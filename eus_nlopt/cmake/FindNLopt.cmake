@@ -11,10 +11,12 @@ IF (NLOPT_INCLUDE_DIR)
   SET (nlopt_FIND_QUIETLY TRUE)
 ENDIF (NLOPT_INCLUDE_DIR)
 
-FIND_PATH(NLOPT_INCLUDE_DIR nlopt.h PATHS ~/Desktop/nlopt/include)
+execute_process(COMMAND rospack find nlopt OUTPUT_VARIABLE NLOPT_ROOT_DIR)
+MESSAGE(-- _rospack_find_nlopt_ -- ${NLOPT_ROOT_DIR})
+FIND_PATH(NLOPT_INCLUDE_DIR nlopt.h PATHS ${NLOPT_ROOT_DIR}/include)
 
 SET (NLOPT_NAMES nlopt nlopt_cxx)
-FIND_LIBRARY (NLOPT_LIBRARY NAMES ${NLOPT_NAMES} PATHS  ~/Desktop/nlopt/lib)
+FIND_LIBRARY (NLOPT_LIBRARY NAMES ${NLOPT_NAMES} PATHS ${NLOPT_ROOT_DIR}/lib)
 
 # handle the QUIETLY and REQUIRED arguments and set NLOPT_FOUND to TRUE if 
 # all listed variables are TRUE

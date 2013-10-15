@@ -1,19 +1,20 @@
-project(eus_nlopt)
+project(eus_nlopt_wrapper)
 
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+#include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 cmake_minimum_required(VERSION 2.4.6)
 
-rosbuild_init()
-rosbuild_find_ros_package(nlopt)
+#rosbuild_init()
+#rosbuild_find_ros_package(nlopt)
 
 # Uses Eigen
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-find_package(Eigen REQUIRED)
-include_directories(${Eigen_INCLUDE_DIRS})
-include_directories(${EIGEN_INCLUDE_DIRS})
+#find_package(Eigen REQUIRED)
+#include_directories(${Eigen_INCLUDE_DIRS})
+#include_directories(${EIGEN_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include("./path-tricker/includes.txt")
+
 
 find_package(NLopt REQUIRED)
 if(NLOPT_FOUND)
@@ -30,6 +31,8 @@ add_executable(nlopt_test src/test.cpp src/nlopt_solver.cpp)
 add_library(nlopt_solver SHARED src/nlopt_solver.cpp)
 add_library(nlopt_wrapper SHARED src/nlopt_wrapper.cpp src/nlopt_solver.cpp)
 #add_executable(nlopt_wrapper_test src/nlopt_wrapper.cpp src/nlopt_solver.cpp)
+
+#rosbuild_genmsg()
 
 if(NLOPT_FOUND)
   TARGET_LINK_LIBRARIES(nlopt_test ${NLOPT_LIBRARY})
