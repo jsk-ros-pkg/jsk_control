@@ -63,6 +63,39 @@
     (dotimes (i (length vec))
       (setf (aref vec i) (aref buf i)))))
 
+(defun simple-jacobian
+  (v1 v2 func)
+  (let ((buf #f(0))
+	tmp
+	(org #F(0))
+	(delta 1e-6))
+    (funcall func v1 org)
+    (dotimes (i (length v1))
+      (setq tmp (aref v1 i))
+      (setf (aref v1 i) (+ (aref v1 i) delta))
+      (funcall func v1 buf)
+      (setf (aref v2 i) (/ (- (aref buf 0) (aref org 0)) delta))
+      (setf (aref v1 i) tmp))))
+
+(defun simple-jacobian
+  (v1 v2 func &optional (w (/ (length v2) (length v1))))
+  (let* ((h (length v1))
+	 (buf (instantiate float-vector w))
+	 tmp
+	 (org (instantiate float-vector w))
+	 (delta 1e-6))
+    (funcall func v1 org)
+    (dotimes (i h)
+      (setq tmp (aref v1 i))
+      (setf (aref v1 i) (+ (aref v1 i) delta))
+      ;;
+      (funcall func v1 buf)
+      (dotimes (j w)
+	(setf (aref v2 (+ j (* i w)))
+	      (/ (- (aref buf j) (aref org j)) delta)))
+      ;;
+      (setf (aref v1 i) tmp))))
+
 ;; sample
 (defun-c-callable sample-f ((v1 :string) (v2 :string)) :integer
   (setf (aref v2 0) (sqrt (aref v1 1)))
