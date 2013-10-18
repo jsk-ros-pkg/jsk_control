@@ -190,26 +190,14 @@
 	*weights* *links* *move-target* *target-coords*)))
      v2)))
 
-(defun simple-jacobian
-  (v1 v2 func)
-  (let ((buf #f(0))
-	tmp
-	(org #F(0))
-	(delta 1e-6))
-    (funcall func v1 org)
-    (dotimes (i (length v1))
-      (setq tmp (aref v1 i))
-      (setf (aref v1 i) (+ (aref v1 i) delta))
-      (funcall func v1 buf)
-      (setf (aref v2 i) (/ (- (aref buf 0) (aref org 0)) delta))
-      (setf (aref v1 i) tmp))))
-
 (defun-c-callable ik-obj ((v1 :string) (v2 :string)) :integer
   (endcoords-diff v1 v2) 0)
 
 (defun-c-callable ik-obj-grad ((v1 :string) (v2 :string)) :integer
-  (jacobian v1 v2)
-  ;(simple-jacobian v1 v2 'endcoords-diff)
+  ;(jacobian v1 v2)
+  (simple-jacobian v1 v2 'endcoords-diff)
+  (dotimes (i 3)
+    (setf (aref v2 i) (* 1e-3 (aref v2 i))))
   0)
 
 (defun fullbody-ik-test
@@ -253,6 +241,7 @@
 			       :rpy (map cons #'+
 					 (random-vector 0.0))))))
 	    target-limb move-target))
+   (debug-view :no-message)
    ret
    )
   (setq *target-coords* target-coords)
@@ -260,6 +249,7 @@
   (setq *all-links* all-links)
   (setq *move-target* move-target)
   (setq *weights* weights)
+  (setq *debug-view* debug-view)
   (format
    t
    "TIME: ~A~%"

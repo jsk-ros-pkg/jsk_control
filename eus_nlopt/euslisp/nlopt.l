@@ -68,7 +68,7 @@
   (let ((buf #f(0))
 	tmp
 	(org #F(0))
-	(delta 1e-6))
+	(delta 1e-10))
     (funcall func v1 org)
     (dotimes (i (length v1))
       (setq tmp (aref v1 i))
@@ -83,7 +83,7 @@
 	 (buf (instantiate float-vector w))
 	 tmp
 	 (org (instantiate float-vector w))
-	 (delta 1e-6))
+	 (delta 1e-3))
     (funcall func v1 org)
     (dotimes (i h)
       (setq tmp (aref v1 i))
@@ -129,7 +129,7 @@
 
 (defun nlopt-optmize
   (&key
-   (x0 (float-vector 5 5))
+   (x0 (float-vector 1 9))
    (x-min #F(0 0 ))
    (x-max #F(10 10))
    (m-x (length x0))
@@ -186,7 +186,7 @@
 	     DIRECT_L
 	     G_DIRECT_L
 	     CRS
-             ;STOGO un-supported
+	     STOGO ;un-supported
 	     ISRES
 	     CCSA
 	     SLSQP
