@@ -130,6 +130,48 @@ NLoptSolver::NLoptSolver(double* x,
 		nlopt_set_xtol_rel(solver, xtol);
 		//nlopt_set_maxeval(solver, 1e3);
 		nlopt_destroy(core_solver);
+	} else if ( algorithm == Optimization::NLopt::COBYLA ||
+			algorithm == Optimization::NLopt::BOBYQA ||
+			algorithm == Optimization::NLopt::NEWUOA ||
+			algorithm == Optimization::NLopt::PRAXIS ||
+			algorithm == Optimization::NLopt::NelderMeadSimplex ||
+			algorithm == Optimization::NLopt::Sbplx ){
+		if(algorithm == Optimization::NLopt::COBYLA)
+		{
+			solver = nlopt_create(NLOPT_LN_COBYLA, m_x);
+			nlopt_set_ftol_rel(solver, ftol);
+			nlopt_set_xtol_rel(solver, xtol);
+		}
+		else if(algorithm == Optimization::NLopt::BOBYQA)
+		{
+			solver = nlopt_create(NLOPT_LN_BOBYQA, m_x);
+			nlopt_set_ftol_rel(solver, ftol);
+			nlopt_set_xtol_rel(solver, xtol);
+		}
+		else if(algorithm == Optimization::NLopt::NEWUOA)
+		{
+			solver = nlopt_create(NLOPT_LN_NEWUOA, m_x);
+			nlopt_set_ftol_rel(solver, ftol);
+			nlopt_set_xtol_rel(solver, xtol);
+		}
+		else if(algorithm == Optimization::NLopt::PRAXIS)
+		{
+			solver = nlopt_create(NLOPT_LN_PRAXIS, m_x);
+			nlopt_set_ftol_rel(solver, ftol);
+			nlopt_set_xtol_rel(solver, xtol);
+		}
+		else if(algorithm == Optimization::NLopt::NelderMeadSimplex)
+		{
+			solver = nlopt_create( NLOPT_LN_NELDERMEAD, m_x);
+			nlopt_set_ftol_rel(solver, ftol);
+			nlopt_set_xtol_rel(solver, xtol);
+		}
+		else if(algorithm == Optimization::NLopt::Sbplx)
+		{
+			solver = nlopt_create(NLOPT_LN_SBPLX, m_x);
+			nlopt_set_ftol_rel(solver, ftol);
+			nlopt_set_xtol_rel(solver, xtol);
+		}
 	}
 	// 定義域の設定
 	nlopt_set_lower_bounds(solver, x_min);

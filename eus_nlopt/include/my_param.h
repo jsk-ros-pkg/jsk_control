@@ -54,7 +54,14 @@ namespace Optimization
 			L_BFGS=9, /* Limited memory Broyden Fletcher Goldfarb Shanno(J. Nocedal, "Updating quasi-Newton matrices with limited storage," Math. Comput. 35, 773-782, 1980)．ヘッセ行列の近似に省メモリ版BFGS公式を用いた準ニュートン法．大規模(>10^3)の問題には適している．最適解近傍を初期値としない場合は大域収束性は補償されない． */
 			TN=10, /* Truncated Newton(R. S. Dembo and T. Steihaug, "Truncated Newton algorithms for large-scale optimization," Math. Programming 26, p. 190-212, 1982)．勾配方向を共役勾配法で近似的に求めるニュートン法．収束は遅いが各ステップの計算は速い．保持するメモリが少なく大規模な問題でも解くことができる． */
 			SL_VM=11, /* Shifted limited memory variable metric(J. Vlcek and L. Luksan, "Shifted limited-memory variable metric methods for large-scale unconstrained minimization," J. Computational Appl. Math. 186, p. 365-390, (2006)．ヘッセ行列の省メモリな近似を用いた修正ニュートン法．大域収束性を補償している．大規模な問題でも解くことができる． */
-			NUM_ALGORITHMS=12
+			NUM_ALGORITHMS=12,
+			// 勾配を使わないローカル探索 べーた
+			COBYLA=13,
+			BOBYQA=14,
+			NEWUOA=15,
+			PRAXIS=16,
+			NelderMeadSimplex=17,
+			Sbplx=18
 		};
 	}
 	/*!
