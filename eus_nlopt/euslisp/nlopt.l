@@ -13,7 +13,15 @@
 (defconstant L_BFGS 9)
 (defconstant TN 10)
 (defconstant SL_VM 11)
-(defconstant NUM_ALGORITHMS 12)
+;; no test
+(defconstant COBYLA 12)
+(defconstant BOBYQA 13)
+(defconstant NEWUOA 14)
+(defconstant PRAXIS 15)
+(defconstant NelderMeadSimplex 16)
+(defconstant Sbplx 17)
+;;
+(defconstant NUM_ALGORITHMS 18)
 
 ;; result status
 (defconstant NLOPT_FAILURE 4)
@@ -83,7 +91,7 @@
 	 (buf (instantiate float-vector w))
 	 tmp
 	 (org (instantiate float-vector w))
-	 (delta 1e-3))
+	 (delta 1e-6))
     (funcall func v1 org)
     (dotimes (i h)
       (setq tmp (aref v1 i))
@@ -155,11 +163,13 @@
    ret)
   (cond
    (log?
-    (format t "ALGORITHM: ~A~%"
+    (format t "ALGORITHM: ~A(~A)~%"
 	    (aref (vector "DIRECT" "G_DIRECT" "DIRECT_L" "G_DIRECT_L"
 			  "CRS" "STOGO" "ISRES" "CCSA" "SLSQP" "L_BFGS"
-			  "TN" "SL_VM")
-		  alg))))
+			  "TN" "SL_VM"
+			  "COBYLA" "BOBYQA" "NEWUOA" "PRAXIS" "NelderMeadSimplex" "Sbplx"
+			  )
+		  alg) alg)))
   (setq
    ret
    (optimize
@@ -192,7 +202,14 @@
 	     SLSQP
 	     L_BFGS
 	     TN
-	     SL_VM))
+	     SL_VM
+	     COBYLA ;; beta
+	     BOBYQA
+	     NEWUOA
+	     PRAXIS
+	     NelderMeadSimplex
+	     Sbplx
+	     ))
     (nlopt-optmize :ftol 1e-2 :xtol 1e-2 :eqthre 1e-1 :alg alg)))
 
 ;(nlopt-optmize)

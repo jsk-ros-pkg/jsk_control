@@ -194,10 +194,11 @@
   (endcoords-diff v1 v2) 0)
 
 (defun-c-callable ik-obj-grad ((v1 :string) (v2 :string)) :integer
-  ;(jacobian v1 v2)
-  (simple-jacobian v1 v2 'endcoords-diff)
-  (dotimes (i 3)
-    (setf (aref v2 i) (* 1e-3 (aref v2 i))))
+  (print 'grad)
+  (jacobian v1 v2)
+;  (simple-jacobian v1 v2 'endcoords-diff)
+;  (dotimes (i 3)
+;    (setf (aref v2 i) (* 1e-3 (aref v2 i))))
   0)
 
 (defun fullbody-ik-test
@@ -241,7 +242,7 @@
 			       :rpy (map cons #'+
 					 (random-vector 0.0))))))
 	    target-limb move-target))
-   (debug-view :no-message)
+   (debug-view nil)
    ret
    )
   (setq *target-coords* target-coords)
@@ -275,7 +276,7 @@
 			:f 'ik-obj :df 'ik-obj-grad
 			:g 'nop :dg 'nop
 			:h 'nop :dh 'nop
-			:ftol 1e-8 :xtol 1e-8 :eqthre 1e-3
+			:ftol 1e-4 :xtol 1e-4 :eqthre 1e-2
 			:m-x (length x0)
 			:m-g 0 :m-h 0))))))
   (send *pickview* :draw-objects)
