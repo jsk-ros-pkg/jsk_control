@@ -71,19 +71,19 @@
     (dotimes (i (length vec))
       (setf (aref vec i) (aref buf i)))))
 
-(defun simple-jacobian
-  (v1 v2 func)
-  (let ((buf #f(0))
-	tmp
-	(org #F(0))
-	(delta 1e-10))
-    (funcall func v1 org)
-    (dotimes (i (length v1))
-      (setq tmp (aref v1 i))
-      (setf (aref v1 i) (+ (aref v1 i) delta))
-      (funcall func v1 buf)
-      (setf (aref v2 i) (/ (- (aref buf 0) (aref org 0)) delta))
-      (setf (aref v1 i) tmp))))
+;; (defun simple-jacobian
+;;   (v1 v2 func)
+;;   (let ((buf #f(0))
+;; 	tmp
+;; 	(org #F(0))
+;; 	(delta 1e-10))
+;;     (funcall func v1 org)
+;;     (dotimes (i (length v1))
+;;       (setq tmp (aref v1 i))
+;;       (setf (aref v1 i) (+ (aref v1 i) delta))
+;;       (funcall func v1 buf)
+;;       (setf (aref v2 i) (/ (- (aref buf 0) (aref org 0)) delta))
+;;       (setf (aref v1 i) tmp))))
 
 (defun simple-jacobian
   (v1 v2 func &optional (w (/ (length v2) (length v1))))

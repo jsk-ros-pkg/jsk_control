@@ -194,7 +194,7 @@
   (endcoords-diff v1 v2) 0)
 
 (defun-c-callable ik-obj-grad ((v1 :string) (v2 :string)) :integer
-  (print 'grad)
+  ;(print 'grad)
   (jacobian v1 v2)
 ;  (simple-jacobian v1 v2 'endcoords-diff)
 ;  (dotimes (i 3)
@@ -276,7 +276,7 @@
 			:f 'ik-obj :df 'ik-obj-grad
 			:g 'nop :dg 'nop
 			:h 'nop :dh 'nop
-			:ftol 1e-4 :xtol 1e-4 :eqthre 1e-2
+			:ftol 1e-6 :xtol 1e-6 :eqthre 1e-2
 			:m-x (length x0)
 			:m-g 0 :m-h 0))))))
   (send *pickview* :draw-objects)
