@@ -52,7 +52,7 @@ int main(){
 	double x[2] = { 1, 9 };
 	double x_min[2] = {0,0} ;
 	double x_max[2] = {10,10} ;
-	NLoptSolver nos(x,x_min,x_max,f,df,g1,dg1,h1,dh1,2,1,1,1e-16,1e-8,1e-4,Optimization::NLopt::COBYLA) ;
+	NLoptSolver nos(x,x_min,x_max,f,df,g1,dg1,h1,dh1,2,1,1,1e-16,1e-8,1e-4,-1,-1,Optimization::NLopt::COBYLA) ;
 	//NLoptSolver nos(x,x_min,x_max,f,df,nop,nop,nop,nop,2,1,1,Optimization::NLopt::DIRECT) ;
 	nos.output_result(nos.Optimize()) ;
 	return 0 ;

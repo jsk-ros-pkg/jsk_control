@@ -12,7 +12,7 @@ public:
 			int (*g)(double*,double*), int (*dg)(double*,double*),
 			int (*h)(double*,double*), int (*dh)(double*,double*),
 			int m_x, int m_g, int m_h,
-			double ftol, double xtol, double eqthre,
+			double ftol, double xtol, double eqthre, int max_eval, double max_time,
 			Optimization::NLopt::Algorithm algorithm);
 	~NLoptSolver();
 	int Optimize();
@@ -111,6 +111,10 @@ public:
 		my_log("  |   eq constt: ", this->gbuf, this->m_g) ;
 		//this->InequalityConstraintCost(this->hbuf) ;
 		my_log("  |  neq constt: ", this->hbuf, this->m_h) ;
+	}
+
+	void stop(){
+		nlopt_force_stop(this->solver) ;
 	}
 
 private:

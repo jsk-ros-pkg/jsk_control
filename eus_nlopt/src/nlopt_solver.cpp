@@ -12,7 +12,7 @@ NLoptSolver::NLoptSolver(double* x,
 		int (*g)(double*,double*), int (*dg)(double*,double*),
 		int (*h)(double*,double*), int (*dh)(double*,double*),
 		int m_x, int m_g, int m_h,
-		double ftol, double xtol, double eqthre,
+		double ftol, double xtol, double eqthre, int max_eval, double max_time,
 		Optimization::NLopt::Algorithm algorithm)
 	:
 		x(x), m_x(m_x), m_g(m_g), m_h(m_h), iteration(0), n_f(0), n_df(0), n_g(0), n_dg(0), n_h(0), n_dh(0) {
@@ -173,6 +173,9 @@ NLoptSolver::NLoptSolver(double* x,
 			nlopt_set_xtol_rel(solver, xtol);
 		}
 	}
+	//
+	if ( max_eval > 0 ) nlopt_set_maxeval(solver,max_eval) ;
+	if ( max_time > 0 ) nlopt_set_maxtime(solver,max_time) ;
 	// 定義域の設定
 	nlopt_set_lower_bounds(solver, x_min);
 	nlopt_set_upper_bounds(solver, x_max);

@@ -42,6 +42,7 @@
 					   :integer :integer ;; neq const
 					   :integer :integer :integer ;; dim
 					   :double :double :double ; thres
+					   :integer :double ; max_eval, max_time
 					   :integer ; log?
 					   :integer ; alg
 					   :string :string ;; buf 
@@ -49,6 +50,7 @@
 					   :string :string
 					   ) :string)
 (defforeign get-result m "get_result" () :integer)
+(defforeign stop m "stop" () :integer)
 
 (defun-c-callable my_print ((v1 :string) (v2 :string)) :integer
   (print v1) (print v2) 0)
@@ -149,6 +151,8 @@
    ;;
    (alg 9)
    (ftol 1e-16) (xtol 1e-8) (eqthre 1e-4)
+   (max-eval -1)
+   (max-time -1) ; sec
    (log? t)
    ;;
    (fbuf (instantiate float-vector 1))
@@ -179,6 +183,7 @@
     (pod-address h) (pod-address dh)
     m-x m-g m-h
     ftol xtol eqthre
+    max-eval max-time
     (if log? 1 0)
     alg
     fbuf dfbuf gbuf dgbuf hbuf dhbuf))
