@@ -83,7 +83,7 @@
        (setq val (assoc sym (send self :slots)))))
      (cond
       ((or (null sym) (null val)) nil)
-      ((cadr args)
+      ((> (length args) 1)
        (eval (list 'setq sym '(cadr args))))
       (t (cdr val)))))
   (:optimize
