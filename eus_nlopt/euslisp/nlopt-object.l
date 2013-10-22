@@ -30,6 +30,8 @@
 	  ftol
 	  xtol
 	  eqthre
+	  max-eval
+	  max-time
 	  m-x
 	  m-g
 	  m-h
@@ -48,6 +50,8 @@
     (ftol 1e-8)
     (xtol 1e-8)
     (eqthre 1e-3)
+    (max-eval -1)
+    (max-time -1)
     (m-x (length x0))
     (m-g 0)
     (m-h 0)
@@ -61,6 +65,8 @@
    (send self :ftol ftol)
    (send self :xtol xtol)
    (send self :eqthre eqthre)
+   (send self :max-time max-time)
+   (send self :max-eval max-eval)
    (send self :m-x m-x)
    (send self :m-g m-g)
    (send self :m-h m-h)
@@ -95,6 +101,7 @@
       :g 'nlopt-g :dg 'nlopt-dg
       :h 'nlopt-h :dh 'nlopt-dh
       :ftol 1e-8 :xtol 1e-8 :eqthre 1e-4
+      :max-eval max-eval :max-time max-time
       :log? log?
       :m-x m-x
       :m-g m-g
