@@ -1,7 +1,7 @@
 #-:jsk (jsk)
 #-:rbrain-basic (rbrain)
 
-(require "nlopt.l")
+(require "../nlopt.l")
 (defvar *robot* (hrp2-simple-detail))
 
 (defvar *move-target* (list (send *robot* :rarm :end-coords)))
@@ -103,6 +103,15 @@
      m-list)
     ret))
 
+(defun vlist+
+  (vlist
+   &optional (ret (scale 0 (car vlist))))
+  (dolist (v vlist)
+    (dotimes (i (length v))
+      (setf (aref ret i)
+            (+ (aref ret i) (aref v i)))))
+  ret)
+
 (defun endcoords-diff (v1 v2)
   (let (buf (tmp 0))
     (mapcar
@@ -142,10 +151,8 @@
     (if *debug-view* (send *pickview* :draw-objects))
     (x::window-main-one)
     (my-copy-matrix
-     (reduce
-      #'v+
+     (vlist+
       (append
-       (list (scale 0 v2) (scale 0 v2))
        (mapcar
 	#'(lambda (w l m c)
 	    (setq J (send *robot* :calc-jacobian-from-link-list l

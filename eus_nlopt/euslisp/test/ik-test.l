@@ -1,7 +1,7 @@
 #-:jsk (jsk)
 #-:rbrain-basic (rbrain)
 
-(require "nlopt.l")
+(require "../nlopt.l")
 (defvar *robot* (hrp2-simple-detail))
 
 (defvar *move-target* (send *robot* :rarm :end-coords))

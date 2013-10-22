@@ -1,5 +1,5 @@
 
-(require "nlopt-object.l")
+(require "../nlopt-object.l")
 
 (defclass test-nlopt-object
   :super nlopt-object
