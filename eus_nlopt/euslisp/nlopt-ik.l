@@ -218,20 +218,23 @@
       #'(lambda (mt)
 	  (copy-object (send mt :worldcoords)))
       move-target))
+    (target-centroid-pos nil)
+    (cog-gain 1)
+    ;;
     (link-list
      (mapcar
       #'(lambda (c) (send robot :link-list (send c :parent)))
       move-target))
-    (all-links (reduce #'union (cons nil link-list)))
+    (all-links
+     (if target-centroid-pos (send robot :links)
+       (reduce #'union (cons nil link-list))))
     (weight-list
      (make-list (length move-target)
 		:initial-element (unit-matrix 6)))
     (root-link-virtual-joint-weight
      (make-list 6 :initial-element 1e-3))
-    (target-centroid-pos nil)
-    (cog-gain 1)
     ;;
-    (algorithm 9)
+    (algorithm 8)
     (x0
      (vector-eus2nlopt
       (send-all (send-all all-links :joint) :joint-angle)))
@@ -284,9 +287,9 @@
    )
   (:target-diff
    (&key
-    (weight-list weight-list)
-    (move-target move-target)
-    (target-coords target-coords))
+    ((:weight-list wl) weight-list)
+    ((:move-target mt) move-target)
+    ((:target-coords tc) target-coords))
    (mapcar
     #'(lambda (w m c)
 	(transform
@@ -295,11 +298,11 @@
 	  float-vector
 	  (scale 1e-3 (send m :difference-position c))
 	  (send m :difference-rotation c))))
-    weight-list move-target target-coords))
+    wl mt tc))
   (:target-jacobian
    (&key
-    (link-list link-list)
-    (move-target move-target)
+    ((:link-list ll) link-list)
+    ((:move-target mt) move-target)
     J)
    (mapcar
     #'(lambda (l m dx)
@@ -309,29 +312,28 @@
 		      :translation-axis '(t)
 		      :rotation-axis '(t)))
 	(transform (transpose J) dx))
-    link-list move-target
-    (send self :target-diff)))
+    ll mt (send self :target-diff)))
   (:cog-jacobian
    (&key
-    (link-list all-links)
-    (cog-gain cog-gain)
-    (translation-axis :z)
-    (target-centroid-pos target-centroid-pos)
+    ((:link-list ll) all-links)
+    ((:cog-gain cg) cog-gain)
+    ((:translation-axis ta) :z)
+    ((:target-centroid-pos tcp) target-centroid-pos)
     (centroid-offset-func)
     &allow-other-keys)
    (transform
     (transpose
      (send robot :calc-cog-jacobian-from-link-list
-	   :link-list link-list
-	   :translation-axis translation-axis))
-    (scale cog-gain
+	   :link-list ll
+	   :translation-axis ta))
+    (scale cg
 	   (calc-dif-with-axis
 	    (let ((current-centroid-pos
 		   (if (functionp centroid-offset-func)
 		       (funcall centroid-offset-func)
 		     (send robot :centroid nil))))
-	      (v- target-centroid-pos current-centroid-pos))
-	    translation-axis))
+	      (scale 1e-3 (v- tcp current-centroid-pos)))
+	    ta))
     )
    )
   ;;
@@ -352,8 +354,11 @@
 	      (+
 	       (if target-centroid-pos
 		   (norm2
-		    (subseq (scale 1e-3 (v- (send robot :centroid) target-centroid-pos))
-			    0 2)) 0)
+		    (subseq
+		     (scale (* 1 1e-3)
+			    (v- (send robot :centroid) target-centroid-pos))
+		     0 2))
+		 0)
 	       (apply #'+ (mapcar #'norm2 (send self :target-diff))))))
       0)
   (:df (v1 v2)
@@ -366,34 +371,38 @@
 	 (send robot :worldcoords)
 	 (my-copy-matrix
 	   (vlist+
-	    (append
-	     (if target-centroid-pos
-		 (scale -2 (send self :cog-jacobian)))
-	     (mapcar
-	      #'(lambda (l Jdx)
-		  (setq buf
-			(mapcar
-			 #'cons
-			 l
-			 (vector-nlopt2eus
-			  (scale -2.0 Jdx)
-			  :link-list l)))
-		  (vector-eus2nlopt
-		   (mapcar
-		    #'(lambda (al)
-			(let* ((val (cdr (assoc al buf)))
-			       (val0 (send (send al :joint) :joint-angle)))
-			  (cond
-			   ((and val (vectorp val))
-			    (map float-vector #'*
-				 root-link-virtual-joint-weight val))
-			   (val val)
-			   ((vectorp val0) (scale 0 val0))
-			   (t 0))))
-		    all-links)))
-	     link-list
-	     (send self :target-jacobian))))
+	    (mapcar
+	     #'(lambda (l Jdx)
+		 (setq buf
+		       (mapcar
+			#'cons
+			l
+			(vector-nlopt2eus
+			 (scale -2.0 Jdx)
+			 :link-list l)))
+		 (vector-eus2nlopt
+		  (mapcar
+		   #'(lambda (al)
+		       (let* ((val (cdr (assoc al buf)))
+			      (val0 (send (send al :joint) :joint-angle)))
+			 (cond
+			  ((and val (vectorp val))
+			   (map float-vector #'*
+				root-link-virtual-joint-weight val))
+			  (val val)
+			  ((vectorp val0) (scale 0 val0))
+			  (t 0))))
+		   all-links)))
+	     (append
+	      (if target-centroid-pos
+		  (list all-links))
+	      link-list)
+	     (append
+	      (if target-centroid-pos
+		  (list (send self :cog-jacobian)))
+	      (send self :target-jacobian))))
 	   v2))
+					;(print v2)
        0)
   (:g (v1 v2) 0)
   (:dg (v1 v2) 0)
@@ -447,6 +456,7 @@
 
 
 #|
+
 (progn
       (cond
        ((not (and (boundp '*robot*) *robot*))
@@ -459,13 +469,16 @@
       (instance
        nlopt-ik
        :init
+       :debug-view :no-message
        :move-target
        (mapcar #'(lambda (k) (send *robot* k :end-coords))
-	       '(:rarm :larm :rleg :lleg))
+	       '(:rleg :lleg))
        :target-centroid-pos
-       (scale
-	0.5
-	(apply
-	 #'v+ (list (send *robot* :rleg :end-coords :worldpos)
-		    (send *robot* :lleg :end-coords :worldpos))))))
+       (v+
+	#f(100 0 0)
+	(scale
+	 0.5
+	 (apply
+	  #'v+ (list (send *robot* :rleg :end-coords :worldpos)
+		     (send *robot* :lleg :end-coords :worldpos)))))))
 (send a :optimize)
