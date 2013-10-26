@@ -244,7 +244,7 @@
 		(cond
 		 ((find k '(:rleg :lleg)) (copy-object (send c :worldcoords)))
 		 (t
-		  (make-coords :pos (v+ (float-vector -900 (aref (send c :worldpos) 1) 0)
+		  (make-coords :pos (v+ (float-vector -700 (aref (send c :worldpos) 1) 0)
 					(random-vector 0.0))
 			       :rpy (map cons #'+
 					 (random-vector 0.0))))))
@@ -283,7 +283,7 @@
 			:f 'ik-obj :df 'ik-obj-grad
 			:g 'nop :dg 'nop
 			:h 'nop :dh 'nop
-			:ftol 1e-6 :xtol 1e-6 :eqthre 1e-2
+			:ftol 1e-8 :xtol 1e-8 :eqthre 1e-3
 			:m-x (length x0)
 			:m-g 0 :m-h 0))))))
   (send *pickview* :draw-objects)

@@ -130,7 +130,7 @@
      move-target))
    (all-links (reduce #'union (cons nil link-list)))
    (weight-list (make-list (length move-target) :initial-element (unit-matrix 6)))
-   (eus? nil) (reset? t) (move-base? t) (alg 9)
+   (eus? nil) (reset? t) (move-base? t) (alg 8)
    (x0 (progn
 	 (cond
 	  (reset?
@@ -144,7 +144,7 @@
 		(cond
 		 ((find k '(:rleg :lleg)) (copy-object (send c :worldcoords)))
 		 (t
-		  (make-coords :pos (v+ (float-vector -900 (aref (send c :worldpos) 1) 0)
+		  (make-coords :pos (v+ (float-vector -700 (aref (send c :worldpos) 1) 0)
 					(random-vector 0.0))
 			       :rpy (map cons #'+
 					 (random-vector 0.0))))))
@@ -231,33 +231,46 @@
     (target-centroid-pos nil)
     (cog-gain 1)
     ;;
+    (algorithm 9)
+    (x0
+     (vector-eus2nlopt
+      (send-all (send-all all-links :joint) :joint-angle)))
+    (x-min
+     (vector-eus2nlopt
+      (send-all (send-all all-links :joint) :min-angle)))
+    (x-max
+     (vector-eus2nlopt
+      (send-all (send-all all-links :joint) :max-angle)))
+    (ftol 1e-8)
+    (xtol 1e-8)
+    (eqthre 1e-4)
+    (m-x
+     (length
+      (vector-eus2nlopt
+       (send-all (send-all all-links :joint) :joint-angle))))
+    (m-g 0)
+    (m-h 0)
+    ;;
     (stop -1)
+    (max-eval stop)
     (add-6dof? t)
     (debug-view :no-message)
     &allow-other-keys
     )
-   (eval
-    (send-super*
-     :init
-     :algorithm 9
-     :x0
-     (vector-eus2nlopt
-      (send-all (send-all all-links :joint) :joint-angle))
-     :x-min
-     (vector-eus2nlopt
-      (send-all (send-all all-links :joint) :min-angle))
-     :x-max
-     (vector-eus2nlopt
-      (send-all (send-all all-links :joint) :max-angle))
-     :ftol 1e-8 :xtol 1e-8 :eqthre 1e-4
-     :m-x
-     (length
-      (vector-eus2nlopt
-       (send-all (send-all all-links :joint) :joint-angle)))
-     :m-g 0
-     :m-h 0
-     :max-eval stop
-     args))
+   (send-super*
+    :init
+    :algorithm algorithm
+    :x0 x0
+    :x-min x-min
+    :x-max x-max
+    :ftol ftol
+    :xtol xtol
+    :eqthre eqthre
+    :m-x m-x
+    :m-g m-g
+    :m-h m-h
+    :max-eval max-eval
+    args)
    (mapcar
     #'(lambda (k val) (send self k val))
     (list :robot :move-target :target-coords
@@ -317,10 +330,6 @@
 		   (if (functionp centroid-offset-func)
 		       (funcall centroid-offset-func)
 		     (send robot :centroid nil))))
-	      (send robot :put :ik-draw-on-params
-		    (append (send robot :get :ik-draw-on-params)
-			    (list (list target-centroid-pos :color #f(0 0 1))
-				  (list (float-vector (elt current-centroid-pos 0) (elt current-centroid-pos 1) (elt target-centroid-pos 2)) :size 100 :color #f(0 1 0)))))
 	      (v- target-centroid-pos current-centroid-pos))
 	    translation-axis))
     )
@@ -354,39 +363,37 @@
 	  (send-all all-links :joint)
 	  (vector-nlopt2eus
 	   v1 :link-list all-links))
+	 (send robot :worldcoords)
 	 (my-copy-matrix
-	  (vlist+
-	   (mapcar
-	    #'(lambda (l Jdx)
-		(setq buf
-		      (mapcar
-		       #'cons
-		       l
-		       (vector-nlopt2eus
-			(scale -2.0 Jdx)
-			:link-list l)))
-		(vector-eus2nlopt
-		 (mapcar
-		  #'(lambda (al)
-		      (let* ((val (cdr (assoc al buf)))
-			     (val0 (send (send al :joint) :joint-angle)))
-			(cond
-			 ((and val (vectorp val))
-			  (map float-vector #'*
-			       root-link-virtual-joint-weight val))
-			 (val val)
-			 ((vectorp val0) (scale 0 val0))
-			 (t 0))))
-		  all-links)))
+	   (vlist+
 	    (append
 	     (if target-centroid-pos
-		 (list all-links))
-	     link-list)
-	    (append
-	     (if target-centroid-pos
-		 (list (send self :cog-jacobian)))
+		 (scale -2 (send self :cog-jacobian)))
+	     (mapcar
+	      #'(lambda (l Jdx)
+		  (setq buf
+			(mapcar
+			 #'cons
+			 l
+			 (vector-nlopt2eus
+			  (scale -2.0 Jdx)
+			  :link-list l)))
+		  (vector-eus2nlopt
+		   (mapcar
+		    #'(lambda (al)
+			(let* ((val (cdr (assoc al buf)))
+			       (val0 (send (send al :joint) :joint-angle)))
+			  (cond
+			   ((and val (vectorp val))
+			    (map float-vector #'*
+				 root-link-virtual-joint-weight val))
+			   (val val)
+			   ((vectorp val0) (scale 0 val0))
+			   (t 0))))
+		    all-links)))
+	     link-list
 	     (send self :target-jacobian))))
-	  v2))
+	   v2))
        0)
   (:g (v1 v2) 0)
   (:dg (v1 v2) 0)
@@ -433,6 +440,7 @@
 	(send self :link-list ll-buf)
 	(send self :all-links al-buf)
 	(funcall (cdr (assoc :del-6dof-links add6dof)))
+	(if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))
 	ret))
     (t (send-super* :optimize args))))
   )
