@@ -226,7 +226,7 @@
       #'(lambda (c) (send robot :link-list (send c :parent)))
       move-target))
     (all-links
-     (if target-centroid-pos (send robot :links)
+     (if target-centroid-pos (cdr (send robot :links))
        (reduce #'union (cons nil link-list))))
     (weight-list
      (make-list (length move-target)
@@ -244,8 +244,8 @@
     (x-max
      (vector-eus2nlopt
       (send-all (send-all all-links :joint) :max-angle)))
-    (ftol 1e-8)
-    (xtol 1e-8)
+    (ftol 1e-10)
+    (xtol 1e-10)
     (eqthre 1e-4)
     (m-x
      (length
@@ -465,6 +465,7 @@
        ((not (and (boundp '*pickview*) *pickview*))
 	(pickview :no-menu t)
 	(objects *robot*))))
+
 (setq a
       (instance
        nlopt-ik
@@ -481,4 +482,5 @@
 	 (apply
 	  #'v+ (list (send *robot* :rleg :end-coords :worldpos)
 		     (send *robot* :lleg :end-coords :worldpos)))))))
+
 (send a :optimize)
