@@ -1,5 +1,5 @@
-#-:jsk (jsk)
-#-:rbrain-basic (rbrain)
+;#-:jsk (jsk)
+;#-:rbrain-basic (rbrain)
 
 (require "nlopt-object.l")
 
@@ -130,7 +130,7 @@
      move-target))
    (all-links (reduce #'union (cons nil link-list)))
    (weight-list (make-list (length move-target) :initial-element (unit-matrix 6)))
-   (eus? nil) (reset? t) (move-base? t) (alg 8)
+   (reset? t) (move-base? t) (alg 11)
    (x0 (progn
 	 (cond
 	  (reset?
@@ -153,41 +153,91 @@
    (add-6dof? t)
    ret
    )
-  (cond
-   (eus?
-    (send *robot* :fullbody-inverse-kinematics
-	  target-coords
-	  :target-centroid-pos nil
-	  :debug-view debug-view
-	  :stop 100
-	  :link-list link-list
-	  :revert-if-fail nil
-	  :move-target move-target))
-   (t (send
-       (instance
-	nlopt-ik
-	:init
-	:add-6dof? add-6dof?
-	:debug-view debug-view
-	:robot *robot*
-	:move-target move-target
-	:target-coords target-coords
-	:link-list link-list
-	:all-links all-links
-	:weight-list weight-list
-	;;
-	:algorithm alg
-	:x0 x0
-	:x-min
-	(vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
-	:x-max
-	(vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
-	:ftol 1e-6 :xtol 1e-6 :eqthre 1e-2
-	:m-x (length x0)
-	:m-g 0
-	:m-h 0)
-       :optimize)))
-  )
+  (send
+   (instance
+    nlopt-ik
+    :init
+    :add-6dof? add-6dof?
+    :debug-view debug-view
+    :robot *robot*
+    :move-target move-target
+    :target-coords target-coords
+    :link-list link-list
+    :all-links all-links
+    :weight-list weight-list
+    ;;
+    :algorithm alg
+    :x0 x0
+    :x-min
+    (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
+    :x-max
+    (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
+    :ftol 1e-6 :xtol 1e-6 :eqthre 1e-2
+    :m-x (length x0)
+    :m-g 0
+    :m-h 0)
+   :optimize))
+
+(defun ik-test
+  (&key
+   (init
+    (progn
+      (cond
+       ((not (and (boundp '*robot*) *robot*))
+	(setq *robot* (hrp2-simple-detail))))
+      (cond
+       ((not (and (boundp '*pickview*) *pickview*))
+	(pickview :no-menu t)
+	(objects *robot*)))))
+   (target-limb :rarm)
+   (move-target (send *robot* target-limb :end-coords))
+   (link-list
+    (send *robot* :link-list (send move-target :parent)))
+   (all-links link-list)
+   (weight-list (unit-matrix 6))
+   (reset? t)
+   (alg 11)
+   (x0 (progn
+	 (cond
+	  (reset?
+	   (send *robot* :reset-pose)
+	   (send *robot* :newcoords (make-coords :pos (float-vector 0 0 700)))
+	   (send *pickview* :draw-objects)))
+	 (vector-eus2nlopt
+	  (send-all (send-all all-links :joint) :joint-angle))))
+   (target-coords ;*target-coords*)
+    (make-coords :pos (v+ (send move-target :worldpos)
+			  #F(500 0 500))))
+   (debug-view :no-message)
+   (add-6dof? nil)
+   (max-time 20)
+   ret
+   )
+  (send
+   (instance
+    nlopt-ik
+    :init
+    :add-6dof? add-6dof?
+    :debug-view debug-view
+    :robot *robot*
+    :move-target (list move-target)
+    :target-coords (list target-coords)
+    :link-list (list link-list)
+    :all-links all-links
+    :weight-list (list weight-list)
+    ;;
+    :algorithm alg
+    :x0 x0
+    :x-min
+    (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
+    :x-max
+    (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
+    :max-time max-time
+    :ftol 1e-6 :xtol 1e-6 :eqthre 1e-2
+    :m-x (length x0)
+    :m-g 0
+    :m-h 0)
+   :optimize))
 
 (defclass nlopt-ik
   :super nlopt-object
@@ -198,6 +248,9 @@
 	  all-links
 	  weight-list
 	  root-link-virtual-joint-weight
+	  ;;
+	  translation-axis
+	  rotation-axis
 	  ;;
 	  target-centroid-pos
 	  cog-gain
@@ -221,6 +274,9 @@
     (target-centroid-pos nil)
     (cog-gain 1)
     ;;
+    (translation-axis (mapcar #'(lambda (hoge) t) move-target))
+    (rotation-axis (mapcar #'(lambda (hoge) t) move-target))
+    ;;
     (link-list
      (mapcar
       #'(lambda (c) (send robot :link-list (send c :parent)))
@@ -232,9 +288,9 @@
      (make-list (length move-target)
 		:initial-element (unit-matrix 6)))
     (root-link-virtual-joint-weight
-     (make-list 6 :initial-element 1e-3))
+     (coerce (make-list 6 :initial-element 1e-3) float-vector))
     ;;
-    (algorithm 8)
+    (algorithm 11)
     (x0
      (vector-eus2nlopt
       (send-all (send-all all-links :joint) :joint-angle)))
@@ -244,9 +300,9 @@
     (x-max
      (vector-eus2nlopt
       (send-all (send-all all-links :joint) :max-angle)))
-    (ftol 1e-10)
-    (xtol 1e-10)
-    (eqthre 1e-4)
+    (ftol 1e-18)
+    (xtol 1e-18)
+    (eqthre 1e-10)
     (m-x
      (length
       (vector-eus2nlopt
@@ -279,26 +335,34 @@
     (list :robot :move-target :target-coords
 	  :link-list :all-links :weight-list
 	  :add-6dof? :debug-view :root-link-virtual-joint-weight
+	  :translation-axis :rotation-axis
 	  :target-centroid-pos :cog-gain)
     (list robot move-target target-coords
 	  link-list all-links weight-list
 	  add-6dof? debug-view root-link-virtual-joint-weight
+	  translation-axis rotation-axis
 	  target-centroid-pos cog-gain))
    )
   (:target-diff
    (&key
     ((:weight-list wl) weight-list)
     ((:move-target mt) move-target)
-    ((:target-coords tc) target-coords))
+    ((:target-coords tc) target-coords)
+    ((:translation-axis ta) translation-axis)
+    ((:rotation-axis ra) rotation-axis))
    (mapcar
-    #'(lambda (w m c)
+    #'(lambda (w m c ta ra)
 	(transform
 	 w
-	 (concatenate
-	  float-vector
-	  (scale 1e-3 (send m :difference-position c))
-	  (send m :difference-rotation c))))
-    wl mt tc))
+	 (scale
+	  1e+0
+	  (concatenate
+	   float-vector
+	   (scale 1e-3 (send m :difference-position c
+			     :translation-axis ta))
+	   (send m :difference-rotation c
+		 :rotation-axis ra)))))
+    wl mt tc ta ra))
   (:target-jacobian
    (&key
     ((:link-list ll) link-list)
@@ -355,7 +419,7 @@
 	       (if target-centroid-pos
 		   (norm2
 		    (subseq
-		     (scale (* 1 1e-3)
+		     (scale (* cog-gain 1e-3)
 			    (v- (send robot :centroid) target-centroid-pos))
 		     0 2))
 		 0)
@@ -366,42 +430,41 @@
 	 (mapcar
 	  #'(lambda (j v) (send j :joint-angle v))
 	  (send-all all-links :joint)
-	  (vector-nlopt2eus
-	   v1 :link-list all-links))
+	  (vector-nlopt2eus v1 :link-list all-links))
 	 (send robot :worldcoords)
 	 (my-copy-matrix
-	   (vlist+
-	    (mapcar
-	     #'(lambda (l Jdx)
-		 (setq buf
-		       (mapcar
-			#'cons
-			l
-			(vector-nlopt2eus
-			 (scale -2.0 Jdx)
-			 :link-list l)))
-		 (vector-eus2nlopt
-		  (mapcar
-		   #'(lambda (al)
-		       (let* ((val (cdr (assoc al buf)))
-			      (val0 (send (send al :joint) :joint-angle)))
-			 (cond
-			  ((and val (vectorp val))
-			   (map float-vector #'*
-				root-link-virtual-joint-weight val))
-			  (val val)
-			  ((vectorp val0) (scale 0 val0))
-			  (t 0))))
-		   all-links)))
-	     (append
-	      (if target-centroid-pos
-		  (list all-links))
-	      link-list)
-	     (append
-	      (if target-centroid-pos
-		  (list (send self :cog-jacobian)))
-	      (send self :target-jacobian))))
-	   v2))
+	  (vlist+
+	   (mapcar
+	    #'(lambda (l Jdx)
+		(setq buf
+		      (mapcar
+		       #'cons
+		       l
+		       (vector-nlopt2eus
+			(scale -2.0 Jdx)
+			:link-list l)))
+		(vector-eus2nlopt
+		 (mapcar
+		  #'(lambda (al)
+		      (let* ((val (cdr (assoc al buf)))
+			     (val0 (send (send al :joint) :joint-angle)))
+			(cond
+			 ((and val (vectorp val))
+			  (map float-vector #'*
+			       root-link-virtual-joint-weight val))
+			 (val val)
+			 ((vectorp val0) (scale 0 val0))
+			 (t 0))))
+		  all-links)))
+	    (append
+	     (if target-centroid-pos
+		 (list all-links))
+	     link-list)
+	    (append
+	     (if target-centroid-pos
+		 (list (send self :cog-jacobian)))
+	     (send self :target-jacobian))))
+	  v2))
 					;(print v2)
        0)
   (:g (v1 v2) 0)
@@ -409,15 +472,24 @@
   (:h (v1 v2) 0)
   (:dh (v1 v2) 0)
   (:eus-ik
-   nil
-   (send robot :fullbody-inverse-kinematics
-	 target-coords
-	 :target-centroid-pos nil
-	 :debug-view debug-view
-	 :stop 100
-	 :link-list link-list
-	 :revert-if-fail nil
-	 :move-target move-target))
+   (&rest args)
+   (apply
+    #'send
+    (append
+     (list robot :fullbody-inverse-kinematics
+	   target-coords
+	   :target-centroid-pos target-centroid-pos
+	   :cog-gain cog-gain
+	   :root-link-virtual-joint-weight
+	   root-link-virtual-joint-weight
+	   :translation-axis translation-axis
+	   :rotation-axis rotation-axis
+	   :debug-view debug-view
+	   :stop max-eval
+	   :link-list link-list
+	   ;:revert-if-fail t
+	   :move-target move-target)
+     args)))
   (:optimize
    (&rest args)
    (cond
@@ -454,8 +526,59 @@
     (t (send-super* :optimize args))))
   )
 
+;; test mode
+(cond
+ ((boundp '*alg*)
+  (let* ((i (- *alg* 1))
+	 (s 250)
+	 (w (send x::*root* :width))
+	 (h (send x::*root* :height))
+	 (x (mod (* s i) (- w s)))
+	 (y (* s (/ (* s i) (- w s))))
+	 timer)
+    (pickview :width s :height s :no-menu t)
+    (setq *robot* (hrp2-simple-detail))
+    (objects (list *robot*))
+    (send *pickview* :move x y)
+    (send *pickview* :draw-objects)
+    (while (not (probe-file "/tmp/hoge"))
+      (unix:sleep 1))
+    (setq timer
+	  (bench2 (ik-test :alg *alg*)))
+    (if (< timer 20) (unix:usleep (round (- (* 20 1e+6) (* timer 1e+6)))))
+    (exit -1))))
 
 #|
+
+(defun place-graph-in-order
+  (&key
+   (graph *graph-sample*)
+   (size (list (send (car graph) :width)
+               (send (car graph) :height)))
+   (root-size (list (- (send x::*root* :width) (car size))
+                    (- (send x::*root* :height) (cadr size))))
+   (x 0)
+   (y 0))
+  (if (null graph)
+      nil
+    (let ((g (car graph)))
+      (send g :move x y)
+      (send g :repaint)
+      (setq x (+ x (car size)))
+      (if (> x (car root-size))
+          (progn
+            (setq x 0)
+            (setq y (+ y (cadr size)))))
+      (if (> y (cadr root-size))
+          (setq y 0))
+      (place-graph-in-order
+       :graph (cdr graph)
+       :size size
+       :root-size root-size
+       :x x
+       :y y))))
+
+(dotimes (i 18) (ik-test :alg i))
 
 (progn
       (cond
@@ -470,7 +593,7 @@
       (instance
        nlopt-ik
        :init
-       :debug-view :no-message
+       :debug-view nil
        :move-target
        (mapcar #'(lambda (k) (send *robot* k :end-coords))
 	       '(:rleg :lleg))

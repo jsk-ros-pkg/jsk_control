@@ -164,7 +164,8 @@
    ;;
    (timer (instance mtimer :init))
    (timebuf #F(0))
-   ret)
+   ret
+   &allow-other-keys)
   (cond
    (log?
     (format t "ALGORITHM: ~A(~A)~%"
