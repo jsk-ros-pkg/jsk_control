@@ -41,7 +41,7 @@ NLoptSolver::NLoptSolver(double* x,
 		if(algorithm == Optimization::NLopt::ISRES)
 		{
 			solver = nlopt_create(NLOPT_GN_ISRES, m_x);
-			nlopt_set_maxeval(solver, 1e4);
+			nlopt_set_maxeval(solver, 1e6);
 			nlopt_set_maxtime(solver, 24*60*60);
 		}
 		else
@@ -60,7 +60,7 @@ NLoptSolver::NLoptSolver(double* x,
 			core_solver = nlopt_create(NLOPT_LD_CCSAQ, m_x);
 			nlopt_set_ftol_rel(core_solver, ftol);
 			nlopt_set_xtol_rel(core_solver, xtol);
-			nlopt_set_maxeval(core_solver, 1e3);
+			nlopt_set_maxeval(core_solver, 1e6);
 		}
 		else
 		{
@@ -72,14 +72,14 @@ NLoptSolver::NLoptSolver(double* x,
 			{
 				core_solver = nlopt_create(NLOPT_GN_ORIG_DIRECT_L, m_x);
 			}
-			nlopt_set_maxeval(core_solver, 1e4);
+			nlopt_set_maxeval(core_solver, 1e6);
 			nlopt_set_maxtime(core_solver, 24*60*60);
 		}
 		solver = nlopt_create(NLOPT_AUGLAG_EQ, m_x);
 		nlopt_set_local_optimizer(solver, core_solver);
 		nlopt_set_ftol_rel(solver, ftol);
 		nlopt_set_xtol_rel(solver, xtol);
-		nlopt_set_maxeval(solver, 1e3);
+		nlopt_set_maxeval(solver, 1e6);
 		nlopt_destroy(core_solver);
 	}
 	else if(algorithm == Optimization::NLopt::DIRECT || algorithm == Optimization::NLopt::DIRECT_L || algorithm == Optimization::NLopt::CRS || algorithm == Optimization::NLopt::STOGO || algorithm == Optimization::NLopt::L_BFGS || algorithm == Optimization::NLopt::TN || algorithm == Optimization::NLopt::SL_VM)
@@ -103,7 +103,7 @@ NLoptSolver::NLoptSolver(double* x,
 			{
 				core_solver = nlopt_create(NLOPT_GD_STOGO, m_x);
 			}
-			nlopt_set_maxeval(core_solver, 1e4);
+			nlopt_set_maxeval(core_solver, 1e6);
 			nlopt_set_maxtime(core_solver, 24*60*60);
 		}
 		else
