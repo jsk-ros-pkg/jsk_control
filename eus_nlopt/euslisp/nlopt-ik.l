@@ -149,7 +149,11 @@
 			       :rpy (map cons #'+
 					 (random-vector 0.0))))))
 	    target-limb move-target))
+   (max-time 20)
+   (stop -1) (max-eval stop)
+   (xtol 1e-6) (ftol 1e-6)
    (debug-view :no-message)
+   (optimize :optimize)
    (add-6dof? t)
    ret
    )
@@ -165,6 +169,8 @@
     :link-list link-list
     :all-links all-links
     :weight-list weight-list
+    :max-eval max-eval
+    :max-time max-time
     ;;
     :algorithm alg
     :x0 x0
@@ -172,11 +178,11 @@
     (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
     :x-max
     (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
-    :ftol 1e-6 :xtol 1e-6 :eqthre 1e-2
+    :ftol ftol :xtol xtol :eqthre 1e-2
     :m-x (length x0)
     :m-g 0
     :m-h 0)
-   :optimize))
+   optimize))
 
 (defun ik-test
   (&key
@@ -209,8 +215,10 @@
     (make-coords :pos (v+ (send move-target :worldpos)
 			  #F(500 0 500))))
    (debug-view :no-message)
+   (optimize :optimize)
    (add-6dof? nil)
    (max-time 20)
+   (stop -1) (max-eval stop)
    (xtol 1e-6) (ftol 1e-6)
    ret
    )
@@ -226,6 +234,8 @@
     :link-list (list link-list)
     :all-links all-links
     :weight-list (list weight-list)
+    :max-eval max-eval
+    :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
     ;;
     :algorithm alg
     :x0 x0
@@ -238,7 +248,7 @@
     :m-x (length x0)
     :m-g 0
     :m-h 0)
-   :optimize))
+   optimize))
 
 (defclass nlopt-ik
   :super nlopt-object
@@ -249,6 +259,7 @@
 	  all-links
 	  weight-list
 	  root-link-virtual-joint-weight
+	  max min
 	  ;;
 	  translation-axis
 	  rotation-axis
@@ -292,6 +303,8 @@
 		:initial-element (unit-matrix 6)))
     (root-link-virtual-joint-weight
      (coerce (make-list 6 :initial-element 1e-3) float-vector))
+    (min (float-vector -1500 -1500  -1500 -200 -200 -200))
+    (max (float-vector 1500 1500 1500 200 200 200))
     ;;
     (algorithm 11)
     (x0
@@ -339,12 +352,14 @@
 	  :link-list :all-links :weight-list
 	  :add-6dof? :debug-view :root-link-virtual-joint-weight
 	  :translation-axis :rotation-axis
-	  :target-centroid-pos :cog-gain)
+	  :target-centroid-pos :cog-gain
+	  :min :max)
     (list robot move-target target-coords
 	  link-list all-links weight-list
 	  add-6dof? debug-view root-link-virtual-joint-weight
 	  translation-axis rotation-axis
-	  target-centroid-pos cog-gain))
+	  target-centroid-pos cog-gain
+	  min max))
    )
   (:target-diff
    (&key
@@ -507,6 +522,7 @@
 	   :debug-view debug-view
 	   :stop max-eval
 	   :link-list link-list
+	   :revert-if-fail nil
 	   ;:revert-if-fail t
 	   :move-target move-target)
      args)))
@@ -518,7 +534,8 @@
       (let ((ret)
 	    (ll-buf link-list)
 	    (al-buf all-links)
-	    (add6dof (add-6dof-joint :link-list link-list)))
+	    (add6dof (add-6dof-joint :link-list link-list
+				     :max max :min min)))
 	(send self :link-list
 	      (cdr (assoc :6dof-links add6dof)))
 	(send self :all-links (reduce #'union (cons nil link-list)))
