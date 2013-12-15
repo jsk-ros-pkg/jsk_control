@@ -39,8 +39,8 @@
 (defun vector-eus2nlopt
   (vl &key
       (vector-scale
-       (make-list 6 :initial-element 1e-3))
-      (scala-scale (deg2rad 1)))
+       (make-list 6 :initial-element 1));;1e-3))
+      (scala-scale 1));;(deg2rad 1)))
   (apply
    #'concatenate
    (cons
@@ -57,8 +57,8 @@
      (link-list *all-links*)
      (joint-list (send-all link-list :joint))
      (vector-scale
-      (make-list 6 :initial-element 1e-3))
-     (scala-scale (rad2deg 1))
+      (make-list 6 :initial-element 1));;1e-3))
+     (scala-scale 1);;(rad2deg 1))
      (index 0) buf ret)
   (mapcar
    #'(lambda (j)
@@ -211,6 +211,7 @@
    (debug-view :no-message)
    (add-6dof? nil)
    (max-time 20)
+   (xtol 1e-6) (ftol 1e-6)
    ret
    )
   (send
@@ -233,7 +234,7 @@
     :x-max
     (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
     :max-time max-time
-    :ftol 1e-6 :xtol 1e-6 :eqthre 1e-2
+    :ftol ftol :xtol xtol :eqthre 1e-2
     :m-x (length x0)
     :m-g 0
     :m-h 0)
@@ -257,6 +258,8 @@
 	  ;;
 	  add-6dof?
 	  debug-view
+	  ;;
+	  last-cost
 	  ))
 
 (defmethod nlopt-ik
@@ -402,28 +405,43 @@
    )
   ;;
   (:f (v1 v2)
-      (let (buf (tmp 0))
-	(mapcar
-	 #'(lambda (j v) (send j :joint-angle v))
-	 (send-all all-links :joint)
-	 (vector-nlopt2eus
-	  v1 :link-list all-links))
-	(cond
-	 ((and debug-view
-	       (boundp '*viewer*)
-	       *viewer*)
-	  (send *viewer* :draw-objects)
-	  (x::window-main-one)))
-	(setf (aref v2 0)
-	      (+
-	       (if target-centroid-pos
-		   (norm2
-		    (subseq
-		     (scale (* cog-gain 1e-3)
-			    (v- (send robot :centroid) target-centroid-pos))
-		     0 2))
-		 0)
-	       (apply #'+ (mapcar #'norm2 (send self :target-diff))))))
+      (mapcar
+       #'(lambda (j v) (send j :joint-angle v))
+       (send-all all-links :joint)
+       (vector-nlopt2eus
+	v1 :link-list all-links))
+      (setf (aref v2 0)
+	    (*
+	     1e+3
+	     (+
+	      (if target-centroid-pos
+		  (norm2
+		   (subseq
+		    (scale (* cog-gain 1e-3)
+			   (v- (send robot :centroid) target-centroid-pos))
+		    0 2))
+		0)
+	      (apply #'+ (mapcar #'norm2 (send self :target-diff))))))
+      (cond
+       ((or
+	 (not debug-view)
+	 (not (and (boundp '*viewer*)
+		   *viewer*)) nil))
+       ((and (eq debug-view :success-draw)
+	     (< (aref v2 0) last-cost))
+	(setq last-cost (aref v2 0))
+	(send *viewer* :draw-objects :flush nil)
+	(send-all target-coords
+		  :draw-on :flush nil :color #F(1 0 0) :size 100)
+	(send *viewer* :viewsurface :flush)
+	(x::window-main-one)
+	)
+       ((eq debug-view :success-draw)
+	(x::window-main-one)
+	)
+       (t
+	(send *viewer* :draw-objects)
+	(x::window-main-one)))
       0)
   (:df (v1 v2)
        (let (buf)
@@ -433,37 +451,39 @@
 	  (vector-nlopt2eus v1 :link-list all-links))
 	 (send robot :worldcoords)
 	 (my-copy-matrix
-	  (vlist+
-	   (mapcar
-	    #'(lambda (l Jdx)
-		(setq buf
-		      (mapcar
-		       #'cons
-		       l
-		       (vector-nlopt2eus
-			(scale -2.0 Jdx)
-			:link-list l)))
-		(vector-eus2nlopt
-		 (mapcar
-		  #'(lambda (al)
-		      (let* ((val (cdr (assoc al buf)))
-			     (val0 (send (send al :joint) :joint-angle)))
-			(cond
-			 ((and val (vectorp val))
-			  (map float-vector #'*
-			       root-link-virtual-joint-weight val))
-			 (val val)
-			 ((vectorp val0) (scale 0 val0))
-			 (t 0))))
-		  all-links)))
-	    (append
-	     (if target-centroid-pos
-		 (list all-links))
-	     link-list)
-	    (append
-	     (if target-centroid-pos
-		 (list (send self :cog-jacobian)))
-	     (send self :target-jacobian))))
+	  (scale
+	   1e+3
+	   (vlist+
+	    (mapcar
+	     #'(lambda (l Jdx)
+		 (setq buf
+		       (mapcar
+			#'cons
+			l
+			(vector-nlopt2eus
+			 (scale -2.0 Jdx)
+			 :link-list l)))
+		 (vector-eus2nlopt
+		  (mapcar
+		   #'(lambda (al)
+		       (let* ((val (cdr (assoc al buf)))
+			      (val0 (send (send al :joint) :joint-angle)))
+			 (cond
+			  ((and val (vectorp val))
+			   (map float-vector #'*
+				root-link-virtual-joint-weight val))
+			  (val val)
+			  ((vectorp val0) (scale 0 val0))
+			  (t 0))))
+		   all-links)))
+	     (append
+	      (if target-centroid-pos
+		  (list all-links))
+	      link-list)
+	     (append
+	      (if target-centroid-pos
+		  (list (send self :cog-jacobian)))
+	      (send self :target-jacobian)))))
 	  v2))
 					;(print v2)
        0)
@@ -492,6 +512,7 @@
      args)))
   (:optimize
    (&rest args)
+   (setq last-cost 1e+1000)
    (cond
     (add-6dof?
       (let ((ret)
