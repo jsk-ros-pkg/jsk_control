@@ -110,15 +110,21 @@
 
 (defun fullbody-ik-test
   (&key
-   (init
+   (viewer
     (progn
       (cond
        ((not (and (boundp '*robot*) *robot*))
+	(require "euslib/rbrain/irtrobot/hrp4r.l")
 	(setq *robot* (hrp2-simple-detail))))
       (cond
-       ((not (and (boundp '*pickview*) *pickview*))
+       ((and (not (and (boundp '*pickview*) *pickview*))
+	     (boundp 'pickview))
 	(pickview :no-menu t)
-	(objects *robot*)))))
+	(objects *robot*)
+	*pickview*)
+       ((not (and (boundp '*pickview*) *pickview*))
+	(objects *robot*)
+	*irtviewer*))))
    (target-limb (list :rarm :larm :rleg :lleg))
    (move-target (mapcar #'(lambda (k) (send *robot* k :end-coords)) target-limb))
    (link-list
@@ -136,7 +142,7 @@
 	  (reset?
 	   (send *robot* :reset-pose)
 	   (send *robot* :newcoords (make-coords :pos (float-vector 0 0 700)))
-	   (send *pickview* :draw-objects)))
+	   (send viewer :draw-objects)))
 	 (vector-eus2nlopt
 	  (send-all (send-all all-links :joint) :joint-angle))))
    (target-coords ;*target-coords*)
@@ -186,15 +192,21 @@
 
 (defun ik-test
   (&key
-   (init
+   (viewer
     (progn
       (cond
        ((not (and (boundp '*robot*) *robot*))
+	(require "euslib/rbrain/irtrobot/hrp4r.l")
 	(setq *robot* (hrp2-simple-detail))))
       (cond
-       ((not (and (boundp '*pickview*) *pickview*))
+       ((and (not (and (boundp '*pickview*) *pickview*))
+	     (boundp 'pickview))
 	(pickview :no-menu t)
-	(objects *robot*)))))
+	(objects *robot*)
+	*pickview*)
+       ((not (and (boundp '*pickview*) *pickview*))
+	(objects *robot*)
+	*irtviewer*))))
    (target-limb :rarm)
    (move-target (send *robot* target-limb :end-coords))
    (link-list
@@ -208,7 +220,7 @@
 	  (reset?
 	   (send *robot* :reset-pose)
 	   (send *robot* :newcoords (make-coords :pos (float-vector 0 0 700)))
-	   (send *pickview* :draw-objects)))
+	   (send viewer :draw-objects)))
 	 (vector-eus2nlopt
 	  (send-all (send-all all-links :joint) :joint-angle))))
    (target-coords ;*target-coords*)
@@ -250,6 +262,7 @@
     :m-h 0)
    optimize))
 
+(defconstant EUS_IK NUM_ALGORITHMS)
 (defclass nlopt-ik
   :super nlopt-object
   :slots (robot
@@ -306,7 +319,7 @@
     (min (float-vector -1500 -1500  -1500 -200 -200 -200))
     (max (float-vector 1500 1500 1500 200 200 200))
     ;;
-    (algorithm 11)
+    (algorithm L_BFGS)
     (x0
      (vector-eus2nlopt
       (send-all (send-all all-links :joint) :joint-angle)))
@@ -361,6 +374,17 @@
 	  target-centroid-pos cog-gain
 	  min max))
    )
+  (:dump-args
+   nil
+   (apply
+    #'append
+    (mapcar
+     #'(lambda (kv)
+	 (if (cdr kv)
+	     (list
+	      (read-from-string (format nil ":~A" (car kv)))
+	      (cdr kv))))
+     (send self :slots))))
   (:target-diff
    (&key
     ((:weight-list wl) weight-list)
@@ -508,28 +532,27 @@
   (:dh (v1 v2) 0)
   (:eus-ik
    (&rest args)
-   (apply
-    #'send
-    (append
-     (list robot :fullbody-inverse-kinematics
-	   target-coords
-	   :target-centroid-pos target-centroid-pos
-	   :cog-gain cog-gain
-	   :root-link-virtual-joint-weight
-	   root-link-virtual-joint-weight
-	   :translation-axis translation-axis
-	   :rotation-axis rotation-axis
-	   :debug-view debug-view
-	   :stop max-eval
-	   :link-list link-list
-	   :revert-if-fail nil
-	   ;:revert-if-fail t
-	   :move-target move-target)
-     args)))
+   (format t "[ALGORITHM]: EUS_IK(inf)")
+   (bench
+    (apply
+     #'send
+     (append
+      (list robot :fullbody-inverse-kinematics)
+      (list target-coords)
+      (list :revert-if-fail nil)
+      (list :stop 100)
+      args
+      (send self :dump-args)))))
   (:optimize
    (&rest args)
    (setq last-cost 1e+1000)
    (cond
+    ((>= algorithm EUS_IK)
+     (apply
+      #'send
+      (append
+       (list self :eus-ik)
+       args)))
     (add-6dof?
       (let ((ret)
 	    (ll-buf link-list)
@@ -561,7 +584,25 @@
 	(funcall (cdr (assoc :del-6dof-links add6dof)))
 	(if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))
 	ret))
-    (t (send-super* :optimize args))))
+    (t (send-super* :optimize
+		    (append
+		     (list :root-link-virtual-joint-weight
+			   #F(0 0 0 0 0 0)
+			   :min #F(0 0 0 0 0 0)
+			   :max #F(0 0 0 0 0 0))
+		     args))))
+   (list
+    (cons :angle-vector (copy-object (send robot :angle-vector)))
+    (cons :worldcoords (copy-object (send robot :worldcoords)))
+    (cons :dif
+	  (mapcar
+	   #'(lambda (mt tr)
+	       (concatenate
+		float-vector
+		(scale 1e-3 (send mt :difference-position tr))
+		(send mt :difference-rotation tr)))
+	   move-target target-coords)))
+   )
   )
 
 ;; test mode
