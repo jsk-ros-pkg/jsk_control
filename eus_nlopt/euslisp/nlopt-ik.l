@@ -115,7 +115,7 @@
       (cond
        ((not (and (boundp '*robot*) *robot*))
 	(require "euslib/rbrain/irtrobot/hrp4r.l")
-	(setq *robot* (hrp2-simple-detail))))
+	(setq *robot* (hrp4r))))
       (cond
        ((and (not (and (boundp '*pickview*) *pickview*))
 	     (boundp 'pickview))
@@ -158,7 +158,7 @@
    (max-time 20)
    (stop -1) (max-eval stop)
    (xtol 1e-6) (ftol 1e-6)
-   (debug-view :no-message)
+   (debug-view :success-draw)
    (optimize :optimize)
    (add-6dof? t)
    ret
@@ -197,7 +197,7 @@
       (cond
        ((not (and (boundp '*robot*) *robot*))
 	(require "euslib/rbrain/irtrobot/hrp4r.l")
-	(setq *robot* (hrp2-simple-detail))))
+	(setq *robot* (hrp4r))))
       (cond
        ((and (not (and (boundp '*pickview*) *pickview*))
 	     (boundp 'pickview))
@@ -226,7 +226,7 @@
    (target-coords ;*target-coords*)
     (make-coords :pos (v+ (send move-target :worldpos)
 			  #F(500 0 500))))
-   (debug-view :no-message)
+   (debug-view :success-draw)
    (optimize :optimize)
    (add-6dof? nil)
    (max-time 20)
@@ -342,7 +342,7 @@
     (stop -1)
     (max-eval stop)
     (add-6dof? t)
-    (debug-view :no-message)
+    (debug-view :success-draw)
     &allow-other-keys
     )
    (send-super*
@@ -359,18 +359,29 @@
     :m-h m-h
     :max-eval max-eval
     args)
+   ;; list check
+   (mapcar
+    #'(lambda (k val)
+	(send self
+	      k
+	      (cond
+	       ((atom val) (list val))
+	       (t val))))
+    (list :move-target :target-coords
+	  :link-list :weight-list
+	  :translation-axis :rotation-axis)
+    (list move-target target-coords
+	  link-list weight-list
+	  translation-axis rotation-axis))
+   ;;
    (mapcar
     #'(lambda (k val) (send self k val))
-    (list :robot :move-target :target-coords
-	  :link-list :all-links :weight-list
+    (list :robot :all-links
 	  :add-6dof? :debug-view :root-link-virtual-joint-weight
-	  :translation-axis :rotation-axis
 	  :target-centroid-pos :cog-gain
 	  :min :max)
-    (list robot move-target target-coords
-	  link-list all-links weight-list
+    (list robot all-links
 	  add-6dof? debug-view root-link-virtual-joint-weight
-	  translation-axis rotation-axis
 	  target-centroid-pos cog-gain
 	  min max))
    )
@@ -479,7 +490,10 @@
 	(x::window-main-one)
 	)
        (t
-	(send *viewer* :draw-objects)
+	(send *viewer* :draw-objects :flush nil)
+	(send-all target-coords
+		  :draw-on :flush nil :color #F(1 0 0) :size 100)
+	(send *viewer* :viewsurface :flush)
 	(x::window-main-one)))
       0)
   (:df (v1 v2)
@@ -532,7 +546,7 @@
   (:dh (v1 v2) 0)
   (:eus-ik
    (&rest args)
-   (format t "[ALGORITHM]: EUS_IK(inf)")
+   (format t "[ALGORITHM]: EUS_IK(inf)~%")
    (bench
     (apply
      #'send
@@ -541,6 +555,10 @@
       (list target-coords)
       (list :revert-if-fail nil)
       (list :stop 100)
+      (list :debug-view
+	    (cond
+	     ((eq debug-view :success-draw) :no-message)
+	     (t debug-view)))
       args
       (send self :dump-args)))))
   (:optimize
