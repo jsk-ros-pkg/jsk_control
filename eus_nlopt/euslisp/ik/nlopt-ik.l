@@ -131,10 +131,9 @@
    (move-target (mapcar #'(lambda (k) (send *robot* k :end-coords)) target-limb))
    (link-list
     (mapcar
-     #'(lambda (k c)
+     #'(lambda (c)
 	 (send *robot* :link-list (send c :parent)))
 	       ;(if (find-method *robot* k) (send *robot* k :root-link))))
-     target-limb
      move-target))
    (all-links (reduce #'union (cons nil link-list)))
    (weight-list (make-list (length move-target) :initial-element (unit-matrix 6)))
@@ -144,7 +143,7 @@
 	  (reset?
 	   (send *robot* :reset-pose)
 	   (send *robot* :newcoords (make-coords :pos (float-vector 0 0 700)))
-	   (send viewer :draw-objects)))
+	   (if viewer (send viewer :draw-objects))))
 	 (vector-eus2nlopt
 	  (send-all (send-all all-links :joint) :joint-angle))))
    (target-coords ;*target-coords*)
@@ -228,7 +227,7 @@
 	  (reset?
 	   (send *robot* :reset-pose)
 	   (send *robot* :newcoords (make-coords :pos (float-vector 0 0 700)))
-	   (send viewer :draw-objects)))
+	   (if viewer (send viewer :draw-objects))))
 	 (vector-eus2nlopt
 	  (send-all (send-all all-links :joint) :joint-angle))))
    (target-coords ;*target-coords*)

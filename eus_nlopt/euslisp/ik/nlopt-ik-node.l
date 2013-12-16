@@ -87,13 +87,19 @@
 	 (kv (read-from-string (format nil "(~A)" str)))
 	 ret)
     ;; flatten
-    (while (and kv (not (keywordp (car kv))))
+    (while (and kv
+		(not (keywordp (cadr kv)))
+		(not (keywordp (car kv))))
       (setq kv (car kv)))
     ;;
     (cond
      ((null kv)
       (nlopt-log "null args")
       (return-from solve-nlopt-ik nil)))
+    (cond
+     ((not (keywordp (car kv)))
+      (setq kv
+	    (cons :target-coords kv))))
     ;; eval
     (setq kv
 	  (mapcar
@@ -108,9 +114,17 @@
 	   kv))
     ;;
     (cond
-     ((or (not (subclassp (class (car kv)) coordinates))
-	  (not (subclassp (class (cadr (member :move-target kv)))
-			  cascaded-coords)))
+     ((or
+       (flatten
+	(mapcar
+	 #'(lambda (c)
+	     (not (subclassp (class c) coordinates)))
+	 (car kv)))
+       (flatten
+	(mapcar
+	 #'(lambda (c)
+	     (not (subclassp (class c) cascaded-coords)))
+	 (cadr (member :move-target kv)))))
       (nlopt-log "invalid args ~A" kv)
       (return-from solve-nlopt-ik nil)))
     (cond
@@ -123,8 +137,21 @@
       (send *robot* :newcoords
 	    (cadr (member :base-coords kv)))))
     ;;
+    ;; (setq ret
+    ;; 	  (apply #'send
+    ;; 		 (append
+    ;; 		  (list *robot* :fullbody-inverse-kinematics)
+    ;; 		  kv
+    ;; 		  ;;(list :init nil)
+    ;; 		  ;;(list :viewer nil)
+    ;; 		  (list :algorithm *algorithm*))))
     (setq ret
-	  (apply #'fullbody-ik-test kv))
+	  (apply #'fullbody-ik-test
+		 (append
+		  kv
+		  (list :init nil)
+		  (list :viewer nil)
+		  (list :algorithm *algorithm*))))
     ;;
     (ros::publish "/nlopt_ik_node/ik_response"
 		  (instance std_msgs::string
@@ -136,7 +163,13 @@
 
 (ros::subscribe "/nlopt_ik_node/ik_request"
 		std_msgs::string
-		#'solve-ik 1)
+		#'solve-nlopt-ik 1)
 (ros::advertise "/nlopt_ik_node/ik_response"
                 std_msgs::string)
 
+
+(do-until-key
+ (if (not (ros::ok))
+     (return-from nil nil))
+ (ros::spin-once)
+ (ros::sleep))
