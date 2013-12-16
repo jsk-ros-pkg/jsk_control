@@ -109,7 +109,9 @@
   ret)
 
 (defun fullbody-ik-test
-  (&key
+  (&rest
+   args
+   &key
    (viewer
     (progn
       (cond
@@ -162,36 +164,42 @@
    (optimize :optimize)
    (add-6dof? t)
    ret
+   &allow-other-keys
    )
   (send
-   (instance
+   (instance*
     nlopt-ik
     :init
-    :add-6dof? add-6dof?
-    :debug-view debug-view
-    :robot *robot*
-    :move-target move-target
-    :target-coords target-coords
-    :link-list link-list
-    :all-links all-links
-    :weight-list weight-list
-    :max-eval max-eval
-    :max-time max-time
-    ;;
-    :algorithm alg
-    :x0 x0
-    :x-min
-    (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
-    :x-max
-    (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
-    :ftol ftol :xtol xtol :eqthre 1e-2
-    :m-x (length x0)
-    :m-g 0
-    :m-h 0)
+    (append
+     args
+     (list
+      :add-6dof? add-6dof?
+      :debug-view debug-view
+      :robot *robot*
+      :move-target move-target
+      :target-coords target-coords
+      :link-list link-list
+      :all-links all-links
+      :weight-list weight-list
+      :max-eval max-eval
+      :max-time max-time
+      ;;
+      :algorithm alg
+      :x0 x0
+      :x-min
+      (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
+      :x-max
+      (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
+      :ftol ftol :xtol xtol :eqthre 1e-2
+      :m-x (length x0)
+      :m-g 0
+      :m-h 0)))
    optimize))
 
 (defun ik-test
-  (&key
+  (&rest
+   args
+   &key
    (viewer
     (progn
       (cond
@@ -233,36 +241,40 @@
    (stop -1) (max-eval stop)
    (xtol 1e-6) (ftol 1e-6)
    ret
+   &allow-other-keys
    )
   (send
-   (instance
+   (instance*
     nlopt-ik
     :init
-    :add-6dof? add-6dof?
-    :debug-view debug-view
-    :robot *robot*
-    :move-target (list move-target)
-    :target-coords (list target-coords)
-    :link-list (list link-list)
-    :all-links all-links
-    :weight-list (list weight-list)
-    :max-eval max-eval
-    :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
-    ;;
-    :algorithm alg
-    :x0 x0
-    :x-min
-    (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
-    :x-max
-    (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
-    :max-time max-time
-    :ftol ftol :xtol xtol :eqthre 1e-2
-    :m-x (length x0)
-    :m-g 0
-    :m-h 0)
+    (append
+     args
+     (list
+      :add-6dof? add-6dof?
+      :debug-view debug-view
+      :robot *robot*
+      :move-target (list move-target)
+      :target-coords (list target-coords)
+      :link-list (list link-list)
+      :all-links all-links
+      :weight-list (list weight-list)
+      :max-eval max-eval
+      :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
+      ;;
+      :algorithm alg
+      :x0 x0
+      :x-min
+      (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
+      :x-max
+      (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
+      :max-time max-time
+      :ftol ftol :xtol xtol :eqthre 1e-2
+      :m-x (length x0)
+      :m-g 0
+      :m-h 0)))
    optimize))
 
-(defconstant EUS_IK NUM_ALGORITHMS)
+(defconstant OPTIMIZE_EUS_IK NUM_ALGORITHMS)
 (defclass nlopt-ik
   :super nlopt-object
   :slots (robot
@@ -565,7 +577,7 @@
    (&rest args)
    (setq last-cost 1e+1000)
    (cond
-    ((>= algorithm EUS_IK)
+    ((>= algorithm OPTIMIZE_EUS_IK)
      (apply
       #'send
       (append
