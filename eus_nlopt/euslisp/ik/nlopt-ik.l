@@ -162,6 +162,8 @@
    (debug-view :success-draw)
    (optimize :optimize)
    (add-6dof? t)
+   (max (scale 1 #F(1000 1000 1000 200 200 200)))
+   (min (scale -1 #F(1000 1000 1000 200 200 200)))
    ret
    &allow-other-keys
    )
@@ -189,6 +191,7 @@
       (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
       :x-max
       (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
+      :min min :max max
       :ftol ftol :xtol xtol :eqthre 1e-2
       :m-x (length x0)
       :m-g 0

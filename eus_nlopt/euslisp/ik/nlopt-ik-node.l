@@ -30,8 +30,13 @@
       (require "euslib/rbrain/irtrobot/atlas.l")
       (atlas)))))
 
+(defvar *nlopt_ik_node_name*
+  (format nil "nlopt_ik_node_~A" (send *robot* :name)))
+
+(objects *robot*)
+
 (ros::roseus-add-msgs "std_msgs")
-(ros::roseus (format nil "nlopt-ik-node-~A" (send *robot* :name)))
+(ros::roseus *nlopt_ik_node_name*)
 
 (defun nlopt-log
   (str &rest args)
@@ -81,11 +86,9 @@
 	    ))
    ))
 
-(defun solve-nlopt-ik
-  (msg)
-  (let* ((str (send msg :data))
-	 (kv (read-from-string (format nil "(~A)" str)))
-	 ret)
+(defun check-ik-param
+  (str)
+  (let* ((kv (read-from-string (format nil "(~A)" str))))
     ;; flatten
     (while (and kv
 		(not (keywordp (cadr kv)))
@@ -135,22 +138,24 @@
      ((subclassp (class (cadr (member :base-coords kv)))
 		 coordinates)
       (send *robot* :newcoords
-	    (cadr (member :base-coords kv)))))
-    ;;
-    ;; (setq ret
-    ;; 	  (apply #'send
-    ;; 		 (append
-    ;; 		  (list *robot* :fullbody-inverse-kinematics)
-    ;; 		  kv
-    ;; 		  ;;(list :init nil)
-    ;; 		  ;;(list :viewer nil)
-    ;; 		  (list :algorithm *algorithm*))))
+	    (or
+	     (cadr (member :worldcoords kv))
+	     (cadr (member :base-coords kv))))))
+    kv
+    ))
+
+(defun solve-nlopt-ik
+  (msg)
+  (let* ((str (send msg :data))
+	 (kv (check-ik-param str))
+	 ret)
     (setq ret
 	  (apply #'fullbody-ik-test
 		 (append
 		  kv
 		  (list :init nil)
 		  (list :viewer nil)
+		  (list :reset? nil)
 		  (list :algorithm *algorithm*))))
     ;;
     (ros::publish "/nlopt_ik_node/ik_response"
@@ -159,7 +164,6 @@
 			    :data
 			    (dump-object ret)))
     ))
-
 
 (ros::subscribe "/nlopt_ik_node/ik_request"
 		std_msgs::string
