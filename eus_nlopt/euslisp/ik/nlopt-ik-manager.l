@@ -1,5 +1,6 @@
 
 (defvar *nlopt_ik_node_name* "nlopt_ik_manager")
+(defvar *algorithm* nil)
 (require "nlopt-ik-node.l")
 
 (defvar *ik-param*)
@@ -14,8 +15,8 @@
 (defun manage-nlopt-ik
   (msg)
   (let* ((str (send msg :data))
-	 (kv (car (read-from-string (format nil "(~A)" str))))
-	 ret
+	 (kv (read-from-string str))
+	 ret cst
 	 (mt (cadr (member :move-target *ik-param*)))
 	 (tc (cadr (member :target-coords *ik-param*)))
 	 (av (cdr (assoc :angle-vector kv)))
@@ -44,11 +45,19 @@
 		       float-vector
 		       (scale 1e-3 (send mt :difference-position tr))
 		       (send mt :difference-rotation tr)))
-		  move-target target-coords)))
+		  mt tc)))
 	  )
+    (setq cst
+	  (norm
+	   (apply
+	    #'concatenate
+	    (append
+	     (list float-vector)
+	     (cdr (assoc :dif ret))))))
     (cond
-     ((> *best-cost* (cdr (assoc :dif ret)))
-      (setq *best-cost* (cdr (assoc :dif ret)))
+     ((> *best-cost* cst)
+      (nlopt-log "publish ~A" str)
+      (setq *best-cost* cst)
       (ros::publish "/nlopt_ik_node/best_result"
 		    (instance std_msgs::string
 			      :init

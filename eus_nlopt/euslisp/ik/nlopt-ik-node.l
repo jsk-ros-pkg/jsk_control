@@ -82,7 +82,7 @@
 		    (send obj :slots)))))
     (format nil "#s(~A ~A)"
 	    (send (class obj) :name)
-	    (subseq buf 1 (- (length buf) 2))
+	    (subseq buf 1 (- (length buf) 1))
 	    ))
    ))
 
@@ -165,15 +165,16 @@
 			    (dump-object ret)))
     ))
 
-(ros::subscribe "/nlopt_ik_node/ik_request"
-		std_msgs::string
-		#'solve-nlopt-ik 1)
-(ros::advertise "/nlopt_ik_node/ik_response"
-                std_msgs::string)
-
-
-(do-until-key
- (if (not (ros::ok))
-     (return-from nil nil))
- (ros::spin-once)
- (ros::sleep))
+(cond
+ (*algorithm*
+  (ros::subscribe "/nlopt_ik_node/ik_request"
+		  std_msgs::string
+		  #'solve-nlopt-ik 1)
+  (ros::advertise "/nlopt_ik_node/ik_response"
+		  std_msgs::string)
+  ;;
+  (do-until-key
+   (if (not (ros::ok))
+       (return-from nil nil))
+   (ros::spin-once)
+   (ros::sleep))))
