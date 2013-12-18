@@ -4,6 +4,9 @@
 (defvar *algorithm* nil)
 (require "nlopt-ik-node.l")
 
+(if (not (and (boundp '*viewer*) *viewer*))
+    (objects *robot*))
+
 (defvar *ik-param*)
 (defvar *best-cost* 1e+100)
 
@@ -16,7 +19,7 @@
 (defun manage-nlopt-ik
   (msg)
   (let* ((str (send msg :data))
-	 (kv (read-from-string str))
+	 (kv (car (read-from-string (format nil "(~A)" str))))
 	 ret cst
 	 (mt (cadr (member :move-target *ik-param*)))
 	 (tc (cadr (member :target-coords *ik-param*)))
@@ -59,6 +62,10 @@
      ((> *best-cost* cst)
       (nlopt-log "publish ~A" str)
       (setq *best-cost* cst)
+      (cond
+       ((and (boundp '*viewer*) *viewer*)
+	(send *irtviewer* :draw-objects)
+	(x::window-main-one)))
       (ros::publish "/nlopt_ik_node/best_result"
 		    (instance std_msgs::string
 			      :init
@@ -76,8 +83,14 @@
 (ros::advertise "/nlopt_ik_node/best_result"
                 std_msgs::string)
 
+(ros::rate 10)
 (do-until-key
- (if (not (ros::ok))
-     (return-from nil nil))
+ (cond
+  ((not (ros::ok))
+   (return-from nil nil)))
+ (cond
+  ((and (boundp '*viewer*) *viewer*)
+   ;;(send *irtviewer* :draw-objects)
+   (x::window-main-one)))
  (ros::spin-once)
  (ros::sleep))

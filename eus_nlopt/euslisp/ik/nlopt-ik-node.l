@@ -92,15 +92,18 @@
   (str)
   (let* ((kv (read-from-string (format nil "(~A)" str))))
     ;; flatten
+    (nlopt-log "raw ~A" kv)
     (while (and kv
+		(listp kv)
 		(not (keywordp (cadr kv)))
 		(not (keywordp (car kv))))
       (setq kv (car kv)))
+    (nlopt-log "tar ~A" kv)
     ;;
     (cond
-     ((null kv)
-      (nlopt-log "null args")
-      (return-from solve-nlopt-ik nil)))
+     ((or (null kv) (not (listp kv)))
+      (nlopt-log "null args ~A" kv)
+      (return-from check-ik-param nil)))
     (cond
      ((not (keywordp (car kv)))
       (setq kv
@@ -175,6 +178,7 @@
   (ros::advertise "/nlopt_ik_node/ik_response"
 		  std_msgs::string)
   ;;
+  (ros::rate 3)
   (do-until-key
    (if (not (ros::ok))
        (return-from nil nil))
