@@ -1,3 +1,4 @@
+#!/usr/bin/env roseus
 
 (defvar *nlopt_ik_node_name* "nlopt_ik_manager")
 (defvar *algorithm* nil)

@@ -1,3 +1,4 @@
+#!/usr/bin/env roseus
 
 (require "nlopt-ik.l")
 
@@ -23,17 +24,18 @@
      ((string= str "STARO")
       (require "euslib/rbrain/irtrobot/staro.l")
       (staro))
-     ((string= str "ATLAS_V3")
-      (require "package://hrpsys_gazebo_atlas/euslisp/atlas-model.l")
-      (atlas-with-hand))
      ((string= str "ATLAS")
       (require "euslib/rbrain/irtrobot/atlas.l")
-      (atlas)))))
+      (atlas))
+     (t ;;(string= str "ATLAS_V3")
+      (require "package://hrpsys_gazebo_atlas/euslisp/atlas-model.l")
+      (atlas-with-hand))
+     )))
 
 (defvar *nlopt_ik_node_name*
   (format nil "nlopt_ik_node_~A" (send *robot* :name)))
 
-(objects *robot*)
+;;(objects *robot*)
 
 (ros::roseus-add-msgs "std_msgs")
 (ros::roseus *nlopt_ik_node_name*)
