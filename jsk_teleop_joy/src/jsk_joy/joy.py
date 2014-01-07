@@ -84,13 +84,23 @@ def joyCB(msg):
   new_pose = PoseStamped()
   new_pose.header.frame_id = '/map'
   new_pose.header.stamp = rospy.Time(0.0)
-  new_pose.pose.position.x = pre_pose.pose.position.x + status.left_analog_y / 50.0
-  new_pose.pose.position.y = pre_pose.pose.position.y + status.left_analog_x / 50.0
+  # move in local
+  if not status.R3:
+    local_xy_move = numpy.array((status.left_analog_y / 50.0,
+                                 status.left_analog_x / 50.0,
+                                 0.0, 
+                                 1.0))
+  else:
+    local_xy_move = numpy.array((0.0, 0.0, 0.0, 1.0))
   new_pose.pose.position.z = pre_pose.pose.position.z
   q = numpy.array((pre_pose.pose.orientation.x,
                    pre_pose.pose.orientation.y,
                    pre_pose.pose.orientation.z,
                    pre_pose.pose.orientation.w))
+  xy_move = numpy.dot(tf.transformations.quaternion_matrix(q),
+                      local_xy_move)
+  new_pose.pose.position.x = pre_pose.pose.position.x + xy_move[0]
+  new_pose.pose.position.y = pre_pose.pose.position.y + xy_move[1]
   (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(q)
   DTHETA = 0.02
   D = 0.005
@@ -118,17 +128,13 @@ def joyCB(msg):
   view.pitch = pre_view.pitch
   view.distance = pre_view.distance
   if status.R3:
-    if status.R1:
-      view.distance = view.distance - 0.1
-    elif status.R2:
-      view.distance = view.distance + 0.1
-    else:
-      # calc camera orietation
-      focus_diff = numpy.dot(view.cameraOrientation(),
-                             numpy.array((status.right_analog_x / 10.0 * view.distance,
-                                          status.right_analog_y / 10.0 * view.distance,
-                                          0)))
-      view.focus = view.focus + focus_diff
+    view.distance = view.distance + status.left_analog_y * 0.1
+    # calc camera orietation
+    focus_diff = numpy.dot(view.cameraOrientation(),
+                           numpy.array((status.right_analog_x / 10.0 * view.distance,
+                                        status.right_analog_y / 10.0 * view.distance,
+                                        0)))
+    view.focus = view.focus + focus_diff
   else:
     view.yaw = view.yaw - 0.5 * status.right_analog_x
     view.pitch = view.pitch + 0.5 * status.right_analog_y
