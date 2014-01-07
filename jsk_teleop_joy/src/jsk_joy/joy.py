@@ -51,7 +51,7 @@ class ViewProperty():
     m[2, 2] = f[2]
     return m
   def cameraPlacement(self):
-    TIME = 0.1
+    TIME = 0.05
     view_point = self.viewPoint()
     placement = CameraPlacement()
     placement.interpolation_mode = CameraPlacement.LINEAR
@@ -86,8 +86,12 @@ def joyCB(msg):
   new_pose.header.stamp = rospy.Time(0.0)
   # move in local
   if not status.R3:
-    local_xy_move = numpy.array((status.left_analog_y / 50.0,
-                                 status.left_analog_x / 50.0,
+    if status.square:
+      scale = 10.0
+    else:
+      scale = 30.0
+    local_xy_move = numpy.array((status.left_analog_y / scale,
+                                 status.left_analog_x / scale,
                                  0.0, 
                                  1.0))
   else:
@@ -106,13 +110,25 @@ def joyCB(msg):
   D = 0.005
   if not status.R3:
     if status.L1:
-      yaw = yaw + DTHETA
+      if status.square:
+        yaw = yaw + DTHETA * 5
+      else:
+        yaw = yaw + DTHETA
     elif status.R1:
-      yaw = yaw - DTHETA
+      if status.square:
+        yaw = yaw - DTHETA * 5
+      else:
+        yaw = yaw - DTHETA
     if status.L2:
-      new_pose.pose.position.z = pre_pose.pose.position.z + D
+      if status.square:
+        new_pose.pose.position.z = pre_pose.pose.position.z + D * 5.0
+      else:
+        new_pose.pose.position.z = pre_pose.pose.position.z + D
     elif status.R2:
-      new_pose.pose.position.z = pre_pose.pose.position.z - D
+      if status.square:
+        new_pose.pose.position.z = pre_pose.pose.position.z - D * 5.0
+      else:
+        new_pose.pose.position.z = pre_pose.pose.position.z - D
   new_q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
   new_pose.pose.orientation.x = new_q[0]
   new_pose.pose.orientation.y = new_q[1]
@@ -128,13 +144,33 @@ def joyCB(msg):
   view.pitch = pre_view.pitch
   view.distance = pre_view.distance
   if status.R3:
-    view.distance = view.distance + status.left_analog_y * 0.1
+    view.distance = view.distance - status.left_analog_y * 0.1
     # calc camera orietation
+    if status.left:
+      view_x = 1.0
+    elif status.right:
+      view_x = -1.0
+    else:
+      view_x = 0.0
+    if status.up:
+      view_y = 1.0
+    elif status.down:
+      view_y = -1.0
+    else:
+      view_y = 0.0
     focus_diff = numpy.dot(view.cameraOrientation(),
-                           numpy.array((status.right_analog_x / 10.0 * view.distance,
-                                        status.right_analog_y / 10.0 * view.distance,
+                           numpy.array((view_x / 10.0 / view.distance,
+                                        view_y / 10.0 / view.distance,
                                         0)))
     view.focus = view.focus + focus_diff
+    if status.L2 and status.R2:           #align to marker
+      view.distance = 1.0
+      view.focus = numpy.array((new_pose.pose.position.x,
+                                new_pose.pose.position.y,
+                                new_pose.pose.position.z))
+      #view.yaw = math.pi
+      view.yaw = yaw + math.pi
+      view.pitch = math.pi / 2.0 - 0.01
   else:
     view.yaw = view.yaw - 0.5 * status.right_analog_x
     view.pitch = view.pitch + 0.5 * status.right_analog_y
@@ -152,7 +188,7 @@ def publishInit():
 def main():
   global g_camera_pub, pre_view, g_interactive_pub, g_seq_num, g_interactive_full_pub
   g_seq_num = 0
-  rospy.sleep(5)
+  rospy.sleep(1)
   rospy.init_node('jsk_joy')
   pre_view = ViewProperty()
   g_camera_pub = rospy.Publisher('/rviz/camera_placement', CameraPlacement)
