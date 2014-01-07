@@ -1,0 +1,18 @@
+<package>
+  <description brief="jsk_joy">
+
+     jsk_joy
+
+  </description>
+  <author>Ryohei Ueda</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/jsk_joy</url>
+  <depend package="ps3joy" />
+  <depend package="tf" />
+  <depend package="view_controller_msgs" />
+  <depend package="interactive_markers" />
+  <depend package="visualization_msgs" />
+</package>
+
+
