@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-#
-# joystick input driver for Korg padKontrol input device
-#
-# Author: Ryohei Ueda
-#
+
+# joystick input driver for nanoKontrol input device
+# http://www.amazon.co.jp/KORG-USB-MIDI-%E3%82%B3%E3%83%B3%E3%83%88%E3%83%AD%E3%83%BC%E3%83%A9%E3%83%BC-NANO-KONTROL2/dp/B004M8UZS8
 
 import roslib;
 import rospy
