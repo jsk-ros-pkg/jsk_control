@@ -71,9 +71,7 @@ def main():
 
             for bi, i in zip(BUTTON_INDICES, range(len(BUTTON_INDICES))):
                if button_index == bi:
-                  print "hogehoge%s" % control
                   if control[2] == 127:
-                     print "fff%s" % control
                      m.buttons[i] = 1
                   else:
                      m.buttons[i] = 0
