@@ -119,12 +119,12 @@ def main():
             # scratch
             elif control[0] == 178:
                 for s, i in zip(SCRATCH_INDICES, range(len(SCRATCH_INDICES))):
-                if control[1] == s:
-                    if control[2] > 64:
-                        m.axes[i] = (control[2] - 65) / 15.0
-                    else:
-                        m.axes[i] = (control[2] - 63) / 15.0
-                    p = True
+                    if control[1] == s:
+                        if control[2] > 64:
+                            m.axes[i] = (control[2] - 65) / 15.0
+                        else:
+                            m.axes[i] = (control[2] - 63) / 15.0
+                        p = True
             else:
                continue
       if p:
