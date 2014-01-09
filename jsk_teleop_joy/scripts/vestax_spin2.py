@@ -15,11 +15,10 @@ from sensor_msgs.msg import *
 
 BUTTON_INDICES0 = range(32, 38)
 BUTTON_INDICES1 = [46, 47, 48, 49, 42, 43, 44, 98, 99, 100, 101, 102, 103, 35, 36, 37, 34, 104, 45, 50, 32, 33]
-#BUTTON_INDICES2 = [46, 47, 48, 49, 98, 99, 100]
 SCRATCH_INDICES = [16, 17]
 AXIS_INDICES0 = [16]
-AXIS_INDICES1 = [28, 27, 17, 18, 19, 20, 26, 16]
-AXIS_INDICES2 = [22, 17, 28, 19, 18, 21, 27, 20]
+AXIS_INDICES1 = [28, 27, 17, 18, 19, 20, 26, 16, 29]
+AXIS_INDICES2 = [22, 17, 28, 19, 18, 21, 27, 20, 23]
 
 
 
@@ -34,11 +33,15 @@ def main():
    if len(sys.argv) > 1:
       input_dev = int(sys.argv[1])
    else:
-      print "no input device supplied. will try to use default device."
-      input_dev = pygame.midi.get_default_input_id()
-      if input_dev == -1:
-         print "No default MIDI input device"
-         exit(-1)
+       for i in range(devices):
+           info = pygame.midi.get_device_info(i)
+           if 'Vestax Spin 2 MIDI' in info[1]:
+               if info[2] == 1: # is input device?
+                   input_dev = i
+                   break
+       if not input_dev:
+           print "No MIDI device"
+           exit(-1)
    print "Using input device %d" % input_dev
 
    controller = pygame.midi.Input(input_dev)
