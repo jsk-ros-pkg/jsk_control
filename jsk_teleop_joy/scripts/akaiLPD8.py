@@ -15,8 +15,8 @@ import sys
 from sensor_msgs.msg import *
 
 
-BUTTON_INDICES = [43, 45, 47, 48,
-                  36, 38, 40, 41]
+BUTTON_INDICES = [40, 41, 42, 43,
+                  36, 37, 38, 39]
 AXIS_INDICES = [1, 2, 3, 4,
                 5, 6, 7, 8]
 
@@ -68,10 +68,10 @@ def main():
 
             for bi, i in zip(BUTTON_INDICES, range(len(BUTTON_INDICES))):
                if button_index == bi:
-                  if control[0] == 147:
+                  if control[0] == 144:
                      m.buttons[i] = 1
                      p = True
-                  elif control[0] == 131:
+                  elif control[0] == 128:
                      m.buttons[i] = 0
                      p = True
             for bi, i in zip(AXIS_INDICES, range(len(AXIS_INDICES))):
