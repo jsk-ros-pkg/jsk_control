@@ -27,7 +27,8 @@ BUTTON_INDICES = [0, 1, 2, 3, 4, 5, 6, 7,
                   ]
 
 AXIS_INDICES = []
-
+COLOR_R = 3
+COLOR_G = 3
 
 def main():
    rospy.init_node('launchpad_mini_joy')
@@ -48,9 +49,22 @@ def main():
       if input_dev == -1:
          rospy.logerr("No default MIDI input device")
          exit(-1)
+
+   if len(sys.argv) > 2:
+      output_dev = int(sys.argv[2])
+   else:
+      rospy.loginfo("no output device supplied. will try to use default device.")
+      output_dev = pygame.midi.get_default_output_id()
+
+      if output_dev == -1:
+         rospy.logerr("No default MIDI output device")
+         exit(-1)
+
    rospy.loginfo("Using input device %d" % input_dev)
+   rospy.loginfo("Using output device %d" % output_dev)
 
    controller = pygame.midi.Input(input_dev)
+   midi_output = pygame.midi.Output(output_dev)
    rospy.loginfo("Opened it")
 
    m = Joy()
@@ -85,8 +99,10 @@ def main():
 
                   if control[2] == 127:
                      m.buttons[i] = 1
+                     midi_output.write([[[button_type ,button_index , COLOR_G * 4 + COLOR_R ], timestamp]])
                   else:
                      m.buttons[i] = 0
+                     midi_output.write([[[button_type ,button_index , 0], timestamp]])
                p = True
             for bi, i in zip(AXIS_INDICES, range(len(AXIS_INDICES))):
                if button_index == bi:
