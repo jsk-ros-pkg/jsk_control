@@ -16,7 +16,7 @@ import sys
 from sensor_msgs.msg import *
 
 BUTTON_INDICES0 = range(32, 38)
-BUTTON_INDICES1 = [46, 47, 48, 49, 98, 99, 100, 101, 102, 103, 35, 36, 37, 34, 104, 45, 50, 32, 33]
+BUTTON_INDICES1 = [46, 47, 48, 49, 42, 43, 44, 98, 99, 100, 101, 102, 103, 35, 36, 37, 34, 104, 45, 50, 32, 33]
 #BUTTON_INDICES2 = [46, 47, 48, 49, 98, 99, 100]
 SCRATCH_INDICES = [16, 17]
 AXIS_INDICES0 = [16]
@@ -50,8 +50,8 @@ def main():
    pub = rospy.Publisher('/joy_pad', Joy, latch=True)
 
    m = Joy()
-   m.axes = [ 0 ] * 19
-   m.buttons = [ 0 ] * 46
+   m.axes = [ 0 ] * (2 + len(AXIS_INDICES0) + len(AXIS_INDICES1) + len(AXIS_INDICES2))
+   m.buttons = [ 0 ] * (len(BUTTON_INDICES0) + 2 * len(BUTTON_INDICES1))
    mode = None
 
    p = False
