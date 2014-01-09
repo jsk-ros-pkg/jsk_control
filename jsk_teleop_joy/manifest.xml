@@ -8,6 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/jsk_joy</url>
+  <rosdep name="python-pygame" />
   <depend package="ps3joy" />
   <depend package="tf" />
   <depend package="view_controller_msgs" />
