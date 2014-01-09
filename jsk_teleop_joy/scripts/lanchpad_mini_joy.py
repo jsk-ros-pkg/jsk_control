@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-# joystick input driver for nanoKontrol input device
-
+# joystick input driver for Launchpad Mini input device
+# http://www.amazon.com/Novation-Launchpad-Controller-Performing-Producing/dp/B00F9SWK9M
 
 import roslib
 import rospy
