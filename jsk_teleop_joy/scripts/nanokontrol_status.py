@@ -3,7 +3,7 @@
 import rospy
 import roslib
 
-class NanoKONTROL2():
+class NanoKONTROL2Status():
     def __init__(self, msg):
         if msg.buttons[0] == 1:
             self.track_left = True
@@ -170,7 +170,7 @@ class NanoKONTROL2():
 import pprint
 
 def joyCB(msg):
-    status = NanoKONTROL2(msg)
+    status = NanoKONTROL2Status(msg)
     pprint.PrettyPrinter().pprint(status.__dict__)
 
 
