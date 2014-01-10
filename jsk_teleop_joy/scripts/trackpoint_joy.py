@@ -32,24 +32,6 @@ def main():
         trackpoint_joy_pub.publish(joy_msg)
         # rospy.sleep(0.1)
     tp_file.close();
-        
-
-class TrackpointStatus():
-    def __init__(self, msg):
-        if msg.buttons[0] == 1:
-            self.left = True
-        else:
-            self.left = False
-        if msg.buttons[1] == 1:
-            self.middle = True
-        else:
-            self.middle = False
-        if msg.buttons[2] == 1:
-            self.right = True
-        else:
-            self.right = False
-        self.x = msg.axes[0]
-        self.y = msg.axes[1]
 
 
 if __name__ == '__main__':
