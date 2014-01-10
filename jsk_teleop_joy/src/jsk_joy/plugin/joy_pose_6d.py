@@ -13,6 +13,8 @@ class JoyPose6D(RVizViewController):
     self.pose_pub = rospy.Publisher('pose', PoseStamped)
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
+    if status.triangle and not history.latest().triangle:
+      self.follow_view = not self.follow_view
     RVizViewController.joyCB(self, status, history)
     new_pose = PoseStamped()
     new_pose.header.frame_id = '/map'

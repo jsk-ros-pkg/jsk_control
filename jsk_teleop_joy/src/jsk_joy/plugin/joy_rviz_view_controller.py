@@ -68,8 +68,8 @@ class RVizViewController(JSKJoyPlugin):
         view_updated = True
       if status.right_analog_y != 0.0:
         view_updated = True
-      view.yaw = view.yaw - 0.2 * status.right_analog_x
-      view.pitch = view.pitch + 0.2 * status.right_analog_y
+      view.yaw = view.yaw - 0.1 * status.right_analog_x
+      view.pitch = view.pitch + 0.1 * status.right_analog_y
       if view.pitch > math.pi / 2.0 - 0.01:
         view.pitch = math.pi / 2.0 - 0.01
       elif view.pitch < - math.pi / 2.0 + 0.01:

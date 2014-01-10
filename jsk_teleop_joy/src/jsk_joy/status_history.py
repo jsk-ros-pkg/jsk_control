@@ -13,3 +13,5 @@ class StatusHistory():
       if not proc(status):
         return False
     return True
+  def latest(self):
+    return self.buffer[-1]
