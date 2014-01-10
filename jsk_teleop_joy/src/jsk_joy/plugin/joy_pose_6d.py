@@ -53,6 +53,26 @@ class JoyPose6D(RVizViewController):
           yaw = yaw - DTHETA * 5
         else:
           yaw = yaw - DTHETA
+      if status.up:
+        if status.square:
+          pitch = pitch + DTHETA * 5
+        else:
+          pitch = pitch + DTHETA
+      elif status.down:
+        if status.square:
+          pitch = pitch - DTHETA * 5
+        else:
+          pitch = pitch - DTHETA
+      if status.right:
+        if status.square:
+          roll = roll + DTHETA * 5
+        else:
+          roll = roll + DTHETA
+      elif status.left:
+        if status.square:
+          roll = roll - DTHETA * 5
+        else:
+          roll = roll - DTHETA
       if status.L2:
         if status.square:
           new_pose.pose.position.z = pre_pose.pose.position.z + D * 5.0
