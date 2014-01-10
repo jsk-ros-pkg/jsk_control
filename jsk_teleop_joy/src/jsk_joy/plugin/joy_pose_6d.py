@@ -4,15 +4,16 @@ from geometry_msgs.msg import PoseStamped
 import tf
 import rospy
 import numpy
+import math
 
 class JoyPose6D(RVizViewController):
   def __init__(self):
     RVizViewController.__init__(self, 'joyPose6D')
     self.pre_pose = PoseStamped()
     self.pose_pub = rospy.Publisher('pose', PoseStamped)
-  def joyCB(self, status):
+  def joyCB(self, status, history):
     pre_pose = self.pre_pose
-    RVizViewController.joyCB(self, status)
+    RVizViewController.joyCB(self, status, history)
     new_pose = PoseStamped()
     new_pose.header.frame_id = '/map'
     new_pose.header.stamp = rospy.Time(0.0)
@@ -24,8 +25,14 @@ class JoyPose6D(RVizViewController):
         scale = 20.0
       else:
         scale = 60.0
-      local_xy_move = numpy.array((status.left_analog_y / scale,
-                                   status.left_analog_x / scale,
+      x_sign = 1.0
+      if status.left_analog_x < 0:
+        x_sign = -1.0
+      y_sign = 1.0
+      if status.left_analog_y < 0:
+        y_sign = -1.0
+      local_xy_move = numpy.array((status.left_analog_y * status.left_analog_y * y_sign / scale,
+                                   status.left_analog_x * status.left_analog_x * x_sign / scale,
                                    0.0, 
                                    1.0))
     else:
@@ -46,43 +53,59 @@ class JoyPose6D(RVizViewController):
       if status.L1:
         if status.square:
           yaw = yaw + DTHETA * 5
+        elif history.all(lambda s: s.L1):
+          yaw = yaw + DTHETA * 2
         else:
           yaw = yaw + DTHETA
       elif status.R1:
         if status.square:
           yaw = yaw - DTHETA * 5
+        elif history.all(lambda s: s.R1):
+          yaw = yaw - DTHETA * 2
         else:
           yaw = yaw - DTHETA
       if status.up:
         if status.square:
           pitch = pitch + DTHETA * 5
+        elif history.all(lambda s: s.up):
+          pitch = pitch + DTHETA * 2
         else:
           pitch = pitch + DTHETA
       elif status.down:
         if status.square:
           pitch = pitch - DTHETA * 5
+        elif history.all(lambda s: s.down):
+          pitch = pitch - DTHETA * 2
         else:
           pitch = pitch - DTHETA
       if status.right:
         if status.square:
           roll = roll + DTHETA * 5
+        elif history.all(lambda s: s.right):
+          roll = roll + DTHETA * 2
         else:
           roll = roll + DTHETA
       elif status.left:
         if status.square:
           roll = roll - DTHETA * 5
+        elif history.all(lambda s: s.left):
+          roll = roll - DTHETA * 2
         else:
           roll = roll - DTHETA
       if status.L2:
         if status.square:
-          new_pose.pose.position.z = pre_pose.pose.position.z + D * 5.0
+          new_pose.pose.position.z = pre_pose.pose.position.z + D * 10.0
+        elif history.all(lambda s: s.L2):
+          new_pose.pose.position.z = pre_pose.pose.position.z + D * 4.0
         else:
-          new_pose.pose.position.z = pre_pose.pose.position.z + D
+          new_pose.pose.position.z = pre_pose.pose.position.z + D * 2.0
       elif status.R2:
         if status.square:
-          new_pose.pose.position.z = pre_pose.pose.position.z - D * 5.0
+          new_pose.pose.position.z = pre_pose.pose.position.z - D * 10.0
+        elif history.all(lambda s: s.R2):
+          new_pose.pose.position.z = pre_pose.pose.position.z - D * 4.0
         else:
-          new_pose.pose.position.z = pre_pose.pose.position.z - D
+          new_pose.pose.position.z = pre_pose.pose.position.z - D * 2.0
     new_q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
     new_pose.pose.orientation.x = new_q[0]
     new_pose.pose.orientation.y = new_q[1]

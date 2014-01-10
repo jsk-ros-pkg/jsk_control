@@ -11,6 +11,7 @@ class CameraView():
     self.pitch = 0.0
     self.distance = 1.0
     self.focus = numpy.array((0, 0, 0))
+    
   def viewPoint(self):
     p = numpy.array((self.distance * math.cos(self.yaw) * math.cos(self.pitch) + self.focus[0],
                      self.distance * math.sin(self.yaw) * math.cos(self.pitch) + self.focus[1],
@@ -37,7 +38,8 @@ class CameraView():
     m[2, 2] = f[2]
     return m
   def cameraPlacement(self):
-    TIME = 0.05
+    #TIME = 0.05
+    TIME = 0.00
     view_point = self.viewPoint()
     placement = CameraPlacement()
     placement.interpolation_mode = CameraPlacement.LINEAR

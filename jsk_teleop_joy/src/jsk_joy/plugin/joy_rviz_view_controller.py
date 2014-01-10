@@ -14,8 +14,9 @@ class RVizViewController(JSKJoyPlugin):
   def __init__(self, name):
     JSKJoyPlugin.__init__(self, name)
     self.camera_pub = rospy.Publisher('/rviz/camera_placement', CameraPlacement)
+    self.follow_view = rospy.get_param('~follow_view', False)
     self.pre_view = CameraView()
-  def joyCB(self, status):
+  def joyCB(self, status, history):
     pre_view = self.pre_view
     view = CameraView()
     view.focus = numpy.copy(pre_view.focus)
@@ -51,7 +52,7 @@ class RVizViewController(JSKJoyPlugin):
       view.focus = view.focus + focus_diff
       if status.L2 and status.R2:           #align to marker
         view_updated = True
-        view.distance = 1.5
+        view.distance = 1.0
         view.focus = numpy.array((self.pre_pose.pose.position.x,
                                   self.pre_pose.pose.position.y,
                                   self.pre_pose.pose.position.z))
@@ -73,6 +74,20 @@ class RVizViewController(JSKJoyPlugin):
         view.pitch = math.pi / 2.0 - 0.01
       elif view.pitch < - math.pi / 2.0 + 0.01:
         view.pitch = - math.pi / 2.0 + 0.01
+
+    if self.follow_view:
+      view_updated = True
+      view.distance = 0.8
+      view.focus = numpy.array((self.pre_pose.pose.position.x,
+                                self.pre_pose.pose.position.y,
+                                self.pre_pose.pose.position.z))
+      #view.yaw = math.pi
+      (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(numpy.array((self.pre_pose.pose.orientation.x,
+                                                                                 self.pre_pose.pose.orientation.y,
+                                                                                 self.pre_pose.pose.orientation.z,
+                                                                                 self.pre_pose.pose.orientation.w)))
+      view.yaw = yaw + math.pi
+      view.pitch = math.pi / 2.0 - 0.01
     if view_updated:
       self.camera_pub.publish(view.cameraPlacement())
     self.pre_view = view

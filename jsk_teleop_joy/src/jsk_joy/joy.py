@@ -12,10 +12,12 @@ from sensor_msgs.msg import Joy
 import tf.transformations
 from joy_status import XBoxStatus, PS3Status
 from plugin_manager import PluginManager
+from status_history import StatusHistory
 
 class JoyManager():
   def __init__(self):
     self.pre_status = None
+    self.history = StatusHistory(max_length=50)
     self.controller_type = rospy.get_param('~controller_type', 'xbox')
     self.plugins = rospy.get_param('~plugins', [])
     self.current_plugin_index = 0
@@ -46,12 +48,13 @@ class JoyManager():
     
   def joyCB(self, msg):
     status = self.JoyStatus(msg)
+    
     if self.pre_status and status.select and not self.pre_status.select:
       self.nextPlugin()
     else:
-      self.current_plugin.joyCB(status)
+      self.current_plugin.joyCB(status, self.history)
     self.pre_status = status
-    
+    self.history.add(status)
     
 def main():
   global g_manager
