@@ -1,0 +1,4 @@
+<library path="src">
+  <class name="JoyPose6D" type="jsk_joy.plugin.joy_pose_6d.JoyPose6D">
+  </class>
+</library>
