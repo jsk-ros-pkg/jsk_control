@@ -10,13 +10,26 @@ import rospy
 import numpy
 import math
 
+def signedSquare(val):
+  if val > 0:
+    sign = 1
+  else:
+    sign = -1
+  return val * val * sign
+
 class RVizViewController(JSKJoyPlugin):
   def __init__(self, name):
     JSKJoyPlugin.__init__(self, name)
     self.camera_pub = rospy.Publisher('/rviz/camera_placement', CameraPlacement)
     self.follow_view = rospy.get_param('~follow_view', False)
     self.pre_view = CameraView()
+    self.counter = 0
   def joyCB(self, status, history):
+    self.counter = self.counter + 1
+    if self.counter > 1024:
+      self.counter = 0
+    if self.counter % 2 != 0:
+      pass
     pre_view = self.pre_view
     view = CameraView()
     view.focus = numpy.copy(pre_view.focus)
@@ -26,7 +39,7 @@ class RVizViewController(JSKJoyPlugin):
     view_updated = False
     if status.R3:
       if not status.left_analog_y == 0.0:
-        view.distance = view.distance - status.left_analog_y * 0.1
+        view.distance = view.distance - signedSquare(status.left_analog_y) * 0.02
         view_updated = True
       # calc camera orietation
       if status.left:
@@ -68,8 +81,9 @@ class RVizViewController(JSKJoyPlugin):
         view_updated = True
       if status.right_analog_y != 0.0:
         view_updated = True
-      view.yaw = view.yaw - 0.1 * status.right_analog_x
-      view.pitch = view.pitch + 0.1 * status.right_analog_y
+      
+      view.yaw = view.yaw - 0.01 * signedSquare(status.right_analog_x)
+      view.pitch = view.pitch + 0.01 * signedSquare(status.right_analog_y)
       if view.pitch > math.pi / 2.0 - 0.01:
         view.pitch = math.pi / 2.0 - 0.01
       elif view.pitch < - math.pi / 2.0 + 0.01:
@@ -88,6 +102,7 @@ class RVizViewController(JSKJoyPlugin):
                                                                                  self.pre_pose.pose.orientation.w)))
       view.yaw = yaw + math.pi
       view.pitch = math.pi / 2.0 - 0.01
-    if view_updated:
+    
+    if view_updated and self.counter % 10 == 0:
       self.camera_pub.publish(view.cameraPlacement())
     self.pre_view = view

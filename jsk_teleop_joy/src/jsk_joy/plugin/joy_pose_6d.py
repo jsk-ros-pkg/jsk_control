@@ -1,4 +1,3 @@
-from jsk_joy.joy_plugin import JSKJoyPlugin
 from joy_rviz_view_controller import RVizViewController
 from geometry_msgs.msg import PoseStamped
 import tf
@@ -8,7 +7,7 @@ import math
 
 class JoyPose6D(RVizViewController):
   def __init__(self):
-    RVizViewController.__init__(self, 'joyPose6D')
+    RVizViewController.__init__(self, 'JoyPose6D')
     self.pre_pose = PoseStamped()
     self.pose_pub = rospy.Publisher('pose', PoseStamped)
   def joyCB(self, status, history):
