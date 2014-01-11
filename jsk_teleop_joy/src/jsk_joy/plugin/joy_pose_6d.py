@@ -5,6 +5,13 @@ import rospy
 import numpy
 import math
 
+def signedSquare(val):
+ if val > 0:
+   sign = 1
+ else:
+   sign = -1
+ return val * val * sign
+
 class JoyPose6D(RVizViewController):
   def __init__(self, name='JoyPose6D', publish_pose=True):
     RVizViewController.__init__(self, name)
@@ -23,36 +30,46 @@ class JoyPose6D(RVizViewController):
     new_pose.header.stamp = rospy.Time(0.0)
     # move in local
     if not status.R3:
+      # xy
       if status.square:
         scale = 10.0
-      elif status.left_analog_y * status.left_analog_y + status.left_analog_x * status.left_analog_x == 1.0:
-        scale = 20.0
       else:
-        scale = 60.0
-      x_sign = 1.0
-      if status.left_analog_x < 0:
-        x_sign = -1.0
-      y_sign = 1.0
-      if status.left_analog_y < 0:
-        y_sign = -1.0
-      local_xy_move = numpy.array((status.left_analog_y * status.left_analog_y * y_sign / scale,
-                                   status.left_analog_x * status.left_analog_x * x_sign / scale,
-                                   0.0, 
-                                   1.0))
+        dist = status.left_analog_y * status.left_analog_y + status.left_analog_x * status.left_analog_x
+        if dist > 0.9:
+          scale = 20.0
+        else:
+          scale = 60.0
+      x_diff = signedSquare(status.left_analog_y) / scale
+      y_diff = signedSquare(status.left_analog_x) / scale
+      # z
+      if status.L2:
+        z_diff = 0.005
+      elif status.R2:
+        z_diff = -0.005
+      else:
+        z_diff = 0.0
+      if status.square:
+        z_scale = 10.0
+      elif history.all(lambda s: s.L2) or history.all(lambda s: s.R2):
+        z_scale = 4.0
+      else:
+        z_scale = 2.0
+      local_move = numpy.array((x_diff, y_diff,
+                                z_diff * z_scale, 
+                                1.0))
     else:
-      local_xy_move = numpy.array((0.0, 0.0, 0.0, 1.0))
-    new_pose.pose.position.z = pre_pose.pose.position.z
+      local_move = numpy.array((0.0, 0.0, 0.0, 1.0))
     q = numpy.array((pre_pose.pose.orientation.x,
                      pre_pose.pose.orientation.y,
                      pre_pose.pose.orientation.z,
                      pre_pose.pose.orientation.w))
-    xy_move = numpy.dot(tf.transformations.quaternion_matrix(q),
-                        local_xy_move)
-    new_pose.pose.position.x = pre_pose.pose.position.x + xy_move[0]
-    new_pose.pose.position.y = pre_pose.pose.position.y + xy_move[1]
+    xyz_move = numpy.dot(tf.transformations.quaternion_matrix(q),
+                         local_move)
+    new_pose.pose.position.x = pre_pose.pose.position.x + xyz_move[0]
+    new_pose.pose.position.y = pre_pose.pose.position.y + xyz_move[1]
+    new_pose.pose.position.z = pre_pose.pose.position.z + xyz_move[2]
     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(q)
     DTHETA = 0.02
-    D = 0.005
     if not status.R3:
       if status.L1:
         if status.square:
@@ -96,20 +113,6 @@ class JoyPose6D(RVizViewController):
           roll = roll - DTHETA * 2
         else:
           roll = roll - DTHETA
-      if status.L2:
-        if status.square:
-          new_pose.pose.position.z = pre_pose.pose.position.z + D * 10.0
-        elif history.all(lambda s: s.L2):
-          new_pose.pose.position.z = pre_pose.pose.position.z + D * 4.0
-        else:
-          new_pose.pose.position.z = pre_pose.pose.position.z + D * 2.0
-      elif status.R2:
-        if status.square:
-          new_pose.pose.position.z = pre_pose.pose.position.z - D * 10.0
-        elif history.all(lambda s: s.R2):
-          new_pose.pose.position.z = pre_pose.pose.position.z - D * 4.0
-        else:
-          new_pose.pose.position.z = pre_pose.pose.position.z - D * 2.0
     new_q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
     new_pose.pose.orientation.x = new_q[0]
     new_pose.pose.orientation.y = new_q[1]
