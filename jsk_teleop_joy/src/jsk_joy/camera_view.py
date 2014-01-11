@@ -9,9 +9,10 @@ class CameraView():
   def __init__(self):
     self.yaw = 0.0
     self.pitch = 0.0
+    #self.roll = 0.0
     self.distance = 1.0
     self.focus = numpy.array((0, 0, 0))
-    
+    self.z_up = numpy.array((0, 0, 1))
   def viewPoint(self):
     p = numpy.array((self.distance * math.cos(self.yaw) * math.cos(self.pitch) + self.focus[0],
                      self.distance * math.sin(self.yaw) * math.cos(self.pitch) + self.focus[1],
@@ -45,17 +46,16 @@ class CameraView():
     placement.interpolation_mode = CameraPlacement.LINEAR
     placement.time_from_start = rospy.Duration(TIME)
     placement.eye.header.stamp = rospy.Time(0.0)
-    placement.eye.header.frame_id = "/map"
     placement.eye.point.x = view_point[0]
     placement.eye.point.y = view_point[1]
     placement.eye.point.z = view_point[2]
     placement.focus.header.stamp = rospy.Time(0.0)
-    placement.focus.header.frame_id = "/map"
     placement.focus.point.x = self.focus[0]
     placement.focus.point.y = self.focus[1]
     placement.focus.point.z = self.focus[2]
     placement.up.header.stamp = rospy.Time(0.0)
-    placement.up.header.frame_id = "/map"
-    placement.up.vector.z = 1.0
+    placement.up.vector.x = self.z_up[0]
+    placement.up.vector.y = self.z_up[1]
+    placement.up.vector.z = self.z_up[2]
     placement.mouse_interaction_mode = CameraPlacement.ORBIT
     return placement

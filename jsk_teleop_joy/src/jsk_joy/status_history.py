@@ -15,3 +15,5 @@ class StatusHistory():
     return True
   def latest(self):
     return self.buffer[-1]
+  def length(self):
+    return len(self.buffer)

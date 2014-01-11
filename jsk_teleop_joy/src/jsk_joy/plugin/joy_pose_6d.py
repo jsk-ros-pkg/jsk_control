@@ -16,17 +16,21 @@ class JoyPose6D(RVizViewController):
   def __init__(self, name='JoyPose6D', publish_pose=True):
     RVizViewController.__init__(self, name)
     self.pre_pose = PoseStamped()
+    self.pre_pose.pose.orientation.w = 1
     self.publish_pose = publish_pose
     if self.publish_pose:
       self.pose_pub = rospy.Publisher('pose', PoseStamped)
     self.support_follow_view = True
+    self.frame_id = rospy.get_param('~frame_id', '/map')
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
-    if status.triangle and not history.latest().triangle:
-      self.follow_view = not self.follow_view
+    if history.length() > 0:
+      latest = history.latest()
+      if status.R3 and status.L2 and status.R2 and not (latest.R3 and latest.L2 and latest.R2):
+        self.follow_view = not self.follow_view
     RVizViewController.joyCB(self, status, history)
     new_pose = PoseStamped()
-    new_pose.header.frame_id = '/map'
+    new_pose.header.frame_id = self.frame_id
     new_pose.header.stamp = rospy.Time(0.0)
     # move in local
     if not status.R3:
@@ -68,7 +72,9 @@ class JoyPose6D(RVizViewController):
     new_pose.pose.position.x = pre_pose.pose.position.x + xyz_move[0]
     new_pose.pose.position.y = pre_pose.pose.position.y + xyz_move[1]
     new_pose.pose.position.z = pre_pose.pose.position.z + xyz_move[2]
-    (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(q)
+    roll = 0.0
+    pitch = 0.0
+    yaw = 0.0
     DTHETA = 0.02
     if not status.R3:
       if status.L1:
@@ -113,7 +119,8 @@ class JoyPose6D(RVizViewController):
           roll = roll - DTHETA * 2
         else:
           roll = roll - DTHETA
-    new_q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+    diff_q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+    new_q = tf.transformations.quaternion_multiply(q, diff_q)
     new_pose.pose.orientation.x = new_q[0]
     new_pose.pose.orientation.y = new_q[1]
     new_pose.pose.orientation.z = new_q[2]
