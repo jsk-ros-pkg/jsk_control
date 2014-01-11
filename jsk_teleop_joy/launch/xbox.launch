@@ -11,7 +11,8 @@
     <param name="controller_type" value="xbox" />
     <param name="follow_view" value="true" />
     <rosparam>
-      plugins: ['JoyPose6D']
+#      plugins: ['JoyPose6D', 'JoyFootstep']
+       plugins: ['JoyFootstep']
     </rosparam>
   </node>
 </launch>

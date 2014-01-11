@@ -89,7 +89,7 @@ class RVizViewController(JSKJoyPlugin):
       elif view.pitch < - math.pi / 2.0 + 0.01:
         view.pitch = - math.pi / 2.0 + 0.01
 
-    if self.follow_view:
+    if self.follow_view and self.support_follow_view:
       view_updated = True
       view.distance = 0.8
       view.focus = numpy.array((self.pre_pose.pose.position.x,

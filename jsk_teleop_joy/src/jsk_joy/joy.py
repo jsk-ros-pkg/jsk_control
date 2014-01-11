@@ -17,7 +17,7 @@ from status_history import StatusHistory
 class JoyManager():
   def __init__(self):
     self.pre_status = None
-    self.history = StatusHistory(max_length=50)
+    self.history = StatusHistory(max_length=10)
     self.controller_type = rospy.get_param('~controller_type', 'xbox')
     self.plugins = rospy.get_param('~plugins', [])
     self.current_plugin_index = 0

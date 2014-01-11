@@ -6,10 +6,13 @@ import numpy
 import math
 
 class JoyPose6D(RVizViewController):
-  def __init__(self):
-    RVizViewController.__init__(self, 'JoyPose6D')
+  def __init__(self, name='JoyPose6D', publish_pose=True):
+    RVizViewController.__init__(self, name)
     self.pre_pose = PoseStamped()
-    self.pose_pub = rospy.Publisher('pose', PoseStamped)
+    self.publish_pose = publish_pose
+    if self.publish_pose:
+      self.pose_pub = rospy.Publisher('pose', PoseStamped)
+    self.support_follow_view = True
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
     if status.triangle and not history.latest().triangle:
@@ -112,6 +115,7 @@ class JoyPose6D(RVizViewController):
     new_pose.pose.orientation.y = new_q[1]
     new_pose.pose.orientation.z = new_q[2]
     new_pose.pose.orientation.w = new_q[3]
-    self.pose_pub.publish(new_pose)
+    if self.publish_pose:
+      self.pose_pub.publish(new_pose)
     self.pre_pose = new_pose
 

@@ -1,5 +1,5 @@
 import os
-
+import sys, traceback
 import rospy
 
 from rospkg import RosPack
@@ -31,6 +31,7 @@ class PluginManager():
             self.plugins.append(class_ref())
         except:
           rospy.logerr('failed to load %s' % (plugin))
+          traceback.print_exc(file=sys.stdout)
     return self.plugins
   def loadPlugins(self):
     """
