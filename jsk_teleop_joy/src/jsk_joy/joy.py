@@ -10,7 +10,7 @@ roslib.load_manifest('jsk_joy')
 
 from sensor_msgs.msg import Joy
 import tf.transformations
-from joy_status import XBoxStatus, PS3Status
+from joy_status import XBoxStatus, PS3Status, PS3WiredStatus
 from plugin_manager import PluginManager
 from status_history import StatusHistory
 
@@ -25,6 +25,8 @@ class JoyManager():
       self.JoyStatus = XBoxStatus
     elif self.controller_type == 'ps3':
       self.JoyStatus = PS3Status
+    elif self.controller_type == 'ps3wired':
+      self.JoyStatus = PS3WiredStatus
     self.plugin_manager = PluginManager('jsk_joy')
     self.loadPlugins()
   def loadPlugins(self):
