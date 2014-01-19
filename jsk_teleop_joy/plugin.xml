@@ -5,4 +5,6 @@
   </class>
   <class name="JoyFootstep" type="jsk_joy.plugin.joy_footstep.JoyFootstep">
   </class>
+  <class name="JoyFootstepPlanner" type="jsk_joy.plugin.joy_footstep_planner.JoyFootstepPlanner">
+  </class>
 </library>

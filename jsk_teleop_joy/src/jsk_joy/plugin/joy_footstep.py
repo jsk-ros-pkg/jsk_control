@@ -36,12 +36,13 @@ class JoyFootstep(JoyPose6D):
     self.footstep_pub = rospy.Publisher('/footstep', FootstepArray)
     self.footsteps = []
     self.frame_id = rospy.get_param('~frame_id', '/map')
+    
   def joyCB(self, status, history):
     JoyPose6D.joyCB(self, status, history)
     footsteps = FootstepArray()
     footsteps.header.frame_id = self.frame_id
     footsteps.header.stamp = rospy.Time(0.0)
-
+    
     if status.triangle and not history.latest().triangle:
       # remove the latest one
       if len(self.footsteps) >= 2:

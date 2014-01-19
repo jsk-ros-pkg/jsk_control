@@ -15,6 +15,7 @@
   <depend package="interactive_markers" />
   <depend package="visualization_msgs" />
   <depend package="jsk_footstep_msgs" />
+  <depend package="jsk_footstep_planner" />
   <export>
     <jsk_joy plugin="${prefix}/plugin.xml"/>
   </export>
