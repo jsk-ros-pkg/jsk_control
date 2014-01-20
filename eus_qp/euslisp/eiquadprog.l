@@ -2,7 +2,7 @@
 
 (defforeign _solve-eiquadprog m "solve_eiquadprog"
   (:string :string ;; min xTGx/2 + g0x
-	   :string :string ;; CEx = ce
+	   :string :string ;; CEx + ce = 0
 	   :string :string ;; CIx + ci > 0
 	   :string ;; ret
 	   :integer ;; |x|
@@ -98,7 +98,7 @@
 	 (G eval-weight-matrix)
 	 (g0 eval-coeff-vector)
 	 (CE eq-matrix)
-	 (ce0 eq-vector)
+	 (ce0 (scale -1 eq-vector))
 	 (CI
 	  (matrix-append
 	   (flatten
@@ -155,7 +155,7 @@
 	  (make-matrix 3 3 '((2.1 0.0 1.0) (1.5 2.2 0.0) (1.2 1.3 3.1)))
 	  :eval-coeff-vector (float-vector 6.0 1.0 1.0)
 	  :eq-matrix (make-matrix 1 3 '((1.0 2.0 -1.0)))
-	  :eq-vector (float-vector -4)
+	  :eq-vector (float-vector 4)
 	  :non-eq-matrix
 	  (make-matrix
 	   4 3
