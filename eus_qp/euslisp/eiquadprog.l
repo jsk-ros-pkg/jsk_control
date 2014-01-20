@@ -109,7 +109,7 @@
 		 (scale-matrix -1 (unit-matrix (length f0-max))))
 	     (if (plusp (length non-eq-min-vector))
 		 non-eq-matrix)
-	     (if (plusp (length non-eq-min-vector))
+	     (if (plusp (length non-eq-max-vector))
 		 (scale-matrix -1 non-eq-matrix))))
 	   '(1 0)))
 	 (ci0
