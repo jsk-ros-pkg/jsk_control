@@ -84,21 +84,21 @@
    (f0 #F(0))
    (eval-weight-matrix (unit-matrix (length f0)))
    (eval-coeff-vector (scale 0 f0))
-   (eq-matrix #2f())
-   (eq-vector #f())
+   (equality-matrix #2f())
+   (equality-vector #f())
    (f0-min #F())
    (f0-max #F())
-   (non-eq-matrix #2f())
-   (non-eq-min-vector #F())
-   (non-eq-max-vector #F())
+   (inequality-matrix #2f())
+   (inequality-min-vector #F())
+   (inequality-max-vector #F())
    (timer (instance mtimer :init))
    (timebuf #F(0))
    (debug? nil))
   (let* ((x0 f0)
 	 (G eval-weight-matrix)
 	 (g0 eval-coeff-vector)
-	 (CE eq-matrix)
-	 (ce0 (scale -1 eq-vector))
+	 (CE equality-matrix)
+	 (ce0 (scale -1 equality-vector))
 	 (CI
 	  (matrix-append
 	   (flatten
@@ -107,18 +107,18 @@
 		 (unit-matrix (length f0-min)))
 	     (if (plusp (length f0-max))
 		 (scale-matrix -1 (unit-matrix (length f0-max))))
-	     (if (plusp (length non-eq-min-vector))
-		 non-eq-matrix)
-	     (if (plusp (length non-eq-max-vector))
-		 (scale-matrix -1 non-eq-matrix))))
+	     (if (plusp (length inequality-min-vector))
+		 inequality-matrix)
+	     (if (plusp (length inequality-max-vector))
+		 (scale-matrix -1 inequality-matrix))))
 	   '(1 0)))
 	 (ci0
 	  (concatenate
 	   float-vector
 	   (scale -1 f0-min)
 	   f0-max
-	   (scale -1 non-eq-min-vector)
-	   non-eq-max-vector))
+	   (scale -1 inequality-min-vector)
+	   inequality-max-vector))
 	 ret)
     (setq
      ret
@@ -154,13 +154,13 @@
 	  :eval-weight-matrix
 	  (make-matrix 3 3 '((2.1 0.0 1.0) (1.5 2.2 0.0) (1.2 1.3 3.1)))
 	  :eval-coeff-vector (float-vector 6.0 1.0 1.0)
-	  :eq-matrix (make-matrix 1 3 '((1.0 2.0 -1.0)))
-	  :eq-vector (float-vector 4)
-	  :non-eq-matrix
+	  :equality-matrix (make-matrix 1 3 '((1.0 2.0 -1.0)))
+	  :equality-vector (float-vector 4)
+	  :inequality-matrix
 	  (make-matrix
 	   4 3
 	   '((1.0 0.0 0.0) (0.0 1.0 0.0) (0.0 0.0 1.0) (-1.0 -1.0 0.0)))
-	  :non-eq-min-vector (float-vector 0 0 0 -10)
+	  :inequality-min-vector (float-vector 0 0 0 -10)
 	  :debug? t)
     args))
   )
