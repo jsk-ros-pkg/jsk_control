@@ -160,6 +160,7 @@
 	  (make-matrix
 	   4 3
 	   '((1.0 0.0 0.0) (0.0 1.0 0.0) (0.0 0.0 1.0) (-1.0 -1.0 0.0)))
-	  :non-eq-min-vector (float-vector 0 0 0 10))
+	  :non-eq-min-vector (float-vector 0 0 0 -10)
+	  :debug? t)
     args))
   )
