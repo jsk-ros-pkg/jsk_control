@@ -1,0 +1,9 @@
+
+include_directories("/usr/include/c++/4.6")
+include_directories("/usr/include/c++/4.6/x86_64-linux-gnu/.")
+include_directories("/usr/include/c++/4.6/backward")
+include_directories("/usr/lib/gcc/x86_64-linux-gnu/4.6/include")
+include_directories("/usr/local/include")
+include_directories("/usr/lib/gcc/x86_64-linux-gnu/4.6/include-fixed")
+include_directories("/usr/include/x86_64-linux-gnu")
+include_directories("/usr/include")
