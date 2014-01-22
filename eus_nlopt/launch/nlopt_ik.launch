@@ -1,34 +1,38 @@
 <launch>
-  <arg name="NLOPT_IK_NODE_ROBOT" default=""/>
+  <arg name="NLOPT_IK_NODE_ROBOT" default="STARO" />
 
   <node pkg="eus_nlopt"
         type="nlopt-ik-node.l"
         name="nlopt_ik_node1"
-        output="screen">
-    <env name="NLOPT_IK_NODE_ROBOT" value="${NLOPT_IK_NODE_ROBOT}" />
+        output="screen"
+	respawn="true" >
+    <env name="NLOPT_IK_NODE_ROBOT" value="$(arg NLOPT_IK_NODE_ROBOT)" />
     <env name="NLOPT_IK_NODE_ALGORITHM" value="3" />
   </node>
 
   <node pkg="eus_nlopt"
         type="nlopt-ik-node.l"
         name="nlopt_ik_node2"
-        output="screen">
-    <env name="NLOPT_IK_NODE_ROBOT" value="${NLOPT_IK_NODE_ROBOT}" />
+        output="screen"
+	respawn="true" >
+    <env name="NLOPT_IK_NODE_ROBOT" value="$(arg NLOPT_IK_NODE_ROBOT)" />
     <env name="NLOPT_IK_NODE_ALGORITHM" value="8" />
   </node>
 
   <node pkg="eus_nlopt"
         type="nlopt-ik-node.l"
         name="nlopt_ik_node3"
-        output="screen">
-    <env name="NLOPT_IK_NODE_ROBOT" value="${NLOPT_IK_NODE_ROBOT}" />
+        output="screen"
+	respawn="true" >
+    <env name="NLOPT_IK_NODE_ROBOT" value="$(arg NLOPT_IK_NODE_ROBOT)" />
     <env name="NLOPT_IK_NODE_ALGORITHM" value="30" />
   </node>
 
   <node pkg="eus_nlopt"
         type="nlopt-ik-manager.l"
         name="nlopt_ik_manager"
-        output="screen">
+        output="screen"
+	respawn="true" >
+    <env name="NLOPT_IK_NODE_ROBOT" value="$(arg NLOPT_IK_NODE_ROBOT)" />
   </node>
-
 </launch>
