@@ -1,0 +1,22 @@
+<package>
+  <description brief="jsk_ik_server">
+
+     jsk_ik_server
+
+  </description>
+  <author>furuta</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/jsk_ik_server</url>
+  <depend package="roseus"/>
+  <depend package="pr2eus"/>
+  <depend package="hrpsys_ros_bridge"/>
+  <depend package="atlas_msgs"/>
+  <depend package="sandia_hand_msgs"/>
+  <depend package="osrf_msgs"/>
+  <depend package="pr2_controller_manager"/>
+  <depend package="tf"/>
+
+</package>
+
+
