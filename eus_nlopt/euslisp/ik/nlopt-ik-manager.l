@@ -23,6 +23,8 @@
 	 ret cst
 	 (mt (cadr (member :move-target *ik-param*)))
 	 (tc (cadr (member :target-coords *ik-param*)))
+	 (prev-av (copy-object (send *robot* :angle-vector)))
+	 (prev-b (copy-object (send *robot* :worldcoords)))
 	 (av (cdr (assoc :angle-vector kv)))
 	 (wb (or (cdr (assoc :base-coords kv))
 		 (cdr (assoc :worldcoords kv)))))
@@ -72,7 +74,10 @@
 			      :data
 			      (dump-object ret))))
      (t
-      (nlopt-log "trash ~A" str)))))
+      (nlopt-log "trash ~A" str)
+      (send *robot* :angle-vector prev-av)
+      (send *robot* :newcoords prev-b))
+     )))
 
 (ros::subscribe "/nlopt_ik_node/ik_request"
 		std_msgs::string
