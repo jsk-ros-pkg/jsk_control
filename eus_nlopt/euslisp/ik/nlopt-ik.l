@@ -108,6 +108,8 @@
 	    (+ (aref ret i) (aref v i)))))
   ret)
 
+(defvar *best-cost*)
+(defvar *best-pos*)
 (defun fullbody-ik-test
   (&rest
    args
@@ -164,6 +166,16 @@
    (add-6dof? t)
    (max (scale 1 #F(1000 1000 1000 200 200 200)))
    (min (scale -1 #F(1000 1000 1000 200 200 200)))
+   (f-callback
+    '(lambda (v1 v2)
+       (cond
+	((or (null *best-cost*) (< (aref v2 0) *best-cost*))
+	 (setq *best-cost* (aref v2 0))
+	 (setq
+	  *best-pos*
+	  (list
+	   (cons :angle-vector (copy-object (send *robot* :angle-vector)))
+	   (cons :worldcoords (copy-object (send *robot* :worldcoords)))))))))
    ret
    &allow-other-keys
    )
@@ -184,6 +196,7 @@
       :axis-matrix axis-matrix
       :max-eval max-eval
       :max-time max-time
+      :f-callback f-callback
       ;;
       :algorithm alg
       :x0 x0
@@ -324,6 +337,8 @@
 	  debug-view
 	  ;;
 	  last-cost
+	  ;;
+	  f-callback
 	  ))
 
 (defmethod nlopt-ik
@@ -391,6 +406,7 @@
     (max-eval stop)
     (add-6dof? t)
     (debug-view :success-draw)
+    (f-callback)
     &allow-other-keys
     )
    (send-super*
@@ -428,12 +444,12 @@
 	  :add-6dof? :debug-view :root-link-virtual-joint-weight
 	  :target-centroid-pos :cog-gain
 	  :collision-avoidance-link-pair
-	  :min :max)
+	  :min :max :f-callback)
     (list robot all-links
 	  add-6dof? debug-view root-link-virtual-joint-weight
 	  target-centroid-pos cog-gain
 	  collision-avoidance-link-pair
-	  min max))
+	  min max f-callback))
    )
   (:dump-args
    nil
@@ -553,6 +569,8 @@
       ;;
       ;; draw
       ;;
+      (if (functionp f-callback)
+	  (funcall f-callback v1 v2))
       (send self :update-viewer
 	    :debug-view debug-view
 	    :target-coords target-coords
