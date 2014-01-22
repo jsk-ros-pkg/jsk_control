@@ -2,6 +2,18 @@
 
 (require "nlopt-ik.l")
 
+(defun nlopt-log
+  (str &rest args)
+  (let* ((message
+	  (apply
+	   #'format
+	   (append (list nil str) args)))
+	 (pre-message
+	  (format nil "[nlopt-ik] ~A" message)))
+    (ros::ros-info pre-message)
+    ;;(format t "~A~%" pre-message)
+    ))
+
 (defvar *algorithm*
   (let ((str (unix::getenv "NLOPT_IK_NODE_ALGORITHM")))
     (cond
@@ -11,6 +23,7 @@
 
 (defvar *robot*
   (let ((str (unix::getenv "NLOPT_IK_NODE_ROBOT")))
+    (nlopt-log "robot type=~A" str)
     (setq
      str
      (cond
@@ -39,18 +52,6 @@
 
 (ros::roseus-add-msgs "std_msgs")
 (ros::roseus *nlopt_ik_node_name*)
-
-(defun nlopt-log
-  (str &rest args)
-  (let* ((message
-	  (apply
-	   #'format
-	   (append (list nil str) args)))
-	 (pre-message
-	  (format nil "[nlopt-ik] ~A" message)))
-    (ros::ros-info pre-message)
-    ;;(format t "~A~%" pre-message)
-    ))
 
 (defun dump-object
   (obj
@@ -149,25 +150,61 @@
     kv
     ))
 
+(defvar *kv*)
+(defun solve-nlopt-ik-thread
+  (msg)
+  (let* ((str (send msg :data))
+	 (kv (check-ik-param str))
+	 ret)
+    ;; (setq ret
+    ;; 	  (apply #'fullbody-ik-test
+    ;; 		 (append
+    ;; 		  kv
+    ;; 		  (list :init nil)
+    ;; 		  (list :viewer nil)
+    ;; 		  (list :reset? nil)
+    ;; 		  (list :algorithm *algorithm*))))
+    ;; ;;
+    ;; (ros::publish "/nlopt_ik_node/ik_response"
+    ;; 		  (instance std_msgs::string
+    ;; 			    :init
+    ;; 			    :data
+    ;; 			    (dump-object ret)))
+    (setq *kv* kv)
+    (sys::make-thread 1)
+    (sys::thread
+     #'(lambda nil
+	 (apply #'fullbody-ik-test
+		(append
+		 *kv*
+		 (list :init nil)
+		 (list :viewer nil)
+		 (list :reset? nil)
+		 (list :algorithm *algorithm*)))
+	 (setq *best-pos* nil)
+	 ))
+    ))
+
 (defun solve-nlopt-ik
   (msg)
   (let* ((str (send msg :data))
 	 (kv (check-ik-param str))
 	 ret)
     (setq ret
-	  (apply #'fullbody-ik-test
-		 (append
-		  kv
-		  (list :init nil)
-		  (list :viewer nil)
-		  (list :reset? nil)
-		  (list :algorithm *algorithm*))))
+    	  (apply #'fullbody-ik-test
+    		 (append
+    		  kv
+    		  (list :init nil)
+    		  (list :viewer nil)
+    		  (list :reset? nil)
+    		  (list :algorithm *algorithm*))))
     ;;
     (ros::publish "/nlopt_ik_node/ik_response"
-		  (instance std_msgs::string
-			    :init
-			    :data
-			    (dump-object ret)))
+    		  (instance std_msgs::string
+    			    :init
+    			    :data
+    			    (dump-object ret)))
+    ret
     ))
 
 (cond
@@ -183,4 +220,9 @@
    (if (not (ros::ok))
        (return-from nil nil))
    (ros::spin-once)
+   ;; (ros::publish "/nlopt_ik_node/ik_response"
+   ;; 		 (instance std_msgs::string
+   ;; 			   :init
+   ;; 			   :data
+   ;; 			   (dump-object *best-pos*)))
    (ros::sleep))))
