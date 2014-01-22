@@ -2,12 +2,10 @@
 
 (ros::load-ros-manifest "jsk_ik_server")
 
-(require :robot-im "package://jsk_ik_server/euslisp/ik-server.l")
+(require :ik-server "package://jsk_ik_server/euslisp/ik-server.l")
 (require "package://pr2eus/pr2-interface.l")
 
 (ros::roseus "pr2_ik_server")
-
-
 
 (defclass pr2-ik-server
   :super ik-server
@@ -20,7 +18,7 @@
    (setq *robot* (pr2))
    (setq *root-link* "/base_link")
    (send-super* :init args)
-  )
+   )
   )
 
 

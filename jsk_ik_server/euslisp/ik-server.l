@@ -6,7 +6,6 @@
 
 (require :rtm-ros-robotics-interface
 	 "package://hrpsys_ros_bridge/euslisp/rtm-ros-robot-interface.l")
-(require "package://jsk_ik_server/euslisp/atlas-fullbody-ik.l")
 (require "models/arrow-object.l")
 
 (ros::roseus "ik_server")
@@ -21,10 +20,12 @@
    )
   )
 
+(require "package://jsk_ik_server/euslisp/atlas-fullbody-ik.l")
+
 (defmethod ik-server
   (:fullbody-ik-with-collision (arm goal-in-world &rest args)
   (apply
-   #'fullbody-ik-main
+   #'send self :fullbody-ik-main
    (append
     args
     (list
@@ -34,11 +35,11 @@
      ;;:centroid-thre 100
      :root-link-virtual-joint-weight
      (float-vector 0.02 0.02 0.1 0.01 0.04 0.04)
-     :thre '(5 5 5)
+     :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
      :cog-gain 0.7
      ;;:target-centroid-pos nil
      ;;:stop 100
-     :rotation-axis '(t t t)))))
+     :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg))))))
 
   (:torso-ik-with-collision (arm goal-in-world
 				    &rest args
@@ -60,7 +61,7 @@
 					   #F(1000 1000 1000 200 200 200))))
 				    &allow-other-keys)
   (apply
-   #'fullbody-ik-main
+   #'send self :fullbody-ik-main
    (append
     args
     (list
@@ -84,9 +85,9 @@
      :manipulability-gain 0 ;0.00500
      ;;:centroid-thre 200
      ;;:target-centroid-pos nil
-     :thre '(5 5 5)
+     :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
      ;;:stop 100
-     :rotation-axis '(t t t)))))
+     :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg))))))
 
   (:normal-ik-with-collision (arm goal-in-world &rest args)
   (let* ((w
@@ -97,20 +98,21 @@
 		    :max-joint-velocity 0.2))
 	 (ret
 	  (apply
-	   #'fullbody-ik-main
+	   #'send self :fullbody-ik-main
 	   (append
 	    args
 	    (list
 	     :target-limb (mapcan #'(lambda (limb) (if (send *robot* limb) (list limb))) (list arm :lleg :rleg))
 	     :target-coords (mapcan #'(lambda (limb target) (if (send *robot* limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
-	     :additional-weight-list
-	     (append
-	      (mapcar
-	       #'(lambda (k gain)
-		   (list (send *robot* :torso k :child-link)
-			 gain))
-	       (list :waist-r :waist-p :waist-y)
-	       (make-list 3 :initial-element 0)))
+	     ;;:additional-weight-list
+	     ;;(if (find-method *robot* :torso :waist-r)
+	     ;;(append
+	     ;;(mapcar
+	     ;;#'(lambda (k gain)
+	     ;;(list (send *robot* :torso k :child-link)
+	     ;;gain))
+	     ;;(list :waist-r :waist-p :waist-y)
+	     ;;(make-list 3 :initial-element 0))))
 	     ;; :additional-nspace-list
 	     ;; (mapcar
 	     ;;  #'(lambda (k)
@@ -128,9 +130,9 @@
 	     ;;:dif-pos-ratio 1.0
 	     ;;:dif-rot-ratio 0.00500
 	     ;;:manipulability-gain 0.00500
-	     :thre '(5 5 5)
-	     :rthre (list (deg2rad 1) (deg2rad 1) (deg2rad 1))
-	     :rotation-axis '(t t t))))))
+	     :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
+	     :rthre (mapcan #'(lambda (limb) (if (send *robot* limb) (list (deg2rad 1)))) (list arm :lleg :rleg))
+	     :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg)))))))
     (mapcar
      #'(lambda (j g) (send j :max-joint-velocity g))
      (send *robot* :joint-list) w)

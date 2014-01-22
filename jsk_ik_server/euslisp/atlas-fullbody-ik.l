@@ -1,11 +1,10 @@
-(load "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
-
-(defvar *foot-convex* (make-coords))
-(defvar *centroid-object* (make-coords))
+(ros::load-ros-manifest "jsk_ik_server")
+(require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
 (defvar *success-state-collection*)
 (defvar *fix-limb-coords*)
 
-(defun make-foot-convex
+(defmethod ik-server
+  (:make-foot-convex
   (&key
    (foot-key '(:rleg :lleg))
    (force? nil))
@@ -73,12 +72,12 @@
     )
    (t (format t "reject~%"))))
 
-(defun make-centroid-object
+  (:make-centroid-object
   ()
   (setq *centroid-object* (make-cylinder 20 400))
   (send *centroid-object* :set-color #F(1 1 0)))
 
-(defun convex-pos-list
+  (:convex-pos-list
   nil
   (if (and (boundp '*foot-convex*) (find-method *foot-convex* :faces))
       (union
@@ -90,14 +89,14 @@
 	:vertices)
        nil)))
 
-(defun fix-centroid-object
+  (:fix-centroid-object
   (&optional
    (centroid (send *robot* :centroid))
    (leg-h (scale 0.5
 		 (v+
-		  (send *robot* :rleg :end-coords :worldpos)
-		  (send *robot* :lleg :end-coords :worldpos))
-		 )))
+		  (if (send *robot* :rleg) (send *robot* :rleg :end-coords :worldpos) (float-vector 0 0 0))
+		  (if (send *robot* :lleg) (send *robot* :lleg :end-coords :worldpos) (float-vector 0 0 0))
+		 ))))
   (if (and (boundp '*centroid-object*) *centroid-object*)
       (send *centroid-object*
 	    :newcoords
@@ -109,19 +108,21 @@
 				(list (+ 10 (aref leg-h 2))))))))
   )
 
-(defun check-centroid-with-convex
+  (:check-centroid-with-convex
   (diff
    &optional
    (convex (convex-pos-list))
    (center
-    (scale
-     0.5
-     (apply
-      #'v+
-      (mapcar
-       #'(lambda (k)
-	   (send *robot* k :end-coords :worldpos))
-       '(:rleg :lleg))))))
+    (if (find-method *robot* :rleg)
+	(scale
+	 0.5
+	 (apply
+	  #'v+
+	  (mapcar
+	   #'(lambda (k)
+	       (send *robot* k :end-coords :worldpos))
+	   '(:rleg :lleg))))
+      (send *robot* :worldpos))))
   (let* ((diff (concatenate float-vector diff (list 0)))
 	 (target (v+ diff center))
 	 (t-vec (mapcar
@@ -140,7 +141,7 @@
        (mapcar
 	#'(lambda (v) (minusp (aref v 2)))
 	rotate))))))
-
+  )
 (defmethod cascaded-link
   (:cog-convergence-check
    (centroid-thre target-centroid-pos &optional centroid-offset-func)
@@ -213,7 +214,8 @@
        )
       (t (send self :angle-vector))))))
 
-(defun fullbody-ik-main
+(defmethod ik-server
+  (:fullbody-ik-main
   (&rest
    args
    &key
@@ -269,7 +271,7 @@
     ;;(float-vector 0.01 0.01 1 0.01 0.01 0.01))
    (min-vec #F(-1000 -1000 -1000 -200 -200 -200))
    (max-vec #F(1000 1000 1000 200 200 200))
-   (centroid-thre #'check-centroid-with-convex)
+   (centroid-thre 'check-centroid-with-convex)
    (rotation-axis
     (mapcar
      #'(lambda (k)
@@ -365,7 +367,8 @@
 	      :avoid-collision-joint-gain 0.3
 	      ;;
 	      :dump-command nil
-	      :debug-view debug-view
+	      ;;:debug-view debug-view
+	      :debug-view :no-message
 	      :warnp nil)
 	     args)))
     ;;
@@ -380,7 +383,7 @@
     (cond
      ((and (not collision?) (vectorp ret))
       (format t "[ik-main] success !!~%")
-      (fix-centroid-object)
+      (send self :fix-centroid-object)
       (send *irtviewer* :draw-objects)
       (cond
        ((and real? (boundp '*ri*) *ri*)
@@ -420,12 +423,14 @@
     ret
     ))
 
-(defun init-fullbody-ik-main
+  (:init-fullbody-ik-main
   ()
   (send (send *robot* :utorso_lk) :make-pqpmodel :fat 30)
   (setq *success-state-collection* nil)
   ;; (make-foot-convex)
-  (make-centroid-object))
+  (send self :make-centroid-object))
+
+  )
 
 
 ;; setup

@@ -7,9 +7,8 @@
 (ros::load-ros-manifest "arm_navigation_msgs")
 
 (require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
-(require "package://jsk_ik_server/euslisp/atlas-fullbody-ik.l")
 (require "package://jsk_ik_server/euslisp/atlas-end-coords.l")
-(require :robot-im "package://jsk_ik_server/euslisp/ik-server.l")
+(require "package://jsk_ik_server/euslisp/ik-server.l")
 
 (ros::roseus "atlas_ik_server")
 
@@ -17,6 +16,7 @@
 (defclass atlas-ik-server
   :super ik-server
   )
+
 
 (defmethod atlas-ik-server
   (:init
@@ -33,14 +33,15 @@
    ;;
    (send *atlas* :torso :waist-p :max-angle 10)
    (send *atlas* :torso :waist-p :min-angle -10)
+   (setq *robot* *atlas*)
    
-   (make-foot-convex)
-   (make-centroid-object)
+   (send self :make-foot-convex)
+   (send self :make-centroid-object)
 
-   (init-fullbody-ik-main)
+   (send self :init-fullbody-ik-main)
    (send self :switch-end-coords :id 1)
    (setq *root-link* "/pelvis")
-   (setq *robot* *atlas*)
+
    (send-super* :init args)
   )
   )
