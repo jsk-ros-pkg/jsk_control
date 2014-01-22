@@ -136,7 +136,7 @@
 	       ;(if (find-method *robot* k) (send *robot* k :root-link))))
      move-target))
    (all-links (reduce #'union (cons nil link-list)))
-   (weight-list (make-list (length move-target) :initial-element (unit-matrix 6)))
+   (axis-matrix (make-list (length move-target) :initial-element (unit-matrix 6)))
    (reset? t) (move-base? t) (alg 11)
    (x0 (progn
 	 (cond
@@ -181,7 +181,7 @@
       :target-coords target-coords
       :link-list link-list
       :all-links all-links
-      :weight-list weight-list
+      :axis-matrix axis-matrix
       :max-eval max-eval
       :max-time max-time
       ;;
@@ -222,7 +222,7 @@
    (link-list
     (send *robot* :link-list (send move-target :parent)))
    (all-links link-list)
-   (weight-list (unit-matrix 6))
+   (axis-matrix (unit-matrix 6))
    (reset? t)
    (alg 11)
    (x0 (progn
@@ -259,7 +259,7 @@
       :target-coords (list target-coords)
       :link-list (list link-list)
       :all-links all-links
-      :weight-list (list weight-list)
+      :axis-matrix (list axis-matrix)
       :max-eval max-eval
       :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
       ;;
@@ -276,6 +276,30 @@
       :m-h 0)))
    optimize))
 
+(defun fill0-vector-with-links
+  (&key
+   (all-links (cdr (send *robot* :links)))
+   (link-list (send *robot* :rarm :links))
+   (val-list
+    (send-all
+     (send-all link-list :joint) :joint-angle))
+   buf
+   )
+  (setq buf (mapcar #'cons link-list val-list))
+  (vector-eus2nlopt
+   (mapcar
+    #'(lambda (al)
+	(let* ((val (cdr (assoc al buf)))
+	       (val0 (send (send al :joint) :joint-angle)))
+	  (cond
+	   ((and val (vectorp val)) val)
+	    ;;(map float-vector #'*
+	    ;;root-link-virtual-joint-weight val))
+	   (val val)
+	   ((vectorp val0) (scale 0 val0))
+	   (t 0))))
+    all-links)))
+
 (defconstant OPTIMIZE_EUS_IK NUM_ALGORITHMS)
 (defclass nlopt-ik
   :super nlopt-object
@@ -284,9 +308,11 @@
 	  target-coords
 	  link-list
 	  all-links
-	  weight-list
 	  root-link-virtual-joint-weight
+	  weight-list
+	  axis-matrix
 	  max min
+	  collision-avoidance-link-pair
 	  ;;
 	  translation-axis
 	  rotation-axis
@@ -325,13 +351,21 @@
     (all-links
      (if target-centroid-pos (cdr (send robot :links))
        (reduce #'union (cons nil link-list))))
-    (weight-list
+    (axis-matrix
      (make-list (length move-target)
 		:initial-element (unit-matrix 6)))
+    (additional-weight-list nil)
+    (weight-list
+     (mapcar
+      #'(lambda (l)
+	  (or (cadr (assoc l additional-weight-list))
+	      1))
+      all-links))
     (root-link-virtual-joint-weight
      (coerce (make-list 6 :initial-element 1e-3) float-vector))
     (min (float-vector -1500 -1500  -1500 -200 -200 -200))
     (max (float-vector 1500 1500 1500 200 200 200))
+    (collision-avoidance-link-pair nil)
     ;;
     (algorithm L_BFGS)
     (x0
@@ -382,10 +416,10 @@
 	       ((atom val) (list val))
 	       (t val))))
     (list :move-target :target-coords
-	  :link-list :weight-list
+	  :link-list :weight-list :axis-matrix
 	  :translation-axis :rotation-axis)
     (list move-target target-coords
-	  link-list weight-list
+	  link-list weight-list axis-matrix
 	  translation-axis rotation-axis))
    ;;
    (mapcar
@@ -393,10 +427,12 @@
     (list :robot :all-links
 	  :add-6dof? :debug-view :root-link-virtual-joint-weight
 	  :target-centroid-pos :cog-gain
+	  :collision-avoidance-link-pair
 	  :min :max)
     (list robot all-links
 	  add-6dof? debug-view root-link-virtual-joint-weight
 	  target-centroid-pos cog-gain
+	  collision-avoidance-link-pair
 	  min max))
    )
   (:dump-args
@@ -412,7 +448,7 @@
      (send self :slots))))
   (:target-diff
    (&key
-    ((:weight-list wl) weight-list)
+    ((:axis-matrix am) axis-matrix)
     ((:move-target mt) move-target)
     ((:target-coords tc) target-coords)
     ((:translation-axis ta) translation-axis)
@@ -429,8 +465,8 @@
 			     :translation-axis ta))
 	   (send m :difference-rotation c
 		 :rotation-axis ra)))))
-    wl mt tc ta ra))
-  (:target-jacobian
+    am mt tc ta ra))
+  (:Jxdx
    (&key
     ((:link-list ll) link-list)
     ((:move-target mt) move-target)
@@ -439,12 +475,12 @@
     #'(lambda (l m dx)
 	(setq J (send robot :calc-jacobian-from-link-list l
 		      :move-target m
-		      :target-coords nil;(make-coords)
+		      :target-coords nil
 		      :translation-axis '(t)
 		      :rotation-axis '(t)))
 	(transform (transpose J) dx))
     ll mt (send self :target-diff)))
-  (:cog-jacobian
+  (:Jcdc
    (&key
     ((:link-list ll) all-links)
     ((:cog-gain cg) cog-gain)
@@ -467,6 +503,34 @@
 	    ta))
     )
    )
+  (:update-viewer
+   (&key
+    (debug-view debug-view)
+    (target-coords target-coords)
+    (cost 0))
+   (cond
+    ((or
+      (not debug-view)
+      (not (and (boundp '*viewer*)
+		*viewer*)) nil))
+    ((and (eq debug-view :success-draw)
+	  (< cost last-cost))
+     (setq last-cost cost)
+     (send *viewer* :draw-objects :flush nil)
+     (send-all target-coords
+	       :draw-on :flush nil :color #F(1 0 0) :size 100)
+     (send *viewer* :viewsurface :flush)
+     (x::window-main-one)
+     )
+    ((eq debug-view :success-draw)
+     (x::window-main-one)
+     )
+    (t
+     (send *viewer* :draw-objects :flush nil)
+     (send-all target-coords
+	       :draw-on :flush nil :color #F(1 0 0) :size 100)
+     (send *viewer* :viewsurface :flush)
+     (x::window-main-one))))
   ;;
   (:f (v1 v2)
       (mapcar
@@ -486,73 +550,42 @@
 		    0 2))
 		0)
 	      (apply #'+ (mapcar #'norm2 (send self :target-diff))))))
-      (cond
-       ((or
-	 (not debug-view)
-	 (not (and (boundp '*viewer*)
-		   *viewer*)) nil))
-       ((and (eq debug-view :success-draw)
-	     (< (aref v2 0) last-cost))
-	(setq last-cost (aref v2 0))
-	(send *viewer* :draw-objects :flush nil)
-	(send-all target-coords
-		  :draw-on :flush nil :color #F(1 0 0) :size 100)
-	(send *viewer* :viewsurface :flush)
-	(x::window-main-one)
-	)
-       ((eq debug-view :success-draw)
-	(x::window-main-one)
-	)
-       (t
-	(send *viewer* :draw-objects :flush nil)
-	(send-all target-coords
-		  :draw-on :flush nil :color #F(1 0 0) :size 100)
-	(send *viewer* :viewsurface :flush)
-	(x::window-main-one)))
+      ;;
+      ;; draw
+      ;;
+      (send self :update-viewer
+	    :debug-view debug-view
+	    :target-coords target-coords
+	    :cost (aref v2 0))
       0)
   (:df (v1 v2)
-       (let (buf)
-	 (mapcar
-	  #'(lambda (j v) (send j :joint-angle v))
-	  (send-all all-links :joint)
-	  (vector-nlopt2eus v1 :link-list all-links))
-	 (send robot :worldcoords)
-	 (my-copy-matrix
-	  (scale
-	   1e+3
-	   (vlist+
-	    (mapcar
-	     #'(lambda (l Jdx)
-		 (setq buf
-		       (mapcar
-			#'cons
-			l
-			(vector-nlopt2eus
-			 (scale -2.0 Jdx)
-			 :link-list l)))
-		 (vector-eus2nlopt
-		  (mapcar
-		   #'(lambda (al)
-		       (let* ((val (cdr (assoc al buf)))
-			      (val0 (send (send al :joint) :joint-angle)))
-			 (cond
-			  ((and val (vectorp val))
-			   (map float-vector #'*
-				root-link-virtual-joint-weight val))
-			  (val val)
-			  ((vectorp val0) (scale 0 val0))
-			  (t 0))))
-		   all-links)))
-	     (append
-	      (if target-centroid-pos
-		  (list all-links))
-	      link-list)
-	     (append
-	      (if target-centroid-pos
-		  (list (send self :cog-jacobian)))
-	      (send self :target-jacobian)))))
-	  v2))
-					;(print v2)
+       (mapcar
+	#'(lambda (j v) (send j :joint-angle v))
+	(send-all all-links :joint)
+	(vector-nlopt2eus v1 :link-list all-links))
+       (send robot :worldcoords)
+       (my-copy-matrix
+	(scale
+	 1e+3
+	 (map float-vector
+	      #'*
+	      weight-list
+	      (vlist+
+	       (mapcar
+		#'(lambda (ll Jdx)
+		    (fill0-vector-with-links
+		     :all-links all-links
+		     :link-list ll
+		     :val-list
+		     (vector-nlopt2eus
+		      (scale -2.0 Jdx) :link-list ll)))
+		(append
+		 (if target-centroid-pos (list all-links))
+		 link-list)
+		(append
+		 (if target-centroid-pos (list (send self :Jcdc)))
+		 (send self :Jxdx))))))
+	v2)
        0)
   (:g (v1 v2) 0)
   (:dg (v1 v2) 0)
@@ -594,6 +627,11 @@
 	(send self :link-list
 	      (cdr (assoc :6dof-links add6dof)))
 	(send self :all-links (reduce #'union (cons nil link-list)))
+	(send self :weight-list
+	      (concatenate
+	       cons
+	       root-link-virtual-joint-weight
+	       weight-list))
 	(setq ret
 	      (send-super*
 	       :optimize
