@@ -14,6 +14,9 @@ class StatusHistory():
         return False
     return True
   def latest(self):
-    return self.buffer[-1]
+    if len(self.buffer) > 0:
+      return self.buffer[-1]
+    else:
+      return None
   def length(self):
     return len(self.buffer)
