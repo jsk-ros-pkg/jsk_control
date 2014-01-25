@@ -40,7 +40,6 @@ def main():
       joy.header.stamp = rospy.Time.now()
       while controller.poll():
         data = controller.read(1)
-        print data
         for elem_set in data:
           elem = elem_set[0]
           major_id = elem[0]
