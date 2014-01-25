@@ -8,8 +8,7 @@ import yaml
 
 G_DEVICE_INFO = {
   "device_name": "",
-  "analogs": [],                             #[[major_id, minor_id], [major_id, minor_id], ...
-  "buttons": []
+  "analogs": []                             #[[major_id, minor_id], [major_id, minor_id], ...
   }
 
 class ParseException(Exception):
@@ -60,7 +59,15 @@ def configAnalogInputs(controller):
         major_id = elem[0]
         minor_id = elem[1]
         # check that is already installed or not
-        if (major_id, minor_id) not in analog_configs:
+        if major_id == 240 or major_id == 1 or major_id == 79:
+            print "we ignore this button because it has %d major_id" % (major_id)
+            print "please tell the code master it"
+        elif major_id == 144 or major_id == 128:
+          # this might be a same button
+          if (144, minor_id) not in analog_configs:
+            print "(144/128, %d) installing into %d" % (minor_id, len(analog_configs))
+            analog_configs.append((144, minor_id))
+        elif (major_id, minor_id) not in analog_configs:
           print "(%d, %d) installing into %d" % (major_id, minor_id, len(analog_configs))
           analog_configs.append((major_id, minor_id))
           
@@ -102,7 +109,7 @@ def main():
       continue
   controller = pygame.midi.Input(device_num)
   configAnalogInputs(controller)
-  configButtonInputs(controller)
+  # configButtonInputs(controller)
   f = open('/tmp/midi.yaml', 'w')
   f.write(yaml.dump(G_DEVICE_INFO))
   f.close()

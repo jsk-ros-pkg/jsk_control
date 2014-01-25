@@ -35,23 +35,24 @@ def main():
     controller = openMidiDeviceWithName(config["device_name"])
     joy = Joy()
     joy.axes = [0.0] * len(config["analogs"])
-    joy.buttons = [0] * len(config["buttons"])
+    #joy.buttons = [0] * len(config["buttons"])
     while not rospy.is_shutdown():
       joy.header.stamp = rospy.Time.now()
       while controller.poll():
         data = controller.read(1)
+        print data
         for elem_set in data:
           elem = elem_set[0]
           major_id = elem[0]
           minor_id = elem[1]
           value = elem[2]
-          if major_id == 144:              #button
-            if minor_id in config["buttons"]:
-              index = config["buttons"].index(minor_id)
-              if value == 127:
-                joy.buttons[index] = 1
-              elif value == 0:
-                joy.buttons[index] = 0
+          if major_id == 144 or major_id == 128:              #button
+            if (144, minor_id) in config["analogs"]:
+              index = config["analogs"].index((144, minor_id))
+              if major_id == 128:
+                joy.axes[index] = 0
+              else:
+                joy.axes[index] = value / 127.0
           elif (major_id, minor_id) in config["analogs"]:
             index = config["analogs"].index((major_id, minor_id))
             joy.axes[index] = value / 127.0
