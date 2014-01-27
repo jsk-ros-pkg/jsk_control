@@ -5,10 +5,15 @@ import pygame.midi
 import select
 import sys
 import yaml
+import roslib
+
+roslib.load_manifest("jsk_joy")
+
+from jsk_joy.midi_util import MIDIParse, MIDICommand, MIDIException
 
 G_DEVICE_INFO = {
   "device_name": "",
-  "analogs": []                             #[[major_id, minor_id], [major_id, minor_id], ...
+  "buttons": [] #[[command, index], [command, index], ...
   }
 
 class ParseException(Exception):
@@ -55,48 +60,14 @@ def configAnalogInputs(controller):
     while controller.poll():
       data = controller.read(1)
       for elem_set in data:
-        elem = elem_set[0]
-        major_id = elem[0]
-        minor_id = elem[1]
-        # check that is already installed or not
-        if major_id == 240 or major_id == 1 or major_id == 79:
-            print "we ignore this button because it has %d major_id" % (major_id)
-            print "please tell the code master it"
-        elif major_id == 144 or major_id == 128:
-          # this might be a same button
-          if (144, minor_id) not in analog_configs:
-            print "(144/128, %d) installing into %d" % (minor_id, len(analog_configs))
-            analog_configs.append((144, minor_id))
-        elif (major_id, minor_id) not in analog_configs:
-          print "(%d, %d) installing into %d" % (major_id, minor_id, len(analog_configs))
-          analog_configs.append((major_id, minor_id))
+        try:
+          (command, index, val) = MIDIParse(elem_set)
+          if (command, index) not in analog_configs:
+            print "(%d, %d) installing into %d" % (command, index, len(analog_configs))
+            analog_configs.append((command, index))
+        except MIDIException, e:
+          print "(%d, %d, %d) is not supported" % (elem_set[0][0], elem_set[0][1], elem_set[0][2])
           
-def configButtonInputs(controller):
-  global G_DEVICE_INFO
-  print "Please push the buttons"
-  print "The order you move them will be mapped into Joy/buttons."
-  print "If you want to finish buttons mapping, please type 'q'"
-  button_configs = []
-  while True:
-    ready = select.select([sys.stdin], [], [], 0.1)[0]
-    if ready:
-      line = sys.stdin.readline()
-      if line.startswith("q"):
-        print "We installed %d button inputs" % (len(button_configs))
-        G_DEVICE_INFO["buttons"] = button_configs
-        return
-    while controller.poll():
-      data = controller.read(1)
-      for elem_set in data:
-        elem = elem_set[0]
-        major_id = elem[0]
-        minor_id = elem[1]
-        # check that is already installed or not
-        if major_id == 144:
-          if minor_id not in button_configs:
-            print "%dinstalling into %d" % (minor_id, len(button_configs))
-            button_configs.append(minor_id)
-  
 def main():
   pygame.midi.init()
   while True:
@@ -109,7 +80,6 @@ def main():
       continue
   controller = pygame.midi.Input(device_num)
   configAnalogInputs(controller)
-  # configButtonInputs(controller)
   f = open('/tmp/midi.yaml', 'w')
   f.write(yaml.dump(G_DEVICE_INFO))
   f.close()

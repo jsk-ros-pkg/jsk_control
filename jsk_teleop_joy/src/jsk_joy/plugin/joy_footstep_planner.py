@@ -21,4 +21,3 @@ class JoyFootstepPlanner(JoyPose6D):
     elif status.cross and not latest.cross:
       self.command_pub.publish(UInt8(2))
     
-    
