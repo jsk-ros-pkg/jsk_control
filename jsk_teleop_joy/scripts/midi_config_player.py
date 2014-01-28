@@ -12,7 +12,7 @@ from sensor_msgs.msg import Joy
 roslib.load_manifest('jsk_joy')
 
 from jsk_joy.midi_util import MIDIParse, MIDICommand, MIDIException, openMIDIInputByName
-    
+
 def main():
   pygame.midi.init()
   rospy.init_node('midi_joy')
@@ -29,7 +29,10 @@ def main():
     controller = openMIDIInputByName(config["device_name"])
     joy = Joy()
     joy.axes = [0.0] * len(config["analogs"])
-    #joy.buttons = [0] * len(config["buttons"])
+    # automatically mapping to buttons from axes if it has NOTE_OFF or NOTE_ON MIDI commands
+    button_configs = [c for c in config["analogs"]
+                      if c[0] == MIDICommand.NOTE_ON or c[0] == MIDICommand.NOTE_OFF]
+    joy.buttons = [0] * len(button_configs)
     while not rospy.is_shutdown():
       joy.header.stamp = rospy.Time.now()
       while controller.poll():
@@ -38,6 +41,12 @@ def main():
           (command, ind, val) = MIDIParse(elem_set)
           index = config["analogs"].index((command, ind))
           joy.axes[index] = val
+          if command == MIDICommand.NOTE_ON or command == MIDICommand.NOTE_OFF:
+            button_index = button_configs.index((command, ind))
+            if val == 0.0:
+              joy.buttons[button_index] = 0
+            else:
+              joy.buttons[button_index] = 1
       joy_pub.publish(joy)
       rospy.sleep(1.0 / 100.0)
 if __name__ == '__main__':

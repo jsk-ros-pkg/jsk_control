@@ -22,6 +22,7 @@ class ParseException(Exception):
 def parseDeviceName():
   global G_DEVICE_INFO
   devices = pygame.midi.get_count()
+  print "==========================================="
   print "First, we choose device name:"
   for d in range(devices):
     info = pygame.midi.get_device_info(d)
@@ -45,7 +46,9 @@ def parseDeviceName():
 
 def configAnalogInputs(controller):
   global G_DEVICE_INFO
-  print "Please move analog inputs"
+  print "==========================================="
+  print "Please move ALL the inputs"
+  print "==========================================="
   print "The order you move them will be mapped into Joy/axes."
   print "If you want to finish analog mapping, please type 'q'"
   analog_configs = []
@@ -67,7 +70,7 @@ def configAnalogInputs(controller):
             analog_configs.append((command, index))
         except MIDIException, e:
           print "(%d, %d, %d) is not supported" % (elem_set[0][0], elem_set[0][1], elem_set[0][2])
-          
+
 def main():
   pygame.midi.init()
   while True:

@@ -25,7 +25,7 @@ def MIDIParse(message):
   elif command_type == MIDICommand.CHANNEL_PRESSURE:
     return (MIDICommand.CHANNEL_PRESSURE, midi_channel, midi_param1)
   elif command_type == MIDICommand.PITCH_BEND:
-    return (MIDICommand.PITCH_BEND, midi_channel, midi_param1)
+    return (MIDICommand.PITCH_BEND, midi_channel, midi_param1 / 127.0)
   else:
     raise MIDIException("unknown command type: " + MIDICommand.toStr(command_type))
     
