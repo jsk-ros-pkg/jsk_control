@@ -82,7 +82,7 @@ class MIDICommand():
 def openMIDIInputByName(device_name):
   return openMIDIByName(device_name, 1)
   
-def openMIDIoutputIByName(device_name):
+def openMIDIOutputByName(device_name):
   return openMIDIByName(device_name, 0)
   
 def openMIDIByName(device_name, input_output):
@@ -90,6 +90,9 @@ def openMIDIByName(device_name, input_output):
   for i in range(devices):
     info = pygame.midi.get_device_info(i)
     if info[1] == device_name and info[2] == input_output:
-      return pygame.midi.Input(i)
+      if input_output == 1:
+        return pygame.midi.Input(i)
+      else:
+        return pygame.midi.Output(i)
   raise MIDIException("Cannot find the device: %s" % (device_name))
   
