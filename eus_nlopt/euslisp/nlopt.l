@@ -1,4 +1,4 @@
-(defvar m (load-foreign "../lib/libnlopt_wrapper.so"))
+(defvar *nlopt-plugin* (load-foreign "../lib/libnlopt_wrapper.so"))
 
 ;; algorithm
 (defconstant DIRECT 0)
@@ -36,21 +36,22 @@
 (defconstant NLOPT_MAXEVAL_REACHED 10)
 (defconstant NLOPT_MAXTIME_REACHED 11)
 
-(defforeign optimize m "optimize" (:string :string :string ;; x E [min max]
-					   :integer :integer ;; object
-					   :integer :integer ;; eq const
-					   :integer :integer ;; neq const
-					   :integer :integer :integer ;; dim
-					   :double :double :double ; thres
-					   :integer :double ; max_eval, max_time
-					   :integer ; log?
-					   :integer ; alg
-					   :string :string ;; buf 
-					   :string :string
-					   :string :string
-					   ) :string)
-(defforeign get-result m "get_result" () :integer)
-(defforeign stop m "stop" () :integer)
+(defforeign optimize *nlopt-plugin*
+  "optimize" (:string :string :string ;; x E [min max]
+		      :integer :integer ;; object
+		      :integer :integer ;; eq const
+		      :integer :integer ;; neq const
+		      :integer :integer :integer ;; dim
+		      :double :double :double ; thres
+		      :integer :double ; max_eval, max_time
+		      :integer ; log?
+		      :integer ; alg
+		      :string :string ;; buf 
+		      :string :string
+		      :string :string
+		      ) :string)
+(defforeign get-result *nlopt-plugin* "get_result" () :integer)
+(defforeign stop *nlopt-plugin* "stop" () :integer)
 
 (defun-c-callable my_print ((v1 :string) (v2 :string)) :integer
   (print v1) (print v2) 0)
