@@ -13,7 +13,7 @@ from jsk_joy.midi_util import MIDIParse, MIDICommand, MIDIException
 
 G_DEVICE_INFO = {
   "device_name": "",
-  "buttons": [] #[[command, index], [command, index], ...
+  "analogs": [] #[[command, index], [command, index], ...
   }
 
 class ParseException(Exception):

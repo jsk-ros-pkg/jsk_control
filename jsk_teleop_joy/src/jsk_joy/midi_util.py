@@ -48,6 +48,11 @@ class MIDICommand():
         return t
     raise MIDIException("cannot detect the type of " + str(val))
   @classmethod
+  def allCommands(cls):
+    return [cls.NOTE_OFF, cls.NOTE_ON, cls.AFTERTOUCH, cls.CONTINUOUS_CONTROLLER,
+            cls.PATCH_CHANGE, cls.CHANNEL_PRESSURE, cls.PITCH_BEND, 
+            cls.NON_MUSICAL]
+  @classmethod
   def checkUpperByte(cls, ref, val):
     return (ref >> 4) == (val >> 4)
   @classmethod
