@@ -40,7 +40,7 @@ class CameraView():
     return m
   def cameraPlacement(self):
     #TIME = 0.05
-    TIME = 0.02
+    TIME = 1.0 / 40 * 2.0
     view_point = self.viewPoint()
     placement = CameraPlacement()
     placement.interpolation_mode = CameraPlacement.LINEAR

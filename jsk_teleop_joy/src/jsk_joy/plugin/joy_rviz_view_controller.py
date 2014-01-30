@@ -39,7 +39,7 @@ class RVizViewController(JSKJoyPlugin):
     view_updated = False
     if status.R3:
       if not status.left_analog_y == 0.0:
-        view.distance = view.distance - signedSquare(status.left_analog_y) * 0.02
+        view.distance = view.distance - signedSquare(status.left_analog_y) * 0.05
         view_updated = True
       # calc camera orietation
       if status.left:
@@ -69,12 +69,8 @@ class RVizViewController(JSKJoyPlugin):
       if status.right_analog_y != 0.0:
         view_updated = True
       
-      view.yaw = view.yaw - 0.01 * signedSquare(status.right_analog_x)
-      view.pitch = view.pitch + 0.01 * signedSquare(status.right_analog_y)
-      # if view.pitch > math.pi / 2.0 - 0.01:
-      #   view.pitch = math.pi / 2.0 - 0.01
-      # elif view.pitch < - math.pi / 2.0 + 0.01:
-      #   view.pitch = - math.pi / 2.0 + 0.01
+      view.yaw = view.yaw - 0.05 * signedSquare(status.right_analog_x)
+      view.pitch = view.pitch + 0.05 * signedSquare(status.right_analog_y)
 
     if self.follow_view and self.support_follow_view:
       view_updated = True
