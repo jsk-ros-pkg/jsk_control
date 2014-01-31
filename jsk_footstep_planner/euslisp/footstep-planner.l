@@ -52,13 +52,14 @@ footstep-parameter"))
           rotate-max
           wd wp
           footstep-param
-          collision-robot-model))
+          collision-robot-model timeout))
 
 (defmethod footstep-planner-graph
   (:init (&rest args
           &key ((:scene sc) nil)
                ((:scene-grow sg) 0.0)
                ((:grow g) 0.2)
+               ((:timeout tm) nil)
                ((:wd d) 1.0)
                ((:wp p) 0.0)
                ((:robot r) nil)
@@ -73,6 +74,7 @@ footstep-parameter"))
                &allow-other-keys)
     (setq footstep-param param)
     (setq target-scene sc)
+    (setq timeout tm)
     (if target-scene
         (setq obstacles
               (remove-if #'null
@@ -159,6 +161,10 @@ footstep-parameter"))
            (not (send self :collision-with-obstacles-no-robot-mode-p
                       next-leg-coords :debug debug)))))
   (:successors (state &key (verbose nil))
+    (when timeout                            ;check the timeout
+      (when (< (- (send timeout :to-sec) (send (ros::time-now) :to-sec)) 0)
+        (print "timeout!")
+        (return-from :successors nil)))
     (let* ((current-leg (send state :l/r))
            (current-step-coords (send state :worldcoords))
            (next-leg (send footstep-param :next-leg current-leg)))

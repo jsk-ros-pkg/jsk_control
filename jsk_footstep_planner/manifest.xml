@@ -8,6 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <depend package="jsk_footstep_msgs" />
+  <depend package="jsk_pcl_ros" />
   <url>http://ros.org/wiki/jsk_footstep_planner</url>
 
 </package>

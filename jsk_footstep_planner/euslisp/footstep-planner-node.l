@@ -3,6 +3,26 @@
 (ros::load-ros-manifest "jsk_footstep_planner")
 (load "package://jsk_footstep_planner/euslisp/footstep-planner.l")
 
+(defun planes-cb (msg)
+  (let ((polygons (send msg :polygons)))
+    (let ((faces (mapcar #'(lambda (polygon)
+                             (let ((trans (send *tf* :lookup-transform
+                                                (send polygon :header :frame_id)
+                                                *global-frame-id*
+                                                (send polygon :header :stamp))))
+                               (let ((points (mapcar #'(lambda (point)
+                                                         (send (send (send trans :copy-worldcoords)
+                                                                     :transform
+                                                                     (make-coords :pos (ros::tf-point->pos point)))
+                                                               :worldpos))
+                                                     (send polygon :polygon :points))))
+                                 (instance face :init :vertices points))))
+                         polygons)))
+      (setq *planes* (instance faceset :init :faces faces))
+      ))
+  (objects (list *planes*))
+  )
+
 (defclass ros-footstep-parameter
   :super footstep-parameter
   :slots (left-footsteps right-footsteps))
@@ -83,6 +103,7 @@
                           :wd 0.8
                           :wp 0.0
                           :wg 1.0
+                          :timeout (ros::time+ (ros::time-now) (ros::time *timeout*))
                           :collisoin-robot-model nil
                           ))
          ;; 一個目がllegだったら、llegからスタートする
@@ -126,24 +147,25 @@
                              :render-leg-object *leg*)))
       (let ((solver-nodes (send asolver :solve prblm :verbose nil)))
         (let ((result (send server :result)))
-          (let ((footsteps (instance jsk_footstep_msgs::FootstepArray :init)))
-            (send footsteps :footsteps
-                  (mapcar #'(lambda (n)
-                              (let ((f (instance jsk_footstep_msgs::Footstep :init)))
-                                (let ((pose (ros::coords->tf-pose (send (send n :state) :worldcoords))))
+          (if solver-nodes
+              (let ((footsteps (instance jsk_footstep_msgs::FootstepArray :init)))
+                (send footsteps :footsteps
+                      (mapcar #'(lambda (n)
+                                  (let ((f (instance jsk_footstep_msgs::Footstep :init)))
+                                    (let ((pose (ros::coords->tf-pose (send (send n :state) :worldcoords))))
                                   (send f :pose pose)
                                   (if (eq (send (send n :state) :l/r) :lleg)
                                       (send f :leg jsk_footstep_msgs::Footstep::*LEFT*)
                                     (send f :leg jsk_footstep_msgs::Footstep::*RIGHT*))
                                   f)))
-                          solver-nodes))
-            (send footsteps :header (send goal :goal :initial_footstep :header))
-            (send result :result footsteps)
-            )
-          (send server :set-succeeded result))
-        ))
-    )
-  )
+                              solver-nodes))
+                (send footsteps :header (send goal :goal :initial_footstep :header))
+                (send result :result footsteps)
+                (send server :set-succeeded result))
+              (send server :set-aborted result))
+          ))
+      )
+    ))
 
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
@@ -159,12 +181,20 @@
   (setq *footstep-xs* (ros::get-param "~x"))
   (setq *footstep-ys* (ros::get-param "~y"))
   (setq *footstep-thetas* (ros::get-param "~theta"))
+  (setq *timeout* (ros::get-param "~timeout" 10))
+  (setq *planes* nil)
+  (setq *use-planes* (ros::get-param "~use_planes" nil))
+  (setq *tf* (instance ros::transform-listener :init))
+  (when *use-planes*
+    (ros::subscribe "planes" jsk_pcl_ros::PolygonArray #'planes-cb))
+  
   (let ((s (instance ros::simple-action-server :init
                      "footstep_planner" jsk_footstep_msgs::PlanFootstepsAction
                      :execute-cb 'plan-execute-cb)))
     (while (ros::ok)
       (send s :worker)
       (ros::spin-once)
+      (x::window-main-one)
       (ros::sleep))
     ))
 
