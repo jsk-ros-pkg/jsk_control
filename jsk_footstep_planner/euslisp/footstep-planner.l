@@ -44,6 +44,38 @@ footstep-parameter"))
       (setq start-leg (send self :next-leg start-leg))))
   )
 
+(defun face-on-a-face (face support-face)
+  (dolist (v (send face :vertices))
+    (if (eq (send support-face :insidep v) :outside)
+        (return-from face-on-a-face nil)
+      ))
+  t)
+
+(defun project-coords-on-to-plane (coords planes z-axis)
+  (let ((point (send coords :worldpos)))
+    ;; first, creating line from the point and z-axis
+    ;; and, compute the points projected on the planes
+    ;; x = P + aZ: line
+    ;; nx + D = 0: plane
+    ;; n(P + aZ) + D = 0
+    ;; nP + anZ + D = 0
+    ;; anZ = -(D + nP)
+    ;; a = -(D + nP) / nZ
+    (let ((candidates (mapcar #'(lambda (pln)
+                                  (let ((projected-point
+                                         (let ((plane-normal (send pln :normal))
+                                               (plane-D (- (send pln :plane-distance (float-vector 0 0 0)))))
+                                           (let ((alpha (/ (- plane-D (v. plane-normal point))
+                                                           (v. plane-normal z-axis))))
+                                             (v+ point (scale alpha z-axis))))))
+                                    (if (not (eq (send pln :insidep projected-point) :outside))
+                                        (make-coords :pos projected-point) ;only supports z-value
+                                      nil)))
+                              planes)))
+      (let ((non-null-candidates (remove-if #'null candidates)))
+        (if non-null-candidates (car non-null-candidates)
+          nil)))))
+
 (defclass footstep-planner-graph
   :super graph
   :slots (thr rthr target-scene
@@ -51,7 +83,8 @@ footstep-parameter"))
           leg-object step-max
           rotate-max
           wd wp
-          footstep-param
+          z-axis
+          footstep-param planes
           collision-robot-model timeout))
 
 (defmethod footstep-planner-graph
@@ -61,6 +94,8 @@ footstep-parameter"))
                ((:grow g) 0.2)
                ((:timeout tm) nil)
                ((:wd d) 1.0)
+               ((:planes ps) nil)
+               ((:z-axis z) nil)
                ((:wp p) 0.0)
                ((:robot r) nil)
                ((:leg-object lo) nil)
@@ -75,6 +110,8 @@ footstep-parameter"))
     (setq footstep-param param)
     (setq target-scene sc)
     (setq timeout tm)
+    (setq planes ps)
+    (setq z-axis z)
     (if target-scene
         (setq obstacles
               (remove-if #'null
@@ -148,18 +185,27 @@ footstep-parameter"))
                   (debug nil)
                   (next-leg-coords nil)
                   (robot-coords nil)
+                  (next-leg-face nil)
                   &allow-other-keys)
     "this method is called after robot model is moved."
-    (cond (collision-robot-model
+    (and
+     (cond (collision-robot-model
             (not (send self :collision-with-obstacles-collision-robot-model-p
                        (send (send robot-coords :copy-worldcoords)
                              :transform (send footstep-param :foot->robot))
                        :debug debug)))
-          (robot
+           (robot
             (not (send self :collision-with-obstacles-p robot :debug debug)))
-          (t
-           (not (send self :collision-with-obstacles-no-robot-mode-p
-                      next-leg-coords :debug debug)))))
+           (t
+            (not (send self :collision-with-obstacles-no-robot-mode-p
+                       next-leg-coords :debug debug))))
+     ;; plane check
+     (if (and next-leg-face planes)
+         (remove-if #'null
+                    (mapcar #'(lambda (pln)
+                                (face-on-a-face next-leg-face pln))
+                            planes))
+       t)))
   (:successors (state &key (verbose nil))
     (when timeout                            ;check the timeout
       (when (< (- (send timeout :to-sec) (send (ros::time-now) :to-sec)) 0)
@@ -172,6 +218,15 @@ footstep-parameter"))
                                          (send state :worldcoords)
                                          next-leg
                                          (send state :step-name))))
+        ;; mapping to the planes if needed
+        (when (and planes z-axis)
+          (setq next-coords-candidate
+                (remove-if #'(lambda (x) (null (cdr x)))
+                           (mapcar #'(lambda (c)
+                                       (cons (car c)
+                                             (project-coords-on-to-plane
+                                              (cdr c) planes z-axis)))
+                                   next-coords-candidate))))
         ;; remove steps collide with obstacles
         (let ((ret nil))
           (dolist (c next-coords-candidate)
@@ -206,14 +261,10 @@ footstep-parameter"))
     (when debug
       (send-all (send self :obstacles) :draw-on :flush nil)
       (send collision-robot-model :draw-on :flush t))
-;;    (let ((coords-worldpos (send coords :worldpos)))
       (dolist (x (send self :obstacles))
-;;        (if (< (distance (send x :worldpos) coords-worldpos)
-;;               2000.0)
         (if (= (pqp-collision-check collision-robot-model x) 1)
             (return-from :collision-with-obstacles-collision-robot-model-p
               t)))
-      ;;)
     nil)
   (:collision-with-obstacles-no-robot-mode-p (coords &key (debug nil))
     "returns t when colliding. when no robot model mode, we utilize collision

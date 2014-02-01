@@ -2,6 +2,7 @@
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
+        clear_params="true"
         output="screen">
     <rosparam>
     use_planes: true
@@ -13,7 +14,7 @@
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-client-sample.l"
         name="footstep_planner_client"
-        output="screen" if="false">
+        output="screen">
   </node>
   <node pkg="jsk_footstep_planner"
         type="plane_publisher.py"

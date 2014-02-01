@@ -2,6 +2,7 @@
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
+        clear_params="true"
         output="screen">
     <rosparam>
     x:     [-0.039375,0.0525,0.0525,0.027176,-0.027176,-0.08,0.0,0.0,0.075,0.15,0.0]

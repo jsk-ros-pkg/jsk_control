@@ -18,10 +18,9 @@
                                                      (send polygon :polygon :points))))
                                  (instance face :init :vertices points))))
                          polygons)))
-      (setq *planes* (instance faceset :init :faces faces))
-      ))
-  (objects (list *planes*))
-  )
+      (let ((fc (instance faceset :init :faces faces)))
+      (setq *planes* faces)
+      ))))
 
 (defclass ros-footstep-parameter
   :super footstep-parameter
@@ -104,6 +103,8 @@
                           :wp 0.0
                           :wg 1.0
                           :timeout (ros::time+ (ros::time-now) (ros::time *timeout*))
+                          :planes *planes*
+                          :z-axis (float-vector 0 0 1)
                           :collisoin-robot-model nil
                           ))
          ;; 一個目がllegだったら、llegからスタートする
