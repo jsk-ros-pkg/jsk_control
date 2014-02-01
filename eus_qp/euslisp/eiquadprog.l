@@ -81,20 +81,20 @@
 
 (defun solve-eiquadprog
   (&key
-   (f0 #F(0))
-   (eval-weight-matrix (unit-matrix (length f0)))
-   (eval-coeff-vector (scale 0 f0))
+   (initial-state #F(0))
+   (eval-weight-matrix (unit-matrix (length initial-state)))
+   (eval-coeff-vector (instantiate float-vector (length initial-state)))
    (equality-matrix #2f())
    (equality-vector #f())
-   (f0-min #F())
-   (f0-max #F())
+   (state-min-vector #F())
+   (state-max-vector #F())
    (inequality-matrix #2f())
    (inequality-min-vector #F())
    (inequality-max-vector #F())
    (timer (instance mtimer :init))
    (timebuf #F(0))
    (debug? nil))
-  (let* ((x0 f0)
+  (let* ((x0 initial-state)
 	 (G eval-weight-matrix)
 	 (g0 eval-coeff-vector)
 	 (CE equality-matrix)
@@ -103,10 +103,10 @@
 	  (matrix-append
 	   (flatten
 	    (list
-	     (if (plusp (length f0-min))
-		 (unit-matrix (length f0-min)))
-	     (if (plusp (length f0-max))
-		 (scale-matrix -1 (unit-matrix (length f0-max))))
+	     (if (plusp (length state-min-vector))
+		 (unit-matrix (length state-min-vector)))
+	     (if (plusp (length state-max-vector))
+		 (scale-matrix -1 (unit-matrix (length state-max-vector))))
 	     (if (plusp (length inequality-min-vector))
 		 inequality-matrix)
 	     (if (plusp (length inequality-max-vector))
@@ -115,8 +115,8 @@
 	 (ci0
 	  (concatenate
 	   float-vector
-	   (scale -1 f0-min)
-	   f0-max
+	   (scale -1 state-min-vector)
+           state-max-vector
 	   (scale -1 inequality-min-vector)
 	   inequality-max-vector))
 	 ret)
