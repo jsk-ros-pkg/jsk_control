@@ -12,6 +12,9 @@
     (setf legs-num ln)
     (send* self :gen-footstep args)
     self)
+  (:foot-vertices (leg coords)
+    (error
+     "You have to define :gen-footstep in subclass of footstep-parameter"))
   ;; common interface
   (:footstep-num ()
     0)
@@ -69,7 +72,7 @@ footstep-parameter"))
                                                            (v. plane-normal z-axis))))
                                              (v+ point (scale alpha z-axis))))))
                                     (if (not (eq (send pln :insidep projected-point) :outside))
-                                        (make-coords :pos projected-point) ;only supports z-value
+                                        (make-coords :rot (send (send coords :copy-worldcoords) :rot) :pos projected-point) ;only supports z-value
                                       nil)))
                               planes)))
       (let ((non-null-candidates (remove-if #'null candidates)))
@@ -242,7 +245,12 @@ footstep-parameter"))
                 (if (send self :successablep :debug verbose
                           :next-leg next-leg ;:lleg, :rleg and so on
                           :next-leg-coords cdr-c
-                          :robot-coords robot-coords)
+                          :robot-coords robot-coords
+                          :next-leg-face (instance
+                                          face :init
+                                          :vertices
+                                          (send footstep-param :foot-vertices
+                                                next-leg cdr-c)))
                     (progn
                       (setf (cdr c)
                             (instance step-node :init

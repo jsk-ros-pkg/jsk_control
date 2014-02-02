@@ -24,10 +24,31 @@
 
 (defclass ros-footstep-parameter
   :super footstep-parameter
-  :slots (left-footsteps right-footsteps))
+  :slots (left-footsteps right-footsteps size-x size-y size-z))
 (defmethod ros-footstep-parameter
-  (:init ()
+  (:init (x y)
+    (setq size-x x)
+    (setq size-y y)
     (send-super :init :legs-num 2))
+  (:foot-vertices (leg coords)
+    ;;
+    ;;     x     x
+    ;;
+    ;;        c
+    ;;
+    ;;     x     x
+    (let* ((size-x/2 (/ size-x 2))
+           (size-y/2 (/ size-y 2))
+           (local-vertices (list
+                            (float-vector size-x/2 size-y/2 0)
+                            (float-vector (- size-x/2) size-y/2 0)
+                            (float-vector (- size-x/2) (- size-y/2) 0)
+                            (float-vector size-x/2 (- size-y/2) 0))))
+      (mapcar #'(lambda (v)
+                  (let ((vv (send coords :transform-vector v)))
+                    ;;(format t "~A -> ~A~%" v vv)
+                    vv))
+              local-vertices)))
   (:gen-footstep (&rest args)
     (send self :gen-left-footstep)
     (send self :gen-right-footstep)
@@ -88,7 +109,7 @@
   )
 
 (defun plan-execute-cb (server goal)
-  (let* ((param (instance ros-footstep-parameter :init))
+  (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
          (prblm (instance footstep-planner-graph :init
                           :scene nil :scene-grow 0
                           :footstep-parameter param
@@ -176,6 +197,9 @@
   (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
         (leg-size-z (* 1000.0 (ros::get-param "~leg_height" 0.001)))
         (leg-size-y (* 1000.0 (ros::get-param "~leg_width" 0.135))))
+    (setq *leg-size-x* leg-size-x)
+    (setq *leg-size-y* leg-size-y)
+    (setq *leg-size-z* leg-size-z)
     (setq *leg* (make-cube leg-size-x leg-size-y leg-size-z))
     (setq *global-frame-id* (ros::get-param "~global_frame_id" "/odom"))
     (setq *tf* (instance ros::transform-listener :init)))
