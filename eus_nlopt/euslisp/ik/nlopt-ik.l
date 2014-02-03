@@ -140,7 +140,7 @@
    (all-links (reduce #'union (cons nil link-list)))
    (axis-matrix (make-list (length move-target) :initial-element (unit-matrix 6)))
    (reset? t) (move-base? t) (alg 11)
-   (x0 (progn
+   (initial-state (progn
 	 (cond
 	  (reset?
 	   (send *robot* :reset-pose)
@@ -197,18 +197,18 @@
       :max-eval max-eval
       :max-time max-time
       :f-callback f-callback
+      :min min :max max
       ;;
       :algorithm alg
-      :x0 x0
-      :x-min
+      :initial-state initial-state
+      :state-min-vector
       (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
-      :x-max
+      :state-max-vector
       (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
-      :min min :max max
       :ftol ftol :xtol xtol :eqthre 1e-2
-      :m-x (length x0)
-      :m-g 0
-      :m-h 0)))
+      :state-dimension (length initial-state)
+      :equality-dimension 0
+      :inequality-dimension 0)))
    optimize))
 
 (defun ik-test
@@ -238,7 +238,7 @@
    (axis-matrix (unit-matrix 6))
    (reset? t)
    (alg 11)
-   (x0 (progn
+   (initial-state (progn
 	 (cond
 	  (reset?
 	   (send *robot* :reset-pose)
@@ -277,16 +277,16 @@
       :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
       ;;
       :algorithm alg
-      :x0 x0
-      :x-min
+      :initial-state initial-state
+      :state-min-vector
       (vector-eus2nlopt (send-all (send-all all-links :joint) :min-angle))
-      :x-max
+      :state-max-vector
       (vector-eus2nlopt (send-all (send-all all-links :joint) :max-angle))
       :max-time max-time
       :ftol ftol :xtol xtol :eqthre 1e-2
-      :m-x (length x0)
-      :m-g 0
-      :m-h 0)))
+      :state-dimension (length initial-state)
+      :equality-dimension 0
+      :inequality-dimension 0)))
    optimize))
 
 (defun fill0-vector-with-links
@@ -383,24 +383,24 @@
     (collision-avoidance-link-pair nil)
     ;;
     (algorithm L_BFGS)
-    (x0
+    ((:initial-state initial-state)
      (vector-eus2nlopt
       (send-all (send-all all-links :joint) :joint-angle)))
-    (x-min
+    ((:state-min-vector state-min-vector)
      (vector-eus2nlopt
       (send-all (send-all all-links :joint) :min-angle)))
-    (x-max
+    ((:state-max-vector state-max-vector)
      (vector-eus2nlopt
       (send-all (send-all all-links :joint) :max-angle)))
     (ftol 1e-18)
     (xtol 1e-18)
     (eqthre 1e-10)
-    (m-x
+    (state-dimension
      (length
       (vector-eus2nlopt
        (send-all (send-all all-links :joint) :joint-angle))))
-    (m-g 0)
-    (m-h 0)
+    (equality-dimension 0)
+    (inequality-dimension 0)
     ;;
     (stop -1)
     (max-eval stop)
@@ -412,15 +412,15 @@
    (send-super*
     :init
     :algorithm algorithm
-    :x0 x0
-    :x-min x-min
-    :x-max x-max
+    :initial-state initial-state
+    :state-min-vector state-min-vector
+    :state-max-vector state-max-vector
     :ftol ftol
     :xtol xtol
     :eqthre eqthre
-    :m-x m-x
-    :m-g m-g
-    :m-h m-h
+    :state-dimension state-dimension
+    :equality-dimension equality-dimension
+    :inequality-dimension inequality-dimension
     :max-eval max-eval
     args)
    ;; list check
@@ -548,67 +548,69 @@
      (send *viewer* :viewsurface :flush)
      (x::window-main-one))))
   ;;
-  (:f (v1 v2)
-      (mapcar
-       #'(lambda (j v) (send j :joint-angle v))
-       (send-all all-links :joint)
-       (vector-nlopt2eus
-	v1 :link-list all-links))
-      (setf (aref v2 0)
-	    (*
-	     1e+3
-	     (+
-	      (if target-centroid-pos
-		  (norm2
-		   (subseq
-		    (scale (* cog-gain 1e-3)
-			   (v- (send robot :centroid) target-centroid-pos))
-		    0 2))
-		0)
-	      (apply #'+ (mapcar #'norm2 (send self :target-diff))))))
-      ;;
-      ;; draw
-      ;;
-      (if (functionp f-callback)
-	  (funcall f-callback v1 v2))
-      (send self :update-viewer
-	    :debug-view debug-view
-	    :target-coords target-coords
-	    :cost (aref v2 0))
-      0)
-  (:df (v1 v2)
-       (mapcar
-	#'(lambda (j v) (send j :joint-angle v))
-	(send-all all-links :joint)
-	(vector-nlopt2eus v1 :link-list all-links))
-       (send robot :worldcoords)
-       (my-copy-matrix
-	(scale
-	 1e+3
-	 (map float-vector
-	      #'*
-	      weight-list
-	      (vlist+
-	       (mapcar
-		#'(lambda (ll Jdx)
-		    (fill0-vector-with-links
-		     :all-links all-links
-		     :link-list ll
-		     :val-list
-		     (vector-nlopt2eus
-		      (scale -2.0 Jdx) :link-list ll)))
-		(append
-		 (if target-centroid-pos (list all-links))
-		 link-list)
-		(append
-		 (if target-centroid-pos (list (send self :Jcdc)))
-		 (send self :Jxdx))))))
-	v2)
-       0)
-  (:g (v1 v2) 0)
-  (:dg (v1 v2) 0)
-  (:h (v1 v2) 0)
-  (:dh (v1 v2) 0)
+  (:evaluation-function
+   (v1 v2)
+   (mapcar
+    #'(lambda (j v) (send j :joint-angle v))
+    (send-all all-links :joint)
+    (vector-nlopt2eus
+     v1 :link-list all-links))
+   (setf (aref v2 0)
+	 (*
+	  1e+3
+	  (+
+	   (if target-centroid-pos
+	       (norm2
+		(subseq
+		 (scale (* cog-gain 1e-3)
+			(v- (send robot :centroid) target-centroid-pos))
+		 0 2))
+	     0)
+	   (apply #'+ (mapcar #'norm2 (send self :target-diff))))))
+   ;;
+   ;; draw
+   ;;
+   (if (functionp f-callback)
+       (funcall f-callback v1 v2))
+   (send self :update-viewer
+	 :debug-view debug-view
+	 :target-coords target-coords
+	 :cost (aref v2 0))
+   0)
+  (:evaluation-function-gradient
+   (v1 v2)
+   (mapcar
+    #'(lambda (j v) (send j :joint-angle v))
+    (send-all all-links :joint)
+    (vector-nlopt2eus v1 :link-list all-links))
+   (send robot :worldcoords)
+   (my-copy-matrix
+    (scale
+     1e+3
+     (map float-vector
+	  #'*
+	  weight-list
+	  (vlist+
+	   (mapcar
+	    #'(lambda (ll Jdx)
+		(fill0-vector-with-links
+		 :all-links all-links
+		 :link-list ll
+		 :val-list
+		 (vector-nlopt2eus
+		  (scale -2.0 Jdx) :link-list ll)))
+	    (append
+	     (if target-centroid-pos (list all-links))
+	     link-list)
+	    (append
+	     (if target-centroid-pos (list (send self :Jcdc)))
+	     (send self :Jxdx))))))
+    v2)
+   0)
+  (:equality-function (v1 v2) 0)
+  (:equality-function-gradient (v1 v2) 0)
+  (:inequality-function (v1 v2) 0)
+  (:inequality-function-gradient (v1 v2) 0)
   (:eus-ik
    (&rest args)
    (format t "[ALGORITHM]: EUS_IK(inf)~%")
@@ -653,16 +655,16 @@
 	(setq ret
 	      (send-super*
 	       :optimize
-	       :x0
+	       :initial-state
 	       (vector-eus2nlopt
 		(send-all (send-all all-links :joint) :joint-angle))
-	       :x-min
+	       :state-min-vector
 	       (vector-eus2nlopt
 		(send-all (send-all all-links :joint) :min-angle))
-	       :x-max
+	       :state-max-vector
 	       (vector-eus2nlopt
 		(send-all (send-all all-links :joint) :max-angle))
-	       :m-x
+	       :state-dimension
 	       (length
 		(vector-eus2nlopt
 		 (send-all (send-all all-links :joint) :joint-angle)))

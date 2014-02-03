@@ -36,11 +36,11 @@
 (defconstant NLOPT_MAXEVAL_REACHED 10)
 (defconstant NLOPT_MAXTIME_REACHED 11)
 
-(defforeign optimize *nlopt-plugin*
+(defforeign _nlopt_optimize *nlopt-plugin*
   "optimize" (:string :string :string ;; x E [min max]
-		      :integer :integer ;; object
-		      :integer :integer ;; eq const
-		      :integer :integer ;; neq const
+		      :integer :integer ;; object f
+		      :integer :integer ;; eq const g = 0
+		      :integer :integer ;; neq const  h <= 0
 		      :integer :integer :integer ;; dim
 		      :double :double :double ; thres
 		      :integer :double ; max_eval, max_time
@@ -138,17 +138,21 @@
   (setf (aref v2 1) -1)
   0)
 
-(defun nlopt-optmize
+(defun nlopt-optimize
   (&key
-   (x0 (float-vector 1 9))
-   (x-min #F(0 0 ))
-   (x-max #F(10 10))
-   (m-x (length x0))
+   ((:initial-state x0) (float-vector 1 9))
+   ((:state-min-vector x-min) #F(0 0 ))
+   ((:state-max-vector x-max) #F(10 10))
+   ((:state-dimension m-x) (length x0))
    ;;
-   (f 'sample-f) (df 'sample-df)
-   (g 'sample-g) (dg 'sample-dg)
-   (h 'sample-h) (dh 'sample-dh)
-   (m-g 1) (m-h 1)
+   ((:evaluation-function f) 'sample-f)
+   ((:evaluation-function-gradient df) 'sample-df)
+   ((:equality-function g) 'sample-g) ;; g = 0
+   ((:equality-function-gradient dg) 'sample-dg)
+   ((:inequality-function h) 'sample-h) ;; h <= 0
+   ((:inequality-function-gradient dh) 'sample-dh)
+   ((:equality-dimension m-g) 1)
+   ((:inequality-dimension m-h) 1)
    ;;
    (alg 9)
    (ftol 1e-16) (xtol 1e-8) (eqthre 1e-4)
@@ -178,7 +182,7 @@
 		  alg) alg)))
   (setq
    ret
-   (optimize
+   (_nlopt_optimize
     x0 x-min x-max
     (pod-address f) (pod-address df)
     (pod-address g) (pod-address dg)
@@ -217,6 +221,8 @@
 	     NelderMeadSimplex
 	     Sbplx
 	     ))
-    (nlopt-optmize :ftol 1e-2 :xtol 1e-2 :eqthre 1e-1 :alg alg)))
+    (nlopt-optimize :ftol 1e-10 :xtol 1e-10 :eqthre 1e-10
+		   :max-time 10
+		   :alg alg)))
 
 ;(nlopt-optmize)
