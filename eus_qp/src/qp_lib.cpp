@@ -9,6 +9,14 @@ using namespace Eigen;
 #define print(var)  \
   std::cout<<#var"= "<<std::endl<<var<<std::endl
 
+int flag = -1 ;
+
+extern "C" {
+int get_constraints_check_flag(){
+	return flag ;
+}
+}
+
 extern "C" {
 int check_constraints(double* CE, double* ce0, double* CI, double* ci0,
 		double* x, int x_len, int ce_len, int ci_len, double eqthre, double* ce_err,
@@ -39,8 +47,7 @@ double* solve_eiquadprog(double* G, double* g0, double* CE, double* ce0, double*
 		int x_len, int ce_len, int ci_len,
 		double eqthre,
 		int debug,
-		double* ret_buf, double* ce_err, double* ci_err, int* flag
-		) {
+		double* ret_buf, double* ce_err, double* ci_err) {
 	MatrixXd G_buf(x_len, x_len);
 	Eigen::VectorXd g0_buf(x_len);
 	MatrixXd CE_buf(x_len, ce_len);
@@ -89,28 +96,27 @@ double* solve_eiquadprog(double* G, double* g0, double* CE, double* ce0, double*
 	for (int i = 0; i < x_buf.size(); i++)
 				x[i] = x_buf(i) ;
 
-	flag[0] = check_constraints(CE, ce0, CI, ci0, x, x_len, eqthre, ce_len, ci_len, ce_err, ci_err);
+	flag = check_constraints(CE, ce0, CI, ci0, x, x_len, eqthre, ce_len, ci_len, ce_err, ci_err);
 	if (debug>0) {
-		std::cout << ":eq-constraint || " ;
+		std::cout << "[eus-eiquadprog]" << std::endl;
+		std::cout << "  :minimized-object "
+				<< ret_buf[0] << std::endl;
+		std::cout << "  :optimal-state [";
+		for (int i = 0; i < x_buf.size(); i++)
+			std::cout << x[i]  << ' ';
+		std::cout << "]" << std::endl;
+
+		std::cout << "  :eq-constraint || " ;
 		for ( int i=0 ; i <ce_len ; i++ ) std::cout << ce_err[i] << " " ;
 		std::cout << "|| < " << eqthre ;
 		std::cout << std::endl ;
-		std::cout << ":iq-constraint " ;
+		std::cout << "  :iq-constraint [" ;
 		for ( int i=0 ; i <ci_len ; i++ ) std::cout << ci_err[i] << " " ;
-		std::cout << "> " << -eqthre ;
+		std::cout << "] > " << -eqthre ;
 		std::cout << std::endl ;
-		std::cout << ":constraint-check " ;
-		std::cout << flag[0]  ;
+		std::cout << "  :constraint-check " ;
+		std::cout << flag  ;
 		std::cout << std::endl ;
-	}
-
-	if (debug > 0){
-		std::cout << "f: "
-				<< ret_buf[0] << std::endl;
-		std::cout << "x: ";
-		for (int i = 0; i < x_buf.size(); i++)
-			std::cout << x[i]  << ' ';
-		std::cout << std::endl;
 	}
 
 	return x;

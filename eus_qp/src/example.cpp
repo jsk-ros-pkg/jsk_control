@@ -133,16 +133,9 @@ void bar() {
 
   double ce_err[ce_len] ;
   double ci_err[ci_len] ;
-  int flag[1] ;
   solve_eiquadprog(G, g0, CE, ce0, CI, ci0, x,
   		x_len, ce_len, ci_len, 1e-1,
-  		1, ret_buf, ce_err, ci_err, flag
-  		) ;
-  std::cout << "f: " << ret_buf[0] << std::endl;
-  std::cout << "x: ";
-  for (int i = 0; i < x_len; i++)
-    std::cout << x[i] << ' ';
-  std::cout << std::endl;
+  		2, ret_buf, ce_err, ci_err) ;
 }
 
 int main(int argc, char** argv){
