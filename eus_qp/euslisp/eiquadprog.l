@@ -153,7 +153,7 @@
     (setf (aref timebuf 0) (send timer :stop))
     (if debug? (format t "TIME: ~A sec~%" (aref timebuf 0)))
     (setf (aref ok? 0) (_get_constraints_check_flag))
-    ret
+    (if (= (aref ok? 0) 0) ret)
     ))
 
 ;;;;
