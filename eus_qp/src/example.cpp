@@ -55,6 +55,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <Eigen/Dense>
 
 #include "eiquadprog.hpp"
+#include "qp_lib.cpp"
 
 using namespace Eigen;
 
@@ -89,16 +90,62 @@ template<typename Vec, typename Mat> void foo() {
   ci0(0)=0.0; ci0(1)=0.0;ci0(2)=0.0; ci0(3)=10.0;
 
 
-  std::cout << "f: " << solve_quadprog(G, g0,  CE, ce0,  CI, ci0, x) << std::endl;
+  std::cout << "f: " ;
+  std::cout << solve_quadprog(G, g0,  CE, ce0,  CI, ci0, x) ;
+  std::cout << std::endl;
   std::cout << "x: ";
   for (int i = 0; i < x.size(); i++)
     std::cout << x(i) << ' ';
   std::cout << std::endl;
 }
 
+void bar() {
+  double g0[3];
+  double G[3*3] ;
+  double CE[1*3];
+  double ce0[1];
+  double CI[4*3];
+  double ci0[4];
+  double x[3];
+  double ret_buf[1];
+
+  int x_len = 3;
+  int ce_len = 1;
+  int ci_len = 4;
+
+  g0[0]=6.0; g0[1]=1.0; g0[2]=1.0;
+
+  CE[0]=1.0;
+  CE[1]=2.0;
+  CE[2]=-1.0;
+
+  ce0[0]=-4;
+
+  G[0]=2.1; G[3]=0.0; G[6]=1.0;
+  G[1]=1.5; G[4]=2.2; G[7]=0.0;
+  G[2]=1.2; G[5]=1.3; G[8]=3.1;
+
+  CI[0]=1.0; CI[3]=0.0; CI[6]=0.0; CI[9]=-1.0;
+  CI[1]=0.0; CI[4]=1.0; CI[7]=0.0; CI[10]=-1.0;
+  CI[2]=0.0; CI[5]=0.0; CI[8]=1.0; CI[11]=0.0;
+
+  ci0[0]=0.0; ci0[1]=0.0; ci0[2]=0.0; ci0[3]=10.0;
+
+  solve_eiquadprog(G, g0, CE, ce0, CI, ci0, x,
+  		x_len, ce_len, ci_len,
+  		2, ret_buf
+  		) ;
+  std::cout << "f: " << ret_buf[0] << std::endl;
+  std::cout << "x: ";
+  for (int i = 0; i < x_len; i++)
+    std::cout << x[i] << ' ';
+  std::cout << std::endl;
+}
+
 int main(int argc, char** argv){
   	
   foo<Eigen::VectorXd, MatrixXd>();
-
+  std::cout << "----------------------------" << std::endl ;
+  bar();
 }
 
