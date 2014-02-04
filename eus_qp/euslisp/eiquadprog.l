@@ -1,6 +1,8 @@
-(defvar m (load-foreign "../lib/libeus_qp.so"))
+(defvar *eiquadprog-plugin* (load-foreign "../lib/libeus_qp.so"))
 
-(defforeign _solve-eiquadprog m "solve_eiquadprog"
+(defforeign _solve-eiquadprog
+  *eiquadprog-plugin*
+  "solve_eiquadprog"
   (:string :string ;; min xTGx/2 + g0x
 	   :string :string ;; CEx + ce = 0
 	   :string :string ;; CIx + ci > 0
@@ -8,9 +10,17 @@
 	   :integer ;; |x|
 	   :integer ;; |ce|
 	   :integer ;: |ci|
+	   :double ;; eqthre	   :
 	   :integer ;; debug?
+	   :string :string :string ;; ret, ce, ci values
 	   )
   :string)
+
+(defforeign _get_constraints_check_flag
+  *eiquadprog-plugin*
+  "get_constraints_check_flag"
+  ()
+  :integer)
 
 ;; util
 (defun my-copy-matrix (mat vec)
@@ -33,6 +43,10 @@
    (CI (make-matrix ci_len x_len))
    ;;
    (debug? nil)
+   (eqthre 1e-1)
+   (ret_buf #F(0))
+   (ce_err (instantiate float-vector ce_len))
+   (ci_err (instantiate float-vector ci_len))
    ret
    &allow-other-keys)
   (setq
@@ -45,7 +59,9 @@
     (send CI :get-val 'entity)
     ci0
     x0 x_len ce_len ci_len
+    eqthre
     (if debug? 1 0)
+    ret_buf ce_err ci_err
     ))
   ret
   )
@@ -93,7 +109,14 @@
    (inequality-max-vector #F())
    (timer (instance mtimer :init))
    (timebuf #F(0))
-   (debug? nil))
+   (debug? nil)
+   ;;
+   (eqthre 1e-1)
+   (ret_buf #F(0))
+   ;;(ce_err (instantiate float-vector (length ))
+   ;;(ci_err (instantiate float-vector ci_len))
+   (ok? #i(-1))
+   )
   (let* ((x0 initial-state)
 	 (G eval-weight-matrix)
 	 (g0 eval-coeff-vector)
@@ -123,9 +146,13 @@
     (setq
      ret
      (solve-eiquadprog-raw
-      :x0 x0 :G G :g0 g0 :CE CE :ce0 ce0 :CI CI :ci0 ci0 :debug? debug?))
+      :x0 x0 :G G :g0 g0 :CE CE :ce0 ce0 :CI CI :ci0 ci0
+      :eqthre eqthre
+      :ret_buf ret_buf ;;:ce_err ce_err :ci_err ci_err
+      :debug? debug?))
     (setf (aref timebuf 0) (send timer :stop))
     (if debug? (format t "TIME: ~A sec~%" (aref timebuf 0)))
+    (setf (aref ok? 0) (_get_constraints_check_flag))
     ret
     ))
 
@@ -150,7 +177,7 @@
   (apply
    #'solve-eiquadprog
    (append
-    (list :f0 (instantiate float-vector 3)
+    (list :initial-state (instantiate float-vector 3)
 	  :eval-weight-matrix
 	  (make-matrix 3 3 '((2.1 0.0 1.0) (1.5 2.2 0.0) (1.2 1.3 3.1)))
 	  :eval-coeff-vector (float-vector 6.0 1.0 1.0)
