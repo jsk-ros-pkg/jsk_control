@@ -10,10 +10,36 @@ using namespace Eigen;
   std::cout<<#var"= "<<std::endl<<var<<std::endl
 
 extern "C" {
+int check_constraints(double* CE, double* ce0, double* CI, double* ci0,
+		double* x, int x_len, int ce_len, int ci_len, double eqthre, double* ce_err,
+		double* ci_err) {
+	int ret = ce_len + ci_len ;
+	for (int i = 0; i < ce_len; i++) {
+		for (int j = 0; j < x_len; j++) {
+			ce_err[i] += CE[i * x_len + j] * x[j];
+		}
+		ce_err[i] += ce0[i];
+		if ( ce_err[i] < eqthre && ce_err[i] > eqthre ) ret-- ;
+	}
+	for (int i = 0; i < ci_len; i++) {
+		for (int j = 0; j < x_len; j++) {
+			ci_err[i] += CI[i * x_len + j] * x[j];
+		}
+		ci_err[i] += ci0[i];
+		if ( ci_err[i] > -eqthre ) ret-- ;
+	}
+	return ret;
+}
+}
+
+
+extern "C" {
 double* solve_eiquadprog(double* G, double* g0, double* CE, double* ce0, double* CI,
 		double* ci0, double* x,
 		int x_len, int ce_len, int ci_len,
-		int debug, double* ret_buf
+		double eqthre,
+		int debug,
+		double* ret_buf, double* ce_err, double* ci_err, int* flag
 		) {
 	MatrixXd G_buf(x_len, x_len);
 	Eigen::VectorXd g0_buf(x_len);
@@ -49,7 +75,7 @@ double* solve_eiquadprog(double* G, double* g0, double* CE, double* ce0, double*
 	}
 
 
-	if (debug>0) {
+	if (debug>1) {
 		print(G_buf);
 		print(g0_buf);
 		print(CE_buf);
@@ -62,6 +88,21 @@ double* solve_eiquadprog(double* G, double* g0, double* CE, double* ce0, double*
 							ci0_buf, x_buf) ;
 	for (int i = 0; i < x_buf.size(); i++)
 				x[i] = x_buf(i) ;
+
+	flag[0] = check_constraints(CE, ce0, CI, ci0, x, x_len, eqthre, ce_len, ci_len, ce_err, ci_err);
+	if (debug>0) {
+		std::cout << ":eq-constraint || " ;
+		for ( int i=0 ; i <ce_len ; i++ ) std::cout << ce_err[i] << " " ;
+		std::cout << "|| < " << eqthre ;
+		std::cout << std::endl ;
+		std::cout << ":iq-constraint " ;
+		for ( int i=0 ; i <ci_len ; i++ ) std::cout << ci_err[i] << " " ;
+		std::cout << "> " << -eqthre ;
+		std::cout << std::endl ;
+		std::cout << ":constraint-check " ;
+		std::cout << flag[0]  ;
+		std::cout << std::endl ;
+	}
 
 	if (debug > 0){
 		std::cout << "f: "

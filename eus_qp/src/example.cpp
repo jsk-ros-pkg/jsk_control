@@ -15,7 +15,7 @@
  Solve:
  min f(x) = 1/2 x G x + g0 x
  s.t.
-   x_1 + 2*x_2 + x_3 = -4
+   x_1 + 2*x_2 + x_3 + -4 = 0
 
    x_1 >= 0
    x_2 >= 0
@@ -131,9 +131,12 @@ void bar() {
 
   ci0[0]=0.0; ci0[1]=0.0; ci0[2]=0.0; ci0[3]=10.0;
 
+  double ce_err[ce_len] ;
+  double ci_err[ci_len] ;
+  int flag[1] ;
   solve_eiquadprog(G, g0, CE, ce0, CI, ci0, x,
-  		x_len, ce_len, ci_len,
-  		2, ret_buf
+  		x_len, ce_len, ci_len, 1e-1,
+  		1, ret_buf, ce_err, ci_err, flag
   		) ;
   std::cout << "f: " << ret_buf[0] << std::endl;
   std::cout << "x: ";
