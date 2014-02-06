@@ -139,10 +139,6 @@
     ret))
 
 
-  (:switch-end-coords 
-   (&key id)
-   )
-
   (:make-foot-convex
    (&key force?)
    )
@@ -157,10 +153,6 @@
 	 (torso2p (substringp "torso2" (send req :ik_request :group_name)))
 	 (torso3p (substringp "torso3" (send req :ik_request :group_name)))
          (fullbodyp (substringp "fullbody" (send req :ik_request :group_name)))
-	 (end-coords-id
-	  (if (substringp "eus" (send req :ik_request :group_name))
-	      (send self :switch-end-coords :id 2)
-	    (send self :switch-end-coords :id 1)))
          (opt-str (send (send (send req :ik_request) :constraints) :name))
          (opt
           (cond

@@ -39,7 +39,6 @@
    (send self :make-centroid-object)
 
    (send self :init-fullbody-ik-main)
-   (send self :switch-end-coords :id 1)
    (setq *root-link* "/pelvis")
 
    (send-super* :init args)
