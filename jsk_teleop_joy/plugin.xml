@@ -11,4 +11,6 @@
   </class>
   <class name="JoyMoveIt" type="jsk_joy.plugin.moveit.JoyMoveIt">
   </class>
+  <class name="JoyGoPos" type="jsk_joy.plugin.gopos.JoyGoPos">
+  </class>
 </library>
