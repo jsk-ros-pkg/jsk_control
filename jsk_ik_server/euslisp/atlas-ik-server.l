@@ -7,7 +7,6 @@
 (ros::load-ros-manifest "arm_navigation_msgs")
 
 (require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
-(require "package://jsk_ik_server/euslisp/atlas-end-coords.l")
 (require "package://jsk_ik_server/euslisp/ik-server.l")
 
 (ros::roseus "atlas_ik_server")
@@ -16,7 +15,6 @@
 (defclass atlas-ik-server
   :super ik-server
   )
-
 
 (defmethod atlas-ik-server
   (:init
@@ -46,7 +44,3 @@
   )
 
 (instance atlas-ik-server :init)
-
-;;
-;; roseus "(setq *setup-end-coords-for-hku-flag* nil)" atlas-eus-ik.l
-;;

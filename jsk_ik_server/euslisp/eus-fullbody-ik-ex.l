@@ -1,12 +1,86 @@
 (ros::load-ros-manifest "jsk_ik_server")
-(defvar *success-state-collection*)
-(defvar *fix-limb-coords*)
+
+(defmethod cascaded-link
+  (:cog-convergence-check
+   (centroid-thre target-centroid-pos &optional centroid-offset-func)
+   (let ((cdiff
+	  (send self :difference-cog-position target-centroid-pos centroid-offset-func)))
+     (cond
+      ((numberp centroid-thre) (> centroid-thre (norm cdiff)))
+      ((functionp centroid-thre) (funcall centroid-thre cdiff))
+      ((vectorp centroid-thre)
+       (v< (map float-vector #'abs cdiff) centroid-thre)))))
+  )
+
+(defmethod euscollada-robot
+  (:fullbody-inverse-kinematics-with-error
+   (target-coords
+    &rest
+    args
+    &key
+    (revert-if-fail t)
+    link-list move-target
+    rotation-axis translation-axis thre rthre
+    target-centroid-pos centroid-thre centroid-offset-func
+    &allow-other-keys)
+   (let* ((initial-av (copy-object (send self :angle-vector)))
+	  (inital-coords (copy-object (send self :worldcoords)))
+	  (target-coords
+	   (mapcar #'(lambda (x)
+		       (if (functionp x) (funcall x) x))
+		   target-coords))
+	  dif-pos dif-rot success cdiff
+	  )
+     (if (atom (car link-list)) (setq link-list (list link-list)))
+     (if (atom move-target) (setq move-target (list move-target)))
+     (if (atom target-coords) (setq target-coords (list target-coords)))
+     (if (atom rotation-axis) (setq rotation-axis (list rotation-axis)))
+     (if (atom translation-axis) (setq translation-axis (list translation-axis)))
+     (if (atom thre) (setq thre (list thre)))
+     (if (atom rthre) (setq rthre (list rthre)))
+     (send* self :fullbody-inverse-kinematics target-coords
+	    :revert-if-fail nil args)
+     (setq dif-pos
+	   (mapcar #'(lambda (mv tc trans-axis)
+		       (send mv :difference-position tc
+			     :translation-axis trans-axis))
+		   move-target target-coords translation-axis))
+     (setq dif-rot
+	   (mapcar #'(lambda (mv tc rot-axis)
+		       (send mv :difference-rotation tc
+			     :rotation-axis rot-axis))
+		   move-target target-coords rotation-axis))
+     (setq cdiff
+	   (send self :difference-cog-position
+		 target-centroid-pos centroid-offset-func))
+     (setq success
+	   (send self :ik-convergence-check
+		 t dif-pos dif-rot
+		 rotation-axis translation-axis thre rthre
+		 centroid-thre target-centroid-pos centroid-offset-func))
+     (cond
+      ((and (not success) revert-if-fail)
+       (send self :angle-vector initial-av)
+       (send self :newcoords inital-coords)
+       (list
+	(cons :dif-pos dif-pos)
+	(cons :dif-rot dif-rot)
+	(cons :thre thre)
+	(cons :rthre rthre)
+	(cons :cog-dif cdiff)
+	(cons :cthre centroid-thre))
+       )
+      (t (send self :angle-vector))))))
 
 (defmethod ik-server
   (:make-foot-convex
   (&key
    (foot-key '(:rleg :lleg))
    (force? nil))
+
+  (when (position nil (mapcar #'(lambda (l) (send *robot* l)) foot-key))
+    (return-from :make-foot-convex nil))
+
   (format t "[foot-convex] ")
   (cond
    ((or
@@ -141,77 +215,6 @@
 	#'(lambda (v) (minusp (aref v 2)))
 	rotate))))))
   )
-(defmethod cascaded-link
-  (:cog-convergence-check
-   (centroid-thre target-centroid-pos &optional centroid-offset-func)
-   (let ((cdiff
-	  (send self :difference-cog-position target-centroid-pos centroid-offset-func)))
-     (cond
-      ((numberp centroid-thre) (> centroid-thre (norm cdiff)))
-      ((functionp centroid-thre) (funcall centroid-thre cdiff))
-      ((vectorp centroid-thre)
-       (v< (map float-vector #'abs cdiff) centroid-thre)))))
-  )
-
-(defmethod euscollada-robot
-  (:fullbody-inverse-kinematics-with-error
-   (target-coords
-    &rest
-    args
-    &key
-    (revert-if-fail t)
-    link-list move-target
-    rotation-axis translation-axis thre rthre
-    target-centroid-pos centroid-thre centroid-offset-func
-    &allow-other-keys)
-   (let* ((initial-av (copy-object (send self :angle-vector)))
-	  (inital-coords (copy-object (send self :worldcoords)))
-	  (target-coords
-	   (mapcar #'(lambda (x)
-		       (if (functionp x) (funcall x) x))
-		   target-coords))
-	  dif-pos dif-rot success cdiff
-	  )
-     (if (atom (car link-list)) (setq link-list (list link-list)))
-     (if (atom move-target) (setq move-target (list move-target)))
-     (if (atom target-coords) (setq target-coords (list target-coords)))
-     (if (atom rotation-axis) (setq rotation-axis (list rotation-axis)))
-     (if (atom translation-axis) (setq translation-axis (list translation-axis)))
-     (if (atom thre) (setq thre (list thre)))
-     (if (atom rthre) (setq rthre (list rthre)))
-     (send* self :fullbody-inverse-kinematics target-coords
-	    :revert-if-fail nil args)
-     (setq dif-pos
-	   (mapcar #'(lambda (mv tc trans-axis)
-		       (send mv :difference-position tc
-			     :translation-axis trans-axis))
-		   move-target target-coords translation-axis))
-     (setq dif-rot
-	   (mapcar #'(lambda (mv tc rot-axis)
-		       (send mv :difference-rotation tc
-			     :rotation-axis rot-axis))
-		   move-target target-coords rotation-axis))
-     (setq cdiff
-	   (send self :difference-cog-position
-		 target-centroid-pos centroid-offset-func))
-     (setq success
-	   (send self :ik-convergence-check
-		 t dif-pos dif-rot
-		 rotation-axis translation-axis thre rthre
-		 centroid-thre target-centroid-pos centroid-offset-func))
-     (cond
-      ((and (not success) revert-if-fail)
-       (send self :angle-vector initial-av)
-       (send self :newcoords inital-coords)
-       (list
-	(cons :dif-pos dif-pos)
-	(cons :dif-rot dif-rot)
-	(cons :thre thre)
-	(cons :rthre rthre)
-	(cons :cog-dif cdiff)
-	(cons :cthre centroid-thre))
-       )
-      (t (send self :angle-vector))))))
 
 (defmethod ik-server
   (:fullbody-ik-main
@@ -426,7 +429,126 @@
   ()
   (send (send *robot* :utorso_lk) :make-pqpmodel :fat 30)
   (setq *success-state-collection* nil)
-  ;; (make-foot-convex)
+  (send self :make-foot-convex)
   (send self :make-centroid-object))
+  )
 
+(defmethod ik-server
+  (:fullbody-ik-with-collision
+   (arm goal-in-world &rest args)
+   (apply
+    #'send self :fullbody-ik-main
+    (append
+     args
+     (list
+      :target-limb (mapcan #'(lambda (limb) (if (send *robot* limb) (list limb))) (list arm :lleg :rleg))
+      :target-coords (mapcan #'(lambda (limb target) (if (send *robot* limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
+      :collision? t
+      ;;:centroid-thre 100
+      :root-link-virtual-joint-weight
+      (float-vector 0.02 0.02 0.1 0.01 0.04 0.04)
+      :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
+      :cog-gain 0.7
+      ;;:target-centroid-pos nil
+      ;;:stop 100
+      :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg))))))
+
+  (:torso-ik-with-collision
+   (arm goal-in-world
+	&rest args
+	&key
+	(waist-gain '(0.1 0.1 0.1))
+	(root-link-virtual-joint-weight
+	 (float-vector 0 0 0 0 0 0))
+	(max
+	 (map float-vector
+	      #'*
+	      root-link-virtual-joint-weight
+	      #F(1000 1000 1000 200 200 200)))
+	(min
+	 (scale
+	  -1
+	  (map float-vector
+	       #'*
+	       root-link-virtual-joint-weight
+	       #F(1000 1000 1000 200 200 200))))
+	&allow-other-keys)
+   (apply
+    #'send self :fullbody-ik-main
+    (append
+     args
+     (list
+      :target-limb (mapcan #'(lambda (limb) (if (send *robot* limb) (list limb))) (list arm :lleg :rleg))
+      :target-coords (mapcan #'(lambda (limb target) (if (send *robot* limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
+      :additional-weight-list
+      (mapcar
+       #'(lambda (k gain)
+	   (list (send *robot* :torso k :child-link)
+		 gain))
+       (list :waist-r :waist-p :waist-y)
+       waist-gain)
+      ;;(list 1e-3 1e-3 1e-3))
+      :root-link-virtual-joint-weight
+      root-link-virtual-joint-weight
+      :min-vec min
+      :max-vec max
+      :collision? t
+      :dif-pos-ratio 1.0
+      :dif-rot-ratio 0.00500
+      :manipulability-gain 0 ;0.00500
+      ;;:centroid-thre 200
+      ;;:target-centroid-pos nil
+      :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
+      ;;:stop 100
+      :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg))))))
+
+  (:normal-ik-with-collision
+   (arm goal-in-world &rest args)
+   (let* ((w
+	   (send-all (send *robot* :joint-list)
+		     :max-joint-velocity))
+	  (vel-limit
+	   (send-all (send *robot* :joint-list)
+		     :max-joint-velocity 0.2))
+	  (ret
+	   (apply
+	    #'send self :fullbody-ik-main
+	    (append
+	     args
+	     (list
+	      :target-limb (mapcan #'(lambda (limb) (if (send *robot* limb) (list limb))) (list arm :lleg :rleg))
+	      :target-coords (mapcan #'(lambda (limb target) (if (send *robot* limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
+	      ;;:additional-weight-list
+	      ;;(if (find-method *robot* :torso :waist-r)
+	      ;;(append
+	      ;;(mapcar
+	      ;;#'(lambda (k gain)
+	      ;;(list (send *robot* :torso k :child-link)
+	      ;;gain))
+	      ;;(list :waist-r :waist-p :waist-y)
+	      ;;(make-list 3 :initial-element 0))))
+	      ;; :additional-nspace-list
+	      ;; (mapcar
+	      ;;  #'(lambda (k)
+	      ;; 	(list (send *atlas* arm k :child-link)
+	      ;; 	      #'(lambda nil (- (random 1.0) 2.0))))
+	      ;;  '(:elbow-p))
+	      ;;(list 1e-3 1e-3 1e-3))
+	      :root-link-virtual-joint-weight
+	      (coerce (make-list 6 :initial-element 0) float-vector)
+	      :min-vec (float-vector 0 0 0 0 0 0)
+	      :max-vec (float-vector 0 0 0 0 0 0)
+	      :collision? t
+	      :centroid-thre 1e+10000
+					;:stop 100
+	      ;;:dif-pos-ratio 1.0
+	      ;;:dif-rot-ratio 0.00500
+	      ;;:manipulability-gain 0.00500
+	      :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
+	      :rthre (mapcan #'(lambda (limb) (if (send *robot* limb) (list (deg2rad 1)))) (list arm :lleg :rleg))
+	      :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg)))))))
+     (mapcar
+      #'(lambda (j g) (send j :max-joint-velocity g))
+      (send *robot* :joint-list) w)
+     ret))
   )
