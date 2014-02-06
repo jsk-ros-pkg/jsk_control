@@ -1,5 +1,4 @@
 (ros::load-ros-manifest "jsk_ik_server")
-(require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
 (defvar *success-state-collection*)
 (defvar *fix-limb-coords*)
 
@@ -431,15 +430,3 @@
   (send self :make-centroid-object))
 
   )
-
-
-;; setup
-;; (atlas-init-ex :real nil)
-;; (setq *robot* *atlas*)
-;; (init-fullbody-ik-main)
-;; (fix-leg)
-
-;; example
-;; (fullbody-ik-main :target-limb (list :rarm :lleg :rleg) :target-coords (list (make-coords :pos #f(250 -500 1000)) nil nil))
-;; (fullbody-ik-main :target-limb (list :rarm :larm :rleg :lleg) :target-coords (list (make-coords :pos #f(250 -400 1000)) (make-coords :pos #f(250 400 1000)) nil nil))
-

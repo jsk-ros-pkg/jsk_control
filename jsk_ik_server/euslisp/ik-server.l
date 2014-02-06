@@ -20,7 +20,7 @@
    )
   )
 
-(require "package://jsk_ik_server/euslisp/atlas-fullbody-ik.l")
+(require "package://jsk_ik_server/euslisp/eus-fullbody-ik-ex.l")
 
 (defmethod ik-server
   (:fullbody-ik-with-collision (arm goal-in-world &rest args)

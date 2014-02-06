@@ -2,8 +2,8 @@
 
 (ros::load-ros-manifest "jsk_ik_server")
 
-(require :ik-server "package://jsk_ik_server/euslisp/ik-server.l")
 (require "package://pr2eus/pr2-interface.l")
+(require :ik-server "package://jsk_ik_server/euslisp/ik-server.l")
 
 (ros::roseus "pr2_ik_server")
 
