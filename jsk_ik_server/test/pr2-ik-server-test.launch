@@ -1,9 +1,12 @@
 <launch>
-  <node pkg="roseus" type="roseus" name="pr2_ik_server"
-	args="$(find jsk_ik_server)/euslisp/pr2-ik-server.l"/>
+  <node pkg="roseus" type="roseus" name="pr2_ik_server" output="screen"
+	args="$(find jsk_ik_server)/euslisp/ik-server.l">
+    <param name="robot" value="PR2"/>
+  </node>
+
   <node pkg="roseus" type="roseus" name="pr2_ik_client" output="screen"
 	args="$(find jsk_ik_server)/euslisp/ik-client-test.l">
-    <param name="root_link" value="/base_link"/>
+    <param name="root_link" value="base_link"/>
   </node>
 </launch>
 

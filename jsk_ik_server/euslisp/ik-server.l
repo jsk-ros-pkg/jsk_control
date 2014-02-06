@@ -7,7 +7,7 @@
 (require :rtm-ros-robotics-interface
 	 "package://hrpsys_ros_bridge/euslisp/rtm-ros-robot-interface.l")
 (require "models/arrow-object.l")
-
+(require "package://pr2eus/pr2-interface.l")
 
 (ros::roseus "ik_server")
 
@@ -160,8 +160,8 @@
    )
   (:start-ik-server
    nil
+   (send self :init-robot)
    ;; initialization
-   (unless *root-link* (setq *root-link* "/base_link"))
    (setq *arrow* (arrow))
 
    (cond
@@ -200,8 +200,55 @@
     (ros::sleep)
     (ros::spin-once))
    )
+  
+  (:init-robot
+   nil
+   (defvar *robot-name* (ros::get-param "~robot" "PR2"))
+   (cond
+    ;;pr2
+    ((equal (string-upcase *robot-name*) "PR2")
+     (require "package://pr2eus/pr2-interface.l")
+     (setq *robot* (pr2))
+     (setq *root-link* "/base_link")
+     )
+    ;;atlas
+    ((equal (string-upcase *robot-name*) "ATLAS")
+     (require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
+     (setq *atlas* (atlas-with-hand))
+
+     (send *atlas* :reset-manip-pose)
+     (send *atlas* :fix-leg-to-coords (make-coords) :both)
+     (send-all (send *atlas* :joint-list) :max-joint-velocity 0.3)
+
+     (send *atlas* :torso :waist-r :max-angle 10)
+     (send *atlas* :torso :waist-r :min-angle -10)
+     ;;
+     (send *atlas* :torso :waist-p :max-angle 10)
+     (send *atlas* :torso :waist-p :min-angle -10)
+     (setq *robot* *atlas*)
+     
+     (send self :make-foot-convex)
+     (send self :make-centroid-object)
+
+     (send self :init-fullbody-ik-main)
+     (setq *root-link* "/pelvis")
+
+     )
+
+    (t
+     (ros::ros-error "undefined robot: ~A" *robot-name*)
+     (ros::ros-error "use PR2")
+     (require "package://pr2eus/pr2-interface.l")
+     (setq *robot* (pr2))
+     (setq *root-link* "/base_link")
+     )
+    )
+   )
+
+
   )
 
 ;; IK methods definition
 (require "package://jsk_ik_server/euslisp/eus-fullbody-ik-ex.l")
 
+(setq *ik-server* (instance ik-server :init))

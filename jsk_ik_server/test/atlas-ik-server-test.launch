@@ -1,6 +1,9 @@
 <launch>
-  <node pkg="roseus" type="roseus" name="atlas_ik_server"
-	args="$(find jsk_ik_server)/euslisp/atlas-ik-server.l"/>
+  <node pkg="roseus" type="roseus" name="atlas_ik_server" output="screen"
+	args="$(find jsk_ik_server)/euslisp/ik-server.l">
+    <param name="robot" value="atlas"/>
+  </node>
+
   <node pkg="roseus" type="roseus" name="atlas_ik_client" output="screen"
 	args="$(find jsk_ik_server)/euslisp/ik-client-test.l">
     <param name="root_link" value="/pelvis"/>
