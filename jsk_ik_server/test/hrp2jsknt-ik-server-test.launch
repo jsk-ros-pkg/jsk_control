@@ -1,0 +1,12 @@
+<launch>
+  <node pkg="roseus" type="roseus" name="hrp2jsknt_ik_server" output="screen"
+	args="$(find jsk_ik_server)/euslisp/hrp2jsknt-ik-server.l">
+    <param name="robot" value="hrp2jsknt"/>
+  </node>
+
+  <node pkg="roseus" type="roseus" name="hrp2jsknt_ik_client" output="screen"
+	args="$(find jsk_ik_server)/euslisp/ik-client-test.l">
+    <param name="root_link" value="/pelvis"/>
+  </node>
+
+</launch>
