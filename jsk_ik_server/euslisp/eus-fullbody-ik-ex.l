@@ -429,7 +429,7 @@
   ()
   (send (send *robot* :utorso_lk) :make-pqpmodel :fat 30)
   (setq *success-state-collection* nil)
-  (send self :make-foot-convex)
+  ;; (send self :make-foot-convex)
   (send self :make-centroid-object))
   )
 
