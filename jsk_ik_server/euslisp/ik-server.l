@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
 (ros::load-ros-manifest "jsk_ik_server")
-(ros::load-ros-manifest "arm_navigation_msgs")
+;(ros::load-ros-manifest "arm_navigation_msgs")
 (ros::load-ros-manifest "moveit_msgs")
 
 (require :rtm-ros-robotics-interface
@@ -93,8 +93,11 @@
        (send res :error_code :val moveit_msgs::MoveItErrorCodes::*FAILURE*)
        (cond
 	((not (eps= (norm q) 1.0))
-	 (format t "invalid quotanion detected ~A~%" q)
+	 (ros::ros-error "Invalid quotanion detected ~A~%" q)
 	 res)
+	((not (equal *root-link* (send goal :header :frame_id)))
+	  (ros::ros-error "root-link(~A) and frame_id(~A) must be same" *root-link* (send goal :header :frame_id))
+	  res)
 	((let* ((goal-in-pelvis (send *tf* :transform-pose *root-link* goal))
 		(goal-in-world
 		 (send (send *robot* :copy-worldcoords)

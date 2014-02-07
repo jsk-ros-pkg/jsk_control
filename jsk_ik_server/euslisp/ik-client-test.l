@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
 (ros::load-ros-manifest "hrpsys_gazebo_atlas")
-(ros::load-ros-manifest "arm_navigation_msgs")
+;(ros::load-ros-manifest "arm_navigation_msgs")
 (ros::load-ros-manifest "moveit_msgs")
 
 (ros::roseus "ik_client_test")
@@ -16,16 +16,12 @@
 (setq *prev-js* nil)
 (setq *root-link* (ros::get-param "~root_link" "/pelvis"))
 
-(format t "root-link: ~a~%" *root-link*)
-
-
 (do-until-key
  (let ((req (instance moveit_msgs::GetPositionIKRequest :init))
        (D 0.2))
    (send req :ik_request :group_name (random-select
                                       '("larm" "larm_torso" "larm_fullbody"
                                         "rarm" "rarm_torso" "rarm_fullbody")))
-   (print (send req :ik_request :group_name))
    (let ((c (make-coords)))
      (if (or (string= (subseq (send req :ik_request :group_name) 0 4) "larm"))
          (send c :rotate (deg2rad 90) :x)
@@ -34,6 +30,7 @@
          (send c :rotate (deg2rad 90) :x)))
      (if *prev-js*
          (send req :ik_request :robot_state :joint_state *prev-js*))
+     (ros::ros-info "send reqeust ~12A ~A" (send req :ik_request :group_name) c)
      ;;(send c :rotate (deg2rad 90) :x))
      (let ((q (matrix2quaternion (send c :rot))))
        (send req :ik_request :pose_stamped (instance geometry_msgs::PoseStamped :init
@@ -52,16 +49,12 @@
                          :y (elt q 2)
                          :z (elt q 3)
                          :w (elt q 0))
-                     )))
-       (let ((res (ros::service-call "/solve_ik" req)))
-   (if (= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
-       (progn
-         (print "successed!")
-         ;;(setq *prev-js* (send res :solution :joint_state))
-         (print (send res :solution :joint_state :position))
-         )
-     (print "failed!")
-     )))
+                     ))))
+     (let ((res (ros::service-call "/solve_ik" req)))
+       (if (= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
+	   (ros::ros-info " success ~A"  (send res :solution :joint_state :position))
+	 (ros::ros-error " failed ")
+	 ))
      )))
 ;(exit)
 
