@@ -4,7 +4,6 @@
 (ros::load-ros-manifest "hrpsys_gazebo_atlas")
 (ros::load-ros-manifest "sandia_hand_msgs")
 (ros::load-ros-manifest "atlas_msgs")
-(ros::load-ros-manifest "arm_navigation_msgs")
 
 (require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
 (require "package://jsk_ik_server/euslisp/ik-server.l")
