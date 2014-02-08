@@ -9,7 +9,10 @@
       ((numberp centroid-thre) (> centroid-thre (norm cdiff)))
       ((functionp centroid-thre) (funcall centroid-thre cdiff))
       ((vectorp centroid-thre)
-       (v< (map float-vector #'abs cdiff) centroid-thre)))))
+       (v< (map float-vector #'abs cdiff) centroid-thre))
+      ((and (class centroid-thre)
+	    (find-method centroid-thre :cog-convergence-check))
+       (send centroid-thre :cog-convergence-check cdiff)))))
   )
 
 (defmethod euscollada-robot
@@ -155,7 +158,7 @@
 
   (:convex-pos-list
   nil
-  (if (and (boundp '*foot-convex*) (find-method *foot-convex* :faces))
+  (if (find-method *foot-convex* :faces)
       (union
        (send
 	(find-if
@@ -173,7 +176,7 @@
 		  (if (send *robot* :rleg) (send *robot* :rleg :end-coords :worldpos) (float-vector 0 0 0))
 		  (if (send *robot* :lleg) (send *robot* :lleg :end-coords :worldpos) (float-vector 0 0 0))
 		 ))))
-  (if (and (boundp '*centroid-object*) *centroid-object*)
+  (if (and *centroid-object* (find-method *centroid-object* :newcoords))
       (send *centroid-object*
 	    :newcoords
 	    (make-coords
@@ -184,39 +187,40 @@
 				(list (+ 10 (aref leg-h 2))))))))
   )
 
-  (:check-centroid-with-convex
-  (diff
-   &optional
-   (convex (convex-pos-list))
-   (center
-    (if (find-method *robot* :rleg)
-	(scale
-	 0.5
-	 (apply
-	  #'v+
-	  (mapcar
-	   #'(lambda (k)
-	       (send *robot* k :end-coords :worldpos))
-	   '(:rleg :lleg))))
-      (send *robot* :worldpos))))
-  (let* ((diff (concatenate float-vector diff (list 0)))
-	 (target (v+ diff center))
-	 (t-vec (mapcar
-		 #'(lambda (v) (v- target v))
-		 convex))
-	 (rotate
-	  (mapcar
-	   #'(lambda (v1 v2) (v* v1 v2))
-	   t-vec (append (cdr t-vec) (list (car t-vec)))))
-	 )
-    (eq
-     1
-     (length
-      (union
-       nil
-       (mapcar
-	#'(lambda (v) (minusp (aref v 2)))
-	rotate))))))
+  (:cog-convergence-check
+   (diff
+    &optional
+    (convex (send self :convex-pos-list))
+    (center
+     (if (find-method *robot* :rleg)
+	 (scale
+	  0.5
+	  (apply
+	   #'v+
+	   (mapcar
+	    #'(lambda (k)
+		(send *robot* k :end-coords :worldpos))
+	    '(:rleg :lleg))))
+       (send *robot* :worldpos))))
+   ;;(print convex)
+   (let* ((diff (concatenate float-vector diff (list 0)))
+	  (target (v+ diff center))
+	  (t-vec (mapcar
+		  #'(lambda (v) (v- target v))
+		  convex))
+	  (rotate
+	   (mapcar
+	    #'(lambda (v1 v2) (v* v1 v2))
+	    t-vec (append (cdr t-vec) (list (car t-vec)))))
+	  )
+     (eq
+      1
+      (length
+       (union
+	nil
+	(mapcar
+	 #'(lambda (v) (minusp (aref v 2)))
+	 rotate))))))
   )
 
 (defmethod ik-server
@@ -276,7 +280,7 @@
     ;;(float-vector 0.01 0.01 1 0.01 0.01 0.01))
    (min-vec #F(-1000 -1000 -1000 -200 -200 -200))
    (max-vec #F(1000 1000 1000 200 200 200))
-   (centroid-thre 'check-centroid-with-convex)
+   (centroid-thre self)
    (rotation-axis
     (mapcar
      #'(lambda (k)
