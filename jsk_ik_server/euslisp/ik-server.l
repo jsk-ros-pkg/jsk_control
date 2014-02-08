@@ -223,6 +223,7 @@
 	 (return-from nil nil))
      (let ((name (remove #\: (elt (send js :name) i)))
 	   (pos (elt (send js :position) i)) j)
+       ;;(format t "[:update-joint-states] ~A ~Arad~%" name pos)
        (cond
 	((substringp "base" name)
 	 (cond
@@ -265,13 +266,17 @@
 	  (eval (cadr (member :worldcoords opt)))))
       (make-coords :pos (subseq buf 0 3)
 		   :rpy (reverse (subseq buf 3 6)))))
-   (send *robot* :transform
-	 (send
-	  (copy-object
-	   (send (car (send *robot* :links)) :worldcoords))
-	  :transformation
-	  buf))
-   (send-all (send *robot* :links) :worldcoords))
+   (dotimes (i 3)
+     (send *robot* :transform
+	   (send
+	    (copy-object
+	     (send (car (send *robot* :links)) :worldcoords))
+	    :transformation
+	    buf)))
+   (send-all (send *robot* :links) :worldcoords)
+   (send *viewer* :draw-objects)
+   ;;(read-line)
+   )
   ;;
   (:update-move-target
    (poscon oricon &optional opt)
@@ -436,13 +441,13 @@
      (let* ((res (send msg :response))
 	    (req (send msg :ik_request))
 	    (opt
-	     (cadr (read-from-string (format nil "(~A)" (send req :group_name)))))
+	     (cadr (read-from-string (format nil "(~A)"
+					     (print (send req :group_name))))))
 	    (rsd (send req :robot_state))
 	    (js (send rsd :joint_state))
 	    ik-param ret
 	    buf )
        ;;
-       (print (send req :group_name))
        (format t "[:fik-service-cb] options: ~A~%" opt)
        ;; joint angle update
        (send self :update-joint-states js opt)
