@@ -27,7 +27,7 @@ int check_constraints(double* CE, double* ce0, double* CI, double* ci0,
 			ce_err[i] += CE[i * x_len + j] * x[j];
 		}
 		ce_err[i] += ce0[i];
-		if ( ce_err[i] < eqthre && ce_err[i] > eqthre ) ret-- ;
+		if ( ce_err[i] < eqthre && ce_err[i] > -eqthre ) ret-- ;
 	}
 	for (int i = 0; i < ci_len; i++) {
 		for (int j = 0; j < x_len; j++) {
