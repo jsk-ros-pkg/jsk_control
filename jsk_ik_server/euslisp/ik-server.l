@@ -291,7 +291,7 @@
 	      (send *robot* :links)))
        (cond
 	((null link)
-	 (format t "[:update-move-target] unknown link~A~%" name))
+	 (format t "[:update-move-target] unknown link ~A~%" name))
 	(t
 	 (send mt-coords :enter
 	       link
@@ -311,7 +311,7 @@
 	      (send *robot* :links)))
        (cond
 	((null link)
-	 (format t "[:update-move-target] unknown link~A~%" name))
+	 (format t "[:update-move-target] unknown link~A ~%" name))
 	(t
 	 (send mt-coords :enter
 	       link
@@ -505,12 +505,30 @@
 	       (send self :parse-joint-weight-list
 		     (send (send req :constraints) :joint_constraints)))
 	      ))
-       (format t "[:fik-service-cb] args=~A~%" ik-param)
-       (setq ret
-	     (send* self :fullbody-ik-main
-		    ik-param))
        (cond
-	((vectorp ret)
+	((or
+	  (zerop (length (cadr (member :target-coords ik-param))))
+	  (zerop (length (cadr (member :move-target ik-param))))
+	  (zerop (length (cadr (member :link-list ik-param))))
+	  (not
+	   (eq
+	    (length (cadr (member :target-coords ik-param)))
+	    (length (cadr (member :move-target ik-param)))))
+	  (not
+	   (eq
+	    (length (cadr (member :move-target ik-param)))
+	    (length (cadr (member :link-list ik-param))))))
+	 (format t "[:fik-service-cb] invalid args length/tc=~A mt=~A ll=~A~%"
+		 (length (cadr (member :target-coords ik-param)))
+		 (length (cadr (member :move-target ik-param)))
+		 (length (cadr (member :link-list ik-param))))
+	 res)
+	((progn
+	   (format t "[:fik-service-cb] args=~A~%" ik-param)
+	   (setq ret
+		 (send* self :fullbody-ik-main
+			ik-param))
+	   (vectorp ret))
 	 ;;(format t "[ik-server] SUCCESS!!~%")
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
 	 (send *viewer* :draw-objects)

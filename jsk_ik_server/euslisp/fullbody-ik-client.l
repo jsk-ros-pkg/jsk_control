@@ -4,8 +4,9 @@
 (ros::load-ros-manifest "moveit_msgs")
 (ros::roseus "fullbody_ik_client_test")
 
-(require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
-(defvar *robot* (hrp2jsknt))
+;;(require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
+(require :pr2 "package://pr2eus/pr2.l")
+(defvar *robot* (pr2)) ;; (hrp2jsknt))
 (objects *robot*)
 
 (defun coords2posestamped
@@ -256,3 +257,28 @@
  )
 
 (ik-server-call :target-limb '(:rarm) :centroid-thre 100000 :cog-gain 0 :root-link-virtual-joint-weight #F(0 0 0 0 0 0) :target-coords (list (make-coords :pos #F(500 -300 1000))) :rotation-axis (list nil) :debug-view nil :additional-weight-list (mapcar #'(lambda (k) (list (send *robot* :torso k :child-link) 0)) '(:waist-p :waist-y)))
+
+
+(send *robot* :newcoords (make-coords))
+(ik-server-call
+ :target-limb '(:rarm)
+ :centroid-thre nil
+ :target-centroid-pos nil
+ :min #F(0 0 0 0 0 0)
+ :max #F(0 0 0 0 0 0)
+ :cog-gain 0
+ :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
+ :move-target
+ (list (make-cascoords
+	:parent
+	(send (send (send *robot* :rarm :end-coords :parent) :parent) :parent)
+	:coords
+	(copy-object
+	 (send (send (send (send *robot* :rarm :end-coords :parent) :parent) :parent)
+	       :worldcoords))
+	:name :rarm-pr2-end-coords))
+ :target-coords
+ (list
+  (make-coords :pos #F(500 -300 1000)))
+ :rotation-axis (list nil t)
+ )
