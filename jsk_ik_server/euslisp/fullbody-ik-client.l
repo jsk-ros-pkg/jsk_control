@@ -40,6 +40,63 @@
 		       :w (elt q 0))
 	     )))
 
+(defun update-joint-states
+  (js &optional buf)
+  (setq buf (concatenate float-vector
+			 (send (car (send *robot* :links)) :worldpos)
+			 (matrix-log
+			  (send (car (send *robot* :links)) :worldrot))))
+  (dotimes (i (length (send js :name)))
+    (if (or (>= i (length (send js :name)))
+	    (>= i (length (send js :position))))
+	(return-from nil nil))
+    (let ((name (remove #\: (elt (send js :name) i)))
+	  (pos (elt (send js :position) i)) j)
+      ;;(format t "[:update-joint-states] ~A ~Arad~%" name pos)
+      (cond
+       ((substringp "base" name)
+	(cond
+	 ((find #\x name)
+	  (setf (aref buf 0) (* 1e+3 pos)))
+	 ((find #\y name)
+	  (setf (aref buf 1) (* 1e+3 pos)))
+	 ((find #\z name)
+	  (setf (aref buf 2) (* 1e+3 pos)))
+	 ((find #\r name)
+	  (setf (aref buf 3) pos))
+	 ((find #\p name)
+	  (setf (aref buf 4) pos))
+	 ((find #\w name)
+	  (setf (aref buf 5) pos))))
+       ((setq j (find-if
+		 #'(lambda (j) (string-equal
+				(remove #\: (format nil "~A" (send j :name)))
+				name))
+		 (send *robot* :joint-list)))
+	(send j :joint-angle (rad2deg pos)))
+       ((setq j (or j (find-if
+		       #'(lambda (j) (string-equal
+				      (remove #\: (format nil "~A" (send j :name)))
+				      name))
+		       (send *robot* :links))))
+	(if (find-method j :joint) (setq j (send j :joint)))
+	(send j :joint-angle (rad2deg pos))))))
+  (setq
+   buf
+   (make-coords :pos (subseq buf 0 3)
+		:rpy (reverse (subseq buf 3 6))))
+  (dotimes (i 3)
+    (send *robot* :transform
+	  (send
+	   (copy-object
+	    (send (car (send *robot* :links)) :worldcoords))
+	   :transformation
+	   buf)))
+  (send-all (send *robot* :links) :worldcoords)
+  (send *viewer* :draw-objects)
+  ;;(read-line)
+  )
+
 (defun ik-server-call
   (&rest
    args
@@ -133,6 +190,7 @@
     (setq res (ros::service-call "/solve_ik" req))
     (cond
      ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
+      (update-joint-states (send res :solution :joint_state))
       (ros::ros-info " success ~A"  (send res :solution :joint_state :position)))
      (t (ros::ros-error " failed ")))
     res))
@@ -157,7 +215,8 @@
    :centroid-thre 100
    ))
 
-(do-until-key (test-fullbody-ik))
 #|
+
+(do-until-key (test-fullbody-ik) (send *robot* :fix-leg-to-coords (make-coords)))
 
 (ik-server-call :target-limb '(:rarm) :centroid-thre 100000 :cog-gain 0 :root-link-virtual-joint-weight #F(0 0 0 0 0 0) :target-coords (list (make-coords :pos #F(500 -300 1000))) :rotation-axis (list nil) :debug-view nil)

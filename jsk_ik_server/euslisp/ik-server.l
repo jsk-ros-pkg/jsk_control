@@ -484,9 +484,15 @@
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
 	 (send *viewer* :draw-objects)
 	 (send res :solution :joint_state :name
-	       (send-all (send *robot* :joint-list) :name))
+	       (append
+		(send-all (send *robot* :joint-list) :name)
+		(list "basex" "basey" "basez" "baser" "basep" "basew")))
 	 (send res :solution :joint_state :position
-	       (map float-vector #'deg2rad (send *robot* :angle-vector)))
+	       (concatenate
+		float-vector
+		(map float-vector #'deg2rad (send *robot* :angle-vector))
+		(scale 1e-3 (send (car (send *robot* :links)) :worldpos))
+		(matrix-log (send (car (send *robot* :links)) :worldrot))))
 	 res)
 	(t res))))))
   )
