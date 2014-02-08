@@ -216,7 +216,7 @@
    (setq buf (concatenate float-vector
 			  (send (car (send *robot* :links)) :worldpos)
 			  (matrix-log
-			   (send (car (send *robot* :links)) :worldpos))))
+			   (send (car (send *robot* :links)) :worldrot))))
    (dotimes (i (length (send js :name)))
      (if (or (>= i (length (send js :name)))
 	     (>= i (length (send js :position))))
@@ -255,21 +255,27 @@
 	    (eq (length (cadr (member :angle-vector opt)))
 		(length (send *robot* :angle-vector))))
        (send *robot* :angle-vector (cadr (member :angle-vector opt))))
-   (if (cadr (member :worldcoords opt))
-       (send *robot* :newcoords
-	     (cond
-	      ((subclassp (class (cadr (member :worldcoords opt))) coordinates)
-	       (cadr (member :worldcoords opt)))
-	      ((functionp (car (cadr (member :worldcoords opt))))
-	       (eval (cadr (member :worldcoords opt))))))
-     (send *robot* :newcoords
-	   (make-coords :pos (subseq buf 0 3)
-			:rpy (reverse (subseq buf 3 6)))))
+   (setq
+    buf
+    (if (cadr (member :worldcoords opt))
+	(cond
+	 ((subclassp (class (cadr (member :worldcoords opt))) coordinates)
+	  (cadr (member :worldcoords opt)))
+	 ((functionp (car (cadr (member :worldcoords opt))))
+	  (eval (cadr (member :worldcoords opt)))))
+      (make-coords :pos (subseq buf 0 3)
+		   :rpy (reverse (subseq buf 3 6)))))
+   (send *robot* :transform
+	 (send
+	  (copy-object
+	   (send (car (send *robot* :links)) :worldcoords))
+	  :transformation
+	  buf))
    (send-all (send *robot* :links) :worldcoords))
   ;;
   (:update-move-target
    (poscon oricon &optional opt)
-   (let (name link cs)
+   (let (name link cs (mt-coords))
      (dolist (pc poscon)
        (setq name (remove #\: (send pc :link_name)))
        (setq link
@@ -359,14 +365,16 @@
 	buf))
       (cadr (member :collision-avoidance-link-pair opt)))))
   (:parse-ik-param
-   (pose-stamped
-    pose-stamped-list
+   (ik-link-name pose-stamped
+    ik-link-name-list pose-stamped-list
     &optional opt)
    (let (mt ll tc link name buf (id -1)
-	 goal goal-in-world goal-in-pelvis)
+	 goal goal-in-world goal-in-pelvis
+	 (ik-link-name-list (cons ik-link-name ik-link-name-list)))
      (dolist (ps (cons pose-stamped pose-stamped-list))
        (incf id)
-       (setq name (remove #\: (send col :link_name)))
+       (setq name (remove #\: (car ik-link-name-list)))
+       (setq ik-link-name-list (cdr ik-link-name-list))
        (setq link
 	     (find-if
 	      #'(lambda (j) (string-equal
@@ -391,18 +399,18 @@
 	 (setq goal-in-pelvis
 	       (make-coords
 		:pos (float-vector
-		      (or (send (send ps :position) :x) 0)
-		      (or (send (send ps :position) :y) 0)
-		      (or (send (send ps :position) :z) 0))
+		      (or (send (send (send ps :pose) :position) :x) 0)
+		      (or (send (send (send ps :pose) :position) :y) 0)
+		      (or (send (send (send ps :pose) :position) :z) 0))
 		:rot
 		(quaternion2matrix
 		 (float-vector
-		  (or (send (send ps :orientation) :w) 0)
-		  (or (send (send ps :orientation) :x) 0)
-		  (or (send (send ps :orientation) :y) 0)
-		  (or (send (send ps :orientation) :z) 0)))))
+		  (or (send (send (send ps :pose) :orientation) :w) 0)
+		  (or (send (send (send ps :pose) :orientation) :x) 0)
+		  (or (send (send (send ps :pose) :orientation) :y) 0)
+		  (or (send (send (send ps :pose) :orientation) :z) 0)))))
 	 ;;(send *tf* :transform-pose *root-link* goal))
-	 (if (not (string-equal *root-link* (send ps :frame_id)))
+	 (if (not (string-equal *root-link* (send (send ps :header) :frame_id)))
 	     (format t "[:parse-ik-param] frame_id must be ~A~%" *root-link*))
 	 (setq goal-in-world
 	       (send (send (car (send *robot* :links)) :copy-worldcoords)
@@ -429,22 +437,23 @@
 	     (send (send msg :ik_request) :group_name))
      nil)
     (t
-     (let* ((res (send req :response))
-	    (req (send req :ik_request))
+     (let* ((res (send msg :response))
+	    (req (send msg :ik_request))
 	    (opt
-	     (cdr (read-from-string (format nil "(~A)" (send req :group_name)))))
+	     (cadr (read-from-string (format nil "(~A)" (send req :group_name)))))
 	    (rsd (send req :robot_state))
 	    (js (send rsd :joint_state))
 	    ik-param ret
 	    buf )
        ;;
+       (print (send req :group_name))
        (format t "[:fik-service-cb] options: ~A~%" opt)
        ;; joint angle update
        (send self :update-joint-states js opt)
        ;; move-target update
        (send self :update-move-target
-	     (send req :position_constraints)
-	     (send req :orientation_constraints)
+	     (send (send req :constraints) :position_constraints)
+	     (send (send req :constraints) :orientation_constraints)
 	     opt)
        ;; foot convex udpate
        (send self :make-foot-convex :force? t)
@@ -456,7 +465,9 @@
        (setq ik-param
 	     (append
 	      (send self :parse-ik-param
+		    (send req :ik_link_name)
 		    (send req :pose_stamped)
+		    (send req :ik_link_names)
 		    (send req :pose_stamped_vector)
 		    opt)
 	      (list
