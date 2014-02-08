@@ -275,7 +275,7 @@
   ;;
   (:update-move-target
    (poscon oricon &optional opt)
-   (let (name link cs (mt-coords))
+   (let (name link cs (mt-coords (make-hash-table)))
      (dolist (pc poscon)
        (setq name (remove #\: (send pc :link_name)))
        (setq link
@@ -288,24 +288,13 @@
 	((null link)
 	 (format t "[:update-move-target] unknown link~A~%" name))
 	(t
-	 (setq cs (send move-target-hash :get link))
-	 (if cs (send (send cs :parent) :dissoc cs))
-	 (setq cs
-	       (make-cascoords
-		:name name
-		:parent link
-		:coords (copy-object (send link :worldcoords))))
-	 (send
-	  (send cs :worldcoords)
-	  :transform
-	  (make-coords
-	   :pos
-	   (float-vector
-	    (or (send (send pc :target_point_offset) :x) 0)
-	    (or (send (send pc :target_point_offset) :y) 0)
-	    (or (send (send pc :target_point_offset) :z) 0)))
-	  :local)
-	 (send move-target-hash :enter link cs)
+	 (send mt-coords :enter
+	       link
+	       (list :pos
+		     (float-vector
+		      (or (send (send pc :target_point_offset) :x) 0)
+		      (or (send (send pc :target_point_offset) :y) 0)
+		      (or (send (send pc :target_point_offset) :z) 0))))
 	 )))
      (dolist (oc oricon)
        (setq name (remove #\: (send oc :link_name)))
@@ -319,6 +308,17 @@
 	((null link)
 	 (format t "[:update-move-target] unknown link~A~%" name))
 	(t
+	 (send mt-coords :enter
+	       link
+	       (append
+		(send mt-coords :get link)
+		(list
+		 :rot (quaternion2matrix
+		       (float-vector
+			(or (send (send oc :orientation) :w) 0)
+			(or (send (send oc :orientation) :x) 0)
+			(or (send (send oc :orientation) :y) 0)
+			(or (send (send oc :orientation) :z) 0))))))
 	 (setq cs (send move-target-hash :get link))
 	 (if cs (send (send cs :parent) :dissoc cs))
 	 (setq cs
@@ -328,13 +328,9 @@
 		:coords (copy-object (send link :worldcoords))))
 	 (send cs
 	       :transform
-	       (make-coords
-		:rot (quaternion2matrix
-		      (float-vector
-		       (or (send (send oc :orientation) :w) 0)
-		       (or (send (send oc :orientation) :x) 0)
-		       (or (send (send oc :orientation) :y) 0)
-		       (or (send (send oc :orientation) :z) 0))))
+	       (apply
+		#'make-coords
+		(send mt-coords :get link))
 	       :local)
 	 (send move-target-hash :enter link cs)
 	 )))
