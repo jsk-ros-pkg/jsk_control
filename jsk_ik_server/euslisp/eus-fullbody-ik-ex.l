@@ -50,9 +50,12 @@
 		       (send mv :difference-rotation tc
 			     :rotation-axis rot-axis))
 		   move-target target-coords rotation-axis))
-     (setq cdiff
-	   (send self :difference-cog-position
-		 target-centroid-pos centroid-offset-func))
+     (cond
+      (target-centroid-pos
+       (setq cdiff
+	     (send self :difference-cog-position
+		   target-centroid-pos centroid-offset-func)))
+      (t (setq cdiff 0)))
      (setq success
 	   (send self :ik-convergence-check
 		 t dif-pos dif-rot
@@ -319,6 +322,7 @@
 	 (remove-if
 	  #'(lambda (k) (find k '(:rleg :lleg)))
 	  target-limb)))))))
+   (cog-gain 0.1)
    &allow-other-keys
    )
   (let (ret)
@@ -352,7 +356,7 @@
 	      #'(lambda nil
 		  (x::window-main-one)
 		  (send *robot* :centroid))
-	      :cog-gain 0.1
+	      :cog-gain cog-gain
 	      :additional-weight-list additional-weight-list
 	      :stop stop
 	      :thre thre
