@@ -59,9 +59,11 @@
     ;; options
     (while (not (null args))
       (if (or (numberp (cadr args))
+	      (symbolp (cadr args))
 	      (vectorp (cadr args))
 	      (and (listp (cadr args))
-		   (find-if #'numberp (cadr args))))
+		   (or (find-if #'numberp (cadr args))
+		       (find-if #'symbolp (cadr args)))))
 	  (setq opt (append (list (car args) (cadr args)) opt)))
       (setq args (cddr args)))
     ;; group_name
@@ -114,16 +116,20 @@
     (send req :ik_request :constraints :position_constraints pc-list)
     (send req :ik_request :constraints :orientation_constraints oc-list)
     ;;
+    (send req :ik_request :ik_link_name
+	  (format nil "~A"
+		  (send (send (car move-target) :parent) :name)))
     (send req :ik_request :ik_link_names
 	  (mapcar #'(lambda (mt)
 		      (format nil "~A" (send (send mt :parent) :name)))
-		  move-target))
-    ;;
+		  (cdr move-target)))
+    (send req :ik_request :pose_stamped
+	  (coords2posestamped (car target-coords)))
     (send req :ik_request :pose_stamped_vector
 	  (mapcar
 	   #'coords2posestamped
-	   target-coords))
-    ;;req))
+	   (cdr target-coords)))
+    ;;
     (setq res (ros::service-call "/solve_ik" req))
     (cond
      ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
@@ -152,3 +158,6 @@
    ))
 
 (do-until-key (test-fullbody-ik))
+#|
+
+(ik-server-call :target-limb '(:rarm) :centroid-thre 100000 :cog-gain 0 :root-link-virtual-joint-weight #F(0 0 0 0 0 0) :target-coords (list (make-coords :pos #F(500 -300 1000))) :rotation-axis (list nil) :debug-view nil)

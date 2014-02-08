@@ -417,15 +417,14 @@
 	       (send (send (car (send *robot* :links)) :copy-worldcoords)
 		     :transform goal-in-pelvis))
 	 (if (zerop id)
-	     (draw-arrow
-	      (send *arrow* :newcoords goal-in-world)))
+	     (send *arrow* :newcoords goal-in-world))
 	 (push goal-in-world tc))))
      (append
       opt
       (list
-       :move-target mt
-       :target-coords tc
-       :link-list ll))
+       :move-target (reverse mt)
+       :target-coords (reverse tc)
+       :link-list (reverse ll)))
      ))
   ;; :fullbody-inverse-kinematics
   (:fullbody-inverse-kinematics-service-cb ;; [m] or [rad] expected
@@ -475,6 +474,7 @@
 	       :collision-pair
 	       (send self :parse-collision-link-pair
 		     (send rsd :attached_collision_objects)))))
+       (format t "[:fik-service-cb] args=~A~%" ik-param)
        (setq ret
 	     (send* self :fullbody-ik-main
 		    ik-param))
