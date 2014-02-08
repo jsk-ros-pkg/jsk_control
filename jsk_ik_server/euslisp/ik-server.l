@@ -344,6 +344,32 @@
        (if (subclassp (class cs) cascaded-coords)
 	   (send move-target-hash :enter (send cs :parent) cs)))
      ))
+  (:parse-joint-weight-list
+   (jocon)
+   (let (name joint link ret)
+     (dolist (jc jocon)
+       (setq name (remove #\: (send jc :joint_name)))
+       (print name)
+       (setq link
+	     (find-if
+	      #'(lambda (j) (string-equal
+			     (remove #\: (format nil "~A" (send j :name)))
+			     name))
+	      (send *robot* :links)))
+       (cond
+	((and
+	  (null link)
+	  (null
+	   (setq joint
+		 (find-if
+		  #'(lambda (j) (string-equal
+				 (remove #\: (format nil "~A" (send j :name)))
+				 name))
+		  (send-all (send *robot* :links) :joint))))))
+	(t
+	 (setq link (or link (send joint :child-link)))
+	 (push (list link (send jc :weight)) ret))))
+     ret))
   (:parse-collision-link-pair
    (collisions &optional opt)
    (let (buf link name)
@@ -444,7 +470,7 @@
 					     (print (send req :group_name))))))
 	    (rsd (send req :robot_state))
 	    (js (send rsd :joint_state))
-	    ik-param ret
+	    ik-param ret additional-weight-list
 	    buf )
        ;;
        (format t "[:fik-service-cb] options: ~A~%" opt)
@@ -473,7 +499,12 @@
 	      (list
 	       :collision-pair
 	       (send self :parse-collision-link-pair
-		     (send rsd :attached_collision_objects)))))
+		     (send rsd :attached_collision_objects)))
+	      (list
+	       :additional-weight-list
+	       (send self :parse-joint-weight-list
+		     (send (send req :constraints) :joint_constraints)))
+	      ))
        (format t "[:fik-service-cb] args=~A~%" ik-param)
        (setq ret
 	     (send* self :fullbody-ik-main

@@ -104,6 +104,7 @@
    (target-limb '(:rarm :larm :rleg :lleg))
    (move-target (mapcar #'(lambda (k) (send *robot* k :end-coords)) target-limb))
    (target-coords (send-all move-target :copy-worldcoords))
+   (additional-weight-list nil)
    ll
    collision-pair
    &allow-other-keys)
@@ -172,7 +173,17 @@
       (push oc oc-list))
     (send req :ik_request :constraints :position_constraints pc-list)
     (send req :ik_request :constraints :orientation_constraints oc-list)
-    ;;
+    ;; additional-weight-list
+    (send req :ik_request :constraints :joint_constraints
+	  (mapcar
+	   #'(lambda (aw)
+	       (instance moveit_msgs::JointConstraint
+			 :init
+			 :joint_name
+			 (format nil "~A" (send (car aw) :name))
+			 :weight (cadr aw)))
+	   additional-weight-list))
+    ;; target coords
     (send req :ik_request :ik_link_name
 	  (format nil "~A"
 		  (send (send (car move-target) :parent) :name)))
@@ -213,10 +224,15 @@
    :target-coords target-coords
    :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
    :centroid-thre 100
+   :stop 50
+   :use-toes '(nil nil)
    ))
 
 #|
 
+(send *robot* :reset-manip-pose)
+(send *robot* :fix-leg-to-coords (make-coords))
+
 (do-until-key (test-fullbody-ik) (send *robot* :fix-leg-to-coords (make-coords)))
 
-(ik-server-call :target-limb '(:rarm) :centroid-thre 100000 :cog-gain 0 :root-link-virtual-joint-weight #F(0 0 0 0 0 0) :target-coords (list (make-coords :pos #F(500 -300 1000))) :rotation-axis (list nil) :debug-view nil)
+(ik-server-call :target-limb '(:rarm) :centroid-thre 100000 :cog-gain 0 :root-link-virtual-joint-weight #F(0 0 0 0 0 0) :target-coords (list (make-coords :pos #F(500 -300 1000))) :rotation-axis (list nil) :debug-view nil :additional-weight-list (mapcar #'(lambda (k) (list (send *robot* :torso k :child-link) 0)) '(:waist-p :waist-y)))
