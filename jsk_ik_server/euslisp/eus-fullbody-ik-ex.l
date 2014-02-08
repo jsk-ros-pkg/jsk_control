@@ -369,8 +369,8 @@
 	      :avoid-collision-joint-gain 0.3
 	      ;;
 	      :dump-command nil
-	      ;;:debug-view debug-view
-	      :debug-view :no-message
+	      :debug-view debug-view
+	      ;;:debug-view :no-message
 	      :warnp nil)
 	     args)))
     ;;
