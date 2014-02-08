@@ -223,7 +223,7 @@
    :move-target move-target
    :target-coords target-coords
    :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
-   :centroid-thre 100
+   ;;:centroid-thre 100
    :stop 50
    :use-toes '(nil nil)
    ))
@@ -233,6 +233,26 @@
 (send *robot* :reset-manip-pose)
 (send *robot* :fix-leg-to-coords (make-coords))
 
-(do-until-key (test-fullbody-ik) (send *robot* :fix-leg-to-coords (make-coords)))
+(defvar *end-coords-without-toe*
+  (mapcar
+   #'(lambda (k)
+       (make-cascoords
+	:name
+	(read-from-string (format nil "~A-end-coords-without-toe" k))
+	:parent
+	(send (send *robot* k :end-coords :parent) :parent)
+	:coords
+	(send *robot* k :end-coords :copy-worldcoords)))
+   '(:rleg :lleg)))
+
+(do-until-key
+ (send *robot* :reset-manip-pose)
+ (send *robot* :fix-leg-to-coords (make-coords))
+ (test-fullbody-ik
+  :move-target
+  (append
+   (mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
+   *end-coords-without-toe*))
+ )
 
 (ik-server-call :target-limb '(:rarm) :centroid-thre 100000 :cog-gain 0 :root-link-virtual-joint-weight #F(0 0 0 0 0 0) :target-coords (list (make-coords :pos #F(500 -300 1000))) :rotation-axis (list nil) :debug-view nil :additional-weight-list (mapcar #'(lambda (k) (list (send *robot* :torso k :child-link) 0)) '(:waist-p :waist-y)))

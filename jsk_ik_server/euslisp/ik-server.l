@@ -349,7 +349,7 @@
    (let (name joint link ret)
      (dolist (jc jocon)
        (setq name (remove #\: (send jc :joint_name)))
-       (print name)
+       ;;(print name)
        (setq link
 	     (find-if
 	      #'(lambda (j) (string-equal
@@ -467,7 +467,7 @@
 	    (req (send msg :ik_request))
 	    (opt
 	     (cadr (read-from-string (format nil "(~A)"
-					     (print (send req :group_name))))))
+					     (send req :group_name)))))
 	    (rsd (send req :robot_state))
 	    (js (send rsd :joint_state))
 	    ik-param ret additional-weight-list
