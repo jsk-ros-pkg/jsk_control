@@ -1,21 +1,23 @@
 #!/usr/bin/env roseus
 
-(ros::load-ros-manifest "hrpsys_gazebo_atlas")
+;;o(ros::load-ros-manifest "hrpsys_gazebo_atlas")
 (ros::load-ros-manifest "moveit_msgs")
-(ros::roseus "fullbody_ik_client_test")
+
+;;(ros::roseus "fullbody_ik_client_test")
 
 ;;(require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
-(require :pr2 "package://pr2eus/pr2.l")
-(defvar *robot* (pr2)) ;; (hrp2jsknt))
-(objects *robot*)
+;;(require :pr2 "package://pr2eus/pr2.l")
+;;(defvar *robot* (hrp2jsknt))
+;;(objects *robot*)
 
 (defun coords2posestamped
   (coords
    &key
+   (robot *robot*)
    (frame_id "/pelvis")
    (origin
     (copy-object
-     (send (car (send *robot* :links)) :worldcoords)))
+     (send (car (send robot :links)) :worldcoords)))
    (coords-from-origin
     (send origin :transformation coords))
    (q (matrix2quaternion (send coords-from-origin :worldrot))))
@@ -42,11 +44,13 @@
 	     )))
 
 (defun update-joint-states
-  (js &optional buf)
+  (js &key
+      (robot *robot*)
+      buf)
   (setq buf (concatenate float-vector
-			 (send (car (send *robot* :links)) :worldpos)
+			 (send (car (send robot :links)) :worldpos)
 			 (matrix-log
-			  (send (car (send *robot* :links)) :worldrot))))
+			  (send (car (send robot :links)) :worldrot))))
   (dotimes (i (length (send js :name)))
     (if (or (>= i (length (send js :name)))
 	    (>= i (length (send js :position))))
@@ -73,13 +77,13 @@
 		 #'(lambda (j) (string-equal
 				(remove #\: (format nil "~A" (send j :name)))
 				name))
-		 (send *robot* :joint-list)))
+		 (send robot :joint-list)))
 	(send j :joint-angle (rad2deg pos)))
        ((setq j (or j (find-if
 		       #'(lambda (j) (string-equal
 				      (remove #\: (format nil "~A" (send j :name)))
 				      name))
-		       (send *robot* :links))))
+		       (send robot :links))))
 	(if (find-method j :joint) (setq j (send j :joint)))
 	(send j :joint-angle (rad2deg pos))))))
   (setq
@@ -87,14 +91,14 @@
    (make-coords :pos (subseq buf 0 3)
 		:rpy (reverse (subseq buf 3 6))))
   (dotimes (i 3)
-    (send *robot* :transform
+    (send robot :transform
 	  (send
 	   (copy-object
-	    (send (car (send *robot* :links)) :worldcoords))
+	    (send (car (send robot :links)) :worldcoords))
 	   :transformation
 	   buf)))
-  (send-all (send *robot* :links) :worldcoords)
-  (send *viewer* :draw-objects)
+  (send-all (send robot :links) :worldcoords)
+  (if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))
   ;;(read-line)
   )
 
@@ -102,8 +106,9 @@
   (&rest
    args
    &key
+   (robot *robot*)
    (target-limb '(:rarm :larm :rleg :lleg))
-   (move-target (mapcar #'(lambda (k) (send *robot* k :end-coords)) target-limb))
+   (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limb))
    (target-coords (send-all move-target :copy-worldcoords))
    (additional-weight-list nil)
    ll
@@ -113,8 +118,8 @@
 	 pc pc-list oc oc-list tf q res
 	 (opt (list :worldcoords
 		    (list 'make-coords
-			  :pos (send (car (send *robot* :links)) :worldpos)
-			  :rot (send (car (send *robot* :links)) :worldrot)))))
+			  :pos (send (car (send robot :links)) :worldpos)
+			  :rot (send (car (send robot :links)) :worldrot)))))
     ;; options
     (while (not (null args))
       (if (or (numberp (cadr args))
@@ -138,10 +143,10 @@
 			      :frame_id "/pelvis")
 		    :name
 		    (mapcar #'(lambda (j) (format nil "~A" (send j :name)))
-			    (send *robot* :joint-list))
+			    (send robot :joint-list))
 		    :position
 		    (map float-vector #'deg2rad
-			 (send-all (send *robot* :joint-list) :joint-angle))))
+			 (send-all (send robot :joint-list) :joint-angle))))
     ;; move-target
     (dolist (mt move-target)
       (setq pc (instance moveit_msgs::PositionConstraint :init))
@@ -193,24 +198,25 @@
 		      (format nil "~A" (send (send mt :parent) :name)))
 		  (cdr move-target)))
     (send req :ik_request :pose_stamped
-	  (coords2posestamped (car target-coords)))
+	  (coords2posestamped (car target-coords) :robot robot))
     (send req :ik_request :pose_stamped_vector
 	  (mapcar
-	   #'coords2posestamped
+	   #'(lambda (tc) (coords2posestamped tc :robot robot))
 	   (cdr target-coords)))
     ;;
     (setq res (ros::service-call "/solve_ik" req))
     (cond
      ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
-      (update-joint-states (send res :solution :joint_state))
+      (update-joint-states (send res :solution :joint_state) :robot robot)
       (ros::ros-info " success ~A"  (send res :solution :joint_state :position)))
      (t (ros::ros-error " failed ")))
     res))
 
 (defun test-fullbody-ik
   (&key
+   (robot *robot*)
    (target-limb '(:rarm :larm :rleg :lleg))
-   (move-target (mapcar #'(lambda (k) (send *robot* k :end-coords)) target-limb))
+   (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limb))
    (target-coords (send-all move-target :copy-worldcoords)))
   (mapcar
    #'(lambda (tc)
@@ -220,6 +226,7 @@
 	      :rpy (scale 1.57 (random-vector 1.0)))))
    (subseq target-coords 0 2))
   (ik-server-call
+   :robot robot
    :target-limb target-coords
    :move-target move-target
    :target-coords target-coords
@@ -230,6 +237,12 @@
    ))
 
 #|
+
+(require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
+(defvar *robot* (hrp2jsknt))
+(objects *robot*)
+
+(ros::roseus "fullbody_ik_client_test")
 
 (send *robot* :reset-manip-pose)
 (send *robot* :fix-leg-to-coords (make-coords))
