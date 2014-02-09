@@ -21,6 +21,7 @@
    *success-state-collection*
    *fix-limb-coords*
    ;;
+   viewer
    move-target-hash
    ))
 
@@ -83,12 +84,11 @@
        ((cadr (member :update-convex opt))
 
 	(send self :make-foot-convex :force? t)
-	(send *irtviewer* :objects
-	      (list *robot* *centroid-object* *foot-convex* *arrow*))))
-      ;;(make-foot-convex)
-      ;;(send *irtviewer* :objects
-      ;;(list *robot* *foot-convex* *centroid-object* *arrow*))
-      (send *viewer* :draw-objects)
+	(cond
+	 (viewer
+	  (send viewer :objects
+		(list *robot* *centroid-object* *foot-convex* *arrow*))
+	  (send viewer :draw-objects)))))
       (let ((goal (send req :ik_request :pose_stamped))
 	    ;; check that goal is malformed or not
 	    (q (float-vector (send req :ik_request :pose_stamped :pose :orientation :w)
@@ -159,7 +159,7 @@
 	    (vectorp ik-ret))
 	  ;;(format t "[ik-server] SUCCESS!!~%")
 	  (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
-	  (send *viewer* :draw-objects)
+	  (if viewer (send viewer :draw-objects))
 	  (send res :solution :joint_state :name
 		(send-all (send *robot* :joint-list) :name))
 	  (send res :solution :joint_state :position
@@ -172,30 +172,34 @@
    ;; initialization
    (unless *root-link* (setq *root-link* "/base_link"))
    (setq *arrow* (arrow))
-
+   ;; check viewer
    (cond
-    ((not (and (boundp '*irtviewer*) *irtviewer*))
+    ((and (boundp '*irtviewer*) *irtviewer*)
+     (setq viewer *irtviewer*))
+    ((and (boundp '*pickview*) *pickview*)
+     (setq viewer *pickview*))
+    ((functionp 'pickview)
+     (pickview :no-menu t :width 640 :height 640)
+     (send *viewer* :viewsurface :bg-color #F(0.9 1 0.9 0))
+     (send *pickview* :title "IK server")
+     (setq viewer *pickview*))
+    (t
      (make-irtviewer :width 640 :height 640)
      (send *irtviewer* :change-background #f(0.9 1.0 0.9))
-     (send *irtviewer* :title "IK server")))
-   (send *irtviewer*
-	 :objects
-	 (list *robot* *arrow*))
-
+     (send *irtviewer* :title "IK server")
+     (setq viewer *irtviewer*))
+    )
    (unless *foot-convex* (setq *foot-convex* (make-coords)))
    (unless *centroid-object* (setq *centroid-object* (make-coords)))
-   (send *irtviewer*
-	 :objects
-	 (list *robot* *foot-convex* *arrow*))
-   (send *irtviewer* :look-all)
-   (send *viewer* :draw-objects)
+   (cond
+    (viewer
+     (send viewer :objects
+	   (list *robot* *foot-convex* *arrow*))
+     (send viewer :look-all)
+     (send viewer :draw-objects)))
    ;;
    (setq *tf* (instance ros::transform-listener :init))
    ;;
-   (send *irtviewer*
-	 :objects
-	 (list *robot* *foot-convex* *arrow* *centroid-object*))
-
    (ros::advertise-service "/solve_ik" moveit_msgs::GetPositionIK #'send self :ik-service-cb)
    (ros::rate 10)
    (send self :loop-ik-server)
@@ -274,7 +278,7 @@
 	    :transformation
 	    buf)))
    (send-all (send *robot* :links) :worldcoords)
-   (send *viewer* :draw-objects)
+   (if viewer (send viewer :draw-objects))
    ;;(read-line)
    )
   ;;
@@ -483,9 +487,11 @@
 	     opt)
        ;; foot convex udpate
        (send self :make-foot-convex :force? t)
-       (send *irtviewer* :objects
-	     (list *robot* *centroid-object* *foot-convex* *arrow*))
-       (send *viewer* :draw-objects)
+       (cond
+	(viewer
+	 (send viewer :objects
+	       (list *robot* *centroid-object* *foot-convex* *arrow*))
+	 (send viewer :draw-objects)))
        ;;
        (send res :error_code :val moveit_msgs::MoveItErrorCodes::*FAILURE*)
        (setq ik-param
@@ -531,7 +537,7 @@
 	   (vectorp ret))
 	 ;;(format t "[ik-server] SUCCESS!!~%")
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
-	 (send *viewer* :draw-objects)
+	 (if viewer (send viewer :draw-objects))
 	 (send res :solution :joint_state :name
 	       (append
 		(send-all (send *robot* :joint-list) :name)

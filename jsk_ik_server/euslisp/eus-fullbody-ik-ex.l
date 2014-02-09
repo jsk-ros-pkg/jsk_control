@@ -394,7 +394,7 @@
      ((and (not collision?) (vectorp ret))
       (format t "[ik-main] success !!~%")
       (send self :fix-centroid-object)
-      (send *irtviewer* :draw-objects)
+      (if viewer (send viewer :draw-objects))
       (cond
        ((and real? (boundp '*ri*) *ri*)
 	(let ((interpolate-time 1000))
@@ -406,7 +406,7 @@
 	  (unix::usleep (round (* 1000 1000)))
 					;(read-line)
 	  )))
-      (send *viewer* :draw-objects)
+      (if viewer (send viewer :draw-objects))
       (if (or
 	   (null *success-state-collection*)
 	   (> (norm
@@ -427,7 +427,7 @@
       (format t "[ik-main] fail!!~%")
       (send *robot* :angle-vector initial-av)
       (send *robot* :newcoords initial-coords)
-      (send *viewer* :draw-objects)
+      (if viewer (send viewer :draw-objects))
       (print ret)
       (setq ret nil)))
     ret
