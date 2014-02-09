@@ -46,6 +46,7 @@
 (defun update-joint-states
   (js &key
       (robot *robot*)
+      (joint-list (send *robot* :joint-list))
       buf)
   (setq buf (concatenate float-vector
 			 (send (car (send robot :links)) :worldpos)
@@ -77,14 +78,19 @@
 		 #'(lambda (j) (string-equal
 				(remove #\: (format nil "~A" (send j :name)))
 				name))
-		 (send robot :joint-list)))
+		 joint-list))
+	(setq joint-list (remove j joint-list))
 	(send j :joint-angle (rad2deg pos)))
-       ((setq j (or j (find-if
-		       #'(lambda (j) (string-equal
-				      (remove #\: (format nil "~A" (send j :name)))
-				      name))
-		       (send robot :links))))
-	(if (find-method j :joint) (setq j (send j :joint)))
+       ((and
+	 (setq j (or j (find-if
+			#'(lambda (j) (string-equal
+				       (remove #\: (format nil "~A" (send j :name)))
+				       name))
+			(send robot :links))))
+	 (find-method j :joint)
+	 (setq j (send j :joint))
+	 (not (find j joint-list)))
+	(setq joint-list (remove j joint-list))
 	(send j :joint-angle (rad2deg pos))))))
   (setq
    buf

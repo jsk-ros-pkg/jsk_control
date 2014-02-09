@@ -15,7 +15,7 @@
        (send centroid-thre :cog-convergence-check cdiff)))))
   )
 
-(defmethod robot-model
+(defmethod cascaded-link
   (:fullbody-inverse-kinematics-with-error
    (target-coords
     &rest

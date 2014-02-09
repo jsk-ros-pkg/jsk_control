@@ -540,12 +540,15 @@
 	 (if viewer (send viewer :draw-objects))
 	 (send res :solution :joint_state :name
 	       (append
-		(send-all (send *robot* :joint-list) :name)
+		(mapcar
+		 #'(lambda (n) (format nil "~A" n))
+		 (send-all (send *robot* :joint-list) :name))
 		(list "basex" "basey" "basez" "baser" "basep" "basew")))
 	 (send res :solution :joint_state :position
 	       (concatenate
 		float-vector
-		(map float-vector #'deg2rad (send *robot* :angle-vector))
+		(map float-vector #'deg2rad
+		     (send-all (send *robot* :joint-list) :joint-angle))
 		(scale 1e-3 (send (car (send *robot* :links)) :worldpos))
 		(matrix-log (send (car (send *robot* :links)) :worldrot))))
 	 res)
