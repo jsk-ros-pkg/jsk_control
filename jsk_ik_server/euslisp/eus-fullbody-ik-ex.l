@@ -15,7 +15,7 @@
        (send centroid-thre :cog-convergence-check cdiff)))))
   )
 
-(defmethod euscollada-robot
+(defmethod robot-model
   (:fullbody-inverse-kinematics-with-error
    (target-coords
     &rest

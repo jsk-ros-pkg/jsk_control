@@ -143,7 +143,7 @@
 			      :frame_id "/pelvis")
 		    :name
 		    (mapcar #'(lambda (j) (format nil "~A" (send j :name)))
-			    (send robot :joint-list))
+			    (send-all (send robot :joint-list) :child-link))
 		    :position
 		    (map float-vector #'deg2rad
 			 (send-all (send robot :joint-list) :joint-angle))))
