@@ -158,7 +158,8 @@
   ;;
   (:convex-pos-list
    nil
-   (if (find-method foot-convex :faces)
+   ;;(send self :make-foot-convex :force? t)
+   (if (and foot-convex (find-method foot-convex :faces))
        (union
 	(send
 	 (find-if
@@ -203,6 +204,7 @@
 	    '(:rleg :lleg))))
        (send robot :worldpos))))
    ;;(print convex)
+   (x::window-main-one)
    (let* ((diff (concatenate float-vector diff (list 0)))
 	  (target (v+ diff center))
 	  (t-vec (mapcar
@@ -288,10 +290,10 @@
 	       :move-target move-target
 	       :link-list link-list
 	       :target-centroid-pos target-centroid-pos
-	       :centroid-offset-func
-	       #'(lambda nil
-		   (x::window-main-one)
-		   (send robot :centroid))
+	       ;;:centroid-offset-func
+	       ;;#'(lambda nil
+	       ;;(x::window-main-one)
+	       ;;(send robot :centroid))
 	       :centroid-thre centroid-thre
 	       ;;
 	       :collision-avoidance-link-pair

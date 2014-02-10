@@ -18,12 +18,12 @@
 (defmethod hrp2jsk-ik-server
   (:init
    (&rest args)
-
    (setq robot (hrp2jsk))
-
    (setq root-link-frame-id "/pelvis")
+   (send self :make-foot-convex :force? t)
+   (send self :make-centroid-object)
    (send-super* :init args)
-  )
+   )
   )
 
 (instance hrp2jsk-ik-server :init)

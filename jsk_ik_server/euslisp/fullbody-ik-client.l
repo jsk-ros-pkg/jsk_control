@@ -107,10 +107,11 @@
   (&rest
    args
    &key
+   (frame-id "/pelvis")
    (group-name ":fullbody-inverse-kinematics")
    (robot *robot*)
-   (target-limb '(:rarm :larm :rleg :lleg))
-   (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limb))
+   (target-limbs '(:rarm :larm :rleg :lleg))
+   (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limbs))
    (target-coords (send-all move-target :copy-worldcoords))
    (additional-weight-list nil)
    ll
@@ -139,18 +140,18 @@
 	  (format nil "~A ~A" group-name opt))
     ;; joint state
     (send req :ik_request :robot_state :joint_state
-	  (instance sensor_msgs::JointState
-		    :init
-		    :header
-		    (instance std_msgs::Header :init
-			      :stamp (ros::time 0.0)
-			      :frame_id "/pelvis")
-		    :name
-		    (mapcar #'(lambda (j) (format nil "~A" (send j :name)))
-			    (send-all (send robot :joint-list) :child-link))
-		    :position
-		    (map float-vector #'deg2rad
-			 (send-all (send robot :joint-list) :joint-angle))))
+    	  (instance sensor_msgs::JointState
+    		    :init
+    		    :header
+    		    (instance std_msgs::Header :init
+    			      :stamp (ros::time 0.0)
+    			      :frame_id frame-id)
+    		    :name
+    		    (mapcar #'(lambda (j) (format nil "~A" (send j :name)))
+    			    (send-all (send robot :joint-list) :child-link))
+    		    :position
+    		    (map float-vector #'deg2rad
+    			 (send-all (send robot :joint-list) :joint-angle))))
     ;; move-target
     (dolist (mt move-target)
       (setq pc (instance moveit_msgs::PositionConstraint :init))
@@ -223,8 +224,8 @@
    args
    &key
    (robot *robot*)
-   (target-limb '(:rarm :larm :rleg :lleg))
-   (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limb))
+   (target-limbs '(:rarm :larm :rleg :lleg))
+   (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limbs))
    (target-coords (send-all move-target :copy-worldcoords))
    &allow-other-keys)
   (mapcar
@@ -239,7 +240,7 @@
    (append
     (list
      :robot robot
-     :target-limb target-coords
+     :target-limbs target-limbs
      :move-target move-target
      :target-coords target-coords
      :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
@@ -323,7 +324,7 @@
     :group-name ":inverse-kinematics"
     :torso-fix t
     :use-torso 0
-    :target-limb '(:rarm)
+    :target-limbs '(:rarm)
     :centroid-thre nil
     :target-centroid-pos nil
     ;;:min-vec #F(0 0 0 0 0 0)
@@ -347,51 +348,3 @@
     (atlas-test))
    ))
 
-#|
-
-
-
-(ros::roseus "fullbody_ik_client_test")
-
-(send *robot* :reset-manip-pose)
-(send *robot* :fix-leg-to-coords (make-coords))
-
-(defvar *end-coords-without-toe*
-  (mapcar
-   #'(lambda (k)
-       (make-cascoords
-	:name
-	(read-from-string (format nil "~A-end-coords-without-toe" k))
-	:parent
-	(send (send *robot* k :end-coords :parent) :parent)
-	:coords
-	(send *robot* k :end-coords :copy-worldcoords)))
-   '(:rleg :lleg)))
-
-
-(ik-server-call :target-limb '(:rarm) :centroid-thre 100000 :cog-gain 0 :root-link-virtual-joint-weight #F(0 0 0 0 0 0) :target-coords (list (make-coords :pos #F(500 -300 1000))) :rotation-axis (list nil) :debug-view nil :additional-weight-list (mapcar #'(lambda (k) (list (send *robot* :torso k :child-link) 0)) '(:waist-p :waist-y)))
-
-
-(send *robot* :newcoords (make-coords))
-(ik-server-call
- :target-limb '(:rarm)
- :centroid-thre nil
- :target-centroid-pos nil
- :min-vec #F(0 0 0 0 0 0)
- :max-vec #F(0 0 0 0 0 0)
- :cog-gain 0
- :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
- :move-target
- (list (make-cascoords
-	:parent
-	(send (send (send *robot* :rarm :end-coords :parent) :parent) :parent)
-	:coords
-	(copy-object
-	 (send (send (send (send *robot* :rarm :end-coords :parent) :parent) :parent)
-	       :worldcoords))
-	:name :rarm-pr2-end-coords))
- :target-coords
- (list
-  (make-coords :pos #F(500 -300 1000)))
- :rotation-axis (list nil t)
- )
