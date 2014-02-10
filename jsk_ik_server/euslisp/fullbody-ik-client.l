@@ -32,9 +32,9 @@
 	     :init
 	     :position
 	     (instance geometry_msgs::Point :init
-		       :x (aref (send coords-from-origin :worldpos) 0)
-		       :y (aref (send coords-from-origin :worldpos) 1)
-		       :z (aref (send coords-from-origin :worldpos) 2))
+		       :x (* 1e-3 (aref (send coords-from-origin :worldpos) 0))
+		       :y (* 1e-3 (aref (send coords-from-origin :worldpos) 1))
+		       :z (* 1e-3 (aref (send coords-from-origin :worldpos) 2)))
 	     :orientation
 	     (instance geometry_msgs::Quaternion :init
 		       :x (elt q 1)
@@ -166,9 +166,9 @@
       (send pc :target_point_offset
 	    (instance geometry_msgs::vector3
 		      :init
-		      :x (aref (send tf :worldpos) 0)
-		      :y (aref (send tf :worldpos) 1)
-		      :z (aref (send tf :worldpos) 2)))
+		      :x (* 1e-3 (aref (send tf :worldpos) 0))
+		      :y (* 1e-3 (aref (send tf :worldpos) 1))
+		      :z (* 1e-3 (aref (send tf :worldpos) 2))))
       (push pc pc-list)
       ;;
       (setq oc (instance moveit_msgs::OrientationConstraint :init))
@@ -283,8 +283,8 @@
  :target-limb '(:rarm)
  :centroid-thre nil
  :target-centroid-pos nil
- :min #F(0 0 0 0 0 0)
- :max #F(0 0 0 0 0 0)
+ :min-vec #F(0 0 0 0 0 0)
+ :max-vec #F(0 0 0 0 0 0)
  :cog-gain 0
  :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
  :move-target

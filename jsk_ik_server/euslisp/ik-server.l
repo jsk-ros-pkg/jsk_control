@@ -301,9 +301,9 @@
 	       link
 	       (list :pos
 		     (float-vector
-		      (or (send (send pc :target_point_offset) :x) 0)
-		      (or (send (send pc :target_point_offset) :y) 0)
-		      (or (send (send pc :target_point_offset) :z) 0))))
+		      (or (* 1e+3 (send (send pc :target_point_offset) :x)) 0)
+		      (or (* 1e+3 (send (send pc :target_point_offset) :y)) 0)
+		      (or (* 1e+3 (send (send pc :target_point_offset) :z)) 0))))
 	 )))
      (dolist (oc oricon)
        (setq name (remove #\: (send oc :link_name)))
@@ -427,20 +427,25 @@
 	 (push (send *robot* :link-list (send buf :parent)) ll)
 	 ;;
 	 ;;(setq goal ps)
+	 (if *root-link*
+	     (setq
+	      goal-in-pelvis
+	      (send *tf* :transform-pose *root-link* ps)))
 	 (setq goal-in-pelvis
-	       (make-coords
-		:pos (float-vector
-		      (or (send (send (send ps :pose) :position) :x) 0)
-		      (or (send (send (send ps :pose) :position) :y) 0)
-		      (or (send (send (send ps :pose) :position) :z) 0))
-		:rot
-		(quaternion2matrix
-		 (float-vector
-		  (or (send (send (send ps :pose) :orientation) :w) 0)
-		  (or (send (send (send ps :pose) :orientation) :x) 0)
-		  (or (send (send (send ps :pose) :orientation) :y) 0)
-		  (or (send (send (send ps :pose) :orientation) :z) 0)))))
-	 ;;(send *tf* :transform-pose *root-link* goal))
+	       (or
+		goal-in-pelvis
+		(make-coords
+		 :pos (float-vector
+		       (or (* 1e+3 (send (send (send ps :pose) :position) :x)) 0)
+		       (or (* 1e+3 (send (send (send ps :pose) :position) :y)) 0)
+		       (or (* 1e+3 (send (send (send ps :pose) :position) :z)) 0))
+		 :rot
+		 (quaternion2matrix
+		  (float-vector
+		   (or (send (send (send ps :pose) :orientation) :w) 0)
+		   (or (send (send (send ps :pose) :orientation) :x) 0)
+		   (or (send (send (send ps :pose) :orientation) :y) 0)
+		   (or (send (send (send ps :pose) :orientation) :z) 0))))))
 	 (if (not (string-equal *root-link* (send (send ps :header) :frame_id)))
 	     (format t "[:parse-ik-param] frame_id must be ~A~%" *root-link*))
 	 (setq goal-in-world
@@ -450,11 +455,11 @@
 	     (send *arrow* :newcoords goal-in-world))
 	 (push goal-in-world tc))))
      (append
-      opt
       (list
-       :move-target (reverse mt)
        :target-coords (reverse tc)
-       :link-list (reverse ll)))
+       :move-target (reverse mt)
+       :link-list (reverse ll))
+      opt)
      ))
   ;; :fullbody-inverse-kinematics
   (:fullbody-inverse-kinematics-service-cb ;; [m] or [rad] expected
