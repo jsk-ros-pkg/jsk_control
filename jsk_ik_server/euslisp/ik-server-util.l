@@ -228,22 +228,7 @@
    (&rest
     args
     &key
-    (real? nil)
-    (real-feedback? nil)
-    (rotate? t)
-    (translate? t)
-    ;; meta
-    (prev-state
-     (list
-      (cons :angle-vector
-	    (copy-object (send robot :angle-vector)))
-      (cons :worldcoords
-	    (copy-object (send robot :worldcoords)))))
     (target-limb '(:rarm :larm :rleg :lleg))
-    (target-coords (make-list (length target-limb)))
-    (thre (make-list 4 :initial-element 5))
-    (rthre (make-list 4 :initial-element (deg2rad 3)))
-    (left-support? t)
     (move-target
      (mapcar
       #'(lambda (k)
@@ -251,12 +236,11 @@
       target-limb))
     (link-list
      (mapcar
-      #'(lambda (k)
+      #'(lambda (mt)
 	  (send robot :link-list
-		(send robot k :end-coords :parent)
-		(if (find k nil);'(:rarm :larm))
-		    (send robot k :root-link))))
-      target-limb))
+		(send mt :parent)))
+      move-target))
+    (target-coords (send-all move-target :copy-worldcoords))
     (target-centroid-pos
      (scale
       0.5
@@ -268,75 +252,25 @@
 			    :worldpos)
 		    (send (make-coords) :worldpos)))
 	      '(:rleg :lleg)))))
-    (additional-weight-list
-     (mapcar
-      #'(lambda (k gain)
-	  (list (send robot :torso k :child-link)
-		gain))
-      (list :waist-r :waist-p :waist-y)
-      (list 1e-3 1e-2 1e-2)))
-    (root-link-virtual-joint-weight
-     #F(0.1 1.5 1 0.08 0.08 0.08))
-    ;;(float-vector 0.01 0.01 1 0.01 0.01 0.01))
-    (min-vec #F(-1000 -1000 -1000 -200 -200 -200))
-    (max-vec #F(1000 1000 1000 200 200 200))
+    (min #F(-1000 -1000 -1000 -200 -200 -200))
+    (max #F(1000 1000 1000 200 200 200))
+    (min-vec min) ;; for mm
+    (max-vec max)
+    (thre (mapcar #'(lambda (a) 4) move-target))
+    (rthre (mapcar #'(lambda (a) (deg2rad 3)) move-target))
+    (translation-axis (mapcar #'(lambda (a) t) move-target))
+    (rotation-axis (mapcar #'(lambda (a) t) move-target))
     (centroid-thre self)
-    (rotation-axis
-     (mapcar
-      #'(lambda (k)
-	  (case k
-		(:rarm rotate?)
-		(:larm left-support?)
-		(t t)))
-      target-limb))
-    (translation-axis
-     (mapcar
-      #'(lambda (k)
-	  (case k
-		(:rarm translate?)
-		(:larm left-support?)
-		(t t)))
-      target-limb))
     ;;
     (initial-av (copy-seq (send robot :angle-vector)))
     (initial-coords (copy-object (send robot :worldcoords)))
     (debug-view :no-message)
-    (stop 50)
-    (collision? t)
-    (collision-pair
-     (apply
-      #'append
-      (mapcar
-       #'(lambda (l)
-	   (remove-if 
-	    #'null
-	    (list (if (find-method robot :utorso_lk) (list l (send robot :utorso_lk)))
-		  (if (find-method robot :r_uleg_lk) (list l (send robot :r_uleg_lk)))
-		  (if (find-method robot :l_uleg_lk) (list l (send robot :l_uleg_lk))))))
-       (remove-if
-	#'(lambda (l)
-	    (or (eq (send l :parent)
-		    (if (find-method robot :utorso_lk) (send robot :utorso_lk)))
-		(eq (send (send l :parent) :parent)
-		    (if (find-method robot :utorso_lk) (send robot :utorso_lk)))))
-	(apply
-	 #'append
-	 (mapcar
-	  #'(lambda (k) (send robot k :links))
-	  (remove-if
-	   #'(lambda (k) (find k '(:rleg :lleg)))
-	   target-limb)))))))
-    (cog-gain 0.1)
+    (collision-pair)
+    (collision-avoidance-link-pair collision-pair)
     &allow-other-keys
     )
    (let (ret)
-     (cond
-      ((and real-feedback?
-	    (boundp '*ri*) *ri*)
-       (leg-coords-fix-from-real
-	:init-grasp? nil
-	:solve-ik? nil)))
-     (setq target-coords
+     (setq target-coords ;; for mm
 	   (mapcar
 	    #'(lambda (c m k)
 		(or c
@@ -353,28 +287,21 @@
 	       target-coords
 	       :move-target move-target
 	       :link-list link-list
-	       :rotation-axis rotation-axis
-	       :translation-axis translation-axis
 	       :target-centroid-pos target-centroid-pos
 	       :centroid-offset-func
 	       #'(lambda nil
 		   (x::window-main-one)
 		   (send robot :centroid))
-	       :cog-gain cog-gain
-	       :additional-weight-list additional-weight-list
-	       :stop stop
-	       :thre thre
-	       :rthre rthre
 	       :centroid-thre centroid-thre
 	       ;;
-	       :collision-avoidance-link-pair collision-pair
-	       :root-link-virtual-joint-weight
-	       root-link-virtual-joint-weight
+	       :collision-avoidance-link-pair
+	       collision-avoidance-link-pair
 	       :min min-vec
 	       :max max-vec
-	       :avoid-collision-distance 10
-	       :avoid-collision-null-gain 0.3
-	       :avoid-collision-joint-gain 0.3
+	       :thre thre
+	       :rthre rthre
+	       :translation-axis translation-axis
+	       :rotation-axis rotation-axis
 	       ;;
 	       :dump-command nil
 	       :debug-view debug-view
@@ -382,37 +309,24 @@
 	       :warnp nil)
 	      args)))
      ;;
-     (when collision?
-       (setq collision?
+     (when collision-avoidance-link-pair
+       (setq collision-avoidance-link-pair
 	     (send robot :self-collision-check :pairs
 		   (mapcar
 		    #'(lambda (ll) (cons (car ll) (cadr ll)))
-		    collision-pair))))
-     (when collision? (format t "[collision check] ~A~%" collision?))
+		    collision-avoidance-link-pair))))
+     (when collision-avoidance-link-pair
+       (format t "[collision check] ~A~%"
+	       collision-avoidance-link-pair))
      ;;
      (cond
-      ((and (not collision?) (vectorp ret))
+      ((and (not collision-avoidance-link-pair) (vectorp ret))
        (format t "[ik-main] success !!~%")
        (send self :fix-centroid-object)
        (if viewer (send viewer :draw-objects))
-       (cond
-	((and real? (boundp '*ri*) *ri*)
-	 (let ((interpolate-time 1000))
-	   (cond
-	    ((> (norm (v- (send *ri* :state :potentio-vector)
-			  (send robot :angle-vector))) 100)
-	     (setq interpolate-time 4000)))
-	   (model2real :time interpolate-time :wait t)
-	   (unix::usleep (round (* 1000 1000)))
-					;(read-line)
-	   )))
-       (if viewer (send viewer :draw-objects))
        (if (or
 	    (null success-state-collection)
-	    (> (norm
-		(v- ret
-		    (cdr (assoc :angle-vector prev-state))))
-	       1))
+	    (> (norm (v- ret initial-av)) 1))
 	   (setq success-state-collection
 		 (subseq
 		  (cons

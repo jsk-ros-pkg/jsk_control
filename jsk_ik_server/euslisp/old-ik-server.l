@@ -134,10 +134,221 @@
   )
 
 (defmethod ik-server
+  (:old-fullbody-ik-main
+   (&rest
+    args
+    &key
+    (real? nil)
+    (real-feedback? nil)
+    (rotate? t)
+    (translate? t)
+    ;; meta
+    (prev-state
+     (list
+      (cons :angle-vector
+	    (copy-object (send robot :angle-vector)))
+      (cons :worldcoords
+	    (copy-object (send robot :worldcoords)))))
+    (target-limb '(:rarm :larm :rleg :lleg))
+    (target-coords (make-list (length target-limb)))
+    (thre (make-list 4 :initial-element 5))
+    (rthre (make-list 4 :initial-element (deg2rad 3)))
+    (left-support? t)
+    (move-target
+     (mapcar
+      #'(lambda (k)
+	  (send robot k :end-coords))
+      target-limb))
+    (link-list
+     (mapcar
+      #'(lambda (k)
+	  (send robot :link-list
+		(send robot k :end-coords :parent)
+		(if (find k nil);'(:rarm :larm))
+		    (send robot k :root-link))))
+      target-limb))
+    (target-centroid-pos
+     (scale
+      0.5
+      (apply #'v+
+	     (mapcar
+	      #'(lambda (k)
+		  (if (send robot k)
+		      (send robot k :end-coords
+			    :worldpos)
+		    (send (make-coords) :worldpos)))
+	      '(:rleg :lleg)))))
+    (additional-weight-list
+     (mapcar
+      #'(lambda (k gain)
+	  (list (send robot :torso k :child-link)
+		gain))
+      (list :waist-r :waist-p :waist-y)
+      (list 1e-3 1e-2 1e-2)))
+    (root-link-virtual-joint-weight
+     #F(0.1 1.5 1 0.08 0.08 0.08))
+    ;;(float-vector 0.01 0.01 1 0.01 0.01 0.01))
+    (min-vec #F(-1000 -1000 -1000 -200 -200 -200))
+    (max-vec #F(1000 1000 1000 200 200 200))
+    (centroid-thre self)
+    (rotation-axis
+     (mapcar
+      #'(lambda (k)
+	  (case k
+		(:rarm rotate?)
+		(:larm left-support?)
+		(t t)))
+      target-limb))
+    (translation-axis
+     (mapcar
+      #'(lambda (k)
+	  (case k
+		(:rarm translate?)
+		(:larm left-support?)
+		(t t)))
+      target-limb))
+    ;;
+    (initial-av (copy-seq (send robot :angle-vector)))
+    (initial-coords (copy-object (send robot :worldcoords)))
+    (debug-view :no-message)
+    (stop 50)
+    (collision? t)
+    (collision-pair
+     (apply
+      #'append
+      (mapcar
+       #'(lambda (l)
+	   (remove-if 
+	    #'null
+	    (list (if (find-method robot :utorso_lk) (list l (send robot :utorso_lk)))
+		  (if (find-method robot :r_uleg_lk) (list l (send robot :r_uleg_lk)))
+		  (if (find-method robot :l_uleg_lk) (list l (send robot :l_uleg_lk))))))
+       (remove-if
+	#'(lambda (l)
+	    (or (eq (send l :parent)
+		    (if (find-method robot :utorso_lk) (send robot :utorso_lk)))
+		(eq (send (send l :parent) :parent)
+		    (if (find-method robot :utorso_lk) (send robot :utorso_lk)))))
+	(apply
+	 #'append
+	 (mapcar
+	  #'(lambda (k) (send robot k :links))
+	  (remove-if
+	   #'(lambda (k) (find k '(:rleg :lleg)))
+	   target-limb)))))))
+    (cog-gain 0.1)
+    &allow-other-keys
+    )
+   (let (ret)
+     (cond
+      ((and real-feedback?
+	    (boundp '*ri*) *ri*)
+       (leg-coords-fix-from-real
+	:init-grasp? nil
+	:solve-ik? nil)))
+     (setq target-coords
+	   (mapcar
+	    #'(lambda (c m k)
+		(or c
+		    ;;(cdr (assoc k *fix-limb-coords*))
+		    (send m :copy-worldcoords)))
+	    target-coords move-target target-limb))
+     ;;
+     (setq
+      ret
+      (send* robot
+	     :fullbody-inverse-kinematics-with-error
+	     (append
+	      (list
+	       target-coords
+	       :move-target move-target
+	       :link-list link-list
+	       :rotation-axis rotation-axis
+	       :translation-axis translation-axis
+	       :target-centroid-pos target-centroid-pos
+	       :centroid-offset-func
+	       #'(lambda nil
+		   (x::window-main-one)
+		   (send robot :centroid))
+	       :cog-gain cog-gain
+	       :additional-weight-list additional-weight-list
+	       :stop stop
+	       :thre thre
+	       :rthre rthre
+	       :centroid-thre centroid-thre
+	       ;;
+	       :collision-avoidance-link-pair collision-pair
+	       :root-link-virtual-joint-weight
+	       root-link-virtual-joint-weight
+	       :min min-vec
+	       :max max-vec
+	       :avoid-collision-distance 10
+	       :avoid-collision-null-gain 0.3
+	       :avoid-collision-joint-gain 0.3
+	       ;;
+	       :dump-command nil
+	       :debug-view debug-view
+	       ;;:debug-view :no-message
+	       :warnp nil)
+	      args)))
+     ;;
+     (when collision?
+       (setq collision?
+	     (send robot :self-collision-check :pairs
+		   (mapcar
+		    #'(lambda (ll) (cons (car ll) (cadr ll)))
+		    collision-pair))))
+     (when collision? (format t "[collision check] ~A~%" collision?))
+     ;;
+     (cond
+      ((and (not collision?) (vectorp ret))
+       (format t "[ik-main] success !!~%")
+       (send self :fix-centroid-object)
+       (if viewer (send viewer :draw-objects))
+       (cond
+	((and real? (boundp '*ri*) *ri*)
+	 (let ((interpolate-time 1000))
+	   (cond
+	    ((> (norm (v- (send *ri* :state :potentio-vector)
+			  (send robot :angle-vector))) 100)
+	     (setq interpolate-time 4000)))
+	   (model2real :time interpolate-time :wait t)
+	   (unix::usleep (round (* 1000 1000)))
+					;(read-line)
+	   )))
+       (if viewer (send viewer :draw-objects))
+       (if (or
+	    (null success-state-collection)
+	    (> (norm
+		(v- ret
+		    (cdr (assoc :angle-vector prev-state))))
+	       1))
+	   (setq success-state-collection
+		 (subseq
+		  (cons
+		   (list (cons :angle-vector (copy-seq ret))
+			 (cons :worldcoords
+			       (copy-object
+				(send robot :worldcoords))))
+		   success-state-collection)
+		  0 500)))
+       )
+      (t
+       (format t "[ik-main] fail!!~%")
+       (send robot :angle-vector initial-av)
+       (send robot :newcoords initial-coords)
+       (if viewer (send viewer :draw-objects))
+       (print ret)
+       (setq ret nil)))
+     ret
+     ))
+  )
+
+(defmethod ik-server
   (:fullbody-ik-with-collision
    (arm goal-in-world &rest args)
    (apply
-    #'send self :fullbody-ik-main
+    #'send self :old-fullbody-ik-main
     (append
      args
      (list
@@ -174,7 +385,7 @@
 	       #F(1000 1000 1000 200 200 200))))
 	&allow-other-keys)
    (apply
-    #'send self :fullbody-ik-main
+    #'send self :old-fullbody-ik-main
     (append
      args
      (list
@@ -212,7 +423,7 @@
 		     :max-joint-velocity 0.2))
 	  (ret
 	   (apply
-	    #'send self :fullbody-ik-main
+	    #'send self :old-fullbody-ik-main
 	    (append
 	     args
 	     (list
@@ -252,3 +463,4 @@
       (send robot :joint-list) w)
      ret))
   )
+
