@@ -1,12 +1,16 @@
 <launch>
   <node pkg="roseus" type="roseus" name="atlas_ik_server" output="screen"
-	args="$(find jsk_ik_server)/euslisp/atlas-ik-server.l">
+	args="$(find jsk_ik_server)/euslisp/ik-server-impl/atlas-ik-server.l">
     <param name="robot" value="atlas"/>
   </node>
-
+  <!--
   <node pkg="roseus" type="roseus" name="atlas_ik_client" output="screen"
-	args="$(find jsk_ik_server)/euslisp/ik-client-test.l">
+	args="$(find jsk_ik_server)/euslisp/old-ik-client.l">
     <param name="root_link" value="/pelvis"/>
   </node>
-
+  -->
+  <node pkg="roseus" type="roseus" name="atlas_ik_client" output="screen"
+	args="$(find jsk_ik_server)/euslisp/fullbody-ik-client.l">
+    <env name="IK_CLIENT_TEST" value="atlas"/>
+  </node>
 </launch>
