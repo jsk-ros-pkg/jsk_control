@@ -248,7 +248,7 @@
   nil
   (require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
   (defvar *robot* (hrp2jsknt))
-  (objects *robot*)
+  (objects (list *robot*))
   (ros::roseus "fullbody_ik_client_test")
   (defvar *end-coords-without-toe*
     (mapcar
@@ -276,7 +276,7 @@
   (require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
   (defvar *atlas* (atlas))
   (ros::roseus "fullbody_ik_client_test")
-  (objects *atlas*)
+  (objects (list *atlas*))
   (do-until-key
    (send *atlas* :reset-manip-pose)
    (send *atlas* :fix-leg-to-coords (make-coords))
@@ -288,7 +288,7 @@
   (require :pr2 "package://pr2eus/pr2.l")
   (defvar *pr2* (pr2))
   (ros::roseus "fullbody_ik_client_test")
-  (objects *pr2*)
+  (objects (list *pr2*))
   (defvar *pr2-move-target*
     (list (make-cascoords
 	   :parent
