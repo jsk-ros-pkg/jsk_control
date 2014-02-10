@@ -272,11 +272,11 @@
    (let (ret)
      (setq target-coords ;; for mm
 	   (mapcar
-	    #'(lambda (c m k)
+	    #'(lambda (c m) ;; k)
 		(or c
 		    ;;(cdr (assoc k *fix-limb-coords*))
 		    (send m :copy-worldcoords)))
-	    target-coords move-target target-limb))
+	    target-coords move-target));; target-limb))
      ;;
      (setq
       ret

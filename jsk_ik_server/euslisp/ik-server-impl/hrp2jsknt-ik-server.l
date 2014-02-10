@@ -17,6 +17,13 @@
   (:init
    (&rest args)
    (setq robot (hrp2jsknt))
+   (mapcar
+    #'(lambda (k)
+	(let* ((mt (send robot k :end-coords))
+	       (l (send mt :parent)))
+	  (send l :dissoc mt)
+	  (send (send l :parent) :assoc mt)))
+    '(:rleg :lleg))
    (setq root-link-frame-id "/pelvis")
    (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
@@ -57,12 +64,8 @@
 		    (append
 		     (if (and (eps= (send robot :rleg :toe-p :joint-angle) 0 1)
 			      (eps= (send robot :lleg :toe-p :joint-angle) 0 1))
-			 (send
-			  (send (send robot k :end-coords :parent) :parent)
-			  :faces))
-		     (send
-		      (send robot k :end-coords :parent)
-		      :faces))
+			 (send (cadr (reverse (send robot k :links))) :faces))
+		     (send (car (reverse (send robot k :links))) :faces))
 		    :vertices))
 	       foot-key))))
 	   5))

@@ -194,15 +194,17 @@
 			 :weight (cadr aw)))
 	   additional-weight-list))
     ;; target coords
-    (send req :ik_request :ik_link_name
-	  (format nil "~A"
-		  (send (send (car move-target) :parent) :name)))
+    (if move-target
+	(send req :ik_request :ik_link_name
+	      (format nil "~A"
+		      (send (send (car move-target) :parent) :name))))
     (send req :ik_request :ik_link_names
 	  (mapcar #'(lambda (mt)
 		      (format nil "~A" (send (send mt :parent) :name)))
 		  (cdr move-target)))
-    (send req :ik_request :pose_stamped
-	  (coords2posestamped (car target-coords) :robot robot))
+    (if target-coords
+	(send req :ik_request :pose_stamped
+	      (coords2posestamped (car target-coords) :robot robot)))
     (send req :ik_request :pose_stamped_vector
 	  (mapcar
 	   #'(lambda (tc) (coords2posestamped tc :robot robot))
