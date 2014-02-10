@@ -5,11 +5,6 @@
 
 ;;(ros::roseus "fullbody_ik_client_test")
 
-;;(require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
-;;(require :pr2 "package://pr2eus/pr2.l")
-;;(defvar *robot* (hrp2jsknt))
-;;(objects *robot*)
-
 (defun coords2posestamped
   (coords
    &key
@@ -46,7 +41,7 @@
 (defun update-joint-states
   (js &key
       (robot *robot*)
-      (joint-list (send *robot* :joint-list))
+      (joint-list (send robot :joint-list))
       buf)
   (setq buf (concatenate float-vector
 			 (send (car (send robot :links)) :worldpos)
@@ -219,11 +214,14 @@
     res))
 
 (defun test-fullbody-ik
-  (&key
+  (&rest
+   args
+   &key
    (robot *robot*)
    (target-limb '(:rarm :larm :rleg :lleg))
    (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limb))
-   (target-coords (send-all move-target :copy-worldcoords)))
+   (target-coords (send-all move-target :copy-worldcoords))
+   &allow-other-keys)
   (mapcar
    #'(lambda (tc)
        (send tc :transform
@@ -231,26 +229,94 @@
 	      :pos (scale 300 (random-vector 1.0))
 	      :rpy (scale 1.57 (random-vector 1.0)))))
    (subseq target-coords 0 2))
-  (ik-server-call
-   :robot robot
-   :target-limb target-coords
-   :move-target move-target
-   :target-coords target-coords
-   :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
-   ;;:centroid-thre 100
-   :stop 50
-   :use-toes '(nil nil)
+  (apply
+   #'ik-server-call
+   (append
+    (list
+     :robot robot
+     :target-limb target-coords
+     :move-target move-target
+     :target-coords target-coords
+     :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
+     ;;:centroid-thre 100
+     :stop 50
+     :use-toes '(nil nil)
+     )
+    args)))
+
+(defun hrp2jsknt-test
+  nil
+  (require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
+  (defvar *robot* (hrp2jsknt))
+  (objects *robot*)
+  (ros::roseus "fullbody_ik_client_test")
+  (defvar *end-coords-without-toe*
+    (mapcar
+     #'(lambda (k)
+	 (make-cascoords
+	  :name
+	  (read-from-string (format nil "~A-end-coords-without-toe" k))
+	  :parent
+	  (send (send *robot* k :end-coords :parent) :parent)
+	  :coords
+	  (send *robot* k :end-coords :copy-worldcoords)))
+     '(:rleg :lleg)))
+  (do-until-key
+   (send *robot* :reset-manip-pose)
+   (send *robot* :fix-leg-to-coords (make-coords))
+   (test-fullbody-ik
+    :move-target
+    (append
+     (mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
+     *end-coords-without-toe*))
    ))
+
+(defun atlas-test
+  nil
+  (require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
+  (defvar *atlas* (atlas))
+  (ros::roseus "fullbody_ik_client_test")
+  (objects *atlas*)
+  (do-until-key
+   (send *atlas* :reset-manip-pose)
+   (send *atlas* :fix-leg-to-coords (make-coords))
+   (test-fullbody-ik :robot *atlas*)
+   ))
+
+(defun pr2-test
+  nil
+  (require :pr2 "package://pr2eus/pr2.l")
+  (defvar *pr2* (pr2))
+  (ros::roseus "fullbody_ik_client_test")
+  (objects *pr2*)
+  (defvar *pr2-move-target*
+    (list (make-cascoords
+	   :parent
+	   (send (send (send *pr2* :rarm :end-coords :parent) :parent) :parent)
+	   :coords
+	   (copy-object
+	    (send (send (send (send *pr2* :rarm :end-coords :parent) :parent) :parent)
+		  :worldcoords))
+	   :name :rarm-pr2-end-coords)))
+  (do-until-key
+   (test-fullbody-ik
+    :robot *pr2*
+    :target-limb '(:rarm)
+    :centroid-thre nil
+    :target-centroid-pos nil
+    :min-vec #F(0 0 0 0 0 0)
+    :max-vec #F(0 0 0 0 0 0)
+    :cog-gain 0
+    :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
+    :move-target *pr2-move-target*
+    :rotation-axis (list nil)
+    )))
+
+
 
 #|
 
-(require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
-(defvar *robot* (hrp2jsknt))
-(objects *robot*)
 
-(require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
-(defvar *robot* (atlas))
-(objects *robot*)
 
 (ros::roseus "fullbody_ik_client_test")
 
@@ -269,15 +335,6 @@
 	(send *robot* k :end-coords :copy-worldcoords)))
    '(:rleg :lleg)))
 
-(do-until-key
- (send *robot* :reset-manip-pose)
- (send *robot* :fix-leg-to-coords (make-coords))
- (test-fullbody-ik
-  :move-target
-  (append
-   (mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
-   *end-coords-without-toe*))
- )
 
 (ik-server-call :target-limb '(:rarm) :centroid-thre 100000 :cog-gain 0 :root-link-virtual-joint-weight #F(0 0 0 0 0 0) :target-coords (list (make-coords :pos #F(500 -300 1000))) :rotation-axis (list nil) :debug-view nil :additional-weight-list (mapcar #'(lambda (k) (list (send *robot* :torso k :child-link) 0)) '(:waist-p :waist-y)))
 

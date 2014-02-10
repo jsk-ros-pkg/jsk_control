@@ -19,9 +19,9 @@
   (:init
    (&rest args)
 
-   (setq *robot* (hrp2jsk))
+   (setq robot (hrp2jsk))
 
-   (setq *root-link* "/pelvis")
+   (setq root-link-frame-id "/pelvis")
    (send-super* :init args)
   )
   )

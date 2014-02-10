@@ -18,8 +18,8 @@
   (:init
    (&rest args)
 
-   (setq *robot* (pr2))
-   (setq *root-link* "/base_link")
+   (setq robot (pr2))
+   (setq root-link-frame-id "/base_link")
    (send-super* :init args)
    )
   )

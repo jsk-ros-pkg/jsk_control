@@ -29,16 +29,16 @@
    ;;
    (send *atlas* :torso :waist-p :max-angle 10)
    (send *atlas* :torso :waist-p :min-angle -10)
-   (setq *robot* *atlas*)
+   (setq robot *atlas*)
    ;;
    (send self :make-foot-convex)
    (send self :make-centroid-object)
    ;;
-   (send (send *robot* :utorso_lk) :make-pqpmodel :fat 30)
+   (send (send robot :utorso_lk) :make-pqpmodel :fat 30)
    (setq *success-state-collection* nil)
    ;; (send self :make-foot-convex)
    (send self :make-centroid-object)
-   (setq *root-link* "/pelvis")
+   (setq root-link-frame-id "/pelvis")
 
    (send-super* :init args)
    )
