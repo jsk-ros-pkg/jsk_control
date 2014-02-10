@@ -250,6 +250,8 @@
 (defun hrp2jsknt-test
   nil
   (require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
+  (when (probe-file (ros::resolve-ros-path "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-utils.l"))
+    (require :hrp2jsknt-utils "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-utils.l"))
   (defvar *robot* (hrp2jsknt))
   (objects (list *robot*))
   (ros::roseus "fullbody_ik_client_test")
@@ -288,7 +290,7 @@
 
 (defun atlas-test
   nil
-  (require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
+  (require "package://hrpsys_gazebo_atlas/euslisp/atlas-model.l")
   (defvar *atlas* (atlas))
   (ros::roseus "fullbody_ik_client_test")
   (objects (list *atlas*))
