@@ -248,6 +248,10 @@
 (defvar *robot* (hrp2jsknt))
 (objects *robot*)
 
+(require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
+(defvar *robot* (atlas))
+(objects *robot*)
+
 (ros::roseus "fullbody_ik_client_test")
 
 (send *robot* :reset-manip-pose)
