@@ -17,8 +17,8 @@
    centroid-object
    foot-convex
    root-link-frame-id
-   *success-state-collection*
-   *fix-limb-coords*
+   success-state-collection
+   ;; *fix-limb-coords*
    ;;
    viewer
    move-target-hash

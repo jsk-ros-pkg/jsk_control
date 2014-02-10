@@ -35,26 +35,7 @@
   (cond
    ((or
      force?
-     (null foot-convex)
-     (and *fix-limb-coords*
-	  (flatten
-	   (mapcar
-	    #'(lambda (k)
-		(or
-		 (not (assoc k *fix-limb-coords*))
-		 (> (norm
-		     (send
-		      (send robot k :end-coords :worldcoords)
-		      :difference-position
-		      (cdr (assoc k *fix-limb-coords*))))
-		    50)
-		 (> (norm
-		     (send
-		      (send robot k :end-coords :worldcoords)
-		      :difference-rotation
-		      (cdr (assoc k *fix-limb-coords*))))
-		    (deg2rad 10))))
-	    foot-key))))
+     (null foot-convex))
     (format t "update~%")
     (setq foot-convex
 	  (make-prism
@@ -86,17 +67,6 @@
 	       foot-key))))
 	   5))
     (send foot-convex :set-color #F(0 0 1))
-    (setq *fix-limb-coords*
-	  (append
-	   (remove-if
-	    #'(lambda (kf) (find (car kf) '(:rleg :lleg)))
-	    *fix-limb-coords*)
-	   (mapcar
-	    #'(lambda (k)
-		(cons
-		 k
-		 (send robot k :end-coords :copy-worldcoords)))
-	    foot-key)))
     (gl::transparent foot-convex 0.3)
     )
    (t (format t "reject~%"))))
