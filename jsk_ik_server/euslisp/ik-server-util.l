@@ -84,14 +84,14 @@
    (foot-key '(:rleg :lleg))
    (force? nil))
 
-  (when (position nil (mapcar #'(lambda (l) (send *robot* l)) foot-key))
+  (when (position nil (mapcar #'(lambda (l) (send robot l)) foot-key))
     (return-from :make-foot-convex nil))
 
   (format t "[foot-convex] ")
   (cond
    ((or
      force?
-     (null *foot-convex*)
+     (null foot-convex)
      (and *fix-limb-coords*
 	  (flatten
 	   (mapcar
@@ -100,19 +100,19 @@
 		 (not (assoc k *fix-limb-coords*))
 		 (> (norm
 		     (send
-		      (send *robot* k :end-coords :worldcoords)
+		      (send robot k :end-coords :worldcoords)
 		      :difference-position
 		      (cdr (assoc k *fix-limb-coords*))))
 		    50)
 		 (> (norm
 		     (send
-		      (send *robot* k :end-coords :worldcoords)
+		      (send robot k :end-coords :worldcoords)
 		      :difference-rotation
 		      (cdr (assoc k *fix-limb-coords*))))
 		    (deg2rad 10))))
 	    foot-key))))
     (format t "update~%")
-    (setq *foot-convex*
+    (setq foot-convex
 	  (make-prism
 	   (quickhull
 	    (mapcar
@@ -123,19 +123,19 @@
 			       (+
 				-10
 				(aref
-				 (send *robot* :rleg :end-coords :worldpos)
+				 (send robot :rleg :end-coords :worldpos)
 				 2)))))
 	     (flatten
 	      (mapcar
 	       #'(lambda (k)
 		   (send-all
 		    (send
-		     (send *robot* k :end-coords :parent)
+		     (send robot k :end-coords :parent)
 		     :faces)
 		    :vertices))
 	       foot-key))))
 	   5))
-    (send *foot-convex* :set-color #F(0 0 1))
+    (send foot-convex :set-color #F(0 0 1))
     (setq *fix-limb-coords*
 	  (append
 	   (remove-if
@@ -145,39 +145,39 @@
 	    #'(lambda (k)
 		(cons
 		 k
-		 (send *robot* k :end-coords :copy-worldcoords)))
+		 (send robot k :end-coords :copy-worldcoords)))
 	    foot-key)))
-    (gl::transparent *foot-convex* 0.3)
+    (gl::transparent foot-convex 0.3)
     )
    (t (format t "reject~%"))))
 
   (:make-centroid-object
   ()
-  (setq *centroid-object* (make-cylinder 20 400))
-  (send *centroid-object* :set-color #F(1 1 0)))
+  (setq centroid-object (make-cylinder 20 400))
+  (send centroid-object :set-color #F(1 1 0)))
 
   (:convex-pos-list
   nil
-  (if (find-method *foot-convex* :faces)
+  (if (find-method foot-convex :faces)
       (union
        (send
 	(find-if
 	 #'(lambda (f)
 	     (find :bottom (send f :id)))
-	 (send *foot-convex* :faces))
+	 (send foot-convex :faces))
 	:vertices)
        nil)))
 
   (:fix-centroid-object
   (&optional
-   (centroid (send *robot* :centroid))
+   (centroid (send robot :centroid))
    (leg-h (scale 0.5
 		 (v+
-		  (if (send *robot* :rleg) (send *robot* :rleg :end-coords :worldpos) (float-vector 0 0 0))
-		  (if (send *robot* :lleg) (send *robot* :lleg :end-coords :worldpos) (float-vector 0 0 0))
+		  (if (send robot :rleg) (send robot :rleg :end-coords :worldpos) (float-vector 0 0 0))
+		  (if (send robot :lleg) (send robot :lleg :end-coords :worldpos) (float-vector 0 0 0))
 		 ))))
-  (if (and *centroid-object* (find-method *centroid-object* :newcoords))
-      (send *centroid-object*
+  (if (and centroid-object (find-method centroid-object :newcoords))
+      (send centroid-object
 	    :newcoords
 	    (make-coords
 	     :pos (v+
@@ -192,16 +192,16 @@
     &optional
     (convex (send self :convex-pos-list))
     (center
-     (if (find-method *robot* :rleg)
+     (if (find-method robot :rleg)
 	 (scale
 	  0.5
 	  (apply
 	   #'v+
 	   (mapcar
 	    #'(lambda (k)
-		(send *robot* k :end-coords :worldpos))
+		(send robot k :end-coords :worldpos))
 	    '(:rleg :lleg))))
-       (send *robot* :worldpos))))
+       (send robot :worldpos))))
    ;;(print convex)
    (let* ((diff (concatenate float-vector diff (list 0)))
 	  (target (v+ diff center))
@@ -236,9 +236,9 @@
    (prev-state
     (list
      (cons :angle-vector
-	   (copy-object (send *robot* :angle-vector)))
+	   (copy-object (send robot :angle-vector)))
      (cons :worldcoords
-	   (copy-object (send *robot* :worldcoords)))))
+	   (copy-object (send robot :worldcoords)))))
    (target-limb '(:rarm :larm :rleg :lleg))
    (target-coords (make-list (length target-limb)))
    (thre (make-list 4 :initial-element 5))
@@ -247,15 +247,15 @@
    (move-target
     (mapcar
      #'(lambda (k)
-	 (send *robot* k :end-coords))
+	 (send robot k :end-coords))
      target-limb))
    (link-list
     (mapcar
      #'(lambda (k)
-	 (send *robot* :link-list
-	       (send *robot* k :end-coords :parent)
+	 (send robot :link-list
+	       (send robot k :end-coords :parent)
 	       (if (find k nil);'(:rarm :larm))
-		   (send *robot* k :root-link))))
+		   (send robot k :root-link))))
      target-limb))
    (target-centroid-pos
     (scale
@@ -263,15 +263,15 @@
      (apply #'v+
 	    (mapcar
 	     #'(lambda (k)
-		 (if (send *robot* k)
-		     (send *robot* k :end-coords
+		 (if (send robot k)
+		     (send robot k :end-coords
 			   :worldpos)
 		   (send (make-coords) :worldpos)))
 	     '(:rleg :lleg)))))
    (additional-weight-list
     (mapcar
      #'(lambda (k gain)
-	 (list (send *robot* :torso k :child-link)
+	 (list (send robot :torso k :child-link)
 	       gain))
      (list :waist-r :waist-p :waist-y)
      (list 1e-3 1e-2 1e-2)))
@@ -298,8 +298,8 @@
 	   (t t)))
      target-limb))
    ;;
-   (initial-av (copy-seq (send *robot* :angle-vector)))
-   (initial-coords (copy-object (send *robot* :worldcoords)))
+   (initial-av (copy-seq (send robot :angle-vector)))
+   (initial-coords (copy-object (send robot :worldcoords)))
    (debug-view :no-message)
    (stop 50)
    (collision? t)
@@ -310,19 +310,19 @@
       #'(lambda (l)
 	  (remove-if 
 	   #'null
-	  (list (if (find-method *robot* :utorso_lk) (list l (send *robot* :utorso_lk)))
-		(if (find-method *robot* :r_uleg_lk) (list l (send *robot* :r_uleg_lk)))
-		(if (find-method *robot* :l_uleg_lk) (list l (send *robot* :l_uleg_lk))))))
+	  (list (if (find-method robot :utorso_lk) (list l (send robot :utorso_lk)))
+		(if (find-method robot :r_uleg_lk) (list l (send robot :r_uleg_lk)))
+		(if (find-method robot :l_uleg_lk) (list l (send robot :l_uleg_lk))))))
       (remove-if
        #'(lambda (l)
 	   (or (eq (send l :parent)
-		   (if (find-method *robot* :utorso_lk) (send *robot* :utorso_lk)))
+		   (if (find-method robot :utorso_lk) (send robot :utorso_lk)))
 	       (eq (send (send l :parent) :parent)
-		   (if (find-method *robot* :utorso_lk) (send *robot* :utorso_lk)))))
+		   (if (find-method robot :utorso_lk) (send robot :utorso_lk)))))
        (apply
 	#'append
 	(mapcar
-	 #'(lambda (k) (send *robot* k :links))
+	 #'(lambda (k) (send robot k :links))
 	 (remove-if
 	  #'(lambda (k) (find k '(:rleg :lleg)))
 	  target-limb)))))))
@@ -346,7 +346,7 @@
     ;;
     (setq
      ret
-     (send* *robot*
+     (send* robot
 	    :fullbody-inverse-kinematics-with-error
 	    (append
 	     (list
@@ -359,7 +359,7 @@
 	      :centroid-offset-func
 	      #'(lambda nil
 		  (x::window-main-one)
-		  (send *robot* :centroid))
+		  (send robot :centroid))
 	      :cog-gain cog-gain
 	      :additional-weight-list additional-weight-list
 	      :stop stop
@@ -384,7 +384,7 @@
     ;;
     (when collision?
       (setq collision?
-	    (send *robot* :self-collision-check :pairs
+	    (send robot :self-collision-check :pairs
 		  (mapcar
 		   #'(lambda (ll) (cons (car ll) (cadr ll)))
 		   collision-pair))))
@@ -400,7 +400,7 @@
 	(let ((interpolate-time 1000))
 	  (cond
 	   ((> (norm (v- (send *ri* :state :potentio-vector)
-			 (send *robot* :angle-vector))) 100)
+			 (send robot :angle-vector))) 100)
 	    (setq interpolate-time 4000)))
 	  (model2real :time interpolate-time :wait t)
 	  (unix::usleep (round (* 1000 1000)))
@@ -419,14 +419,14 @@
 		  (list (cons :angle-vector (copy-seq ret))
 			(cons :worldcoords
 			      (copy-object
-			       (send *robot* :worldcoords))))
+			       (send robot :worldcoords))))
 		  *success-state-collection*)
 		 0 500)))
       )
      (t
       (format t "[ik-main] fail!!~%")
-      (send *robot* :angle-vector initial-av)
-      (send *robot* :newcoords initial-coords)
+      (send robot :angle-vector initial-av)
+      (send robot :newcoords initial-coords)
       (if viewer (send viewer :draw-objects))
       (print ret)
       (setq ret nil)))

@@ -30,7 +30,7 @@
 	       (length (send req :ik_request :robot_state :joint_state :position))))
        (dotimes (i (length (send req :ik_request :robot_state :joint_state :name)))
 	 (let ((joint-name (elt (send req :ik_request :robot_state :joint_state :name) i)))
-	   (let ((j (find joint-name (send *robot* :joint-list)
+	   (let ((j (find joint-name (send robot :joint-list)
 			  :test #'string= :key #'(lambda (x) (send x :name)))))
 	     (if j
 		 (send j :joint-angle
@@ -40,18 +40,18 @@
 			 i)))
 	       (warn "we cannot find ~A~%" joint-name)
 	       )))))
-      (t (send *robot* :reset-manip-pose)))
+      (t (send robot :reset-manip-pose)))
      (format t "[ik-server] options: ~A~%" opt)
      (format t "            target: limb=~A, torso=~A:~A:~A, fullbody=~A~%"
 	     arm torsop torso2p torso3p fullbodyp)
-     (send *robot* :fix-leg-to-coords (make-coords) :both)
+     (send robot :fix-leg-to-coords (make-coords) :both)
      (cond
       ((cadr (member :update-convex opt))
        (send self :make-foot-convex :force? t)
        (cond
 	(viewer
 	 (send viewer :objects
-	       (list *robot* *centroid-object* *foot-convex* *arrow*))
+	       (list robot centroid-object foot-convex arrow))
 	 (send viewer :draw-objects)))))
      (let ((goal (send req :ik_request :pose_stamped))
 	   ;; check that goal is malformed or not
@@ -64,15 +64,15 @@
 	((not (eps= (norm q) 1.0))
 	 (ros::ros-error "Invalid quotanion detected ~A~%" q)
 	 res)
-	((not (equal *root-link* (send goal :header :frame_id)))
-	 (ros::ros-error "root-link(~A) and frame_id(~A) must be same" *root-link* (send goal :header :frame_id))
+	((not (equal root-link-frame-id (send goal :header :frame_id)))
+	 (ros::ros-error "root-link(~A) and frame_id(~A) must be same" root-link-frame-id (send goal :header :frame_id))
 	 res)
-	((let* ((goal-in-pelvis (send *tf* :transform-pose *root-link* goal))
+	((let* ((goal-in-pelvis (send *tf* :transform-pose root-link-frame-id goal))
 		(goal-in-world
-		 (send (send *robot* :copy-worldcoords)
+		 (send (send robot :copy-worldcoords)
 		       :transform goal-in-pelvis))
 		(draw-arrow
-		 (send *arrow* :newcoords goal-in-world))
+		 (send arrow :newcoords goal-in-world))
 		(ik-ret (cond
 			 (fullbodyp
 			  (apply
@@ -125,9 +125,9 @@
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
 	 (if viewer (send viewer :draw-objects))
 	 (send res :solution :joint_state :name
-	       (send-all (send *robot* :joint-list) :name))
+	       (send-all (send robot :joint-list) :name))
 	 (send res :solution :joint_state :position
-	       (map float-vector #'deg2rad (send *robot* :angle-vector)))
+	       (map float-vector #'deg2rad (send robot :angle-vector)))
 	 res)
 	(t res))))
    )
@@ -141,17 +141,17 @@
     (append
      args
      (list
-      :target-limb (mapcan #'(lambda (limb) (if (send *robot* limb) (list limb))) (list arm :lleg :rleg))
-      :target-coords (mapcan #'(lambda (limb target) (if (send *robot* limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
+      :target-limb (mapcan #'(lambda (limb) (if (send robot limb) (list limb))) (list arm :lleg :rleg))
+      :target-coords (mapcan #'(lambda (limb target) (if (send robot limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
       :collision? t
       ;;:centroid-thre 100
       :root-link-virtual-joint-weight
       (float-vector 0.02 0.02 0.1 0.01 0.04 0.04)
-      :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
+      :thre (mapcan #'(lambda (limb) (if (send robot limb) (list 5))) (list arm :lleg :rleg))
       :cog-gain 0.7
       ;;:target-centroid-pos nil
       ;;:stop 100
-      :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg))))))
+      :rotation-axis (mapcan #'(lambda (limb) (if (send robot limb) (list t))) (list arm :lleg :rleg))))))
   ;;
   (:torso-ik-with-collision
    (arm goal-in-world
@@ -178,12 +178,12 @@
     (append
      args
      (list
-      :target-limb (mapcan #'(lambda (limb) (if (send *robot* limb) (list limb))) (list arm :lleg :rleg))
-      :target-coords (mapcan #'(lambda (limb target) (if (send *robot* limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
+      :target-limb (mapcan #'(lambda (limb) (if (send robot limb) (list limb))) (list arm :lleg :rleg))
+      :target-coords (mapcan #'(lambda (limb target) (if (send robot limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
       :additional-weight-list
       (mapcar
        #'(lambda (k gain)
-	   (list (send *robot* :torso k :child-link)
+	   (list (send robot :torso k :child-link)
 		 gain))
        (list :waist-r :waist-p :waist-y)
        waist-gain)
@@ -198,17 +198,17 @@
       :manipulability-gain 0 ;0.00500
       ;;:centroid-thre 200
       ;;:target-centroid-pos nil
-      :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
+      :thre (mapcan #'(lambda (limb) (if (send robot limb) (list 5))) (list arm :lleg :rleg))
       ;;:stop 100
-      :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg))))))
+      :rotation-axis (mapcan #'(lambda (limb) (if (send robot limb) (list t))) (list arm :lleg :rleg))))))
   ;;
   (:normal-ik-with-collision
    (arm goal-in-world &rest args)
    (let* ((w
-	   (send-all (send *robot* :joint-list)
+	   (send-all (send robot :joint-list)
 		     :max-joint-velocity))
 	  (vel-limit
-	   (send-all (send *robot* :joint-list)
+	   (send-all (send robot :joint-list)
 		     :max-joint-velocity 0.2))
 	  (ret
 	   (apply
@@ -216,14 +216,14 @@
 	    (append
 	     args
 	     (list
-	      :target-limb (mapcan #'(lambda (limb) (if (send *robot* limb) (list limb))) (list arm :lleg :rleg))
-	      :target-coords (mapcan #'(lambda (limb target) (if (send *robot* limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
+	      :target-limb (mapcan #'(lambda (limb) (if (send robot limb) (list limb))) (list arm :lleg :rleg))
+	      :target-coords (mapcan #'(lambda (limb target) (if (send robot limb) (list target))) (list arm :lleg :rleg) (list goal-in-world nil nil))
 	      ;;:additional-weight-list
-	      ;;(if (find-method *robot* :torso :waist-r)
+	      ;;(if (find-method robot :torso :waist-r)
 	      ;;(append
 	      ;;(mapcar
 	      ;;#'(lambda (k gain)
-	      ;;(list (send *robot* :torso k :child-link)
+	      ;;(list (send robot :torso k :child-link)
 	      ;;gain))
 	      ;;(list :waist-r :waist-p :waist-y)
 	      ;;(make-list 3 :initial-element 0))))
@@ -244,11 +244,11 @@
 	      ;;:dif-pos-ratio 1.0
 	      ;;:dif-rot-ratio 0.00500
 	      ;;:manipulability-gain 0.00500
-	      :thre (mapcan #'(lambda (limb) (if (send *robot* limb) (list 5))) (list arm :lleg :rleg))
-	      :rthre (mapcan #'(lambda (limb) (if (send *robot* limb) (list (deg2rad 1)))) (list arm :lleg :rleg))
-	      :rotation-axis (mapcan #'(lambda (limb) (if (send *robot* limb) (list t))) (list arm :lleg :rleg)))))))
+	      :thre (mapcan #'(lambda (limb) (if (send robot limb) (list 5))) (list arm :lleg :rleg))
+	      :rthre (mapcan #'(lambda (limb) (if (send robot limb) (list (deg2rad 1)))) (list arm :lleg :rleg))
+	      :rotation-axis (mapcan #'(lambda (limb) (if (send robot limb) (list t))) (list arm :lleg :rleg)))))))
      (mapcar
       #'(lambda (j g) (send j :max-joint-velocity g))
-      (send *robot* :joint-list) w)
+      (send robot :joint-list) w)
      ret))
   )

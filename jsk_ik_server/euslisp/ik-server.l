@@ -12,11 +12,11 @@
 
 (defclass ik-server
   :slots
-  (*robot*
-   *arrow*
-   *centroid-object*
-   *foot-convex*
-   *root-link*
+  (robot
+   arrow
+   centroid-object
+   foot-convex
+   root-link-frame-id
    *success-state-collection*
    *fix-limb-coords*
    ;;
@@ -38,8 +38,8 @@
   (:start-ik-server
    nil
    ;; initialization
-   (unless *root-link* (setq *root-link* "/base_link"))
-   (setq *arrow* (arrow))
+   (unless root-link-frame-id (setq root-link-frame-id "/base_link"))
+   (setq arrow (arrow))
    ;; check viewer
    (cond
     ((and (boundp '*irtviewer*) *irtviewer*)
@@ -57,12 +57,12 @@
      (send *irtviewer* :title "IK server")
      (setq viewer *irtviewer*))
     )
-   (unless *foot-convex* (setq *foot-convex* (make-coords)))
-   (unless *centroid-object* (setq *centroid-object* (make-coords)))
+   (unless foot-convex (setq foot-convex (make-coords)))
+   (unless centroid-object (setq centroid-object (make-coords)))
    (cond
     (viewer
      (send viewer :objects
-	   (list *robot* *foot-convex* *arrow*))
+	   (list robot foot-convex arrow))
      (send viewer :look-all)
      (send viewer :draw-objects)))
    ;;
@@ -87,9 +87,9 @@
   (:update-joint-states
    (js &optional opt buf)
    (setq buf (concatenate float-vector
-			  (send (car (send *robot* :links)) :worldpos)
+			  (send (car (send robot :links)) :worldpos)
 			  (matrix-log
-			   (send (car (send *robot* :links)) :worldrot))))
+			   (send (car (send robot :links)) :worldrot))))
    (dotimes (i (length (send js :name)))
      (if (or (>= i (length (send js :name)))
 	     (>= i (length (send js :position))))
@@ -116,19 +116,19 @@
 		  #'(lambda (j) (string-equal
 				 (remove #\: (format nil "~A" (send j :name)))
 				 name))
-		  (send *robot* :joint-list)))
+		  (send robot :joint-list)))
 	 (send j :joint-angle (rad2deg pos)))
 	((setq j (or j (find-if
 			#'(lambda (j) (string-equal
 				       (remove #\: (format nil "~A" (send j :name)))
 				       name))
-			(send *robot* :links))))
+			(send robot :links))))
 	 (if (find-method j :joint) (setq j (send j :joint)))
 	 (send j :joint-angle (rad2deg pos))))))
    (if (and (cadr (member :angle-vector opt))
 	    (eq (length (cadr (member :angle-vector opt)))
-		(length (send *robot* :angle-vector))))
-       (send *robot* :angle-vector (cadr (member :angle-vector opt))))
+		(length (send robot :angle-vector))))
+       (send robot :angle-vector (cadr (member :angle-vector opt))))
    (setq
     buf
     (if (cadr (member :worldcoords opt))
@@ -140,13 +140,13 @@
       (make-coords :pos (subseq buf 0 3)
 		   :rpy (reverse (subseq buf 3 6)))))
    (dotimes (i 3)
-     (send *robot* :transform
+     (send robot :transform
 	   (send
 	    (copy-object
-	     (send (car (send *robot* :links)) :worldcoords))
+	     (send (car (send robot :links)) :worldcoords))
 	    :transformation
 	    buf)))
-   (send-all (send *robot* :links) :worldcoords)
+   (send-all (send robot :links) :worldcoords)
    (if viewer (send viewer :draw-objects))
    ;;(read-line)
    )
@@ -161,7 +161,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send *robot* :links)))
+	      (send robot :links)))
        (cond
 	((null link)
 	 (format t "[:update-move-target] unknown link ~A~%" name))
@@ -181,7 +181,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send *robot* :links)))
+	      (send robot :links)))
        (cond
 	((null link)
 	 (format t "[:update-move-target] unknown link~A ~%" name))
@@ -228,7 +228,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send *robot* :links)))
+	      (send robot :links)))
        (cond
 	((and
 	  (null link)
@@ -238,7 +238,7 @@
 		  #'(lambda (j) (string-equal
 				 (remove #\: (format nil "~A" (send j :name)))
 				 name))
-		  (send-all (send *robot* :links) :joint))))))
+		  (send-all (send robot :links) :joint))))))
 	(t
 	 (setq link (or link (send joint :child-link)))
 	 (push (list link (send jc :weight)) ret))))
@@ -253,7 +253,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send *robot* :links)))
+	      (send robot :links)))
        (if link (push link buf)))
      (setq buf (union buf nil))
      (append
@@ -280,7 +280,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send *robot* :links)))
+	      (send robot :links)))
        (cond
 	((null link)
 	 (format t "[:parse-ik-param] invalid link ~A~%" name))
@@ -293,13 +293,13 @@
 			:coords (copy-object (send link :worldcoords)))))
 	 (send move-target-hash :enter link buf)
 	 (push buf mt)
-	 (push (send *robot* :link-list (send buf :parent)) ll)
+	 (push (send robot :link-list (send buf :parent)) ll)
 	 ;;
 	 ;;(setq goal ps)
-	 (if *root-link*
+	 (if root-link-frame-id
 	     (setq
 	      goal-in-pelvis
-	      (send *tf* :transform-pose *root-link* ps)))
+	      (send *tf* :transform-pose root-link-frame-id ps)))
 	 (setq goal-in-pelvis
 	       (or
 		goal-in-pelvis
@@ -315,13 +315,13 @@
 		   (or (send (send (send ps :pose) :orientation) :x) 0)
 		   (or (send (send (send ps :pose) :orientation) :y) 0)
 		   (or (send (send (send ps :pose) :orientation) :z) 0))))))
-	 (if (not (string-equal *root-link* (send (send ps :header) :frame_id)))
-	     (format t "[:parse-ik-param] frame_id must be ~A~%" *root-link*))
+	 (if (not (string-equal root-link-frame-id (send (send ps :header) :frame_id)))
+	     (format t "[:parse-ik-param] frame_id must be ~A~%" root-link-frame-id))
 	 (setq goal-in-world
-	       (send (send (car (send *robot* :links)) :copy-worldcoords)
+	       (send (send (car (send robot :links)) :copy-worldcoords)
 		     :transform goal-in-pelvis))
 	 (if (zerop id)
-	     (send *arrow* :newcoords goal-in-world))
+	     (send arrow :newcoords goal-in-world))
 	 (push goal-in-world tc))))
      (append
       (list
@@ -364,7 +364,7 @@
        (cond
 	(viewer
 	 (send viewer :objects
-	       (list *robot* *centroid-object* *foot-convex* *arrow*))
+	       (list robot centroid-object foot-convex arrow))
 	 (send viewer :draw-objects)))
        ;;
        (send res :error_code :val moveit_msgs::MoveItErrorCodes::*FAILURE*)
@@ -416,15 +416,15 @@
 	       (append
 		(mapcar
 		 #'(lambda (n) (format nil "~A" n))
-		 (send-all (send *robot* :joint-list) :name))
+		 (send-all (send robot :joint-list) :name))
 		(list "basex" "basey" "basez" "baser" "basep" "basew")))
 	 (send res :solution :joint_state :position
 	       (concatenate
 		float-vector
 		(map float-vector #'deg2rad
-		     (send-all (send *robot* :joint-list) :joint-angle))
-		(scale 1e-3 (send (car (send *robot* :links)) :worldpos))
-		(matrix-log (send (car (send *robot* :links)) :worldrot))))
+		     (send-all (send robot :joint-list) :joint-angle))
+		(scale 1e-3 (send (car (send robot :links)) :worldpos))
+		(matrix-log (send (car (send robot :links)) :worldrot))))
 	 res)
 	(t res))))))
   )

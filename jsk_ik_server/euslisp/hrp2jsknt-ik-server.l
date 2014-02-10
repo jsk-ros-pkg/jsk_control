@@ -16,12 +16,12 @@
 (defmethod hrp2jsknt-ik-server
   (:init
    (&rest args)
-   (setq *robot* (hrp2jsknt))
-   (setq *root-link* "/pelvis")
+   (setq robot (hrp2jsknt))
+   (setq root-link-frame-id "/pelvis")
    (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
    (send-super* :init args)
-  )
+   )
   )
 
 (defmethod ik-server
@@ -29,13 +29,13 @@
   (&key
    (foot-key '(:rleg :lleg))
    (force? nil))
-  (when (position nil (mapcar #'(lambda (l) (send *robot* l)) foot-key))
+  (when (position nil (mapcar #'(lambda (l) (send robot l)) foot-key))
     (return-from :make-foot-convex nil))
   (format t "[foot-convex] ")
   (cond
    ((or
      force?
-     (null *foot-convex*)
+     (null foot-convex)
      (and *fix-limb-coords*
 	  (flatten
 	   (mapcar
@@ -44,19 +44,19 @@
 		 (not (assoc k *fix-limb-coords*))
 		 (> (norm
 		     (send
-		      (send *robot* k :end-coords :worldcoords)
+		      (send robot k :end-coords :worldcoords)
 		      :difference-position
 		      (cdr (assoc k *fix-limb-coords*))))
 		    50)
 		 (> (norm
 		     (send
-		      (send *robot* k :end-coords :worldcoords)
+		      (send robot k :end-coords :worldcoords)
 		      :difference-rotation
 		      (cdr (assoc k *fix-limb-coords*))))
 		    (deg2rad 10))))
 	    foot-key))))
     (format t "update~%")
-    (setq *foot-convex*
+    (setq foot-convex
 	  (make-prism
 	   (quickhull
 	    (mapcar
@@ -67,25 +67,25 @@
 			       (+
 				-10
 				(aref
-				 (send *robot* :rleg :end-coords :worldpos)
+				 (send robot :rleg :end-coords :worldpos)
 				 2)))))
 	     (flatten
 	      (mapcar
 	       #'(lambda (k)
 		   (send-all
 		    (append
-		     (if (and (eps= (send *robot* :rleg :toe-p :joint-angle) 0 1)
-			      (eps= (send *robot* :lleg :toe-p :joint-angle) 0 1))
+		     (if (and (eps= (send robot :rleg :toe-p :joint-angle) 0 1)
+			      (eps= (send robot :lleg :toe-p :joint-angle) 0 1))
 			 (send
-			  (send (send *robot* k :end-coords :parent) :parent)
+			  (send (send robot k :end-coords :parent) :parent)
 			  :faces))
 		     (send
-		      (send *robot* k :end-coords :parent)
+		      (send robot k :end-coords :parent)
 		      :faces))
 		    :vertices))
 	       foot-key))))
 	   5))
-    (send *foot-convex* :set-color #F(0 0 1))
+    (send foot-convex :set-color #F(0 0 1))
     (setq *fix-limb-coords*
 	  (append
 	   (remove-if
@@ -95,9 +95,9 @@
 	    #'(lambda (k)
 		(cons
 		 k
-		 (send *robot* k :end-coords :copy-worldcoords)))
+		 (send robot k :end-coords :copy-worldcoords)))
 	    foot-key)))
-    (gl::transparent *foot-convex* 0.3)
+    (gl::transparent foot-convex 0.3)
     )
    (t (format t "reject~%"))))
   )
