@@ -107,6 +107,7 @@
   (&rest
    args
    &key
+   (group-name ":fullbody-inverse-kinematics")
    (robot *robot*)
    (target-limb '(:rarm :larm :rleg :lleg))
    (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limb))
@@ -135,7 +136,7 @@
     ;;(print opt)
     ;; group_name
     (send req :ik_request :group_name
-	  (format nil ":fullbody-inverse-kinematics ~A" opt))
+	  (format nil "~A ~A" group-name opt))
     ;; joint state
     (send req :ik_request :robot_state :joint_state
 	  (instance sensor_msgs::JointState
@@ -303,15 +304,18 @@
   (do-until-key
    (test-fullbody-ik
     :robot *pr2*
+    :group-name ":inverse-kinematics"
+    :torso-fix t
+    :use-torso 0
     :target-limb '(:rarm)
     :centroid-thre nil
     :target-centroid-pos nil
-    :min-vec #F(0 0 0 0 0 0)
-    :max-vec #F(0 0 0 0 0 0)
+    ;;:min-vec #F(0 0 0 0 0 0)
+    ;;:max-vec #F(0 0 0 0 0 0)
     :cog-gain 0
-    :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
+    ;;:root-link-virtual-joint-weight #F(0 0 0 0 0 0)
     :move-target *pr2-move-target*
-    :rotation-axis (list nil)
+    :rotation-axis (list t)
     )))
 
 

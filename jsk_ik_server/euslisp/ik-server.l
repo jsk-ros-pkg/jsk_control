@@ -33,7 +33,7 @@
   (:ik-service-cb
    (req)
    (or
-    (send self :fullbody-inverse-kinematics-service-cb req)
+    (send self :inverse-kinematics-service-cb req)
     (send self :old-ik-service-cb)))
   (:start-ik-server
    nil
@@ -218,7 +218,7 @@
 	   (send move-target-hash :enter (send cs :parent) cs)))
      ))
   (:parse-joint-weight-list
-   (jocon)
+   (jocon &optional opt)
    (let (name joint link ret)
      (dolist (jc jocon)
        (setq name (remove #\: (send jc :joint_name)))
@@ -242,7 +242,8 @@
 	(t
 	 (setq link (or link (send joint :child-link)))
 	 (push (list link (send jc :weight)) ret))))
-     ret))
+     (append
+      (cadr (member :additional-weight-list opt)) ret)))
   (:parse-collision-link-pair
    (collisions &optional opt)
    (let (buf link name)
@@ -330,13 +331,30 @@
        :link-list (reverse ll))
       opt)
      ))
+  (:inverse-kinematics-group-options
+   (&optional opt)
+   (append
+    (if (cadr (member :torso-fix opt))
+	(list
+	 :additional-weight-list
+	 (mapcar #'(lambda (l) (list l 0))
+		 (send robot :torso :links))))
+    (list
+     :min-vec #F(0 0 0 0 0 0)
+     :max-vec #F(0 0 0 0 0 0)
+     :root-link-virtual-joint-weight #F(0 0 0 0 0 0)
+     )))
   ;; :fullbody-inverse-kinematics
-  (:fullbody-inverse-kinematics-service-cb ;; [m] or [rad] expected
+  (:inverse-kinematics-service-cb ;; [m] or [rad] expected
    (msg)
    (cond
-    ((not (substringp
-	   ":fullbody-inverse-kinematics"
-	   (send (send msg :ik_request) :group_name)))
+    ((and
+      (not (substringp
+	    ":fullbody-inverse-kinematics"
+	    (send (send msg :ik_request) :group_name)))
+      (not (substringp
+	    ":inverse-kinematics"
+	    (send (send msg :ik_request) :group_name))))
      (format t "[:fik-service-cb] invalid group ~A~%"
 	     (send (send msg :ik_request) :group_name))
      nil)
@@ -350,6 +368,13 @@
 	    (js (send rsd :joint_state))
 	    ik-param ret additional-weight-list
 	    buf )
+       (if (substringp
+	    ":inverse-kinematics"
+	    (send (send msg :ik_request) :group_name))
+	   (setq opt
+		 (append
+		  (send self :inverse-kinematics-group-options opt)
+		  opt)))
        ;;
        (format t "[:fik-service-cb] options: ~A~%" opt)
        ;; joint angle update
@@ -383,7 +408,8 @@
 	      (list
 	       :additional-weight-list
 	       (send self :parse-joint-weight-list
-		     (send (send req :constraints) :joint_constraints)))
+		     (send (send req :constraints) :joint_constraints)
+		     opt))
 	      ))
        (cond
 	((or
