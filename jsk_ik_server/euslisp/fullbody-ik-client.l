@@ -274,6 +274,18 @@
      *end-coords-without-toe*))
    ))
 
+(defun hrp2jsk-test
+  nil
+  (require "package://hrpsys_ros_bridge_tutorials/models/hrp2jsk.l")
+  (defvar *hrp2jsk* (hrp2jsk))
+  (objects (list *hrp2jsk*))
+  (ros::roseus "fullbody_ik_client_test")
+  (do-until-key
+   (send *hrp2jsk* :reset-manip-pose)
+   (send *hrp2jsk* :fix-leg-to-coords (make-coords))
+   (test-fullbody-ik :robot *hrp2jsk*))
+  )
+
 (defun atlas-test
   nil
   (require "package://hrpsys_gazebo_atlas/euslisp/atlas-interface.l")
@@ -318,7 +330,18 @@
     :rotation-axis (list t)
     )))
 
-
+(let ((test (unix::getenv "IK_CLIENT_TEST")))
+  (cond
+   ((null test))
+   ((substringp "hrp2jsknt" test)
+    (hrp2jsknt-test))
+   ((substringp "hrp2jsk" test)
+    (hrp2jsk-test))
+   ((substringp "pr2" test)
+    (pr2-test))
+   ((substringp "atlas" test)
+    (atlas-test))
+   ))
 
 #|
 
