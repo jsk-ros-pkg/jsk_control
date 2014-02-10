@@ -431,5 +431,5 @@
 
 
 ;; IK methods definition
-(require "package://jsk_ik_server/euslisp/eus-fullbody-ik-ex.l")
+(require "package://jsk_ik_server/euslisp/ik-server-util.l")
 (require "package://jsk_ik_server/euslisp/old-ik-server.l")
