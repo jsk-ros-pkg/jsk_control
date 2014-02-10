@@ -128,9 +128,11 @@
 	      (vectorp (cadr args))
 	      (and (listp (cadr args))
 		   (or (find-if #'numberp (cadr args))
+		       (not (zerop (count nil (cadr args))))
 		       (find-if #'symbolp (cadr args)))))
 	  (setq opt (append (list (car args) (cadr args)) opt)))
       (setq args (cddr args)))
+    ;;(print opt)
     ;; group_name
     (send req :ik_request :group_name
 	  (format nil ":fullbody-inverse-kinematics ~A" opt))
