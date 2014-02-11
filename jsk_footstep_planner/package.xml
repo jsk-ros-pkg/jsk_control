@@ -1,0 +1,22 @@
+<package>
+  <name>jsk_footstep_planner</name>
+  <version>0.0.1</version>
+  <description>jsk_footstep_planner</description>
+  <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/jsk_footstep_planner</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>jsk_footstep_msgs</build_depend>
+  <run_depend>jsk_footstep_msgs</run_depend>
+
+  <export>
+
+  </export>
+</package>
