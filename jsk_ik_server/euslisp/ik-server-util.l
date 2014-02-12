@@ -81,11 +81,22 @@
 (defmethod ik-server
   (:make-foot-convex
   (&key
-   (foot-key '(:rleg :lleg))
+   (support-links support-links)
+   (support-vertices
+    (mapcar
+     #'(lambda (l)
+	 (flatten (send-all (send l :faces) :vertices)))
+     support-links))
+   (support-height
+    (mapcar #'(lambda (hl) (apply #'min hl))
+	    (mapcar #'(lambda (vl)
+			(mapcar #'(lambda (v) (aref v 2)) vl))
+		    support-vertices)))
    (force? nil))
   ;;
-  (when (position nil (mapcar #'(lambda (l) (send robot l)) foot-key))
-    (return-from :make-foot-convex nil))
+  ;;(when (position nil (mapcar #'(lambda (l) (send robot l)) foot-key))
+  ;;(return-from :make-foot-convex nil))
+  (when (null support-links) (return-from :make-foot-convex nil))
   ;;
   (format t "[foot-convex] ")
   (cond
@@ -116,25 +127,18 @@
     (setq foot-convex
 	  (make-prism
 	   (quickhull
-	    (mapcar
-	     #'(lambda (v)
-		 (concatenate float-vector
-			      (subseq v 0 2)
-			      (list
-			       (+
-				-10
-				(aref
-				 (send robot :rleg :end-coords :worldpos)
-				 2)))))
-	     (flatten
-	      (mapcar
-	       #'(lambda (k)
-		   (send-all
-		    (send
-		     (send robot k :end-coords :parent)
-		     :faces)
-		    :vertices))
-	       foot-key))))
+	    (flatten
+	     (mapcar
+	      #'(lambda (vl h)
+		  (mapcar
+		   #'(lambda (v)
+		       (float-vector
+			(aref v 0)
+			(aref v 1)
+			(- h 10)))
+		   vl))
+	      support-vertices
+	      support-height)))
 	   5))
     (send foot-convex :set-color #F(0 0 1))
     ;; (setq *fix-limb-coords*
@@ -192,17 +196,7 @@
    (diff
     &optional
     (convex (send self :convex-pos-list))
-    (center
-     (if (find-method robot :rleg)
-	 (scale
-	  0.5
-	  (apply
-	   #'v+
-	   (mapcar
-	    #'(lambda (k)
-		(send robot k :end-coords :worldpos))
-	    '(:rleg :lleg))))
-       (send robot :worldpos))))
+    (center support-centroid-pos))
    ;;(print convex)
    (x::window-main-one)
    (let* ((diff (concatenate float-vector diff (list 0)))
@@ -243,17 +237,7 @@
 		(send mt :parent)))
       move-target))
     (target-coords (send-all move-target :copy-worldcoords))
-    (target-centroid-pos
-     (scale
-      0.5
-      (apply #'v+
-	     (mapcar
-	      #'(lambda (k)
-		  (if (send robot k)
-		      (send robot k :end-coords
-			    :worldpos)
-		    (send (make-coords) :worldpos)))
-	      '(:rleg :lleg)))))
+    (target-centroid-pos support-centroid-pos)
     (min #F(-1000 -1000 -1000 -200 -200 -200))
     (max #F(1000 1000 1000 200 200 200))
     (min-vec min) ;; for mm

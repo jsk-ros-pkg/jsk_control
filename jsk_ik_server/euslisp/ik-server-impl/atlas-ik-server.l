@@ -31,7 +31,8 @@
    (send *atlas* :torso :waist-p :min-angle -10)
    (setq robot *atlas*)
    ;;
-   (send self :make-foot-convex)
+   (send self :update-support-links '(:rleg :lleg))
+   (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
    ;;
    (send (send robot :utorso_lk) :make-pqpmodel :fat 30)

@@ -25,6 +25,7 @@
 	  (send (send l :parent) :assoc mt)))
     '(:rleg :lleg))
    (setq root-link-frame-id "/pelvis")
+   (send self :update-support-links '(:rleg :lleg))
    (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
    (send-super* :init args)
@@ -34,10 +35,48 @@
 (defmethod ik-server
   (:make-foot-convex
   (&key
-   (foot-key '(:rleg :lleg))
+   (support-links support-links)
+   (support-vertices
+    (mapcar
+     #'(lambda (l)
+	 (cond
+	  ((find l (subseq
+		    (reverse (send robot :rleg :links))
+		    0 2))
+	   (flatten
+	    (send-all
+	     (flatten
+	      (send-all
+	       (subseq
+		(reverse (send robot :rleg :links))
+		0 2)
+	       :faces))
+	     :vertices)))
+	  ((find l (subseq
+		    (reverse (send robot :lleg :links))
+		    0 2))
+	   (flatten
+	    (send-all
+	     (flatten
+	      (send-all
+	       (subseq
+		(reverse (send robot :lleg :links))
+		0 2)
+	       :faces))
+	     :vertices)))
+	  (t (flatten (send-all (send l :faces) :vertices)))))
+     support-links))
+   (support-height
+    (mapcar #'(lambda (hl) (apply #'min hl))
+	    (mapcar #'(lambda (vl)
+			(mapcar #'(lambda (v) (aref v 2)) vl))
+		    support-vertices)))
    (force? nil))
-  (when (position nil (mapcar #'(lambda (l) (send robot l)) foot-key))
-    (return-from :make-foot-convex nil))
+  ;;
+  ;;(when (position nil (mapcar #'(lambda (l) (send robot l)) foot-key))
+  ;;(return-from :make-foot-convex nil))
+  (when (null support-links) (return-from :make-foot-convex nil))
+  ;;
   (format t "[foot-convex] ")
   (cond
    ((or
@@ -47,27 +86,18 @@
     (setq foot-convex
 	  (make-prism
 	   (quickhull
-	    (mapcar
-	     #'(lambda (v)
-		 (concatenate float-vector
-			      (subseq v 0 2)
-			      (list
-			       (+
-				-10
-				(aref
-				 (send robot :rleg :end-coords :worldpos)
-				 2)))))
-	     (flatten
-	      (mapcar
-	       #'(lambda (k)
-		   (send-all
-		    (append
-		     (if (and (eps= (send robot :rleg :toe-p :joint-angle) 0 1)
-			      (eps= (send robot :lleg :toe-p :joint-angle) 0 1))
-			 (send (cadr (reverse (send robot k :links))) :faces))
-		     (send (car (reverse (send robot k :links))) :faces))
-		    :vertices))
-	       foot-key))))
+	    (flatten
+	     (mapcar
+	      #'(lambda (vl h)
+		  (mapcar
+		   #'(lambda (v)
+		       (float-vector
+			(aref v 0)
+			(aref v 1)
+			(- h 10)))
+		   vl))
+	      support-vertices
+	      support-height)))
 	   5))
     (send foot-convex :set-color #F(0 0 1))
     (gl::transparent foot-convex 0.3)

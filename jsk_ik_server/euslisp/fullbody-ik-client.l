@@ -317,14 +317,23 @@
 	   (copy-object
 	    (send (send (send (send *pr2* :rarm :end-coords :parent) :parent) :parent)
 		  :worldcoords))
-	   :name :rarm-pr2-end-coords)))
+	   :name :rarm-pr2-end-coords)
+	  (make-cascoords
+	   :parent
+	   (send (send (send *pr2* :larm :end-coords :parent) :parent) :parent)
+	   :coords
+	   (copy-object
+	    (send (send (send (send *pr2* :larm :end-coords :parent) :parent) :parent)
+		  :worldcoords))
+	   :name :larm-pr2-end-coords)))
   (do-until-key
+   (send *pr2* :reset-manip-pose)
    (test-fullbody-ik
     :robot *pr2*
     :group-name ":inverse-kinematics"
-    :torso-fix t
-    :use-torso 0
-    :target-limbs '(:rarm)
+    ;;:torso-fix t
+    ;;:use-torso 0
+    :target-limbs '(:rarm :larm)
     :centroid-thre nil
     :target-centroid-pos nil
     ;;:min-vec #F(0 0 0 0 0 0)
@@ -332,7 +341,7 @@
     :cog-gain 0
     ;;:root-link-virtual-joint-weight #F(0 0 0 0 0 0)
     :move-target *pr2-move-target*
-    :rotation-axis (list t)
+    :rotation-axis (list t t)
     )))
 
 (let ((test (unix::getenv "IK_CLIENT_TEST")))

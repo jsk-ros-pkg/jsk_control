@@ -18,8 +18,9 @@
    foot-convex
    root-link-frame-id
    success-state-collection
-   ;; *fix-limb-coords*
    ;;
+   support-links
+   support-centroid-pos
    viewer
    move-target-hash
    ))
@@ -57,6 +58,10 @@
      (send *irtviewer* :title "IK server")
      (setq viewer *irtviewer*))
     )
+   ;; (unless
+   ;;     (and (or (null support-links) (null support-centroid-pos))
+   ;; 	    (find-method robot :rleg))
+   ;;   (send self :update-support-links '(:rleg :lleg)))
    (unless foot-convex (setq foot-convex (make-coords)))
    (unless centroid-object (setq centroid-object (make-coords)))
    (cond
@@ -72,6 +77,34 @@
    (ros::rate 10)
    (send self :loop-ik-server)
    )
+  (:update-support-links
+   (name-list
+    &key
+    (link-list
+     (flatten
+      (mapcar
+       #'(lambda (name)
+	   (cond
+	    ((and (keywordp name)
+		  (find-method robot name))
+	     (send robot name :end-coords :parent))
+	    (t
+	     (let ((n (remove #\: (format nil "~A" name))))
+	       (find-if #'(lambda (l)
+			    (substringp n (format nil "~A" (send l :name))))
+			(send robot :links))))))
+       name-list))))
+   ;;(print name-list)
+   (setq support-links link-list)
+   (setq support-centroid-pos
+	 (cond
+	  ((null support-links) nil)
+	  ((eq 1 (length support-links))
+	   (send (car support-links) :worldpos))
+	  (t
+	   (scale (/ 1.0 (length support-links))
+		  (reduce #'v+
+			  (send-all support-links :worldpos)))))))
   (:loop-ik-server
    nil
    (do-until-key
@@ -393,6 +426,9 @@
 	     (send (send req :constraints) :orientation_constraints)
 	     opt)
        ;; foot convex udpate
+       (if (cadr (member :support-links opt))
+	   (send self :update-support-links
+		 (cadr (member :support-links opt))))
        (send self :make-foot-convex :force? t)
        (cond
 	(viewer

@@ -20,6 +20,7 @@
    (&rest args)
    (setq robot (hrp2jsk))
    (setq root-link-frame-id "/pelvis")
+   (send self :update-support-links '(:rleg :lleg))
    (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
    (send-super* :init args)
