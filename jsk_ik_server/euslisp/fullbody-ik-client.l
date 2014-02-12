@@ -5,7 +5,13 @@
 
 ;;(ros::roseus "fullbody_ik_client_test")
 
-(defun coords2posestamped
+(defclass fullbody-ik-client)
+(defmethod fullbody-ik-client
+  (:init
+   nil
+   )
+
+  (:coords2posestamped
   (coords
    &key
    (robot *robot*)
@@ -38,7 +44,7 @@
 		       :w (elt q 0))
 	     )))
 
-(defun update-joint-states
+  (:update-joint-states
   (js &key
       (robot *robot*)
       (joint-list (send robot :joint-list))
@@ -103,7 +109,7 @@
   ;;(read-line)
   )
 
-(defun ik-server-call
+  (:ik-server-call
   (&rest
    args
    &key
@@ -205,21 +211,21 @@
 		  (cdr move-target)))
     (if target-coords
 	(send req :ik_request :pose_stamped
-	      (coords2posestamped (car target-coords) :robot robot)))
+	      (send self :coords2posestamped (car target-coords) :robot robot)))
     (send req :ik_request :pose_stamped_vector
 	  (mapcar
-	   #'(lambda (tc) (coords2posestamped tc :robot robot))
+	   #'(lambda (tc) (send self :coords2posestamped tc :robot robot))
 	   (cdr target-coords)))
     ;;
     (setq res (ros::service-call "/solve_ik" req))
     (cond
      ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
-      (update-joint-states (send res :solution :joint_state) :robot robot)
+      (send self :update-joint-states (send res :solution :joint_state) :robot robot)
       (ros::ros-info " success ~A"  (send res :solution :joint_state :position)))
      (t (ros::ros-error " failed ")))
     res))
 
-(defun test-fullbody-ik
+  (:test-fullbody-ik
   (&rest
    args
    &key
@@ -236,7 +242,7 @@
 	      :rpy (scale 1.57 (random-vector 1.0)))))
    (subseq target-coords 0 2))
   (apply
-   #'ik-server-call
+   #'send self :ik-server-call
    (append
     (list
      :robot robot
@@ -250,7 +256,7 @@
      )
     args)))
 
-(defun hrp2jsknt-test
+  (:hrp2jsknt-test
   nil
   (require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
   (when (probe-file (ros::resolve-ros-path "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-utils.l"))
@@ -272,14 +278,14 @@
   (do-until-key
    (send *robot* :reset-manip-pose)
    (send *robot* :fix-leg-to-coords (make-coords))
-   (test-fullbody-ik
+   (send self :test-fullbody-ik
     :move-target
     (append
      (mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
      *end-coords-without-toe*))
    ))
 
-(defun hrp2jsk-test
+  (:hrp2jsk-test
   nil
   (require "package://hrpsys_ros_bridge_tutorials/models/hrp2jsk.l")
   (defvar *hrp2jsk* (hrp2jsk))
@@ -288,10 +294,10 @@
   (do-until-key
    (send *hrp2jsk* :reset-manip-pose)
    (send *hrp2jsk* :fix-leg-to-coords (make-coords))
-   (test-fullbody-ik :robot *hrp2jsk*))
+   (send self :test-fullbody-ik :robot *hrp2jsk*))
   )
 
-(defun atlas-test
+  (:atlas-test
   nil
   (require "package://hrpsys_gazebo_atlas/euslisp/atlas-model.l")
   (defvar *atlas* (atlas))
@@ -300,10 +306,10 @@
   (do-until-key
    (send *atlas* :reset-manip-pose)
    (send *atlas* :fix-leg-to-coords (make-coords))
-   (test-fullbody-ik :robot *atlas*)
+   (send self :test-fullbody-ik :robot *atlas*)
    ))
 
-(defun pr2-test
+  (:pr2-test
   nil
   (require :pr2 "package://pr2eus/pr2.l")
   (defvar *pr2* (pr2))
@@ -328,7 +334,7 @@
 	   :name :larm-pr2-end-coords)))
   (do-until-key
    (send *pr2* :reset-manip-pose)
-   (test-fullbody-ik
+   (send self :test-fullbody-ik
     :robot *pr2*
     :group-name ":inverse-kinematics"
     ;;:torso-fix t
@@ -343,17 +349,4 @@
     :move-target *pr2-move-target*
     :rotation-axis (list t t)
     )))
-
-(let ((test (unix::getenv "IK_CLIENT_TEST")))
-  (cond
-   ((null test))
-   ((substringp "hrp2jsknt" test)
-    (hrp2jsknt-test))
-   ((substringp "hrp2jsk" test)
-    (hrp2jsk-test))
-   ((substringp "pr2" test)
-    (pr2-test))
-   ((substringp "atlas" test)
-    (atlas-test))
-   ))
-
+)
