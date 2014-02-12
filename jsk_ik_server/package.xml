@@ -1,0 +1,31 @@
+<package>
+  <name>jsk_ik_server</name>
+  <description>
+     jsk_ik_server
+  </description>
+  <author email="furuta@jsk.t.u-tokyo.ac.jp">furuta</author>
+  <maintainer email="furuta@jsk.t.u-tokyo.ac.jp">furuta</maintainer>
+  <license>BSD</license>
+  <version>0.0.0</version>
+  <url>http://ros.org/wiki/jsk_ik_server</url>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roseus</build_depend>
+  <build_depend>pr2eus</build_depend>
+  <build_depend>hrpsys_ros_bridge</build_depend>
+  <build_depend>atlas_msgs</build_depend>
+  <build_depend>sandia_hand_msgs</build_depend>
+  <build_depend>osrf_msgs</build_depend>
+  <build_depend>pr2_controller_manager</build_depend>
+  <build_depend>tf</build_depend>
+
+  <run_depend>roseus</run_depend>
+  <run_depend>pr2eus</run_depend>
+  <run_depend>hrpsys_ros_bridge</run_depend>
+  <run_depend>atlas_msgs</run_depend>
+  <run_depend>sandia_hand_msgs</run_depend>
+  <run_depend>osrf_msgs</run_depend>
+  <run_depend>pr2_controller_manager</run_depend>
+  <run_depend>tf</run_depend>
+</package>
+
+
