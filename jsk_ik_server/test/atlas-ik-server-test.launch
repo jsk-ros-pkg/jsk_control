@@ -10,7 +10,7 @@
   </node>
   -->
   <node pkg="roseus" type="roseus" name="atlas_ik_client" output="screen"
-	args="$(find jsk_ik_server)/euslisp/fullbody-ik-client.l">
+	args="$(find jsk_ik_server)/test/fullbody-ik-client-test.l">
     <env name="IK_CLIENT_TEST" value="atlas"/>
   </node>
 </launch>
