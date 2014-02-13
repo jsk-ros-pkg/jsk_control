@@ -129,6 +129,16 @@
                           :z-axis (float-vector 0 0 1)
                           :collisoin-robot-model nil
                           ))
+         (goal-foot-coords (mapcar #'(lambda (leg-step)
+                                       (let ((pose-stamped
+                                              (instance geometry_msgs::PoseStamped
+                                                        :init)))
+                                         (send pose-stamped :header (send goal :goal :goal_footstep :header))
+                                         (send pose-stamped :pose (send leg-step :pose))
+                                         (let ((coords (send *tf* :transform-pose *global-frame-id* pose-stamped)))
+                                           (cons (send leg-step :leg) coords))))
+                                   (send goal :goal :goal_footstep :footsteps)))
+         (goal-coords (apply #'(lambda (x y) (midcoords 0.5 (cdr x) (cdr y))) goal-foot-coords))
          ;; 一個目がllegだったら、llegからスタートする
          (start-leg (if (= (send (elt (send goal :goal :initial_footstep :footsteps) 0) :leg)
                            jsk_footstep_msgs::Footstep::*LEFT*)
@@ -153,17 +163,8 @@
                                                (cadr leg-coords))
                       :angle-vector nil))
       )
-    (let ((goal-foot-coords (mapcar #'(lambda (leg-step)
-                                        (let ((pose-stamped
-                                               (instance geometry_msgs::PoseStamped
-                                                         :init)))
-                                          (send pose-stamped :header (send goal :goal :goal_footstep :header))
-                                          (send pose-stamped :pose (send leg-step :pose))
-                                          (send *tf* :transform-pose *global-frame-id* pose-stamped)))
-                                    (send goal :goal :goal_footstep :footsteps))))
-      (let ((goal-coords (apply #'midcoords 0.5 goal-foot-coords)))
-        (send prblm :goal-state goal-coords)        ;goal coords
-        ))
+    (send prblm :goal-state goal-coords)        ;goal coords
+    (send prblm :goal-footstep goal-foot-coords)
     (let ((asolver (instance a*-footstep-graph-search-solver
                              :init 1.0 :stepcost-heuristic* prblm
                              :render-leg-object *leg*)))
