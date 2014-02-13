@@ -6,6 +6,7 @@ import numpy
 import rospy
 import roslib
 import os
+import sys
 
 # only if groovy
 if os.environ["ROS_DISTRO"] == "groovy":
@@ -18,6 +19,20 @@ from joy_status import XBoxStatus, PS3Status, PS3WiredStatus
 from plugin_manager import PluginManager
 from status_history import StatusHistory
 
+AUTO_DETECTED_CLASS = None
+
+def autoJoyDetect(msg):
+  global AUTO_DETECTED_CLASS
+  if len(msg.axes) == 27 and len(msg.buttons) == 19:
+    rospy.loginfo("auto detected as ps3wired")
+    AUTO_DETECTED_CLASS = PS3WiredStatus
+  elif len(msg.axes) == 8 and len(msg.buttons) == 11:
+    rospy.loginfo("auto detected as xbox")
+    AUTO_DETECTED_CLASS = XBoxStatus
+  else:
+    rospy.logfatal("unknown joy type")
+    sys.exit(1)
+    
 class JoyManager():
   def __init__(self):
     self.pre_status = None
@@ -31,8 +46,15 @@ class JoyManager():
       self.JoyStatus = PS3Status
     elif self.controller_type == 'ps3wired':
       self.JoyStatus = PS3WiredStatus
-    elif self.container_type == 'auto':
-      pass                                #auto detection
+    elif self.controller_type == 'auto':
+      s = rospy.Subscriber('/joy', Joy, autoJoyDetect)
+      while not rospy.is_shutdown():
+        if AUTO_DETECTED_CLASS:
+          self.JoyStatus = AUTO_DETECTED_CLASS
+          s.unregister()
+          break
+        else:
+          rospy.sleep(1)
     self.plugin_manager = PluginManager('jsk_joy')
     self.loadPlugins()
   def loadPlugins(self):
