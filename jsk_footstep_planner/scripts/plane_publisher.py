@@ -2,8 +2,9 @@
 
 import roslib
 import rospy
-
-roslib.load_manifest("jsk_footstep_planner")
+import os
+if os.environ["ROS_DISTRO"] == "groovy":
+  roslib.load_manifest("jsk_footstep_planner")
 
 from jsk_pcl_ros.msg import PolygonArray
 from geometry_msgs.msg import PolygonStamped, Point32
