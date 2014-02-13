@@ -30,6 +30,8 @@
    (send *atlas* :torso :waist-p :max-angle 10)
    (send *atlas* :torso :waist-p :min-angle -10)
    (setq robot *atlas*)
+   (setq ik-server-name "atlas_ik_server")
+   (setq ik-server-service-name "/solve_ik")
    ;;
    (send self :update-support-links '(:rleg :lleg))
    (send self :make-foot-convex :force? t)

@@ -8,8 +8,6 @@
 	 "package://hrpsys_ros_bridge/euslisp/rtm-ros-robot-interface.l")
 (require "models/arrow-object.l")
 
-(ros::roseus "ik_server")
-
 (defclass ik-server
   :slots
   (robot
@@ -18,6 +16,9 @@
    foot-convex
    root-link-frame-id
    success-state-collection
+   ;;
+   ik-server-name
+   ik-server-service-name
    ;;
    support-links
    support-centroid-pos
@@ -62,6 +63,9 @@
    ;;     (and (or (null support-links) (null support-centroid-pos))
    ;; 	    (find-method robot :rleg))
    ;;   (send self :update-support-links '(:rleg :lleg)))
+   (unless ik-server-name (setq ik-server-name "/ik_server"))
+   (unless ik-server-service-name
+     (setq ik-server-service-name (format nil "~A/~A" ik-server-name "solve")))
    (unless foot-convex (setq foot-convex (make-coords)))
    (unless centroid-object (setq centroid-object (make-coords)))
    (cond
@@ -73,7 +77,10 @@
    ;;
    (setq *tf* (instance ros::transform-listener :init))
    ;;
-   (ros::advertise-service "/solve_ik" moveit_msgs::GetPositionIK #'send self :ik-service-cb)
+   (ros::roseus ik-server-name)
+   (ros::advertise-service ik-server-service-name
+			   moveit_msgs::GetPositionIK
+			   #'send self :ik-service-cb)
    (ros::rate 10)
    (send self :loop-ik-server)
    )

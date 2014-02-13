@@ -111,6 +111,7 @@
     args
     &key
     (frame-id "/pelvis")
+    (ik-server-service-name "/solve_ik")
     (group-name ":fullbody-inverse-kinematics")
     (robot *robot*)
     (target-limbs '(:rarm :larm :rleg :lleg))
@@ -214,7 +215,7 @@
 	    #'(lambda (tc) (send self :coords2posestamped tc :robot robot))
 	    (cdr target-coords)))
      ;;
-     (setq res (ros::service-call "/solve_ik" req))
+     (setq res (ros::service-call ik-server-service-name req))
      (cond
       ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
        (send self :update-joint-states (send res :solution :joint_state) :robot robot)

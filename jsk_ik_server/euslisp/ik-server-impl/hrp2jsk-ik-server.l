@@ -19,6 +19,8 @@
   (:init
    (&rest args)
    (setq robot (hrp2jsk))
+   (setq ik-server-name "hrp2jsk_ik_server")
+   (setq ik-server-service-name "/solve_ik")
    (setq root-link-frame-id "/pelvis")
    (send self :update-support-links '(:rleg :lleg))
    (send self :make-foot-convex :force? t)
