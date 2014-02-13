@@ -136,11 +136,11 @@ footstep-parameter"))
     (setq leg-object lo)
     (setq wd d)
     (setq wp p)
-    (unless robot
-      (warn "[WARN] footstep planning works in no-robot model mode~%")
-      (if collision-robot-model
-          (warn "[INFO] use collision robot model for collision check~%")
-        (warn "[INFO] use simple leg model for collision check~%")))
+    ;; (unless robot
+    ;;   (warn "[WARN] footstep planning works in no-robot model mode~%")
+    ;;   (if collision-robot-model
+    ;;       (warn "[INFO] use collision robot model for collision check~%")
+    ;;     (warn "[INFO] use simple leg model for collision check~%")))
     self)
   (:goal-test (state &key (debug-view nil))
     (let ((current-coords (send state :robot-coords)))
@@ -212,7 +212,6 @@ footstep-parameter"))
   (:successors (state &key (verbose nil))
     (when timeout                            ;check the timeout
       (when (< (- (send timeout :to-sec) (send (ros::time-now) :to-sec)) 0)
-        (print "timeout!")
         (return-from :successors nil)))
     (let* ((current-leg (send state :l/r))
            (current-step-coords (send state :worldcoords))
@@ -680,7 +679,6 @@ in :robot and :reference-robot"))
   (dolist (n solver-nodes)
     (let ((solver-state (send n :state)))
       (when robot
-        (print (send n :action))
         (send parameter :move-robot-model
               robot
               (send solver-state :worldcoords)

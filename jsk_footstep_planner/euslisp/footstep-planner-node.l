@@ -163,7 +163,6 @@
                                     (send goal :goal :goal_footstep :footsteps))))
       (let ((goal-coords (apply #'midcoords 0.5 goal-foot-coords)))
         (send prblm :goal-state goal-coords)        ;goal coords
-        (format t "goal: ~A~%" goal-coords)
         ))
     (let ((asolver (instance a*-footstep-graph-search-solver
                              :init 1.0 :stepcost-heuristic* prblm
