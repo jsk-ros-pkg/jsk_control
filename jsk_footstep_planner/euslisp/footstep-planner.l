@@ -89,6 +89,9 @@ footstep-parameter"))
           z-axis
           footstep-param planes
           goal-footstep
+          goal-coords
+          goal-leg-index
+          near-side-goal
           collision-robot-model timeout))
 
 (defmethod footstep-planner-graph
@@ -146,6 +149,34 @@ footstep-parameter"))
   (:goal-footstep (&optional arg)
     (if arg (setq goal-footstep arg))
     goal-footstep)
+  (:goal-leg-index ()
+    goal-leg-index)
+  (:goal-coords ()
+    goal-coords)
+  (:setup-goal (initial-coords)
+    ;; initial-coords := [(leg-index . coordinate) ...]
+    (let ((distances (mapcar #'(lambda (g)
+                                 (let ((leg-index (car g))
+                                       (leg-coords (cdr g)))
+                                   ;; find
+                                   (let ((same-leg (find-if #'(lambda (i) (eq leg-index (car i)))
+                                                            initial-coords)))
+                                     (cons leg-index
+                                           (distance (send leg-coords :worldpos)
+                                                     (send (cdr same-leg) :worldpos))))))
+                             goal-footstep)))
+      ;; distances := [(leg-index . distance) ...]
+      (let ((min-distance (cdr (car distances)))
+            (min-index (car (car distances))))
+        (dolist (d (cdr distances))
+          (when (> min-distance (cdr d))
+            (setq min-distance (cdr d))
+            (setq min-index (car d)))
+          )
+        (ros::ros-info "minimum index is ~A, distance is ~A~%" min-index min-distance)
+        (setq goal-leg-index min-index)
+        (setq goal-corods (find-if #'(lambda (g) (eq (car g) goal-leg-index)) goal-footstep))
+        )))
   (:goal-test (state &key (debug-view nil))
     (let ((current-coords (send state :robot-coords)))
       (let ((ndiff-pos (distance (send current-coords :worldpos)

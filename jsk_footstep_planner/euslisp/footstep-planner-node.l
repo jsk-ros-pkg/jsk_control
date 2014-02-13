@@ -109,6 +109,16 @@
     (midcoords 0.5 a-leg b-leg))
   )
 
+(defun footstep->consed-coords (leg-step)
+  (let ((pose-stamped
+         (instance geometry_msgs::PoseStamped
+                   :init)))
+    (send pose-stamped :header (send goal :goal :initial_footstep :header))
+    (send pose-stamped :pose (send leg-step :pose))
+    (cons (send leg-step :leg)
+          (send *tf* :transform-pose *global-frame-id* pose-stamped)))
+  )
+
 (defun plan-execute-cb (server goal)
   (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
          (prblm (instance footstep-planner-graph :init
@@ -129,15 +139,10 @@
                           :z-axis (float-vector 0 0 1)
                           :collisoin-robot-model nil
                           ))
-         (goal-foot-coords (mapcar #'(lambda (leg-step)
-                                       (let ((pose-stamped
-                                              (instance geometry_msgs::PoseStamped
-                                                        :init)))
-                                         (send pose-stamped :header (send goal :goal :goal_footstep :header))
-                                         (send pose-stamped :pose (send leg-step :pose))
-                                         (let ((coords (send *tf* :transform-pose *global-frame-id* pose-stamped)))
-                                           (cons (send leg-step :leg) coords))))
+         (goal-foot-coords (mapcar #'footstep->consed-coords
                                    (send goal :goal :goal_footstep :footsteps)))
+         (initial-foot-coords (mapcar #'footstep->consed-coords
+                                      (send goal :goal :initial_footstep :footsteps)))
          (goal-coords (apply #'(lambda (x y) (midcoords 0.5 (cdr x) (cdr y))) goal-foot-coords))
          ;; 一個目がllegだったら、llegからスタートする
          (start-leg (if (= (send (elt (send goal :goal :initial_footstep :footsteps) 0) :leg)
@@ -145,14 +150,7 @@
                         :lleg :rleg))
          (support-leg (if (eq start-leg :lleg) :rleg :lleg)))
     ;; creating initial step node from goal msg
-    (let ((leg-coords (mapcar #'(lambda (leg-step)
-                                  (let ((pose-stamped
-                                         (instance geometry_msgs::PoseStamped
-                                                   :init)))
-                                    (send pose-stamped :header (send goal :goal :initial_footstep :header))
-                                    (send pose-stamped :pose (send leg-step :pose))
-                                    (send *tf* :transform-pose *global-frame-id* pose-stamped)))
-                              (send goal :goal :initial_footstep :footsteps))))
+    (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
       (send prblm :start-state
             (instance step-node :init
                       :worldcoords (cadr leg-coords)
@@ -165,6 +163,7 @@
       )
     (send prblm :goal-state goal-coords)        ;goal coords
     (send prblm :goal-footstep goal-foot-coords)
+    (send prblm :setup-goal initial-foot-coords)
     (let ((asolver (instance a*-footstep-graph-search-solver
                              :init 1.0 :stepcost-heuristic* prblm
                              :render-leg-object *leg*)))
