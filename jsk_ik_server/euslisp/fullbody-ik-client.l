@@ -224,7 +224,10 @@
   )
 
 (defun ik-server-call
-  (&rest args)
-  (send*
-   (instance fullbody-ik-client :init)
-   args))
+  (&rest args &key target-coords &allow-other-keys)
+  (apply
+   #'send
+   (append
+    (list (instance fullbody-ik-client :init) :ik-server-call)
+    args)))
+
