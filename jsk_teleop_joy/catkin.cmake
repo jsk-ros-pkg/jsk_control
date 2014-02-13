@@ -7,3 +7,11 @@ catkin_python_setup()
 catkin_package(
   CATKIN_DEPENDS ps3joy tf view_controller_msgs interactive_markers visualization_msgs jsk_footstep_msgs
   )
+
+install(DIRECTORY launch scripts configs
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  USE_SOURCE_PERMISSIONS
+  PATTERN ".svn" EXCLUDE
+  )
+
+  
