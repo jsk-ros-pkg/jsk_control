@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(jsk_footstep_planner)
 
-find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_pcl_ros)
+find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_pcl_ros roseus)
 catkin_package(
   DEPENDS
-  CATKIN-DEPENDS  jsk_footstep_msgs jsk_pcl_ros
+  CATKIN-DEPENDS  jsk_footstep_msgs jsk_pcl_ros roseus
   INCLUDE_DIRS # TODO include
   LIBRARIES # TODO
   )

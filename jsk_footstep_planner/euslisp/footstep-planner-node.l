@@ -1,6 +1,7 @@
 #!/usr/bin/env roseus
 
-(ros::load-ros-manifest "jsk_footstep_planner")
+(ros::roseus-add-msgs "jsk_footstep_msgs")
+(ros::roseus-add-msgs "jsk_pcl_ros")
 (load "package://jsk_footstep_planner/euslisp/footstep-planner.l")
 
 (defun planes-cb (msg)
