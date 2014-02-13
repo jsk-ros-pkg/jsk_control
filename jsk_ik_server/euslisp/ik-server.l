@@ -443,14 +443,18 @@
 		 #'(lambda (n) (format nil "~A" n))
 		 (send-all (send robot :joint-list) :name))
 		(list "BASE_POSITION_X" "BASE_POSITION_Y" "BASE_POSITION_Z")
-		(list "BASE_EULER_X" "BASE_EULER_Y" "BASE_EULER_Z")))
+		(list "BASE_EULER_X" "BASE_EULER_Y" "BASE_EULER_Z")
+		;;(list "BASE_QUAT_W" "BASE_QUAT_X" "BASE_QUAT_Y" "BASE_QUAT_Z")
+		))
 	 (send res :solution :joint_state :position
 	       (concatenate
 		float-vector
 		(map float-vector #'deg2rad
 		     (send-all (send robot :joint-list) :joint-angle))
 		(scale 1e-3 (send (car (send robot :links)) :worldpos))
-		(matrix-log (send (car (send robot :links)) :worldrot))))
+		(matrix-log (send (car (send robot :links)) :worldrot))
+		;;(matrix2quaternion (send (car (send robot :links)) :worldrot))
+		))
 	 res)
 	(t res))))))
   )
