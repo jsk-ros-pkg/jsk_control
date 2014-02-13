@@ -134,8 +134,8 @@
 	 :update-joint-states
 	 js
 	 :opt opt
-	 :robot robot
-	 :viewer viewer)
+	 :robot robot)
+   (if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))
    )
   ;;
   (:update-move-target

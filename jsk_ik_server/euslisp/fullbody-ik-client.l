@@ -46,7 +46,7 @@
        opt
        (robot *robot*)
        (joint-list (send robot :joint-list))
-       (viewer (if (and (boundp '*viewer*) *viewer*) *viewer*))
+       ;;(viewer (if (and (boundp '*viewer*) *viewer*) *viewer*))
        position rpy quaternion rpy-flag)
    (setq position
 	 (copy-object (send (car (send robot :links)) :worldpos)))
@@ -142,7 +142,7 @@
 	    :transformation
 	    buf)))
    (send-all (send robot :links) :worldcoords)
-   (if viewer (send viewer :draw-objects))
+   ;;(if viewer (send viewer :draw-objects))
    ;;(read-line)
    )
   ;;
@@ -259,6 +259,7 @@
      (cond
       ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
        (send self :update-joint-states (send res :solution :joint_state) :robot robot)
+       (if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))
        (ros::ros-info " success ~A"  (send res :solution :joint_state :position)))
       (t (ros::ros-error " failed ")))
      res))
