@@ -5,8 +5,12 @@ import numpy
 
 import rospy
 import roslib
+import os
 
-roslib.load_manifest('jsk_joy')
+# only if groovy
+if os.environ["ROS_DISTRO"] == "groovy":
+  roslib.load_manifest('jsk_joy')
+    
 
 from sensor_msgs.msg import Joy
 import tf.transformations
@@ -27,6 +31,8 @@ class JoyManager():
       self.JoyStatus = PS3Status
     elif self.controller_type == 'ps3wired':
       self.JoyStatus = PS3WiredStatus
+    elif self.container_type == 'auto':
+      pass                                #auto detection
     self.plugin_manager = PluginManager('jsk_joy')
     self.loadPlugins()
   def loadPlugins(self):
