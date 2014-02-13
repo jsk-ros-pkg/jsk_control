@@ -17,19 +17,17 @@
 (defmethod atlas-ik-server
   (:init
    (&rest args)
-
-   (setq *atlas* (atlas-with-hand))
-
-   (send *atlas* :reset-manip-pose)
-   (send *atlas* :fix-leg-to-coords (make-coords) :both)
-   (send-all (send *atlas* :joint-list) :max-joint-velocity 0.3)
-
-   (send *atlas* :torso :waist-r :max-angle 10)
-   (send *atlas* :torso :waist-r :min-angle -10)
+   (send-super* :init args)
    ;;
-   (send *atlas* :torso :waist-p :max-angle 10)
-   (send *atlas* :torso :waist-p :min-angle -10)
-   (setq robot *atlas*)
+   (setq robot (atlas-with-hand))
+   (send robot :reset-manip-pose)
+   (send robot :fix-leg-to-coords (make-coords) :both)
+   (send-all (send robot :joint-list) :max-joint-velocity 0.3)
+   (send robot :torso :waist-r :max-angle 10)
+   (send robot :torso :waist-r :min-angle -10)
+   (send robot :torso :waist-p :max-angle 10)
+   (send robot :torso :waist-p :min-angle -10)
+   ;;
    (setq ik-server-name "atlas_ik_server")
    (setq ik-server-service-name "/solve_ik")
    ;;
@@ -38,13 +36,9 @@
    (send self :make-centroid-object)
    ;;
    (send (send robot :utorso_lk) :make-pqpmodel :fat 30)
-   (setq *success-state-collection* nil)
-   ;; (send self :make-foot-convex)
-   (send self :make-centroid-object)
    (setq root-link-frame-id "/pelvis")
-
-   (send-super* :init args)
    )
   )
 
-(instance atlas-ik-server :init)
+(defvar *atlas-ik-server* (instance atlas-ik-server :init))
+(send *atlas-ik-server* :start-ik-server)

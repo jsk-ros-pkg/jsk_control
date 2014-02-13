@@ -26,6 +26,7 @@
    )
   )
 
-(instance pr2-ik-server :init)
+(defvar *pr2-ik-server* (instance pr2-ik-server :init))
+(send *pr2-ik-server* :start-ik-server)
 
 

@@ -29,4 +29,5 @@
    )
   )
 
-(instance hrp2jsk-ik-server :init)
+(defvar *hrp2jsk-ik-server* (instance hrp2jsk-ik-server :init))
+(send *hrp2jsk-ik-server* :start-ik-server)

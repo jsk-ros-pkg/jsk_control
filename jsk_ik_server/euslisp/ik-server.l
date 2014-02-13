@@ -7,6 +7,7 @@
 (require :rtm-ros-robotics-interface
 	 "package://hrpsys_ros_bridge/euslisp/rtm-ros-robot-interface.l")
 (require "models/arrow-object.l")
+(require "fullbody-ik-client.l")
 
 (defclass ik-server
   :slots
@@ -19,6 +20,7 @@
    ;;
    ik-server-name
    ik-server-service-name
+   ik-server-client
    ;;
    support-links
    support-centroid-pos
@@ -30,8 +32,9 @@
   (:init
    nil
    (setq move-target-hash (make-hash-table))
-   (unless (boundp '*do-not-start-ik-server*)
-     (send self :start-ik-server)))
+   (setq ik-server-client
+	 (instance fullbody-ik-client :init))
+   )
   (:ik-service-cb
    (req)
    (or
@@ -125,70 +128,14 @@
   ;;
   ;;
   (:update-joint-states
-   (js &optional opt buf)
-   (setq buf (concatenate float-vector
-			  (send (car (send robot :links)) :worldpos)
-			  (matrix-log
-			   (send (car (send robot :links)) :worldrot))))
-   (dotimes (i (length (send js :name)))
-     (if (or (>= i (length (send js :name)))
-	     (>= i (length (send js :position))))
-	 (return-from nil nil))
-     (let ((name (remove #\: (elt (send js :name) i)))
-	   (pos (elt (send js :position) i)) j)
-       ;;(format t "[:update-joint-states] ~A ~Arad~%" name pos)
-       (cond
-	((substringp "base" name)
-	 (cond
-	  ((find #\x name)
-	   (setf (aref buf 0) (* 1e+3 pos)))
-	  ((find #\y name)
-	   (setf (aref buf 1) (* 1e+3 pos)))
-	  ((find #\z name)
-	   (setf (aref buf 2) (* 1e+3 pos)))
-	  ((find #\r name)
-	   (setf (aref buf 3) pos))
-	  ((find #\p name)
-	   (setf (aref buf 4) pos))
-	  ((find #\w name)
-	   (setf (aref buf 5) pos))))
-	((setq j (find-if
-		  #'(lambda (j) (string-equal
-				 (remove #\: (format nil "~A" (send j :name)))
-				 name))
-		  (send robot :joint-list)))
-	 (send j :joint-angle (rad2deg pos)))
-	((setq j (or j (find-if
-			#'(lambda (j) (string-equal
-				       (remove #\: (format nil "~A" (send j :name)))
-				       name))
-			(send robot :links))))
-	 (if (find-method j :joint) (setq j (send j :joint)))
-	 (send j :joint-angle (rad2deg pos))))))
-   (if (and (cadr (member :angle-vector opt))
-	    (eq (length (cadr (member :angle-vector opt)))
-		(length (send robot :angle-vector))))
-       (send robot :angle-vector (cadr (member :angle-vector opt))))
-   (setq
-    buf
-    (if (cadr (member :worldcoords opt))
-	(cond
-	 ((subclassp (class (cadr (member :worldcoords opt))) coordinates)
-	  (cadr (member :worldcoords opt)))
-	 ((functionp (car (cadr (member :worldcoords opt))))
-	  (eval (cadr (member :worldcoords opt)))))
-      (make-coords :pos (subseq buf 0 3)
-		   :rpy (reverse (subseq buf 3 6)))))
-   (dotimes (i 3)
-     (send robot :transform
-	   (send
-	    (copy-object
-	     (send (car (send robot :links)) :worldcoords))
-	    :transformation
-	    buf)))
-   (send-all (send robot :links) :worldcoords)
-   (if viewer (send viewer :draw-objects))
-   ;;(read-line)
+   (js &optional opt
+       position rpy quaternion rpy-flag)
+   (send ik-server-client
+	 :update-joint-states
+	 js
+	 :opt opt
+	 :robot robot
+	 :viewer viewer)
    )
   ;;
   (:update-move-target
@@ -489,12 +436,14 @@
 	 ;;(format t "[ik-server] SUCCESS!!~%")
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
 	 (if viewer (send viewer :draw-objects))
+	 (send-all (send robot :links) :worldcoords)
 	 (send res :solution :joint_state :name
 	       (append
 		(mapcar
 		 #'(lambda (n) (format nil "~A" n))
 		 (send-all (send robot :joint-list) :name))
-		(list "basex" "basey" "basez" "baser" "basep" "basew")))
+		(list "BASE_POSITION_X" "BASE_POSITION_Y" "BASE_POSITION_Z")
+		(list "BASE_EULER_X" "BASE_EULER_Y" "BASE_EULER_Z")))
 	 (send res :solution :joint_state :position
 	       (concatenate
 		float-vector

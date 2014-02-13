@@ -107,4 +107,5 @@
    (t (format t "reject~%"))))
   )
 
-(setq a (instance hrp2jsknt-ik-server :init))
+(defvar *hrp2jsknt-ik-server* (instance hrp2jsknt-ik-server :init))
+(send *hrp2jsknt-ik-server* :start-ik-server)
