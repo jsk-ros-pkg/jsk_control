@@ -2,6 +2,7 @@
 
 ;;o(ros::load-ros-manifest "hrpsys_gazebo_atlas")
 (ros::load-ros-manifest "moveit_msgs")
+(ros::load-ros-manifest "geometry_msgs")
 
 ;;(ros::roseus "fullbody_ik_client_test")
 
@@ -42,26 +43,29 @@
 	      )))
   ;;
   (:update-joint-states
-   (js &key
-       opt
-       (robot *robot*)
-       (joint-list (send robot :joint-list))
-       ;;(viewer (if (and (boundp '*viewer*) *viewer*) *viewer*))
-       position rpy quaternion rpy-flag)
-   (setq position
+   (js
+    &key
+    (name-list (send js :name))
+    (position-list (send js :position))
+    opt
+    (robot *robot*)
+    (joint-list (send robot :joint-list))
+    ;;(viewer (if (and (boundp '*viewer*) *viewer*) *viewer*))
+    position rpy quaternion rpy-flag)
+   (setq base-pos
 	 (copy-object (send (car (send robot :links)) :worldpos)))
-   (setq rpy
+   (setq base-rpy
 	 (matrix-log
 	  (copy-object (send (car (send robot :links)) :worldrot))))
-   (setq quaternion
+   (setq base-quaternion
 	 (matrix2quaternion
 	  (copy-object (send (car (send robot :links)) :worldrot))))
-   (dotimes (i (length (send js :name)))
-     (if (or (>= i (length (send js :name)))
-	     (>= i (length (send js :position))))
+   (dotimes (i (length name-list))
+     (if (or (>= i (length name-list))
+	     (>= i (length position-list)))
 	 (return-from nil nil))
-     (let ((name (string-downcase (remove #\: (elt (send js :name) i))))
-	   (pos (elt (send js :position) i)) j)
+     (let ((name (string-downcase (remove #\: (elt name-list i))))
+	   (pos (elt position-list i)) j)
        ;;(format t "[:update-joint-states] ~A ~Arad~%" name pos)
        (cond
 	((setq j (find-if
@@ -70,7 +74,30 @@
 				 name))
 		  joint-list))
 	 (setq joint-list (remove j joint-list))
-	 (send j :joint-angle (rad2deg pos)))
+	 (cond
+	  ((and (numberp pos)
+		(class j)
+		(or (subclassp (class j) linear-joint)
+		    (subclassp (class j) rotational-joint)))
+	   (send j :joint-angle (rad2deg pos)))
+	  ((and (class pos)
+		(class j)
+		(subclassp (class pos) geometry_msgs::Transform)
+		(subclassp (class j) 6dof-joint))
+	   (send j :joint-angle
+		 (concatenate
+		  float-vector
+		  (scale 1e+3 (float-vector (send pos :translation :x)
+					    (send pos :translation :y)
+					    (send pos :translation :z)))
+		  (matrix-log
+		   (quaternion2matrix
+		    (float-vector (send pos :rotation :w)
+				  (send pos :rotation :x)
+				  (send pos :rotation :y)
+				  (send pos :rotation :z)))))))
+	  )
+	 )
 	((and (setq j (find-if
 		       #'(lambda (j) (string-equal
 				      (remove #\: (format nil "~A" (send j :name)))
@@ -79,42 +106,79 @@
 	      (find-method j :joint)
 	      (setq j (send j :joint)))
 	 (setq joint-list (remove j joint-list))
-	 (send j :joint-angle (rad2deg pos)))
-	((substringp "base" name)
 	 (cond
-	  ((substringp "pos" name)
+	  ((and (numberp pos)
+		(class j)
+		(or (subclassp (class j) linear-joint)
+		    (subclassp (class j) rotational-joint)))
+	   (send j :joint-angle (rad2deg pos)))
+	  ((and (class pos)
+		(class j)
+		(subclassp (class pos) geometry_msgs::Transform)
+		(subclassp (class j) 6dof-joint))
+	   (send j :joint-angle
+		 (concatenate
+		  float-vector
+		  (scale 1e+3 (float-vector (send pos :translation :x)
+					    (send pos :translation :y)
+					    (send pos :translation :z)))
+		  (matrix-log
+		   (quaternion2matrix
+		    (float-vector (send pos :rotation :w)
+				  (send pos :rotation :x)
+				  (send pos :rotation :y)
+				  (send pos :rotation :z)))))))
+	  )
+	 )
+	((or (substringp "base" name)
+	     (substringp "root" name)
+	     (substringp "virtual" name))
+	 (cond
+	  ((and
+	    (class pos)
+	    (subclassp (class pos) geometry_msgs::Transform))
+	   (setf (aref base-pos 0) (* 1e+3 (send pos :translation :x)))
+	   (setf (aref base-pos 1) (* 1e+3 (send pos :translation :y)))
+	   (setf (aref base-pos 2) (* 1e+3 (send pos :translation :z)))
+	   (setf (aref base-quaternion 0) (send pos :rotation :w))
+	   (setf (aref base-quaternion 1) (send pos :rotation :x))
+	   (setf (aref base-quaternion 2) (send pos :rotation :y))
+	   (setf (aref base-quaternion 3) (send pos :rotation :z)))
+	  ((or (substringp "pos" name)
+	       (substringp "trans" name))
 	   (cond
 	    ((find #\x name)
 	     ;;(format t "[:udpate-joint-state] base_pose_x ~A~%" pos)
-	     (setf (aref position 0) (* 1e+3 pos)))
+	     (setf (aref base-pos 0) (* 1e+3 pos)))
 	    ((find #\y name)
 	     ;;(format t "[:udpate-joint-state] base_pose_y ~A~%" pos)
-	     (setf (aref position 1) (* 1e+3 pos)))
+	     (setf (aref base-pos 1) (* 1e+3 pos)))
 	    ((find #\z name)
 	     ;;(format t "[:udpate-joint-state] base_pose_z ~A~%" pos)
-	     (setf (aref position 2) (* 1e+3 pos)))))
-	  ((substringp "eul" name)
+	     (setf (aref base-pos 2) (* 1e+3 pos)))))
+	  ((or (substringp "eul" name)
+	       (substringp "rot" name))
 	   (setq rpy-flag t)
 	   (cond
 	    ((find #\x name)
 	     ;;(format t "[:udpate-joint-state] base_eul_x ~A~%" pos)
-	     (setf (aref rpy 0) pos))
+	     (setf (aref base-rpy 0) pos))
 	    ((find #\y name)
 	     ;;(format t "[:udpate-joint-state] base_eul_y ~A~%" pos)
-	     (setf (aref rpy 1) pos))
+	     (setf (aref base-rpy 1) pos))
 	    ((find #\z name)
 	     ;;(format t "[:udpate-joint-state] base_eul_z ~A~%" pos)
-	     (setf (aref rpy 2) pos))))
+	     (setf (aref base-rpy 2) pos))))
 	  ((substringp "qua" name)
 	   (cond
 	    ((find #\w name)
-	     (setf (aref quaternion 0) pos))
+	     (setf (aref base-quaternion 0) pos))
 	    ((find #\x name)
-	     (setf (aref quaternion 1) pos))
+	     (setf (aref base-quaternion 1) pos))
 	    ((find #\y name)
-	     (setf (aref quaternion 2) pos))
+	     (setf (aref base-quaternion 2) pos))
 	    ((find #\z name)
-	     (setf (aref quaternion 3) pos)))))))))
+	     (setf (aref base-quaternion 3) pos)))))))))
    (if (and (cadr (member :angle-vector opt))
 	    (eq (length (cadr (member :angle-vector opt)))
 		(length (send robot :angle-vector))))
@@ -129,11 +193,11 @@
        ((functionp (car (cadr (member :worldcoords opt))))
 	(eval (cadr (member :worldcoords opt))))))
      (rpy-flag
-      (make-coords :pos position
-		   :rpy (reverse rpy)))
+      (make-coords :pos base-pos
+		   :rpy (reverse base-rpy)))
      (t
-      (make-coords :pos position
-		   :rot (quaternion2matrix quaternion)))))
+      (make-coords :pos base-pos
+		   :rot (quaternion2matrix base-quaternion)))))
    (dotimes (i 3)
      (send robot :transform
 	   (send
@@ -258,7 +322,17 @@
      (setq res (ros::service-call ik-server-service-name req))
      (cond
       ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
-       (send self :update-joint-states (send res :solution :joint_state) :robot robot)
+       (send self :update-joint-states
+	     (send res :solution :joint_state)
+	     :name-list (send (send res :solution :joint_state) :name)
+	     :position-list (send (send res :solution :joint_state) :position)
+	     :robot robot)
+       (send self :update-joint-states
+	     (send res :solution :multi_dof_joint_state)
+	     :name-list (send (send res :solution :multi_dof_joint_state) :joint_names)
+	     :position-list
+	     (send (send res :solution :multi_dof_joint_state) :joint_transforms)
+	     :robot robot)
        (if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))
        (ros::ros-info " success ~A"  (send res :solution :joint_state :position)))
       (t (ros::ros-error " failed ")))

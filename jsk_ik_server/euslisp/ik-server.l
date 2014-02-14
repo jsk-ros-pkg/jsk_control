@@ -3,6 +3,7 @@
 (ros::load-ros-manifest "jsk_ik_server")
 ;(ros::load-ros-manifest "arm_navigation_msgs")
 (ros::load-ros-manifest "moveit_msgs")
+(ros::load-ros-manifest "geometry_msgs")
 
 (require :rtm-ros-robotics-interface
 	 "package://hrpsys_ros_bridge/euslisp/rtm-ros-robot-interface.l")
@@ -128,11 +129,16 @@
   ;;
   ;;
   (:update-joint-states
-   (js &optional opt
+   (js &key
+       opt
+       (name-list (send js :name))
+       (position-list (send js :position))
        position rpy quaternion rpy-flag)
    (send ik-server-client
 	 :update-joint-states
 	 js
+	 :name-list name-list
+	 :position-list position-list
 	 :opt opt
 	 :robot robot)
    (if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))
@@ -361,8 +367,9 @@
 					     (send req :group_name)))))
 	    (rsd (send req :robot_state))
 	    (js (send rsd :joint_state))
+	    (mjs (send rsd :multi_dof_joint_state))
 	    ik-param ret additional-weight-list
-	    buf )
+	    buf pos rot)
        (if (substringp
 	    ":inverse-kinematics"
 	    (send (send msg :ik_request) :group_name))
@@ -373,7 +380,14 @@
        ;;
        (format t "[:fik-service-cb] options: ~A~%" opt)
        ;; joint angle update
-       (send self :update-joint-states js opt)
+       (send self :update-joint-states js
+	     :name-list (send js :name)
+	     :position-list (send js :position)
+	     :opt opt)
+       (send self :update-joint-states mjs
+	     :name-list (send mjs :joint_names)
+	     :position-list (send mjs :joint_transforms)
+	     :opt opt)
        ;; move-target update
        (send self :update-move-target
 	     (send (send req :constraints) :position_constraints)
@@ -442,8 +456,8 @@
 		(mapcar
 		 #'(lambda (n) (format nil "~A" n))
 		 (send-all (send robot :joint-list) :name))
-		(list "BASE_POSITION_X" "BASE_POSITION_Y" "BASE_POSITION_Z")
-		(list "BASE_EULER_X" "BASE_EULER_Y" "BASE_EULER_Z")
+		;;(list "BASE_POSITION_X" "BASE_POSITION_Y" "BASE_POSITION_Z")
+		;;(list "BASE_EULER_X" "BASE_EULER_Y" "BASE_EULER_Z")
 		;;(list "BASE_QUAT_W" "BASE_QUAT_X" "BASE_QUAT_Y" "BASE_QUAT_Z")
 		))
 	 (send res :solution :joint_state :position
@@ -451,10 +465,32 @@
 		float-vector
 		(map float-vector #'deg2rad
 		     (send-all (send robot :joint-list) :joint-angle))
-		(scale 1e-3 (send (car (send robot :links)) :worldpos))
-		(matrix-log (send (car (send robot :links)) :worldrot))
+		;;(scale 1e-3 (send (car (send robot :links)) :worldpos))
+		;;(matrix-log (send (car (send robot :links)) :worldrot))
 		;;(matrix2quaternion (send (car (send robot :links)) :worldrot))
 		))
+	 (send res :solution :multi_dof_joint_state :joint_names
+	       (list "VIRTUAL_JOINT"))
+	 (setq pos (send (car (send robot :links)) :worldpos))
+	 (setq rot (matrix2quaternion
+		    (send (car (send robot :links)) :worldrot)))
+	 (send res :solution :multi_dof_joint_state :joint_transforms
+	       (list
+		(instance geometry_msgs::Transform
+			  :init
+			  :translation
+			  (instance geometry_msgs::Vector3
+				    :init
+				    :x (* 1e-3 (aref pos 0))
+				    :y (* 1e-3 (aref pos 1))
+				    :z (* 1e-3 (aref pos 2)))
+			  :rotation
+			  (instance geometry_msgs::Quaternion
+				    :init
+				    :w (aref rot 0)
+				    :x (aref rot 1)
+				    :y (aref rot 2)
+				    :z (aref rot 3)))))
 	 res)
 	(t res))))))
   )
