@@ -22,7 +22,7 @@ def makePolygonArray():
     x3 = i * 3 + 2 - 0.5
     x4 = i * 3 + 3 - 0.5
     points_array = [[[x2, 2, 0],   [x1, 2, 0],   [x1, -2, 0],   [x2, -2, 0]],
-                    [[x3, 2, 0.2], [x2, 2, 0.2], [x2, -2, 0.2], [x3, -2, 0.2]],
+                    [[x3, 2, 0.3], [x2, 2, 0.2], [x2, -2, 0.2], [x3, -2, 0.3]],
                     [[x4, 2, 0.1], [x3, 2, 0.1], [x3, -2, 0.1], [x4, -2, 0.1]]]
     for points in points_array:
       polygon = PolygonStamped()

@@ -47,11 +47,12 @@ footstep-parameter"))
       (setq start-leg (send self :next-leg start-leg))))
   )
 
-(defun face-on-a-face (face support-face)
-  (dolist (v (send face :vertices))
+(defun face-on-a-face (f support-face)
+  (dolist (v (send f :vertices))
     (if (eq (send support-face :insidep v) :outside)
         (return-from face-on-a-face nil)
       ))
+  (if *debug* (send support-face :draw-on :flush t))
   t)
 
 (defun project-coords-on-to-plane (coords planes z-axis)
@@ -65,6 +66,7 @@ footstep-parameter"))
     ;; anZ = -(D + nP)
     ;; a = -(D + nP) / nZ
     (let ((candidates (mapcar #'(lambda (pln)
+                                  (send coords :worldpos)
                                   (let ((projected-point
                                          (let ((plane-normal (send pln :normal))
                                                (plane-D (- (send pln :plane-distance (float-vector 0 0 0)))))
@@ -72,12 +74,35 @@ footstep-parameter"))
                                                            (v. plane-normal z-axis))))
                                              (v+ point (scale alpha z-axis))))))
                                     (if (not (eq (send pln :insidep projected-point) :outside))
-                                        (make-coords :rot (send (send coords :copy-worldcoords) :rot) :pos projected-point) ;only supports z-value
-                                      nil)))
+                                        (let* ((n (send pln :normal))
+                                               (nf (send (send coords :copy-worldcoords) :z-axis)))
+                                          (if (< (v. nf n) 0)
+                                              (setq n (scale -1.0 n)))
+                                          (format t "n:   ~A~%" n)
+                                          (format t "nf:  ~A~%" nf)
+                                          (let ((ret (send coords :copy-worldcoords)))
+                                            (send ret :locate projected-point :world)
+                                            (if (eps= (norm (v* n nf)) 0)
+                                                ret
+                                              (let* ((b (v* nf n))
+                                                     (b* (normalize-vector b))
+                                                     (theta (asin (norm b))))
+                                                (format t "rotate around ~A, ~A deg~%" b* (rad2deg theta))
+                                                (send ret :rotate theta b* :world)
+                                                ret))
+                                            
+                                            (format t "nf2: ~A~%" (send (send ret :copy-worldcoords) :z-axis))
+                                            ret
+                                            )))))
                               planes)))
       (let ((non-null-candidates (remove-if #'null candidates)))
         (if non-null-candidates (car non-null-candidates)
           nil)))))
+
+(defun leg-index->leg-symbol (index)
+  (if (eq index jsk_footstep_msgs::Footstep::*LEFT*)
+      :lleg
+    :rleg))
 
 (defclass footstep-planner-graph
   :super graph
@@ -174,19 +199,22 @@ footstep-parameter"))
             (setq min-index (car d)))
           )
         (ros::ros-info "minimum index is ~A, distance is ~A~%" min-index min-distance)
-        (setq goal-leg-index min-index)
+        (setq goal-leg-index (leg-index->leg-symbol min-index))
         (setq goal-corods (find-if #'(lambda (g) (eq (car g) goal-leg-index)) goal-footstep))
         )))
   (:goal-test (state &key (debug-view nil))
-    (let ((current-coords (send state :robot-coords)))
-      (let ((ndiff-pos (distance (send current-coords :worldpos)
-                                 (send goal-state :worldpos))))
-        (if (or (not thr) (< ndiff-pos thr))
-            (let* ((diff-rot (send current-coords
-                                   :difference-rotation goal-state))
-                   (ndiff-rot (norm diff-rot)))
-              ;; when thr or rthr is nil, test returns t
-              (or (not rthr) (< ndiff-rot rthr)))))))
+    ;;(print (send state :l/r))
+    ;;(if (eq (send state :l/r) goal-leg-index)
+        (let ((current-coords (send state :robot-coords)))
+          (let ((ndiff-pos (distance (send current-coords :worldpos)
+                                     (send goal-state :worldpos))))
+            (if (or (not thr) (< ndiff-pos thr))
+                (let* ((diff-rot (send current-coords
+                                       :difference-rotation goal-state))
+                       (ndiff-rot (norm diff-rot)))
+                  ;; when thr or rthr is nil, test returns t
+                  (or (not rthr) (< ndiff-rot rthr)))))))
+  ;;)
   (:path-cost (from-node action to-state)
     ;; [J.Kuffner et. al.,
     ;;  Footstep Planning Among Obstacles for Biped Robots,
@@ -227,22 +255,23 @@ footstep-parameter"))
                   &allow-other-keys)
     "this method is called after robot model is moved."
     (and
-     (cond (collision-robot-model
-            (not (send self :collision-with-obstacles-collision-robot-model-p
-                       (send (send robot-coords :copy-worldcoords)
-                             :transform (send footstep-param :foot->robot))
-                       :debug debug)))
-           (robot
-            (not (send self :collision-with-obstacles-p robot :debug debug)))
-           (t
-            (not (send self :collision-with-obstacles-no-robot-mode-p
-                       next-leg-coords :debug debug))))
+     ;; (cond (collision-robot-model
+     ;;        (not (send self :collision-with-obstacles-collision-robot-model-p
+     ;;                   (send (send robot-coords :copy-worldcoords)
+     ;;                         :transform (send footstep-param :foot->robot))
+     ;;                   :debug debug)))
+     ;;       (robot
+     ;;        (not (send self :collision-with-obstacles-p robot :debug debug)))
+     ;;       (t
+     ;;        (not (send self :collision-with-obstacles-no-robot-mode-p
+     ;;                   next-leg-coords :debug debug))))
+     t
      ;; plane check
      (if (and next-leg-face planes)
          (remove-if #'null
-                    (mapcar #'(lambda (pln)
+                    (print (mapcar #'(lambda (pln)
                                 (face-on-a-face next-leg-face pln))
-                            planes))
+                            planes)))
        t)))
   (:successors (state &key (verbose nil))
     (when timeout                            ;check the timeout
@@ -271,20 +300,19 @@ footstep-parameter"))
               (let ((robot-coords
                      (send footstep-param :calc-robot-coords
                            cdr-c current-step-coords)))
-                (send self :move-robot-model
-                      cdr-c
-                      current-step-coords next-leg robot-coords)
+                ;; (send self :move-robot-model
+                ;;       cdr-c
+                ;;       current-step-coords next-leg robot-coords)
                 (when robot
                   (send robot :worldpos))
                 (if (send self :successablep :debug verbose
                           :next-leg next-leg ;:lleg, :rleg and so on
                           :next-leg-coords cdr-c
                           :robot-coords robot-coords
-                          :next-leg-face (instance
-                                          face :init
-                                          :vertices
-                                          (send footstep-param :foot-vertices
-                                                next-leg cdr-c)))
+                          :next-leg-face (instance face :init
+                                                   :vertices
+                                                   (send footstep-param :foot-vertices
+                                                         next-leg cdr-c)))
                     (progn
                       (setf (cdr c)
                             (instance step-node :init

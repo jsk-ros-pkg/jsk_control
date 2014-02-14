@@ -4,6 +4,11 @@
 (ros::roseus-add-msgs "jsk_pcl_ros")
 (load "package://jsk_footstep_planner/euslisp/footstep-planner.l")
 
+
+;; for debug
+(setq *debug* t)
+(if *debug* (make-irtviewer))
+
 (defun planes-cb (msg)
   (let ((polygons (send msg :polygons)))
     (let ((faces (mapcar #'(lambda (polygon)
@@ -20,8 +25,16 @@
                                  (instance face :init :vertices points))))
                          polygons)))
       (let ((fc (instance faceset :init :faces faces)))
-      (setq *planes* faces)
-      ))))
+        (setq *planes* faces)
+        (when *debug*
+          (if (null (send *irtviewer* :objects))
+              (progn
+                (objects (list fc)))
+            (progn
+              (send *irtviewer* :objects (list fc))
+              (send *irtviewer* :draw-objects))
+            )
+          )))))
 
 (defclass ros-footstep-parameter
   :super footstep-parameter
@@ -32,7 +45,6 @@
     (setq size-y y)
     (send-super :init :legs-num 2))
   (:foot-vertices (leg coords)
-    ;;
     ;;     x     x
     ;;
     ;;        c
@@ -179,6 +191,8 @@
                                   (if (eq (send (send n :state) :l/r) :lleg)
                                       (send f :leg jsk_footstep_msgs::Footstep::*LEFT*)
                                     (send f :leg jsk_footstep_msgs::Footstep::*RIGHT*))
+                                  ;; (if *debug*
+                                  ;;     (send (send (send n :state) :worldcoords) :draw-on :flush t))
                                   f)))
                               solver-nodes))
                 (send footsteps :header (send goal :goal :initial_footstep :header))
