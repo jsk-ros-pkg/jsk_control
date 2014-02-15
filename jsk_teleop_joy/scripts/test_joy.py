@@ -26,14 +26,30 @@ def main():
       exit(-1)
    rospy.loginfo("Found %d Joystick devices" % devices)
 
+   joy_name = None
+   input_dev = 0
    if len(sys.argv) > 2:
-      input_dev = int(sys.argv[2])
+      try:
+         input_dev = int(sys.argv[2])
+      except ValueError:
+         joy_name = sys.argv[2]
    else:
       rospy.loginfo("no input device supplied. will try to use default device.")
       input_dev = 0
    rospy.loginfo("Using input device %d" % input_dev)
 
-   controller = pygame.joystick.Joystick(input_dev)
+   controller = None
+   if joy_name == None:
+      controller = pygame.joystick.Joystick(input_dev)
+   else:
+      for i in range(pygame.joystick.get_count()):
+         if joy_name in pygame.joystick.Joystick(i).get_name():
+            controller = pygame.joystick.Joystick(i)
+
+   if controller == None:
+      rospy.logerr("No Joystick controller generated")
+      exit(-1)
+
    controller.init()
    axes = controller.get_numaxes()
    buttons = controller.get_numbuttons()
