@@ -17,7 +17,6 @@
 (defmethod atlas-ik-server
   (:init
    (&rest args)
-   (send-super* :init args)
    ;;
    (setq robot (atlas-with-hand))
    (send robot :reset-manip-pose)
@@ -28,15 +27,18 @@
    (send robot :torso :waist-p :max-angle 10)
    (send robot :torso :waist-p :min-angle -10)
    ;;
-   (setq ik-server-name "atlas_ik_server")
-   (setq ik-server-service-name "/solve_ik")
-   ;;
    (send self :update-support-links '(:rleg :lleg))
    (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
    ;;
    (send (send robot :utorso_lk) :make-pqpmodel :fat 30)
-   (setq root-link-frame-id "/pelvis")
+   (send-super*
+    :init
+    :robot robot
+    :ik-server-name "atlas_ik_server"
+    :ik-server-service-name "/solve_ik"
+    :root-link-frame-id "/pelvis"
+    args)
    )
   )
 

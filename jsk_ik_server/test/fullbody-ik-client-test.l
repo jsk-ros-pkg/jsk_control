@@ -90,22 +90,13 @@
    (ros::roseus "fullbody_ik_client_test")
    (objects (list *pr2*))
    (defvar *pr2-move-target*
-     (list (make-cascoords
-	    :parent
-	    (send (send (send *pr2* :rarm :end-coords :parent) :parent) :parent)
-	    :coords
-	    (copy-object
-	     (send (send (send (send *pr2* :rarm :end-coords :parent) :parent) :parent)
-		   :worldcoords))
-	    :name :rarm-pr2-end-coords)
-	   (make-cascoords
-	    :parent
-	    (send (send (send *pr2* :larm :end-coords :parent) :parent) :parent)
-	    :coords
-	    (copy-object
-	     (send (send (send (send *pr2* :larm :end-coords :parent) :parent) :parent)
-		   :worldcoords))
-	    :name :larm-pr2-end-coords)))
+     (mapcar
+      #'(lambda (k)
+	  (make-cascoords
+	   :parent (send *pr2* k :end-coords :parent)
+	   :coords (send *pr2* k :end-coords :copy-worldcoords)
+	   :name k))
+      '(:rarm :larm)))
    (do-until-key
     (send *pr2* :reset-manip-pose)
     (send self :test-fullbody-ik

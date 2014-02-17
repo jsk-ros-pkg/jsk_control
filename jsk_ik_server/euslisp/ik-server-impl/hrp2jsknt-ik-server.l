@@ -24,13 +24,15 @@
 	  (send l :dissoc mt)
 	  (send (send l :parent) :assoc mt)))
     '(:rleg :lleg))
-   (setq ik-server-name "hrp2jsknt_ik_server")
-   (setq ik-server-service-name "/solve_ik")
-   (setq root-link-frame-id nil)
    (send self :update-support-links '(:rleg :lleg))
    (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
-   (send-super* :init args)
+   (send-super*
+    :init
+    :ik-server-name "hrp2jsknt_ik_server"
+    :ik-server-service-name "/solve_ik"
+    :root-link-frame-id nil
+    args)
    )
   )
 

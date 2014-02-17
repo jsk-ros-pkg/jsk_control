@@ -10,9 +10,24 @@
 (require "models/arrow-object.l")
 (require "fullbody-ik-client.l")
 
+(defmethod cascaded-link
+  (:find-link-route
+   (to &optional from)
+   (let ((pl (send to :parent-link)))
+     (cond
+      ;;((and pl (not (find to (send self :links))))
+      ;;(send self :find-link-route pl from))
+      ((and pl (not (eq to from)))
+       (append (send self :find-link-route pl from) (list to)))
+      ((and pl (eq to from))
+       (list from))
+      )))
+  )
+
 (defclass ik-server
   :slots
   (robot
+   link-list
    arrow
    centroid-object
    foot-convex
@@ -31,8 +46,22 @@
 
 (defmethod ik-server
   (:init
-   nil
+   (&rest args)
+   (while args
+     (send self (car args) (cadr args))
+     (setq args (cddr args)))
    (setq move-target-hash (make-hash-table))
+   (setq link-list
+	 (union
+	  nil
+	  (remove-if
+	   #'(lambda (a)
+	       (not
+		(and (class a)
+		     (subclassp (class a) bodyset-link)
+		     (find-method a :joint)
+		     (send a :joint))))
+	   (flatten (send robot :slots)))))
    (setq ik-server-client
 	 (instance fullbody-ik-client :init))
    )
@@ -103,7 +132,7 @@
 	     (let ((n (remove #\: (format nil "~A" name))))
 	       (find-if #'(lambda (l)
 			    (substringp n (format nil "~A" (send l :name))))
-			(send robot :links))))))
+			link-list)))))
        name-list))))
    ;;(print name-list)
    (setq support-links link-list)
@@ -154,7 +183,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send robot :links)))
+	      link-list))
        (cond
 	((null link)
 	 (format t "[:update-move-target] unknown link ~A~%" name))
@@ -174,7 +203,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send robot :links)))
+	      link-list))
        (cond
 	((null link)
 	 (format t "[:update-move-target] unknown link~A ~%" name))
@@ -221,7 +250,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send robot :links)))
+	      link-list))
        (cond
 	((and
 	  (null link)
@@ -231,7 +260,7 @@
 		  #'(lambda (j) (string-equal
 				 (remove #\: (format nil "~A" (send j :name)))
 				 name))
-		  (send-all (send robot :links) :joint))))))
+		  (send-all link-list :joint))))))
 	(t
 	 (setq link (or link (send joint :child-link)))
 	 (push (list link (send jc :weight)) ret))))
@@ -247,7 +276,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send robot :links)))
+	      link-list))
        (if link (push link buf)))
      (setq buf (union buf nil))
      (append
@@ -274,7 +303,7 @@
 	      #'(lambda (j) (string-equal
 			     (remove #\: (format nil "~A" (send j :name)))
 			     name))
-	      (send robot :links)))
+	      link-list))
        (cond
 	((null link)
 	 (format t "[:parse-ik-param] invalid link ~A~%" name))
@@ -451,12 +480,12 @@
 	 ;;(format t "[ik-server] SUCCESS!!~%")
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
 	 (if viewer (send viewer :draw-objects))
-	 (send-all (send robot :links) :worldcoords)
+	 (send-all link-list :worldcoords)
 	 (send res :solution :joint_state :name
 	       (append
 		(mapcar
 		 #'(lambda (n) (format nil "~A" n))
-		 (send-all (send robot :joint-list) :name))
+		 (send-all link-list :name))
 		;;(list "BASE_POSITION_X" "BASE_POSITION_Y" "BASE_POSITION_Z")
 		;;(list "BASE_EULER_X" "BASE_EULER_Y" "BASE_EULER_Z")
 		;;(list "BASE_QUAT_W" "BASE_QUAT_X" "BASE_QUAT_Y" "BASE_QUAT_Z")
@@ -465,7 +494,7 @@
 	       (concatenate
 		float-vector
 		(map float-vector #'deg2rad
-		     (send-all (send robot :joint-list) :joint-angle))
+		     (send-all (send-all link-list :joint) :joint-angle))
 		;;(scale 1e-3 (send (car (send robot :links)) :worldpos))
 		;;(matrix-log (send (car (send robot :links)) :worldrot))
 		;;(matrix2quaternion (send (car (send robot :links)) :worldrot))
@@ -498,7 +527,21 @@
 	   (format t "[:fik-cb] unknown type of multi_dof_joint_state~%"))
 	 res)
 	(t res))))))
+  (:nomethod
+   (&rest args)
+   (let (sym val)
+     (cond
+      ((keywordp (car args))
+       (setq sym (read-from-string (send (car args) :pname)))
+       (setq val (assoc sym (send self :slots)))))
+     (cond
+      ((or (null sym) (null val)) nil)
+      ((> (length args) 1)
+       (eval (list 'setq sym '(cadr args))))
+      (t (cdr val)))))
   )
+
+
 
 
 ;; IK methods definition
