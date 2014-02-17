@@ -227,7 +227,7 @@
     collision-pair
     &allow-other-keys)
    (let* ((req (instance moveit_msgs::GetPositionIKRequest :init))
-	  pc pc-list oc oc-list tf q res mdj transfrom-key
+	  pc pc-list oc oc-list tf q res mdj transform-key
 	  (opt (list :worldcoords
 		     (list 'make-coords
 			   :pos (send (car (send robot :links)) :worldpos)
@@ -329,13 +329,13 @@
 	     :position-list (send (send res :solution :joint_state) :position)
 	     :robot robot)
        (setq mdj (send res :solution :multi_dof_joint_state))
-       (if (and mdj
-		(or (find-method mdj (setq transfrom-key :joint_transforms))
-		    (find-method mdj (setq transfrom-key :transforms))))
+       (if (and mdj ;; for hydro
+		(or (find-method mdj (setq transform-key :joint_transforms))
+		    (find-method mdj (setq transform-key :transforms))))
 	   (send self :update-joint-states
 		 mdj
 		 :name-list (send mdj :joint_names)
-		 :position-list (send mdj transfrom-key)
+		 :position-list (send mdj transform-key)
 		 :robot robot)
 	 (format t "[:update-joint-state] unknown type of multi_dof_joint_state~%"))
        (if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))

@@ -368,7 +368,7 @@
 	    (rsd (send req :robot_state))
 	    (js (send rsd :joint_state))
 	    (mjs (send rsd :multi_dof_joint_state))
-	    transfrom-key
+	    transform-key
 	    ik-param ret additional-weight-list
 	    buf pos rot)
        (if (substringp
@@ -475,10 +475,10 @@
 	 (setq pos (send (car (send robot :links)) :worldpos))
 	 (setq rot (matrix2quaternion
 		    (send (car (send robot :links)) :worldrot)))
-	 (if (and mjs
-		  (or (find-method mjs (setq transfrom-key :joint_transforms))
-		      (find-method mjs (setq transfrom-key :transforms))))
-	     (send res :solution :multi_dof_joint_state transfrom-key
+	 (if (and mjs ;; for hrdro
+		  (or (find-method mjs (setq transform-key :joint_transforms))
+		      (find-method mjs (setq transform-key :transforms))))
+	     (send res :solution :multi_dof_joint_state transform-key
 		   (list
 		    (instance geometry_msgs::Transform
 			      :init
