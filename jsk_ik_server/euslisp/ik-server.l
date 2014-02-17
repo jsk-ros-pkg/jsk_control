@@ -547,3 +547,193 @@
 ;; IK methods definition
 (require "package://jsk_ik_server/euslisp/ik-server-util.l")
 (require "package://jsk_ik_server/euslisp/old-ik-server.l")
+
+
+
+#|
+
+(ros::load-ros-manifest "moveit_msgs")
+(ros::load-ros-manifest "sensor_msgs")
+(ros::load-ros-manifest "geometry_msgs")
+
+(ros::roseus "test")
+
+(ros::service-call
+ "/solve_ik"
+ (instance
+  moveit_msgs::GetPositionIKRequest
+  :init
+  :ik_request
+  (instance
+   moveit_msgs::PositionIKRequest
+   :init
+   :group_name ":fullbody-inverse-kinematics (:fix-limbs (:rleg :lleg))"
+   :robot_state
+   (instance
+    moveit_msgs::robotstate
+    :init
+    :joint_state
+    (instance sensor_msgs::jointstate
+	      :init
+	      :name
+	      (list
+	       "CHEST_JOINT0"
+	       "CHEST_JOINT1"
+	       "HEAD_JOINT0"
+	       "HEAD_JOINT1"
+	       "LARM_JOINT0"
+	       "LARM_JOINT1"
+	       "LARM_JOINT2"
+	       "LARM_JOINT3"
+	       "LARM_JOINT4"
+	       "LARM_JOINT5"
+	       "LARM_JOINT6"
+	       "LARM_JOINT7"
+	       "L_INDEXMP_R"
+	       "L_INDEXMP_P"
+	       "L_INDEXPIP_R"
+	       "L_MIDDLEPIP_R"
+	       "L_THUMBCM_Y"
+	       "L_THUMBCM_P"
+	       "RARM_JOINT0"
+	       "RARM_JOINT1"
+	       "RARM_JOINT2"
+	       "RARM_JOINT3"
+	       "RARM_JOINT4"
+	       "RARM_JOINT5"
+	       "RARM_JOINT6"
+	       "RARM_JOINT7"
+	       "R_INDEXMP_R"
+	       "R_INDEXMP_P"
+	       "R_INDEXPIP_R"
+	       "R_MIDDLEPIP_R"
+	       "R_THUMBCM_Y"
+	       "R_THUMBCM_P"
+	       "LLEG_JOINT0"
+	       "LLEG_JOINT1"
+	       "LLEG_JOINT2"
+	       "LLEG_JOINT3"
+	       "LLEG_JOINT4"
+	       "LLEG_JOINT5"
+	       "LLEG_JOINT6"
+	       "RLEG_JOINT0"
+	       "RLEG_JOINT1"
+	       "RLEG_JOINT2"
+	       "RLEG_JOINT3"
+	       "RLEG_JOINT4"
+	       "RLEG_JOINT5"
+	       "RLEG_JOINT6")
+	      :position
+	      (list 0.0449376
+		    0.322729
+		    0
+		    0
+		    -0.0230563
+		    0.0411221
+		    -0.0796949
+		    -0.562652
+		    0.0482643
+		    0
+		    0
+		    0
+		    0
+		    0
+		    0
+		    0
+		    0
+		    0
+		    -0.281266
+		    -0.020549
+		    -0.0296894
+		    -0.20813
+		    -0.0598932
+		    -0.0318
+		    0.658795
+		    0
+		    0
+		    0
+		    0
+		    0
+		    0
+		    0
+		    -0.00580568
+		    -0.0439399
+		    -0.312627
+		    0.473204
+		    -0.0634008
+		    0.00540425
+		    0
+		    -0.00579787
+		    -0.0440984
+		    -0.340275
+		    0.530151
+		    -0.092688
+		    0.00558468)
+	      )
+    :multi_dof_joint_state
+    (instance moveit_msgs::MultiDOFJointState
+	      :init
+	      :joint_names
+	      (list "virtual_joint")
+	      :joint_transforms
+	      (list
+	       (instance geometry_msgs::transform
+			 :init
+			 :translation
+			 (instance geometry_msgs::Vector3
+				   :init
+				   :x 0
+				   :y 0
+				   :z 0)
+			 :rotation
+			 (instance geometry_msgs::Quaternion
+				   :init
+				   :x 0.00188104
+				   :y 0.151814
+				   :z -0.0122459
+				   :w 0.988331)
+			 )))
+    )
+   :ik_link_names
+   (list "RARM_LINK6" "LARM_LINK6")
+   :pose_stamped_vector
+   (list
+    (instance geometry_msgs::posestamped
+	      :init
+	      :pose
+	      (instance geometry_msgs::pose
+			:init
+			:position
+			(instance geometry_msgs::Vector3
+				  :init
+				  :x 0.303323
+				  :y -0.179039
+				  :z -0.00450461)
+			:orientation
+			(instance geometry_msgs::Quaternion
+				  :init
+				  :x -0.0394373
+				  :y -0.581649
+				  :z -0.00731869
+				  :w 0.81245)))
+    (instance geometry_msgs::posestamped
+	      :init
+	      :pose
+	      (instance geometry_msgs::pose
+			:init
+			:position
+			(instance geometry_msgs::Vector3
+				  :init
+				  :x 0.0909181
+				  :y 0.258434
+				  :z 0.0149688)
+			:orientation
+			(instance geometry_msgs::Quaternion
+				  :init
+				  :x 0.00226681
+				  :y 0.021845
+				  :z -0.0112564
+				  :w 0.999695)))
+    )
+   )))
+

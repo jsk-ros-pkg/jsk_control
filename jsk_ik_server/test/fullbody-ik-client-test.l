@@ -8,7 +8,7 @@
     args
     &key
     (robot *robot*)
-    (target-limbs '(:rarm :larm :rleg :lleg))
+    (target-limbs '(:rarm :larm));; :rleg :lleg))
     (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limbs))
     (target-coords (send-all move-target :copy-worldcoords))
     &allow-other-keys)
@@ -28,6 +28,7 @@
       :move-target move-target
       :target-coords target-coords
       :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
+      :fix-limbs '(:rleg :lleg)
       ;;:centroid-thre 100
       :stop 50
       :use-toes '(nil nil)
@@ -129,4 +130,3 @@
    ((substringp "atlas" test)
     (send ik-client-test :atlas-test))
    ))
-
