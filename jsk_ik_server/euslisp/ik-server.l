@@ -368,6 +368,7 @@
 	    (rsd (send req :robot_state))
 	    (js (send rsd :joint_state))
 	    (mjs (send rsd :multi_dof_joint_state))
+	    transfrom-key
 	    ik-param ret additional-weight-list
 	    buf pos rot)
        (if (substringp
@@ -474,23 +475,27 @@
 	 (setq pos (send (car (send robot :links)) :worldpos))
 	 (setq rot (matrix2quaternion
 		    (send (car (send robot :links)) :worldrot)))
-	 (send res :solution :multi_dof_joint_state :joint_transforms
-	       (list
-		(instance geometry_msgs::Transform
-			  :init
-			  :translation
-			  (instance geometry_msgs::Vector3
-				    :init
-				    :x (* 1e-3 (aref pos 0))
-				    :y (* 1e-3 (aref pos 1))
-				    :z (* 1e-3 (aref pos 2)))
-			  :rotation
-			  (instance geometry_msgs::Quaternion
-				    :init
-				    :w (aref rot 0)
-				    :x (aref rot 1)
-				    :y (aref rot 2)
-				    :z (aref rot 3)))))
+	 (if (and mjs
+		  (or (find-method mjs (setq transfrom-key :joint_transforms))
+		      (find-method mjs (setq transfrom-key :transforms))))
+	     (send res :solution :multi_dof_joint_state transfrom-key
+		   (list
+		    (instance geometry_msgs::Transform
+			      :init
+			      :translation
+			      (instance geometry_msgs::Vector3
+					:init
+					:x (* 1e-3 (aref pos 0))
+					:y (* 1e-3 (aref pos 1))
+					:z (* 1e-3 (aref pos 2)))
+			      :rotation
+			      (instance geometry_msgs::Quaternion
+					:init
+					:w (aref rot 0)
+					:x (aref rot 1)
+					:y (aref rot 2)
+					:z (aref rot 3)))))
+	   (format t "[:fik-cb] unknown type of multi_dof_joint_state~%"))
 	 res)
 	(t res))))))
   )

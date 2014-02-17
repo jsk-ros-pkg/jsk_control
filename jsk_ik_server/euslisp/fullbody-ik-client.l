@@ -3,6 +3,7 @@
 ;;o(ros::load-ros-manifest "hrpsys_gazebo_atlas")
 (ros::load-ros-manifest "moveit_msgs")
 (ros::load-ros-manifest "geometry_msgs")
+(ros::load-ros-manifest "sensor_msgs")
 
 ;;(ros::roseus "fullbody_ik_client_test")
 
@@ -226,7 +227,7 @@
     collision-pair
     &allow-other-keys)
    (let* ((req (instance moveit_msgs::GetPositionIKRequest :init))
-	  pc pc-list oc oc-list tf q res
+	  pc pc-list oc oc-list tf q res mdj transfrom-key
 	  (opt (list :worldcoords
 		     (list 'make-coords
 			   :pos (send (car (send robot :links)) :worldpos)
@@ -327,12 +328,16 @@
 	     :name-list (send (send res :solution :joint_state) :name)
 	     :position-list (send (send res :solution :joint_state) :position)
 	     :robot robot)
-       (send self :update-joint-states
-	     (send res :solution :multi_dof_joint_state)
-	     :name-list (send (send res :solution :multi_dof_joint_state) :joint_names)
-	     :position-list
-	     (send (send res :solution :multi_dof_joint_state) :joint_transforms)
-	     :robot robot)
+       (setq mdj (send res :solution :multi_dof_joint_state))
+       (if (and mdj
+		(or (find-method mdj (setq transfrom-key :joint_transforms))
+		    (find-method mdj (setq transfrom-key :transforms))))
+	   (send self :update-joint-states
+		 mdj
+		 :name-list (send mdj :joint_names)
+		 :position-list (send mdj transfrom-key)
+		 :robot robot)
+	 (format t "[:update-joint-state] unknown type of multi_dof_joint_state~%"))
        (if (and (boundp '*viewer*) *viewer*) (send *viewer* :draw-objects))
        (ros::ros-info " success ~A"  (send res :solution :joint_state :position)))
       (t (ros::ros-error " failed ")))
