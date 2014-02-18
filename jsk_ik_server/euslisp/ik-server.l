@@ -347,9 +347,12 @@
 	     (send arrow :newcoords goal-in-world))
 	 (push goal-in-world tc))))
      (setq buf
-	   (mapcar
-	    #'(lambda (k) (send robot k :end-coords))
-	    (cadr (member :fix-limbs opt))))
+	   (flatten
+	    (mapcar
+	     #'(lambda (k)
+		 (if (find-method robot k)
+		     (send robot k :end-coords)))
+	     (cadr (member :fix-limbs opt)))))
      (append
       (list
        :target-coords (append (send-all buf :copy-worldcoords) (reverse tc))
