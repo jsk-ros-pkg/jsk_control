@@ -5,8 +5,6 @@
 (ros::load-ros-manifest "moveit_msgs")
 (ros::load-ros-manifest "geometry_msgs")
 
-(require :rtm-ros-robotics-interface
-	 "package://hrpsys_ros_bridge/euslisp/rtm-ros-robot-interface.l")
 (require "models/arrow-object.l")
 (require "fullbody-ik-client.l")
 
@@ -448,7 +446,10 @@
 	       (list robot centroid-object foot-convex arrow))
 	 (send viewer :draw-objects)))
        ;;
-       (send res :error_code :val moveit_msgs::MoveItErrorCodes::*FAILURE*)
+       (send res :error_code :val
+	     (if (boundp 'moveit_msgs::MoveItErrorCodes::*FAILURE*)
+		 moveit_msgs::MoveItErrorCodes::*FAILURE*
+	       moveit_msgs::MoveItErrorCodes::*NO_IK_SOLUTION*))
        (setq ik-param
 	     (append
 	      (send self :parse-ik-param
@@ -495,6 +496,7 @@
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
 	 (if viewer (send viewer :draw-objects))
 	 (send-all link-list :worldcoords)
+	 (send res :solution :joint_state :header :frame_id "/odom") ;; DTC
 	 (send res :solution :joint_state :name
 	       (append
 		(mapcar
@@ -515,6 +517,7 @@
 		))
 	 (send res :solution :multi_dof_joint_state :joint_names
 	       (list "VIRTUAL_JOINT"))
+	 (send res :solution :multi_dof_joint_state :header :frame_id "/odom") ;; DTC
 	 (setq pos (send (car (send robot :links)) :worldpos))
 	 (setq rot (matrix2quaternion
 		    (send (car (send robot :links)) :worldrot)))
