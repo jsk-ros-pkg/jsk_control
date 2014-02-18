@@ -24,6 +24,21 @@
 	  (send l :dissoc mt)
 	  (send (send l :parent) :assoc mt)))
     '(:rleg :lleg))
+   (mapcar
+    #'(lambda (k hl)
+	(mapcar
+	 #'(lambda (h)
+	     (cond
+	      ((null (send h :parent-link)))
+	      ((null (send (send h :parent-link) :parent-link))
+	       (send h :add-parent-link
+		     (send robot k :end-coords :parent))
+	       (send (send robot k :end-coords :parent)
+		     :add-child-links h))))
+	 hl))
+    '(:rarm :larm)
+    (list (send robot :hand :rarm :links)
+	  (send robot :hand :larm :links)))
    (send self :update-support-links '(:rleg :lleg))
    (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
@@ -31,6 +46,16 @@
     :init
     :ik-server-name "hrp2jsknt_ik_server"
     :ik-server-service-name "/solve_ik"
+    :link-list
+    (remove-if
+     #'(lambda (l)
+	 (not (and (find-method l :joint)
+		   (send l :joint))))
+     (flatten
+      (append
+       (send robot :links)
+       (send (send robot :hand :rarm) :links)
+       (send (send robot :hand :larm) :links))))
     :root-link-frame-id nil
     args)
    )

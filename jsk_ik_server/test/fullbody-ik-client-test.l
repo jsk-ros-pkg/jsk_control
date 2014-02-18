@@ -8,7 +8,7 @@
     args
     &key
     (robot *robot*)
-    (target-limbs '(:rarm :larm));; :rleg :lleg))
+    (target-limbs '(:rarm :larm :rleg :lleg))
     (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limbs))
     (target-coords (send-all move-target :copy-worldcoords))
     &allow-other-keys)
@@ -28,7 +28,7 @@
       :move-target move-target
       :target-coords target-coords
       :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
-      :fix-limbs '(:rleg :lleg)
+      ;;:fix-limbs '(:rleg :lleg)
       ;;:centroid-thre 100
       :stop 50
       :use-toes '(nil nil)
@@ -53,13 +53,37 @@
 	   :coords
 	   (send *robot* k :end-coords :copy-worldcoords)))
       '(:rleg :lleg)))
+   (defvar *end-coords-from-hand*
+     (mapcar
+      #'(lambda (k)
+	  (make-cascoords
+	   :name
+	   (read-from-string (format nil "~A-end-coords-without-toe" k))
+	   :parent (car (last (send *robot* :hand k :links)))
+	   :coords
+	   (copy-object
+	    (send (car (last (send *robot* :hand k :links))) :worldcoords))))
+      '(:rarm :larm)))
    (do-until-key
     (send *robot* :reset-manip-pose)
     (send *robot* :fix-leg-to-coords (make-coords))
+    (send *robot* :hand :rarm :close-pose)
+    (send *robot* :hand :larm :close-pose)
     (send self :test-fullbody-ik
+	  :all-links
+	  (remove-if
+	   #'(lambda (l)
+	       (not (and (find-method l :joint)
+			 (send l :joint))))
+	   (flatten
+	    (append
+	     (send *robot* :links)
+	     (send (send *robot* :hand :rarm) :links)
+	     (send (send *robot* :hand :larm) :links))))
 	  :move-target
 	  (append
-	   (mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
+	   ;;(mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
+	   *end-coords-from-hand*
 	   *end-coords-without-toe*))
     ))
   (:hrp2jsk-test

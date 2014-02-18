@@ -331,8 +331,9 @@
 	 (setq
 	  goal-in-pelvis
 	  (cond
-	   (root-link-frame-id
-	    (send *tf* :transform-pose root-link-frame-id ps))
+	   ((and root-link-frame-id
+		 (setq goal-in-pelvis (send *tf* :transform-pose root-link-frame-id ps)))
+	    goal-in-pelvis)
 	   (t
 	    (make-coords
 	     :pos (float-vector
