@@ -23,6 +23,8 @@ AUTO_DETECTED_CLASS = None
 
 def autoJoyDetect(msg):
   global AUTO_DETECTED_CLASS
+  if AUTO_DETECTED_CLASS:
+    return
   if len(msg.axes) == 27 and len(msg.buttons) == 19:
     rospy.loginfo("auto detected as ps3wired")
     AUTO_DETECTED_CLASS = PS3WiredStatus

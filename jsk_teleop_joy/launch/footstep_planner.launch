@@ -1,8 +1,9 @@
 <launch>
   <arg name="POSE_REMAP" default="move_marker" />
   <arg name="CONTROLLER_TYPE" default="auto" />
+  <arg name="DEV" default="/dev/input/js0" />
   <node pkg="joy" type="joy_node" name="ps3_joy0" output="screen" >
-    <param name="dev" type="string" value="/dev/input/js2" />
+    <param name="dev" type="string" value="$(arg DEV)" />
     <param name="deadzone" value="0.2" />
     <param name="autorepeat_rate" value="40" />
     <param name="coalesce_interval" value="0.025" />

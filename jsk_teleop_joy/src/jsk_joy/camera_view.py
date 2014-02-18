@@ -10,7 +10,7 @@ class CameraView():
     self.yaw = 0.0
     self.pitch = 0.0
     #self.roll = 0.0
-    self.distance = 1.0
+    self.distance = 2.0
     self.focus = numpy.array((0, 0, 0))
     self.z_up = numpy.array((0, 0, 1))
   def viewPoint(self):
