@@ -92,7 +92,6 @@ footstep-parameter"))
     ;; anZ = -(D + nP)
     ;; a = -(D + nP) / nZ
     (let ((candidates (mapcar #'(lambda (pln)
-                                  (send coords :worldpos)
                                   (let ((projected-point
                                          (let ((plane-normal (send pln :normal))
                                                (plane-D (- (send pln :plane-distance (float-vector 0 0 0)))))
@@ -107,23 +106,14 @@ footstep-parameter"))
                                               (setq n (scale -1.0 n)))
                                           (let ((ret (send coords :copy-worldcoords)))
                                             (send ret :locate projected-point :world)
-                                            (send ret :worldpos)
                                             (if (eps= (norm (v* n nf)) 0)
                                                 ret
                                               (let* ((b (v* nf n))
                                                      (b* (normalize-vector b))
                                                      (theta (asin (norm b))))
-                                                (format t "n:   ~A~%" n)
-                                                (format t "nf:  ~A~%" nf)
-                                                (format t "rot: ~A~%" (send (send ret :copy-worldcoords) :rot))
-                                                (format t "rotate around ~A, ~A deg~%" b* (rad2deg theta))
-                                                
                                                 (send ret :rotate theta b* :local)
-                                                (send ret :worldpos)
-                                                (format t "nf2: ~A~%" (send (send ret :copy-worldcoords) :z-axis))
                                                 ret))
-                                            ret
-                                            )))))
+                                            ret)))))
                               planes)))
       (let ((non-null-candidates (remove-if #'null candidates)))
         (if non-null-candidates (car non-null-candidates)
@@ -244,7 +234,7 @@ footstep-parameter"))
                        (ndiff-rot (norm diff-rot)))
                   ;; when thr or rthr is nil, test returns t
                   (or (not rthr) (< ndiff-rot rthr)))))))
-  ;;)
+;;    )
   (:path-cost (from-node action to-state)
     ;; [J.Kuffner et. al.,
     ;;  Footstep Planning Among Obstacles for Biped Robots,
@@ -285,23 +275,22 @@ footstep-parameter"))
                   &allow-other-keys)
     "this method is called after robot model is moved."
     (and
-     ;; (cond (collision-robot-model
-     ;;        (not (send self :collision-with-obstacles-collision-robot-model-p
-     ;;                   (send (send robot-coords :copy-worldcoords)
-     ;;                         :transform (send footstep-param :foot->robot))
-     ;;                   :debug debug)))
-     ;;       (robot
-     ;;        (not (send self :collision-with-obstacles-p robot :debug debug)))
-     ;;       (t
-     ;;        (not (send self :collision-with-obstacles-no-robot-mode-p
-     ;;                   next-leg-coords :debug debug))))
-     t
+     (cond (collision-robot-model
+            (not (send self :collision-with-obstacles-collision-robot-model-p
+                       (send (send robot-coords :copy-worldcoords)
+                             :transform (send footstep-param :foot->robot))
+                       :debug debug)))
+           (robot
+            (not (send self :collision-with-obstacles-p robot :debug debug)))
+           (t
+            (not (send self :collision-with-obstacles-no-robot-mode-p
+                       next-leg-coords :debug debug))))
      ;; plane check
      (if (and next-leg-face planes)
          (remove-if #'null
-                    (print (mapcar #'(lambda (pln)
+                    (mapcar #'(lambda (pln)
                                 (face-on-a-face next-leg-face pln))
-                            planes)))
+                            planes))
        t)))
   (:successors (state &key (verbose nil))
     (when timeout                            ;check the timeout
