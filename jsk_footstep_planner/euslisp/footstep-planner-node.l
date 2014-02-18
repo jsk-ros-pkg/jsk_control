@@ -6,7 +6,7 @@
 
 
 ;; for debug
-(setq *debug* t)
+(setq *debug* nil)
 (if *debug* (make-irtviewer))
 
 (defun planes-cb (msg)

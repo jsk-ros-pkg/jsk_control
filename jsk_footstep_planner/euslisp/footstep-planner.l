@@ -1,3 +1,6 @@
+(load "models/arrow-object.l")
+(load "models/single-arrow-object.l")
+
 (defclass footstep-parameter
   :super propertied-object
   :slots (legs-num))
@@ -52,8 +55,31 @@ footstep-parameter"))
     (if (eq (send support-face :insidep v) :outside)
         (return-from face-on-a-face nil)
       ))
-  (if *debug* (send support-face :draw-on :flush t))
+  ;;(if *debug* (send support-face :draw-on :flush t))
   t)
+
+;; for debug
+(defun make-arrow-for-direction (direction)
+  (let ((arrow (instance arrow-object :init))
+        (direction* (normalize-vector direction)))
+    (let ((x-axis (send arrow :x-axis)))
+      (let ((a (v* x-axis direction*)))
+        (if (eps= (norm a) 0.0)
+            arrow
+          (let* ((a* (normalize-vector a))
+                 (theta (asin (norm a))))
+            (send arrow :rotate theta a* :world)
+            arrow))))))
+    
+#|
+(setq a (float-vector 1 0 0))
+(setq b (float-vector 0 0 1))
+(setq axis (v* a b))
+(setq axis* (normalize-vector axis))
+(setq coords (make-coords))
+(send coords :rotate (asin (norm axis)) axis* :world)
+(send coords :x-axis)
+|#
 
 (defun project-coords-on-to-plane (coords planes z-axis)
   (let ((point (send coords :worldpos)))
@@ -75,23 +101,27 @@ footstep-parameter"))
                                              (v+ point (scale alpha z-axis))))))
                                     (if (not (eq (send pln :insidep projected-point) :outside))
                                         (let* ((n (send pln :normal))
-                                               (nf (send (send coords :copy-worldcoords) :z-axis)))
+                                               (nf (matrix-column
+                                                    (send (send coords :copy-worldcoords) :worldrot) 2)))
                                           (if (< (v. nf n) 0)
                                               (setq n (scale -1.0 n)))
-                                          (format t "n:   ~A~%" n)
-                                          (format t "nf:  ~A~%" nf)
                                           (let ((ret (send coords :copy-worldcoords)))
                                             (send ret :locate projected-point :world)
+                                            (send ret :worldpos)
                                             (if (eps= (norm (v* n nf)) 0)
                                                 ret
                                               (let* ((b (v* nf n))
                                                      (b* (normalize-vector b))
                                                      (theta (asin (norm b))))
+                                                (format t "n:   ~A~%" n)
+                                                (format t "nf:  ~A~%" nf)
+                                                (format t "rot: ~A~%" (send (send ret :copy-worldcoords) :rot))
                                                 (format t "rotate around ~A, ~A deg~%" b* (rad2deg theta))
-                                                (send ret :rotate theta b* :world)
+                                                
+                                                (send ret :rotate theta b* :local)
+                                                (send ret :worldpos)
+                                                (format t "nf2: ~A~%" (send (send ret :copy-worldcoords) :z-axis))
                                                 ret))
-                                            
-                                            (format t "nf2: ~A~%" (send (send ret :copy-worldcoords) :z-axis))
                                             ret
                                             )))))
                               planes)))
