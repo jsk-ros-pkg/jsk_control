@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
 (ros::load-ros-manifest "jsk_ik_server")
-;(ros::load-ros-manifest "arm_navigation_msgs")
+;;(ros::load-ros-manifest "arm_navigation_msgs")
 (ros::load-ros-manifest "moveit_msgs")
 (ros::load-ros-manifest "geometry_msgs")
 
@@ -447,9 +447,11 @@
 	 (send viewer :draw-objects)))
        ;;
        (send res :error_code :val
-	     (if (boundp 'moveit_msgs::MoveItErrorCodes::*FAILURE*)
-		 moveit_msgs::MoveItErrorCodes::*FAILURE*
-	       moveit_msgs::MoveItErrorCodes::*NO_IK_SOLUTION*))
+	     (cond
+	      ((boundp 'moveit_msgs::MoveItErrorCodes::*FAILURE*)
+	       moveit_msgs::MoveItErrorCodes::*FAILURE*)
+	      ((boundp 'moveit_msgs::MoveItErrorCodes::*NO_IK_SOLUTION*)
+	       moveit_msgs::MoveItErrorCodes::*NO_IK_SOLUTION*)))
        (setq ik-param
 	     (append
 	      (send self :parse-ik-param
