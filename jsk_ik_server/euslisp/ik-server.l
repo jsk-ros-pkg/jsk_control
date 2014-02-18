@@ -2,6 +2,7 @@
 
 (ros::load-ros-manifest "jsk_ik_server")
 ;;(ros::load-ros-manifest "arm_navigation_msgs")
+(ros::load-ros-manifest "sensor_msgs")
 (ros::load-ros-manifest "moveit_msgs")
 (ros::load-ros-manifest "geometry_msgs")
 
@@ -426,10 +427,13 @@
 	     :name-list (send js :name)
 	     :position-list (send js :position)
 	     :opt opt)
-       (send self :update-joint-states mjs
-	     :name-list (send mjs :joint_names)
-	     :position-list (send mjs :joint_transforms)
-	     :opt opt)
+       (if (and mjs ;; for hrdro
+		(or (find-method mjs (setq transform-key :joint_transforms))
+		    (find-method mjs (setq transform-key :transforms))))
+	   (send self :update-joint-states mjs
+		 :name-list (send mjs :joint_names)
+		 :position-list (send mjs transform-key)
+		 :opt opt))
        ;; move-target update
        (send self :update-move-target
 	     (send (send req :constraints) :position_constraints)
@@ -498,7 +502,7 @@
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
 	 (if viewer (send viewer :draw-objects))
 	 (send-all link-list :worldcoords)
-	 (send res :solution :joint_state :header :frame_id "/odom") ;; DTC
+	 (send res :solution :joint_state :header :frame_id "/odom")
 	 (send res :solution :joint_state :name
 	       (append
 		(mapcar
@@ -519,7 +523,7 @@
 		))
 	 (send res :solution :multi_dof_joint_state :joint_names
 	       (list "VIRTUAL_JOINT"))
-	 (send res :solution :multi_dof_joint_state :header :frame_id "/odom") ;; DTC
+	 (send res :solution :multi_dof_joint_state :header :frame_id "/odom")
 	 (setq pos (send (car (send robot :links)) :worldpos))
 	 (setq rot (matrix2quaternion
 		    (send (car (send robot :links)) :worldrot)))
