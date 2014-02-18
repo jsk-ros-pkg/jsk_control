@@ -159,7 +159,8 @@
          ;; 一個目がllegだったら、llegからスタートする
          (start-leg (if (= (send (elt (send goal :goal :initial_footstep :footsteps) 0) :leg)
                            jsk_footstep_msgs::Footstep::*LEFT*)
-                        :lleg :rleg))
+                        ;;:lleg :rleg))
+                        :rleg :lleg))
          (support-leg (if (eq start-leg :lleg) :rleg :lleg)))
     ;; creating initial step node from goal msg
     (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
@@ -173,9 +174,9 @@
                                                (cadr leg-coords))
                       :angle-vector nil))
       )
-    (send prblm :goal-state goal-coords)        ;goal coords
+    (send prblm :goal-state goal-coords) ; goal coords
     (send prblm :goal-footstep goal-foot-coords)
-    (send prblm :setup-goal initial-foot-coords)
+    ;;(send prblm :setup-goal initial-foot-coords)
     (let ((asolver (instance a*-footstep-graph-search-solver
                              :init 1.0 :stepcost-heuristic* prblm
                              :render-leg-object *leg*)))
@@ -183,19 +184,43 @@
         (let ((result (send server :result)))
           (if solver-nodes
               (let ((footsteps (instance jsk_footstep_msgs::FootstepArray :init)))
+                (send footsteps :header (send goal :goal :initial_footstep :header))
                 (send footsteps :footsteps
                       (mapcar #'(lambda (n)
                                   (let ((f (instance jsk_footstep_msgs::Footstep :init)))
                                     (let ((pose (ros::coords->tf-pose (send (send n :state) :worldcoords))))
-                                  (send f :pose pose)
-                                  (if (eq (send (send n :state) :l/r) :lleg)
-                                      (send f :leg jsk_footstep_msgs::Footstep::*LEFT*)
-                                    (send f :leg jsk_footstep_msgs::Footstep::*RIGHT*))
-                                  ;; (if *debug*
-                                  ;;     (send (send (send n :state) :worldcoords) :draw-on :flush t))
-                                  f)))
-                              solver-nodes))
-                (send footsteps :header (send goal :goal :initial_footstep :header))
+                                      (send f :pose pose)
+                                      (if (eq (send (send n :state) :l/r) :lleg)
+                                          (send f :leg jsk_footstep_msgs::Footstep::*LEFT*)
+                                        (send f :leg jsk_footstep_msgs::Footstep::*RIGHT*))
+                                      f)))
+                              ;; remove the first step, because it will be the sampe step to the initial steps
+                              (cdr solver-nodes)))
+                (ros::ros-info "footsteps: ~A"
+                  (mapcar #'(lambda (n)
+                              (cons (send (send n :state) :l/r)
+                                    (send (send n :state) :worldcoords)))
+                          solver-nodes))
+                ;; finalize the footstep
+                (let ((last-foot (send (send (car (last solver-nodes)) :state) :l/r)))
+                  (let ((step-order (if (eq last-foot :lleg)
+                                        (list jsk_footstep_msgs::Footstep::*RIGHT* jsk_footstep_msgs::Footstep::*LEFT*)
+                                      (list jsk_footstep_msgs::Footstep::*LEFT* jsk_footstep_msgs::Footstep::*RIGHT*))))
+                    (let ((final-steps (list (find-if #'(lambda (s)
+                                                          (= (car step-order) (car s)))
+                                                      goal-foot-coords)
+                                             (find-if #'(lambda (s)
+                                                          (= (cadr step-order) (car s)))
+                                                      goal-foot-coords))))
+                      ;; append final steps
+                      (send footsteps :footsteps (append (send footsteps :footsteps)
+                                                         (mapcar #'(lambda (s)
+                                                                     (let ((f (instance jsk_footstep_msgs::Footstep :init)))
+                                                                       (let ((pose (ros::coords->tf-pose (cdr s))))
+                                                                         (send f :pose pose)
+                                                                         (send f :leg (car s))
+                                                                         f)))
+                                                                 final-steps))))))
                 (send result :result footsteps)
                 (send server :set-succeeded result))
               (send server :set-aborted result))
