@@ -46,24 +46,32 @@
 
 (defmethod ik-server
   (:init
-   (&rest args)
+   (&rest
+    args
+    &key
+    robot
+    (link-list
+     (union
+      nil
+      (remove-if
+       #'(lambda (a)
+	   (not
+	    (and (class a)
+		 (subclassp (class a) bodyset-link)
+		 (find-method a :joint)
+		 (send a :joint))))
+       (flatten (send robot :slots)))))
+    (move-target-hash (make-hash-table))
+    (ik-server-client
+     (instance fullbody-ik-client :init))
+    &allow-other-keys
+    )
    (while args
      (send self (car args) (cadr args))
      (setq args (cddr args)))
-   (setq move-target-hash (make-hash-table))
-   (setq link-list
-	 (union
-	  nil
-	  (remove-if
-	   #'(lambda (a)
-	       (not
-		(and (class a)
-		     (subclassp (class a) bodyset-link)
-		     (find-method a :joint)
-		     (send a :joint))))
-	   (flatten (send robot :slots)))))
-   (setq ik-server-client
-	 (instance fullbody-ik-client :init))
+   (send self :link-list link-list)
+   (send self :move-target-hash move-target-hash)
+   (send self :ik-server-client ik-server-client)
    )
   (:ik-service-cb
    (req)
@@ -73,7 +81,7 @@
   (:start-ik-server
    nil
    ;; initialization
-   (unless root-link-frame-id (setq root-link-frame-id "/base_link"))
+   ;;(unless root-link-frame-id (setq root-link-frame-id "/base_link"))
    (setq arrow (arrow))
    ;; check viewer
    (cond
@@ -166,6 +174,7 @@
    (send ik-server-client
 	 :update-joint-states
 	 js
+	 :joint-list (send-all link-list :joint)
 	 :name-list name-list
 	 :position-list position-list
 	 :opt opt
@@ -206,7 +215,7 @@
 	      link-list))
        (cond
 	((null link)
-	 (format t "[:update-move-target] unknown link~A ~%" name))
+	 (format t "[:update-move-target] unknown link ~A ~%" name))
 	(t
 	 (send mt-coords :enter
 	       link
@@ -319,27 +328,28 @@
 	 (push (send robot :link-list (send buf :parent)) ll)
 	 ;;
 	 ;;(setq goal ps)
-	 (if root-link-frame-id
-	     (setq
-	      goal-in-pelvis
-	      (send *tf* :transform-pose root-link-frame-id ps)))
-	 (setq goal-in-pelvis
-	       (or
-		goal-in-pelvis
-		(make-coords
-		 :pos (float-vector
-		       (or (* 1e+3 (send (send (send ps :pose) :position) :x)) 0)
-		       (or (* 1e+3 (send (send (send ps :pose) :position) :y)) 0)
-		       (or (* 1e+3 (send (send (send ps :pose) :position) :z)) 0))
-		 :rot
-		 (quaternion2matrix
-		  (float-vector
-		   (or (send (send (send ps :pose) :orientation) :w) 0)
-		   (or (send (send (send ps :pose) :orientation) :x) 0)
-		   (or (send (send (send ps :pose) :orientation) :y) 0)
-		   (or (send (send (send ps :pose) :orientation) :z) 0))))))
-	 (if (not (string-equal root-link-frame-id (send (send ps :header) :frame_id)))
-	     (format t "[:parse-ik-param] frame_id must be ~A~%" root-link-frame-id))
+	 (setq
+	  goal-in-pelvis
+	  (cond
+	   (root-link-frame-id
+	    (send *tf* :transform-pose root-link-frame-id ps))
+	   (t
+	    (make-coords
+	     :pos (float-vector
+		   (or (* 1e+3 (send (send (send ps :pose) :position) :x)) 0)
+		   (or (* 1e+3 (send (send (send ps :pose) :position) :y)) 0)
+		   (or (* 1e+3 (send (send (send ps :pose) :position) :z)) 0))
+	     :rot
+	     (quaternion2matrix
+	      (float-vector
+	       (or (send (send (send ps :pose) :orientation) :w) 0)
+	       (or (send (send (send ps :pose) :orientation) :x) 0)
+	       (or (send (send (send ps :pose) :orientation) :y) 0)
+	       (or (send (send (send ps :pose) :orientation) :z) 0)))))))
+	 ;;(if (and
+	 ;;root-link-frame-id
+	 ;;(not (string-equal root-link-frame-id (send (send ps :header) :frame_id))))
+	 ;;(format t "[:parse-ik-param] frame_id must be ~A~%" root-link-frame-id))
 	 (setq goal-in-world
 	       (send (send (car (send robot :links)) :copy-worldcoords)
 		     :transform goal-in-pelvis))

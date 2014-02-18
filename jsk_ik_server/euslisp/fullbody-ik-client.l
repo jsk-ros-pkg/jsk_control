@@ -179,7 +179,9 @@
 	    ((find #\y name)
 	     (setf (aref base-quaternion 2) pos))
 	    ((find #\z name)
-	     (setf (aref base-quaternion 3) pos)))))))))
+	     (setf (aref base-quaternion 3) pos))))
+	  (t (format t "[:update-joint-state] unknown link ~A ~%" name))
+	  )))))
    (if (and (cadr (member :angle-vector opt))
 	    (eq (length (cadr (member :angle-vector opt)))
 		(length (send robot :angle-vector))))
@@ -219,6 +221,9 @@
     (ik-server-service-name "/solve_ik")
     (group-name ":fullbody-inverse-kinematics")
     (robot *robot*)
+    (all-links (remove-if #'(lambda (l) (not (and (find-method l :joint)
+						  (send l :joint))))
+			  (send robot :links)))
     (target-limbs '(:rarm :larm :rleg :lleg))
     (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limbs))
     (target-coords (send-all move-target :copy-worldcoords))
@@ -257,10 +262,10 @@
 			       :frame_id frame-id)
 		     :name
 		     (mapcar #'(lambda (j) (format nil "~A" (send j :name)))
-			     (send-all (send robot :joint-list) :child-link))
+			     all-links)
 		     :position
 		     (map float-vector #'deg2rad
-			  (send-all (send robot :joint-list) :joint-angle))))
+			  (send-all (send-all all-links :joint) :joint-angle))))
      ;; move-target
      (dolist (mt move-target)
        (setq pc (instance moveit_msgs::PositionConstraint :init))
@@ -325,6 +330,7 @@
       ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
        (send self :update-joint-states
 	     (send res :solution :joint_state)
+	     :joint-list (send-all all-links :joint)
 	     :name-list (send (send res :solution :joint_state) :name)
 	     :position-list (send (send res :solution :joint_state) :position)
 	     :robot robot)
