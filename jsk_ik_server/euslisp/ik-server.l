@@ -522,7 +522,9 @@
 		;;(matrix2quaternion (send (car (send robot :links)) :worldrot))
 		))
 	 (send res :solution :multi_dof_joint_state :joint_names
-	       (list "VIRTUAL_JOINT"))
+	       ;;(list "VIRTUAL_JOINT")
+	       (list "virtual_joint")
+	       )
 	 (send res :solution :multi_dof_joint_state :header :frame_id "/odom")
 	 (setq pos (send (car (send robot :links)) :worldpos))
 	 (setq rot (matrix2quaternion

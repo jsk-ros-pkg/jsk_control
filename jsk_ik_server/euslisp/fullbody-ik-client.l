@@ -229,7 +229,7 @@
     (target-coords (send-all move-target :copy-worldcoords))
     (additional-weight-list nil)
     ll
-    collision-pair
+    collision-avoidance-link-pair
     &allow-other-keys)
    (let* ((req (instance moveit_msgs::GetPositionIKRequest :init))
 	  pc pc-list oc oc-list tf q res mdj transform-key
@@ -266,6 +266,14 @@
 		     :position
 		     (map float-vector #'deg2rad
 			  (send-all (send-all all-links :joint) :joint-angle))))
+     ;; collision-avoidance-link-pair
+     (send req :ik_request :robot_state :attached_collision_objects
+	   (mapcar
+	    #'(lambda (collision-link)
+		(instance moveit_msgs::AttachedCollisionObject
+			  :init
+			  :link_name (format nil "~A" (send collision-link :name))))
+	    (union nil (flatten collision-avoidance-link-pair))))
      ;; move-target
      (dolist (mt move-target)
        (setq pc (instance moveit_msgs::PositionConstraint :init))
