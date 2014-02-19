@@ -230,6 +230,8 @@
     (additional-weight-list nil)
     ll
     collision-avoidance-link-pair
+    (collision-link-names
+     (union nil (flatten collision-avoidance-link-pair)))
     &allow-other-keys)
    (let* ((req (instance moveit_msgs::GetPositionIKRequest :init))
 	  pc pc-list oc oc-list tf q res mdj transform-key
@@ -269,11 +271,11 @@
      ;; collision-avoidance-link-pair
      (send req :ik_request :robot_state :attached_collision_objects
 	   (mapcar
-	    #'(lambda (collision-link)
+	    #'(lambda (name)
 		(instance moveit_msgs::AttachedCollisionObject
 			  :init
-			  :link_name (format nil "~A" (send collision-link :name))))
-	    (union nil (flatten collision-avoidance-link-pair))))
+			  :link_name (format nil "~A" name)))
+	    collision-link-names))
      ;; move-target
      (dolist (mt move-target)
        (setq pc (instance moveit_msgs::PositionConstraint :init))

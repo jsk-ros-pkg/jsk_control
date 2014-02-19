@@ -253,6 +253,9 @@
     (debug-view :no-message)
     (collision-pair)
     (collision-avoidance-link-pair collision-pair)
+    (avoid-collision-distance 10)
+    (avoid-collision-null-gain 0.3)
+    (avoid-collision-joint-gain 0.3)
     &allow-other-keys
     )
    (let (ret)
@@ -282,6 +285,9 @@
 	       ;;
 	       :collision-avoidance-link-pair
 	       collision-avoidance-link-pair
+	       :avoid-collision-distance avoid-collision-distance
+	       :avoid-collision-null-gain avoid-collision-null-gain
+	       :avoid-collision-joint-gain avoid-collision-joint-gain
 	       :min min-vec
 	       :max max-vec
 	       :thre thre

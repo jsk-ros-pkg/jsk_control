@@ -464,10 +464,13 @@
 		    (send req :ik_link_names)
 		    (send req :pose_stamped_vector)
 		    opt)
-	      (list
-	       :collision-pair
-	       (send self :parse-collision-link-pair
-		     (send rsd :attached_collision_objects)))
+	      (let ((collision-pair
+		     (send self :parse-collision-link-pair
+			   (send rsd :attached_collision_objects))))
+		(list
+		 :collision-avoidance-link-pair collision-pair
+		 ;;:union-link-list #'(lambda nil (union nil (flatten collision-pair)))
+		 ))
 	      (list
 	       :additional-weight-list
 	       (send self :parse-joint-weight-list
