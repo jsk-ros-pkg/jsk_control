@@ -14,7 +14,7 @@
     <param name="follow_view" value="true" />
     <param name="frame_id" value="/odom" />
     <rosparam>
-      plugins: ['JoyFootstepPlanner']
+      plugins: ['JoyFootstepPlannerDemo']
     </rosparam>
   </node>
 

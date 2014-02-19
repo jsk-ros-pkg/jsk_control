@@ -10,9 +10,8 @@ class JoyFootstepPlanner(JoyPose6D):
     self.support_follow_view = True
     self.frame_id = rospy.get_param('~frame_id', '/map')
     self.command_pub = rospy.Publisher('/menu_command', UInt8)
-  def joyCB(self, status, history):
+  def joyCB(self, status, history):    
     JoyPose6D.joyCB(self, status, history)
-
     latest = history.latest()
     if not latest:
       return

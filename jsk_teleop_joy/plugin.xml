@@ -7,7 +7,7 @@
   </class>
   <class name="JoyFootstepPlanner" type="jsk_joy.plugin.joy_footstep_planner.JoyFootstepPlanner">
   </class>
-  <class name="JoyFootstepPlanner" type="jsk_joy.plugin.joy_footstep_planner.JoyFootstepPlanner">
+  <class name="JoyFootstepPlannerDemo" type="jsk_joy.plugin.joy_footstep_planner_demo.JoyFootstepPlannerDemo">
   </class>
   <class name="JoyMoveIt" type="jsk_joy.plugin.moveit.JoyMoveIt">
   </class>
