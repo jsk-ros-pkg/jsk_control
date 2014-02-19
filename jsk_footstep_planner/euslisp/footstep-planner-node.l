@@ -149,8 +149,7 @@
                           :timeout (ros::time+ (ros::time-now) (ros::time *timeout*))
                           :planes *planes*
                           :z-axis (float-vector 0 0 1)
-                          :collisoin-robot-model nil
-                          ))
+                          :collisoin-robot-model nil))
          (goal-foot-coords (mapcar #'footstep->consed-coords
                                    (send goal :goal :goal_footstep :footsteps)))
          (initial-foot-coords (mapcar #'footstep->consed-coords
@@ -159,7 +158,6 @@
          ;; 一個目がllegだったら、llegからスタートする
          (start-leg (if (= (send (elt (send goal :goal :initial_footstep :footsteps) 0) :leg)
                            jsk_footstep_msgs::Footstep::*LEFT*)
-                        ;;:lleg :rleg))
                         :rleg :lleg))
          (support-leg (if (eq start-leg :lleg) :rleg :lleg)))
     ;; creating initial step node from goal msg
@@ -172,8 +170,7 @@
                       :robot-coords (midcoords 0.5
                                                (car leg-coords)
                                                (cadr leg-coords))
-                      :angle-vector nil))
-      )
+                      :angle-vector nil)))
     (send prblm :goal-state goal-coords) ; goal coords
     (send prblm :goal-footstep goal-foot-coords)
     ;;(send prblm :setup-goal initial-foot-coords)
