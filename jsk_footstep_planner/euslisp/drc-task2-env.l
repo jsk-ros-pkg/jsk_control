@@ -13,6 +13,8 @@
 (setq *grounds* nil)
 (setq *blocks* nil)
 (setq *top-faces* nil)
+(setq *mountain-blocks* nil)
+(setq *sloped-mountain-blocks* nil)
 (let ((slope (make-cube 1000.0 *width* *plane-height*)))
   (send slope :locate (float-vector 500 0 (- (/ *plane-height* 2.0))))
   (send slope :set-color :brown)
@@ -36,15 +38,17 @@
   (push slope2 *bodies*)
   (push (elt (send slope2 :faces) 1) *top-faces*)
   (push slope2 *grounds*)
+  (send-all *bodies* :worldpos)
   )
 
-(dotimes (i 10)                         ;7000
+(dotimes (i 11)                         ;7000
   (let ((slope (make-cube 1000.0 *width* *plane-height*)))
     (send slope :locate (float-vector (+ (* i 1000.0) 2500) 0 (- (/ *plane-height* 2.0))))
     (if (evenp i)
         (send slope :set-color (float-vector 0 0 1))
       (send slope :set-color (float-vector 0 1 0)))
     (push slope *bodies*)
+    (send-all *bodies* :worldpos)
     (push slope *grounds*)
     ))
 
@@ -74,13 +78,15 @@
 ;; second hazard
 (dotimes (i 3)
   (let ((pos (float-vector 2700 (+ -400 (* i 2 (* 16 2.54 10) (cos (deg2rad 45)))) 0)))
+  ;;(let ((pos (float-vector 3700 (+ -400 (* i 2 (* 16 2.54 10) (cos (deg2rad 45)))) 0)))
     (let ((blocks (diagonal-block-pair pos)))
       (setq *bodies* (append blocks *bodies*))
       (setq *blocks* (append blocks *blocks*))
+      (send-all *bodies* :worldpos)
       )
     ))
 (send-all *blocks* :worldpos)
-(objects *bodies*)
+;;(objects *bodies*)
 (let ((vertices1 (list
                   (elt (send (elt *blocks* 0) :vertices) 4)
                   (elt (send (elt *blocks* 0) :vertices) 5)
@@ -121,11 +127,9 @@
                                                   (elt vertices i))
                                               ids)))
                         indices)))
-        (send-all fs :draw-on :flush t)
         (setq *top-faces* (append *top-faces* fs))
         )))
   )
-      ;;(push f *top-faces*))))
 
 (let ((vertices1 (list
                   (elt (send (elt *blocks* 0) :vertices) 4)
@@ -156,7 +160,6 @@
                                                   (elt vertices i))
                                               ids)))
                         indices)))
-         (send-all fs :draw-on :flush t)
          (setq *top-faces* (append *top-faces* fs))
          )))
    )
@@ -170,16 +173,6 @@
     (dotimes (i 4)
       (let ((block-num (1+ i))
             (x-offset (* i w)))
-        ;;(let ((same-line-blocks nil))
-          ;; (dotimes (j block-num)
-          ;;   (let ((ablock (make-block)))
-          ;;     (send ablock :locate (v+ represent-pos (float-vector x-offset
-          ;;                                                          0
-          ;;                                                          (* j d))))
-          ;;     (push ablock same-line-blocks)))
-          ;; (setq blocks (append same-line-blocks blocks))
-          
-        ;;  )
         (let ((ablock (make-block)))
           (send ablock :locate (v+ represent-pos (float-vector x-offset
                                                                0
@@ -189,15 +182,6 @@
     (dotimes (i 3)
       (let ((block-num (- 3 i))
             (x-offset (* (+ 4 i) w)))
-        ;; (let ((same-line-blocks nil))
-        ;;   (dotimes (j block-num)
-        ;;     (let ((ablock (make-block)))
-        ;;       (send ablock :locate (v+ represent-pos (float-vector x-offset
-        ;;                                                            0
-        ;;                                                            (* j d))))
-        ;;       (push ablock same-line-blocks)))
-        ;;   (setq blocks (append same-line-blocks blocks))
-        ;;   )
         (let ((ablock (make-block)))
           (send ablock :locate (v+ represent-pos (float-vector x-offset
                                                                0
@@ -214,10 +198,27 @@
                                                     (* *block-height* (+ j (* i 2))))
                                                  0))))
         (setq *bodies* (append blocks *bodies*))
+        (send-all *bodies* :worldpos)
+        (setq *mountain-blocks* (append blocks *mountain-blocks*))
         (setq *blocks* (append blocks *blocks*)))
+      
       )))
 
-;; 
+(let ((vertices (list (float-vector 3000 (/ *width* 2.0) 0)
+                      (float-vector 3000 (- (/ *width* 2.0)) 0))))
+  (dotimes (i (/ (length *mountain-blocks*) (* 2 7)))
+    (let ((blocks (subseq *mountain-blocks* (* i 2 7) (* (1+ i) 2 7))))
+      (let ((right-block (elt blocks 6))
+            (left-block (elt blocks 13)))
+        (setq vertices (append vertices (list (elt (send right-block :vertices) 5)
+                                              (elt (send left-block :vertices) 4))))
+        )
+      ))
+  (setq vertices (append (cdr vertices)
+                         (list (car vertices))))
+  (let ((f (instance face :init :vertices vertices)))
+    (push f *top-faces*))
+  )
 
 (defun make-sloped-mountain (represent direction)
   (let* ((blocks nil)
@@ -421,26 +422,89 @@
 
 (dotimes (i 6)
   (let ((objs (make-sloped-mountain (float-vector (+ 7000 (* i *block-width* (cos (deg2rad 15))))
-                                                  (- (/ *width* 2.0) (* i *block-height* 2))
+                                                  (- (/ *width* 2.0) (* i *block-height* 2) (/ *block-height* 2))
                                                   0)
                                     (if (evenp i) 1 -1))))
     (setq *bodies* (append objs *bodies*))
+    (send-all *bodies* :worldpos)
+    (setq *sloped-mountain-blocks* (append objs *sloped-mountain-blocks*))
     (setq *blocks* (append objs *blocks*))
   ))
+;;(objects *bodies*)
 
-(let ((top-faces (mapcar #'(lambda (b)
-                             (elt (send b :faces) 1))
-                         *blocks*)))
-  (setq *top-faces* (append *top-faces* top-faces))
-  (send-all *top-faces* :draw-on :flush t)
+(let ((vertices nil))
+  (dotimes (i (/ (length *mountain-blocks*) (* 2 7)))
+    (let ((blocks (subseq *mountain-blocks* (* i 2 7) (* (1+ i) 2 7))))
+      (let ((right-block (elt blocks 0))
+            (left-block (elt blocks 7)))
+        (setq vertices (append 
+                        (list (elt (send left-block :vertices) 0)
+                              (elt (send right-block :vertices) 2))
+                        vertices))
+        )))
+  (dotimes (i (/ (length *sloped-mountain-blocks*) (* 2 7)))
+    (let ((blocks (subseq *sloped-mountain-blocks* (* i 2 7) (* (1+ i) 2 7))))
+      (let ((right-block (elt blocks 12))
+            (left-block (elt blocks 13)))
+        (setq vertices (append vertices
+                               (list
+                                (elt (send right-block :vertices) 5)
+                                (elt (send left-block :vertices) 4))))
+        )
+      ))
+  (let ((indices '((0 1 2 22 23)
+                   (2 3 4 20 21 22)
+                   (4 5 6 18 19 20)
+                   (6 7 8 16 17 18)
+                   (8 9 10 14 15 16)
+                   (10 11 12 13 14))))
+    (let ((fs (mapcar #'(lambda (ids)
+                            (instance face :init :vertices
+                                      (mapcar #'(lambda (i)
+                                                  (elt vertices i))
+                                              ids)))
+                        indices)))
+      (setq *top-faces* (append *top-faces* fs))
+      )))
+
+(let ((vertices nil))
+  (dotimes (i (/ (length *sloped-mountain-blocks*) (* 2 7)))
+    (let ((blocks (subseq *sloped-mountain-blocks* (* i 2 7) (* (1+ i) 2 7))))
+      (let ((right-block (elt blocks 0))
+            (left-block (elt blocks 1)))
+        (setq vertices (append (list 
+                                (elt (send left-block :vertices) 0)
+                                (elt (send right-block :vertices) 2))
+                               vertices))
+        )
+      ))
+  (setq vertices (append
+                  (list (float-vector 13000
+                                      (/ *width* 2)
+                                      0))
+                  vertices
+                  (list (float-vector 13000
+                                      (- (/ *width* 2))
+                                      0))))
+  (let ((f (instance face :init :vertices vertices)))
+    (push f *top-faces*)
+    )
   )
 
+ (let ((top-faces (mapcar #'(lambda (b)
+                              (elt (send b :faces) 1))
+                          *blocks*)))
+   (setq *top-faces* (append *top-faces* top-faces))
+   )
 
-(objects *bodies*)
+(if *debug-view*
+    (objects *bodies*))
 
 (ros::roseus "task2_planes")
 (ros::roseus-add-msgs "jsk_pcl_ros")
 (ros::advertise "planes" jsk_pcl_ros::PolygonArray 1)
+(ros::rate 10)
+
 (while (ros::ok)
   (let ((arr (instance jsk_pcl_ros::PolygonArray :init)))
     (send arr :header :frame_id "/odom")
@@ -460,5 +524,7 @@
                   p))
             *top-faces*))
     (ros::publish "planes" arr)
+    (if *debug-view* (x::window-main-one))
+    (ros::sleep)
     )
   )

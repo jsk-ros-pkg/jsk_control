@@ -58,6 +58,23 @@ footstep-parameter"))
   ;;(if *debug* (send support-face :draw-on :flush t))
   t)
 
+(defun face-on-faces (f support-faces)
+  (dolist (v (send f :vertices))
+    (let ((on-face-p nil))
+      (dolist (support-face support-faces)
+        (when (and (eps= (send support-face :distance v) 0.0)
+                   (not (eq (send support-face :insidep v) :outside)))
+          ;; the v is ok
+          (setq on-face-p t)
+          (return-from nil nil)
+          )
+        )
+      (unless on-face-p
+        (return-from face-on-faces nil))
+      )
+    )
+  t)
+
 ;; for debug
 (defun make-arrow-for-direction (direction)
   (let ((arrow (instance arrow-object :init))
@@ -286,10 +303,7 @@ footstep-parameter"))
                        next-leg-coords :debug debug))))
      ;; plane check
      (if (and next-leg-face planes)
-         (remove-if #'null
-                    (mapcar #'(lambda (pln)
-                                (face-on-a-face next-leg-face pln))
-                            planes))
+         (face-on-faces next-leg-face planes)
        t)))
   (:successors (state &key (verbose nil))
     (when timeout                            ;check the timeout

@@ -176,6 +176,7 @@
     ;;(send prblm :setup-goal initial-foot-coords)
     (let ((asolver (instance a*-footstep-graph-search-solver
                              :init 1.0 :stepcost-heuristic* prblm
+                             ;;:init 1.0 :stepcost-heuristic prblm
                              :render-leg-object *leg*)))
       (let ((solver-nodes (send asolver :solve prblm :verbose nil)))
         (let ((result (send server :result)))
