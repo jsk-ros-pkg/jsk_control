@@ -507,7 +507,7 @@
 	       (append
 		(mapcar
 		 #'(lambda (n) (format nil "~A" n))
-		 (send-all link-list :name))
+		 (send-all (send-all link-list :joint) :name))
 		;;(list "BASE_POSITION_X" "BASE_POSITION_Y" "BASE_POSITION_Z")
 		;;(list "BASE_EULER_X" "BASE_EULER_Y" "BASE_EULER_Z")
 		;;(list "BASE_QUAT_W" "BASE_QUAT_X" "BASE_QUAT_Y" "BASE_QUAT_Z")
