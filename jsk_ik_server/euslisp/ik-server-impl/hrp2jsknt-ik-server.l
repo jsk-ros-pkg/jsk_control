@@ -65,52 +65,45 @@
   (:make-foot-convex
   (&key
    (support-links support-links)
+   (support-link-target-transform-coords
+    (make-list (length support-links) :initial-element (make-coords)))
    (support-vertices
     (mapcar
-     #'(lambda (l)
-	 (cond
-	  ((find l (subseq
-		    (reverse (send robot :rleg :links))
-		    0 2))
-	   (flatten
-	    (send-all
+     #'(lambda (l c)
+	 (let (ll ll2)
+	   (setq ll
+		 (find-if
+		  #'(lambda (ll) (find l ll))
+		  (list (subseq
+			 (reverse (send robot :rleg :links))
+			 0 2)
+			(subseq
+			 (reverse (send robot :lleg :links))
+			 0 2))))
+	   (cond
+	    (ll
+	     (setq ll2 (copy-object ll))
+	     (send-all ll2 :transform c)
 	     (flatten
-	      (send-all
-	       (subseq
-		(reverse (send robot :rleg :links))
-		0 2)
-	       :faces))
-	     :vertices)))
-	  ((find l (subseq
-		    (reverse (send robot :lleg :links))
-		    0 2))
-	   (flatten
-	    (send-all
-	     (flatten
-	      (send-all
-	       (subseq
-		(reverse (send robot :lleg :links))
-		0 2)
-	       :faces))
-	     :vertices)))
-	  (t (flatten (send-all (send l :faces) :vertices)))))
-     support-links))
+	      (send-all (flatten (send-all ll2 :faces)) :vertices)))
+	    (t
+	     (setq ll2 (copy-object l))
+	     (send ll2 :transform c)
+	     (flatten (send-all (send ll2 :faces) :vertices))))))
+     support-links support-link-target-transform-coords))
    (support-height
     (mapcar #'(lambda (hl) (apply #'min hl))
 	    (mapcar #'(lambda (vl)
 			(mapcar #'(lambda (v) (aref v 2)) vl))
 		    support-vertices)))
    (force? nil))
-  ;;
-  ;;(when (position nil (mapcar #'(lambda (l) (send robot l)) foot-key))
-  ;;(return-from :make-foot-convex nil))
   (when (null support-links) (return-from :make-foot-convex nil))
-  ;;
   (format t "[foot-convex] ")
   (cond
    ((or
      force?
-     (null foot-convex))
+     (null foot-convex)
+     )
     (format t "update~%")
     (setq foot-convex
 	  (make-prism

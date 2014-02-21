@@ -82,11 +82,15 @@
   (:make-foot-convex
   (&key
    (support-links support-links)
+   (support-link-target-transform-coords
+    (make-list (length support-links) :initial-element (make-coords)))
    (support-vertices
     (mapcar
-     #'(lambda (l)
-	 (flatten (send-all (send l :faces) :vertices)))
-     support-links))
+     #'(lambda (l c)
+	 (let ((l2 (copy-object l)))
+	   (send l2 :transform c)
+	   (flatten (send-all (send l2 :faces) :vertices))))
+     support-links support-link-target-transform-coords))
    (support-height
     (mapcar #'(lambda (hl) (apply #'min hl))
 	    (mapcar #'(lambda (vl)

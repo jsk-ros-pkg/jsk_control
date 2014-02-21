@@ -443,12 +443,6 @@
        (if (cadr (member :support-links opt))
 	   (send self :update-support-links
 		 (cadr (member :support-links opt))))
-       (send self :make-foot-convex :force? t)
-       (cond
-	(viewer
-	 (send viewer :objects
-	       (list robot centroid-object foot-convex arrow))
-	 (send viewer :draw-objects)))
        ;;
        (send res :error_code :val
 	     (cond
@@ -497,6 +491,31 @@
 	 res)
 	((progn
 	   (format t "[:fik-service-cb] args=~A~%" ik-param)
+	   (send self :make-foot-convex
+		 :support-links support-links
+		 :support-link-target-transform-coords
+		 (let ((mt (cadr (member :move-target ik-param)))
+		       (tc (cadr (member :target-coords ik-param)))
+		       target)
+		   (mapcar
+		    #'(lambda (l)
+			(setq target
+			      (find-if
+			       #'(lambda (mttc) (eq (send (car mttc) :parent) l))
+			       (mapcar #'cons mt tc)))
+			(if target
+			    (send (send (car target) :copy-worldcoords)
+				  :transformation (cdr target))
+			  (make-coords)))
+		    support-links))
+		 :force? t)
+	   ;;
+	   (cond
+	    (viewer
+	     (send viewer :objects
+		   (list robot centroid-object foot-convex arrow))
+	     (send viewer :draw-objects)))
+	   ;;
 	   (setq ret
 		 (send* self :fullbody-ik-main
 			ik-param))
