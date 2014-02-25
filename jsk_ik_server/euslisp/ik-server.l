@@ -33,6 +33,8 @@
    root-link-frame-id
    success-state-collection
    ;;
+   default-collision-avoidance-link-pair
+   ;;
    ik-server-name
    ik-server-service-name
    ik-server-client
@@ -275,7 +277,7 @@
      (append
       (cadr (member :additional-weight-list opt)) ret)))
   (:parse-collision-link-pair
-   (collisions &optional opt)
+   (collisions &optional opt default-collisions)
    (let (buf link name)
      (dolist (col collisions)
        (setq name (remove #\: (send col :link_name)))
@@ -294,7 +296,9 @@
 	#'(lambda (a)
 	    (mapcar #'(lambda (b) (list a b)) (cdr (member a buf))))
 	buf))
-      (cadr (member :collision-avoidance-link-pair opt)))))
+      (cadr (member :collision-avoidance-link-pair opt))
+      default-collisions
+      )))
   (:parse-ik-param
    (ik-link-name pose-stamped
     ik-link-name-list pose-stamped-list
@@ -460,7 +464,11 @@
 		    opt)
 	      (let ((collision-pair
 		     (send self :parse-collision-link-pair
-			   (send rsd :attached_collision_objects))))
+			   (send rsd :attached_collision_objects)
+			   nil
+			   (if (send req :avoid_collisions)
+			       default-collision-avoidance-link-pair)
+			   )))
 		(list
 		 :collision-avoidance-link-pair collision-pair
 		 ;;:union-link-list #'(lambda nil (union nil (flatten collision-pair)))
