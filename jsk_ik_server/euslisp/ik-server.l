@@ -86,8 +86,9 @@
   (:ik-service-cb
    (req)
    (or
+    (send self :inverse-kinematics-with-both-leg-balancing-service-cb req)
     (send self :inverse-kinematics-service-cb req)
-    (send self :old-ik-service-cb)))
+    (send self :old-ik-service-cb req)))
   (:start-ik-server
    nil
    ;; initialization
@@ -409,33 +410,28 @@
      )))
   ;; :fullbody-inverse-kinematics
   (:inverse-kinematics-service-cb ;; [m] or [rad] expected
-   (msg)
+   (msg
+    &key
+    (group_name (send (send msg :ik_request) :group_name))
+    (opt (if (plusp (length group_name))
+	     (cadr (read-from-string
+		    (format nil "(~A)" group_name))))))
    (cond
     ((and
-      (not (substringp
-	    ":fullbody-inverse-kinematics"
-	    (send (send msg :ik_request) :group_name)))
-      (not (substringp
-	    ":inverse-kinematics"
-	    (send (send msg :ik_request) :group_name))))
-     (format t "[:fik-service-cb] invalid group ~A~%"
-	     (send (send msg :ik_request) :group_name))
+      (not (substringp ":fullbody-inverse-kinematics" group_name))
+      (not (substringp ":inverse-kinematics" group_name)))
+     (format t "[:fik-service-cb] invalid group ~A~%" group_name)
      nil)
     (t
      (let* ((res (send msg :response))
 	    (req (send msg :ik_request))
-	    (opt
-	     (cadr (read-from-string (format nil "(~A)"
-					     (send req :group_name)))))
 	    (rsd (send req :robot_state))
 	    (js (send rsd :joint_state))
 	    (mjs (send rsd :multi_dof_joint_state))
 	    transform-key
 	    ik-param ret additional-weight-list
 	    buf pos rot)
-       (if (substringp
-	    ":inverse-kinematics"
-	    (send (send msg :ik_request) :group_name))
+       (if (substringp ":inverse-kinematics" group_name)
 	   (setq opt
 		 (append
 		  (send self :inverse-kinematics-group-options opt)
@@ -598,6 +594,19 @@
 	   (format t "[:fik-cb] unknown type of multi_dof_joint_state~%"))
 	 res)
 	(t res))))))
+  (:inverse-kinematics-with-both-leg-balancing-service-cb ;; [m] or [rad] expected
+   (msg)
+   (cond
+    ((substringp "whole_body" (send (send msg :ik_request) :group_name))
+     (let ((tag (read-from-string
+		 (format nil "(~A)" (send (send msg :ik_request) :group_name)))))
+       (send self :inverse-kinematics-service-cb
+	     msg
+	     :group_name ":fullbody-inverse-kinematics"
+	     :opt (append (cadr tag)
+			  (list :fix-limbs '(:rleg :lleg)
+				:debug-view nil)))))
+    (t nil)))
   (:nomethod
    (&rest args)
    (let (sym val)

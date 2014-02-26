@@ -211,7 +211,7 @@
     args
     &key
     (ik-server-service-name "/solve_ik")
-    (group-name ":fullbody-inverse-kinematics")
+    (group-name ":fullbody-inverse-kinematics") ;;"whole_body")
     (robot *robot*)
     (all-links (remove-if #'(lambda (l) (not (and (find-method l :joint)
 						  (send l :joint))))
