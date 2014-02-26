@@ -47,15 +47,11 @@
     :ik-server-name "hrp2jsknt_ik_server"
     :ik-server-service-name "/solve_ik"
     :link-list
-    (remove-if
-     #'(lambda (l)
-	 (not (and (find-method l :joint)
-		   (send l :joint))))
-     (flatten
-      (append
-       (send robot :links)
-       (send (send robot :hand :rarm) :links)
-       (send (send robot :hand :larm) :links))))
+    (flatten
+     (append
+      (send robot :links)
+      (send (send robot :hand :rarm) :links)
+      (send (send robot :hand :larm) :links)))
     :root-link-frame-id nil
     args)
    )

@@ -27,6 +27,7 @@
   :slots
   (robot
    link-list
+   joint-list
    arrow
    centroid-object
    foot-convex
@@ -58,10 +59,17 @@
        #'(lambda (a)
 	   (not
 	    (and (class a)
-		 (subclassp (class a) bodyset-link)
-		 (find-method a :joint)
-		 (send a :joint))))
+		 (subclassp (class a) bodyset-link))))
        (flatten (send robot :slots)))))
+    (joint-list
+     (flatten
+      (mapcar
+       #'(lambda (l)
+	   (if (and (find-method l :joint)
+		    (class (send l :joint))
+		    (subclassp (class (send l :joint)) joint))
+	       (send l :joint)))
+       link-list)))
     (move-target-hash (make-hash-table))
     (ik-server-client
      (instance fullbody-ik-client :init))
@@ -71,6 +79,7 @@
      (send self (car args) (cadr args))
      (setq args (cddr args)))
    (send self :link-list link-list)
+   (send self :joint-list joint-list)
    (send self :move-target-hash move-target-hash)
    (send self :ik-server-client ik-server-client)
    )
@@ -137,7 +146,8 @@
 	    ((and (keywordp name)
 		  (find-method robot name))
 	     (send robot name :end-coords :parent))
-	    (t (find-link-from-name name :link-list link-list))))
+	    (t (find-link-from-name name :link-list
+				    (send-all joint-list :child-link)))))
        name-list))))
    ;;(print name-list)
    (setq support-links link-list)
@@ -180,16 +190,15 @@
 	(or (send (send pose :orientation) :y) 0)
 	(or (send (send pose :orientation) :z) 0)))))
     (from-link
-     (find-if
-      #'(lambda (j)
-	  (let
-		     (remove #\: (format nil "~A" (send j :name)))
-		     (remove #\/ frame-id)))
-
-      link-list))
+     (find-link-from-name
+      (remove #\/ frame-id) :link-list link-list))
+    (from-coords (if from-link (send from-link :copy-worldcoords)
+		   (make-coords)))
     (to-coords
      (send (car (send robot :links)) :copy-worldcoords)))
-   (send base-coords :transformation coords))
+   (format t "link name=~A, link=~A~%" frame-id from-link)
+   (send to-coords :transformation
+	 (send from-coords :transform coords :local)))
   ;;
   (:update-joint-states
    (js &key
@@ -200,7 +209,7 @@
    (send ik-server-client
 	 :update-joint-states
 	 js
-	 :joint-list (send-all link-list :joint)
+	 :joint-list joint-list
 	 :name-list name-list
 	 :position-list position-list
 	 :opt opt
@@ -213,7 +222,8 @@
    (let (name link cs (mt-coords (make-hash-table)))
      (dolist (pc poscon)
        (setq name (remove #\: (send pc :link_name)))
-       (setq link (find-link-from-name name :link-list link-list))
+       (setq link (find-link-from-name name :link-list
+				       (send-all joint-list :child-link)))
        (cond
 	((null link)
 	 (format t "[:update-move-target] unknown link ~A~%" name))
@@ -228,7 +238,8 @@
 	 )))
      (dolist (oc oricon)
        (setq name (remove #\: (send oc :link_name)))
-       (setq link (find-link-from-name name :link-list link-list))
+       (setq link (find-link-from-name name :link-list
+				       (send-all joint-list :child-link)))
        (cond
 	((null link)
 	 (format t "[:update-move-target] unknown link ~A ~%" name))
@@ -270,14 +281,15 @@
      (dolist (jc jocon)
        (setq name (remove #\: (send jc :joint_name)))
        ;;(print name)
-       (setq link (find-link-from-name name :link-list link-list))
+       (setq link (find-link-from-name name :link-list
+				       (send-all joint-list :child-link)))
        (cond
 	((and
 	  (null link)
 	  (null
 	   (setq joint
 		 (find-link-from-name
-		  name :link-list (send-all link-list :joint))))))
+		  name :link-list joint-list)))))
 	(t
 	 (setq link (or link (send joint :child-link)))
 	 (push (list link (send jc :weight)) ret))))
@@ -288,7 +300,8 @@
    (let (buf link name)
      (dolist (col collisions)
        (setq name (remove #\: (send col :link_name)))
-       (setq link (find-link-from-name name :link-list link-list))
+       (setq link (find-link-from-name name :link-list
+				       (send-all joint-list :child-link)))
        (if link (push link buf)))
      (setq buf (union buf nil))
      (append
@@ -312,7 +325,8 @@
        (incf id)
        (setq name (remove #\: (car ik-link-name-list)))
        (setq ik-link-name-list (cdr ik-link-name-list))
-       (setq link (find-link-from-name name :link-list link-list))
+       (setq link (find-link-from-name name :link-list
+				       (send-all joint-list :child-link)))
        (cond
 	((null link)
 	 (format t "[:parse-ik-param] invalid link ~A~%" name))
@@ -343,10 +357,6 @@
 	 (setq
 	  goal-in-pelvis
 	  (cond
-	   ;; ((and root-link-frame-id
-	   ;; 	 (setq goal-in-pelvis
-	   ;; 	       (send *tf* :transform-pose root-link-frame-id ps)))
-	   ;;  goal-in-pelvis)
 	   ((and root-link-frame-id
 		 (send ps :header :frame_id)
 		 (send ps :header :stamp)
@@ -356,11 +366,10 @@
 			     root-link-frame-id
 			     (send ps :header :stamp))))
 	    (send tmp :transform goal-in-pelvis))
-	   (t tmp)))
-	 ;;(if (and
-	 ;;root-link-frame-id
-	 ;;(not (string-equal root-link-frame-id (send (send ps :header) :frame_id))))
-	 ;;(format t "[:parse-ik-param] frame_id must be ~A~%" root-link-frame-id))
+	   (t (send self :local-transform
+		    (send ps :header :frame_id)
+		    (send ps :pose)
+		    :coords tmp))))
 	 (setq goal-in-world
 	       (send (send (car (send robot :links)) :copy-worldcoords)
 		     :transform goal-in-pelvis))
@@ -544,7 +553,7 @@
 	       (append
 		(mapcar
 		 #'(lambda (n) (format nil "~A" n))
-		 (send-all (send-all link-list :joint) :name))
+		 (send-all joint-list :name))
 		;;(list "BASE_POSITION_X" "BASE_POSITION_Y" "BASE_POSITION_Z")
 		;;(list "BASE_EULER_X" "BASE_EULER_Y" "BASE_EULER_Z")
 		;;(list "BASE_QUAT_W" "BASE_QUAT_X" "BASE_QUAT_Y" "BASE_QUAT_Z")
@@ -553,7 +562,7 @@
 	       (concatenate
 		float-vector
 		(map float-vector #'deg2rad
-		     (send-all (send-all link-list :joint) :joint-angle))
+		     (send-all joint-list :joint-angle))
 		;;(scale 1e-3 (send (car (send robot :links)) :worldpos))
 		;;(matrix-log (send (car (send robot :links)) :worldrot))
 		;;(matrix2quaternion (send (car (send robot :links)) :worldrot))

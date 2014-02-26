@@ -286,11 +286,15 @@
 		       :x (* 1e-3 (aref (send tf :worldpos) 0))
 		       :y (* 1e-3 (aref (send tf :worldpos) 1))
 		       :z (* 1e-3 (aref (send tf :worldpos) 2))))
+       (send pc :header :frame_id
+	     (format nil "/~A" (send (send (send mt :parent) :parent) :name)))
        (push pc pc-list)
        ;;
        (setq oc (instance moveit_msgs::OrientationConstraint :init))
        (send oc :link_name
 	     (format nil "~A" (send (send mt :parent) :name)))
+       (send oc :header :frame_id
+	     (format nil "/~A" (send (send (send mt :parent) :parent) :name)))
        (setq q (matrix2quaternion (send tf :worldrot)))
        (send oc :orientation
 	     (instance geometry_msgs::Quaternion
@@ -313,21 +317,27 @@
 			  :weight (cadr aw)))
 	    additional-weight-list))
      ;; target coords
-     (if move-target
-	 (send req :ik_request :ik_link_name
-	       (format nil "~A"
-		       (send (send (car move-target) :parent) :name))))
+     (cond
+      (move-target
+       (send req :ik_request :ik_link_name
+	     (format nil "~A"
+		     (send (send (car move-target) :parent) :name)))
+       (send req :ik_request :pose_stamped
+	     (send self :coords2posestamped (car target-coords) :robot robot))
+       (send req :ik_request :pose_stamped :header :frame_id
+	     (format nil "/~A" (send (car (send robot :links)) :name)))))
      (send req :ik_request :ik_link_names
 	   (mapcar #'(lambda (mt)
 		       (format nil "~A" (send (send mt :parent) :name)))
 		   (cdr move-target)))
-     (if target-coords
-	 (send req :ik_request :pose_stamped
-	       (send self :coords2posestamped (car target-coords) :robot robot)))
      (send req :ik_request :pose_stamped_vector
 	   (mapcar
 	    #'(lambda (tc) (send self :coords2posestamped tc :robot robot))
 	    (cdr target-coords)))
+     (send-all
+      (send req :ik_request :pose_stamped_vector)
+      :header :frame_id
+      (format nil "/~A" (send (car (send robot :links)) :name)))
      ;;
      (setq res (ros::service-call ik-server-service-name req))
      (cond
