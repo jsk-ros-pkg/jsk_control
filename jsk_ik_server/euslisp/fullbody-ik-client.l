@@ -14,10 +14,9 @@
    (coords
     &key
     (robot *robot*)
-    (frame_id "/pelvis")
-    (origin
-     (copy-object
-      (send (car (send robot :links)) :worldcoords)))
+    (origin-link (car (send robot :links)))
+    (frame_id (format nil "/~A" origin-link))
+    (origin (send origin-link :copy-worldcoords))
     (coords-from-origin
      (send origin :transformation coords))
     (q (matrix2quaternion (send coords-from-origin :worldrot))))
@@ -26,7 +25,7 @@
     :init
     :header (instance std_msgs::Header :init
 		      :stamp (ros::time 0.0)
-		      :frame_id "/pelvis")
+		      :frame_id frame_id)
     :pose
     (instance geometry_msgs::Pose
 	      :init
@@ -211,7 +210,6 @@
    (&rest
     args
     &key
-    (frame-id "/pelvis")
     (ik-server-service-name "/solve_ik")
     (group-name ":fullbody-inverse-kinematics")
     (robot *robot*)
@@ -255,7 +253,7 @@
 		     :header
 		     (instance std_msgs::Header :init
 			       :stamp (ros::time 0.0)
-			       :frame_id frame-id)
+			       :frame_id "/odom")
 		     :name
 		     (mapcar #'(lambda (j) (format nil "~A" (send j :name)))
 			     all-links)
@@ -323,21 +321,34 @@
 	     (format nil "~A"
 		     (send (send (car move-target) :parent) :name)))
        (send req :ik_request :pose_stamped
-	     (send self :coords2posestamped (car target-coords) :robot robot))
-       (send req :ik_request :pose_stamped :header :frame_id
-	     (format nil "/~A" (send (car (send robot :links)) :name)))))
+	     (send self :coords2posestamped
+		   (car target-coords)
+		   :origin-link (car (send robot :links))
+		   :frame_id "/odom"
+		   :origin (make-coords)
+		   :robot robot))
+       ;;(send req :ik_request :pose_stamped :header :frame_id
+       ;;(format nil "/~A" (send (car (send robot :links)) :name))
+       ;;"/odom"
+       ))
      (send req :ik_request :ik_link_names
 	   (mapcar #'(lambda (mt)
 		       (format nil "~A" (send (send mt :parent) :name)))
 		   (cdr move-target)))
      (send req :ik_request :pose_stamped_vector
 	   (mapcar
-	    #'(lambda (tc) (send self :coords2posestamped tc :robot robot))
+	    #'(lambda (tc) (send self :coords2posestamped
+				 tc
+				 :origin-link (car (send robot :links))
+				 :frame_id "/odom"
+				 :origin (make-coords)
+				 :robot robot))
 	    (cdr target-coords)))
-     (send-all
-      (send req :ik_request :pose_stamped_vector)
-      :header :frame_id
-      (format nil "/~A" (send (car (send robot :links)) :name)))
+     ;;(send-all
+     ;;(send req :ik_request :pose_stamped_vector)
+     ;;:header :frame_id "/odom"
+     ;;(format nil "/~A" (send (car (send robot :links)) :name))
+     ;;)
      ;;
      (setq res (ros::service-call ik-server-service-name req))
      (cond
