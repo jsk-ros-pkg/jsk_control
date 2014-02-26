@@ -303,7 +303,7 @@
    (ik-link-name pose-stamped
     ik-link-name-list pose-stamped-list
     &optional opt)
-   (let (mt ll tc link name buf (id -1)
+   (let (mt ll tc link name buf tmp (id -1)
 	 goal goal-in-world goal-in-pelvis
 	 (ik-link-name-list (cons ik-link-name ik-link-name-list)))
      (dolist (ps (cons pose-stamped pose-stamped-list))
@@ -331,25 +331,36 @@
 	 (push (send robot :link-list (send buf :parent)) ll)
 	 ;;
 	 ;;(setq goal ps)
+	 (setq tmp
+	       (make-coords
+		:pos (float-vector
+		      (or (* 1e+3 (send (send (send ps :pose) :position) :x)) 0)
+		      (or (* 1e+3 (send (send (send ps :pose) :position) :y)) 0)
+		      (or (* 1e+3 (send (send (send ps :pose) :position) :z)) 0))
+		:rot
+		(quaternion2matrix
+		 (float-vector
+		  (or (send (send (send ps :pose) :orientation) :w) 0)
+		  (or (send (send (send ps :pose) :orientation) :x) 0)
+		  (or (send (send (send ps :pose) :orientation) :y) 0)
+		  (or (send (send (send ps :pose) :orientation) :z) 0)))))
 	 (setq
 	  goal-in-pelvis
 	  (cond
+	   ;; ((and root-link-frame-id
+	   ;; 	 (setq goal-in-pelvis
+	   ;; 	       (send *tf* :transform-pose root-link-frame-id ps)))
+	   ;;  goal-in-pelvis)
 	   ((and root-link-frame-id
-		 (setq goal-in-pelvis (send *tf* :transform-pose root-link-frame-id ps)))
-	    goal-in-pelvis)
-	   (t
-	    (make-coords
-	     :pos (float-vector
-		   (or (* 1e+3 (send (send (send ps :pose) :position) :x)) 0)
-		   (or (* 1e+3 (send (send (send ps :pose) :position) :y)) 0)
-		   (or (* 1e+3 (send (send (send ps :pose) :position) :z)) 0))
-	     :rot
-	     (quaternion2matrix
-	      (float-vector
-	       (or (send (send (send ps :pose) :orientation) :w) 0)
-	       (or (send (send (send ps :pose) :orientation) :x) 0)
-	       (or (send (send (send ps :pose) :orientation) :y) 0)
-	       (or (send (send (send ps :pose) :orientation) :z) 0)))))))
+		 (send ps :header :frame_id)
+		 (send ps :header :stamp)
+		 (setq goal-in-pelvis
+		       (send *tf* :lookup-transform
+			     (send ps :header :frame_id)
+			     root-link-frame-id
+			     (send ps :header :stamp))))
+	    (send tmp :transform goal-in-pelvis))
+	   (t tmp)))
 	 ;;(if (and
 	 ;;root-link-frame-id
 	 ;;(not (string-equal root-link-frame-id (send (send ps :header) :frame_id))))
