@@ -137,11 +137,7 @@
 	    ((and (keywordp name)
 		  (find-method robot name))
 	     (send robot name :end-coords :parent))
-	    (t
-	     (let ((n (remove #\: (format nil "~A" name))))
-	       (find-if #'(lambda (l)
-			    (substringp n (format nil "~A" (send l :name))))
-			link-list)))))
+	    (t (find-link-from-name name :link-list link-list))))
        name-list))))
    ;;(print name-list)
    (setq support-links link-list)
@@ -166,6 +162,35 @@
   ;;
   ;;
   ;;
+  (:local-transform
+   (frame-id
+    pose
+    &key
+    (coords
+     (make-coords
+      :pos (float-vector
+	    (or (* 1e+3 (send (send pose :position) :x)) 0)
+	    (or (* 1e+3 (send (send pose :position) :y)) 0)
+	    (or (* 1e+3 (send (send pose :position) :z)) 0))
+      :rot
+      (quaternion2matrix
+       (float-vector
+	(or (send (send pose :orientation) :w) 0)
+	(or (send (send pose :orientation) :x) 0)
+	(or (send (send pose :orientation) :y) 0)
+	(or (send (send pose :orientation) :z) 0)))))
+    (from-link
+     (find-if
+      #'(lambda (j)
+	  (let
+		     (remove #\: (format nil "~A" (send j :name)))
+		     (remove #\/ frame-id)))
+
+      link-list))
+    (to-coords
+     (send (car (send robot :links)) :copy-worldcoords)))
+   (send base-coords :transformation coords))
+  ;;
   (:update-joint-states
    (js &key
        opt
@@ -188,12 +213,7 @@
    (let (name link cs (mt-coords (make-hash-table)))
      (dolist (pc poscon)
        (setq name (remove #\: (send pc :link_name)))
-       (setq link
-	     (find-if
-	      #'(lambda (j) (string-equal
-			     (remove #\: (format nil "~A" (send j :name)))
-			     name))
-	      link-list))
+       (setq link (find-link-from-name name :link-list link-list))
        (cond
 	((null link)
 	 (format t "[:update-move-target] unknown link ~A~%" name))
@@ -208,12 +228,7 @@
 	 )))
      (dolist (oc oricon)
        (setq name (remove #\: (send oc :link_name)))
-       (setq link
-	     (find-if
-	      #'(lambda (j) (string-equal
-			     (remove #\: (format nil "~A" (send j :name)))
-			     name))
-	      link-list))
+       (setq link (find-link-from-name name :link-list link-list))
        (cond
 	((null link)
 	 (format t "[:update-move-target] unknown link ~A ~%" name))
@@ -255,22 +270,14 @@
      (dolist (jc jocon)
        (setq name (remove #\: (send jc :joint_name)))
        ;;(print name)
-       (setq link
-	     (find-if
-	      #'(lambda (j) (string-equal
-			     (remove #\: (format nil "~A" (send j :name)))
-			     name))
-	      link-list))
+       (setq link (find-link-from-name name :link-list link-list))
        (cond
 	((and
 	  (null link)
 	  (null
 	   (setq joint
-		 (find-if
-		  #'(lambda (j) (string-equal
-				 (remove #\: (format nil "~A" (send j :name)))
-				 name))
-		  (send-all link-list :joint))))))
+		 (find-link-from-name
+		  name :link-list (send-all link-list :joint))))))
 	(t
 	 (setq link (or link (send joint :child-link)))
 	 (push (list link (send jc :weight)) ret))))
@@ -281,12 +288,7 @@
    (let (buf link name)
      (dolist (col collisions)
        (setq name (remove #\: (send col :link_name)))
-       (setq link
-	     (find-if
-	      #'(lambda (j) (string-equal
-			     (remove #\: (format nil "~A" (send j :name)))
-			     name))
-	      link-list))
+       (setq link (find-link-from-name name :link-list link-list))
        (if link (push link buf)))
      (setq buf (union buf nil))
      (append
@@ -310,12 +312,7 @@
        (incf id)
        (setq name (remove #\: (car ik-link-name-list)))
        (setq ik-link-name-list (cdr ik-link-name-list))
-       (setq link
-	     (find-if
-	      #'(lambda (j) (string-equal
-			     (remove #\: (format nil "~A" (send j :name)))
-			     name))
-	      link-list))
+       (setq link (find-link-from-name name :link-list link-list))
        (cond
 	((null link)
 	 (format t "[:parse-ik-param] invalid link ~A~%" name))
@@ -330,7 +327,6 @@
 	 (push buf mt)
 	 (push (send robot :link-list (send buf :parent)) ll)
 	 ;;
-	 ;;(setq goal ps)
 	 (setq tmp
 	       (make-coords
 		:pos (float-vector

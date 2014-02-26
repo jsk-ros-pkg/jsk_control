@@ -69,11 +69,7 @@
 	   (pos (elt position-list i)) j)
        ;;(format t "[:update-joint-states] ~A ~Arad~%" name pos)
        (cond
-	((setq j (find-if
-		  #'(lambda (j) (string-equal
-				 (remove #\: (format nil "~A" (send j :name)))
-				 name))
-		  joint-list))
+	((setq j (find-link-from-name name :link-list joint-list))
 	 (setq joint-list (remove j joint-list))
 	 (cond
 	  ((and (numberp pos)
@@ -99,10 +95,8 @@
 				  (send pos :rotation :z)))))))
 	  )
 	 )
-	((and (setq j (find-if
-		       #'(lambda (j) (string-equal
-				      (remove #\: (format nil "~A" (send j :name)))
-				      name))
+	((and (setq j (find-link-from-name
+		       name :link-list
 		       (send-all joint-list :child-link)))
 	      (find-method j :joint)
 	      (setq j (send j :joint)))
@@ -359,6 +353,17 @@
       (t (ros::ros-error " failed ")))
      res))
   )
+
+(defun find-link-from-name
+  (name &key
+	link-list
+	(target-name
+	 (remove-if #'(lambda (c) (find c (list #\:))) (format nil "~A" name))))
+  (find-if
+   #'(lambda (j) (string-equal
+		  (remove #\: (format nil "~A" (send j :name)))
+		  target-name))
+   link-list))
 
 (defun ik-server-call
   (&rest args &key target-coords &allow-other-keys)
