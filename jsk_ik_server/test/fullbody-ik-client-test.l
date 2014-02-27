@@ -11,6 +11,7 @@
     (target-limbs '(:rarm :larm :rleg :lleg))
     (move-target (mapcar #'(lambda (k) (send robot k :end-coords)) target-limbs))
     (target-coords (send-all move-target :copy-worldcoords))
+    (foot? nil)
     &allow-other-keys)
    (mapcar
     #'(lambda (tc)
@@ -19,6 +20,17 @@
 	       :pos (scale 300 (random-vector 1.0))
 	       :rpy (scale 1.57 (random-vector 1.0)))))
     (subseq target-coords 0 2))
+   (if foot?
+       (mapcar
+	#'(lambda (tc)
+	    (send tc :transform
+		  (make-coords
+		   :pos
+		   (map float-vector
+			#'*
+			#F(1 1 1)
+			(scale 100 (random-vector 1.0))))))
+	(if (> (length target-coords) 2) (subseq target-coords 2 4))))
    (apply
     #'send self :ik-server-call
     (append
@@ -35,7 +47,7 @@
       )
      args)))
   (:hrp2jsknt-test
-   nil
+   (&rest args)
    (require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.l")
    (when (probe-file (ros::resolve-ros-path "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-utils.l"))
      (require :hrp2jsknt-utils "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-utils.l"))
@@ -69,25 +81,26 @@
     (send *robot* :fix-leg-to-coords (make-coords))
     (send *robot* :hand :rarm :close-pose)
     (send *robot* :hand :larm :close-pose)
-    (send self :test-fullbody-ik
-	  :all-links
-	  (remove-if
-	   #'(lambda (l)
-	       (not (and (find-method l :joint)
-			 (send l :joint))))
-	   (flatten
-	    (append
-	     (send *robot* :links)
-	     (send (send *robot* :hand :rarm) :links)
-	     (send (send *robot* :hand :larm) :links))))
-	  :move-target
-	  (append
-	   ;;(mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
-	   *end-coords-from-hand*
-	   *end-coords-without-toe*))
-    ))
+    (send* self :test-fullbody-ik
+	   :all-links
+	   (remove-if
+	    #'(lambda (l)
+		(not (and (find-method l :joint)
+			  (send l :joint))))
+	    (flatten
+	     (append
+	      (send *robot* :links)
+	      (send (send *robot* :hand :rarm) :links)
+	      (send (send *robot* :hand :larm) :links))))
+	   :move-target
+	   (append
+	    ;;(mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
+	    *end-coords-from-hand*
+	    *end-coords-without-toe*)
+	   args))
+   )
   (:hrp2jsk-test
-   nil
+   (&rest args)
    (require "package://hrpsys_ros_bridge_tutorials/models/hrp2jsk.l")
    (defvar *hrp2jsk* (hrp2jsk))
    (objects (list *hrp2jsk*))
@@ -95,10 +108,10 @@
    (do-until-key
     (send *hrp2jsk* :reset-manip-pose)
     (send *hrp2jsk* :fix-leg-to-coords (make-coords))
-    (send self :test-fullbody-ik :robot *hrp2jsk*))
+    (send* self :test-fullbody-ik :robot *hrp2jsk* args))
    )
   (:atlas-test
-   nil
+   (&rest args)
    (require "package://hrpsys_gazebo_atlas/euslisp/atlas-model.l")
    (defvar *atlas* (atlas))
    (ros::roseus "fullbody_ik_client_test")
@@ -106,10 +119,10 @@
    (do-until-key
     (send *atlas* :reset-manip-pose)
     (send *atlas* :fix-leg-to-coords (make-coords))
-    (send self :test-fullbody-ik :robot *atlas*)
+    (send* self :test-fullbody-ik :robot *atlas* args)
     ))
   (:pr2-test
-   nil
+   (&rest args)
    (require :pr2 "package://pr2eus/pr2.l")
    (defvar *pr2* (pr2))
    (ros::roseus "fullbody_ik_client_test")
@@ -124,33 +137,38 @@
       '(:rarm :larm)))
    (do-until-key
     (send *pr2* :reset-manip-pose)
-    (send self :test-fullbody-ik
-	  :robot *pr2*
-	  :group-name ":inverse-kinematics"
-	  ;;:torso-fix t
-	  ;;:use-torso 0
-	  :target-limbs '(:rarm :larm)
-	  :centroid-thre nil
-	  :target-centroid-pos nil
-	  ;;:min-vec #F(0 0 0 0 0 0)
-	  ;;:max-vec #F(0 0 0 0 0 0)
-	  :cog-gain 0
-	  ;;:root-link-virtual-joint-weight #F(0 0 0 0 0 0)
-	  :move-target *pr2-move-target*
-	  :rotation-axis (list t t)
-	  )))
+    (send* self :test-fullbody-ik
+	   :robot *pr2*
+	   :group-name ":inverse-kinematics"
+	   ;;:torso-fix t
+	   ;;:use-torso 0
+	   :target-limbs '(:rarm :larm)
+	   :centroid-thre nil
+	   :target-centroid-pos nil
+	   ;;:min-vec #F(0 0 0 0 0 0)
+	   ;;:max-vec #F(0 0 0 0 0 0)
+	   :cog-gain 0
+	   ;;:root-link-virtual-joint-weight #F(0 0 0 0 0 0)
+	   :move-target *pr2-move-target*
+	   :rotation-axis (list t t)
+	   args
+	   )))
   )
 
 (let ((ik-client-test (instance fullbody-ik-client :init))
-      (test (unix::getenv "IK_CLIENT_TEST")))
+      (test (unix::getenv "IK_CLIENT_TEST"))
+      (foot? (unix::getenv "IK_CLIENT_TEST_WITH_LEG"))
+      )
+  (if (and (stringp foot?) (plusp (length foot?)))
+      (setq foot? (string-equal foot? "true")))
   (cond
    ((null test))
    ((substringp "hrp2jsknt" test)
-    (send ik-client-test :hrp2jsknt-test))
+    (send ik-client-test :hrp2jsknt-test :foot? foot?))
    ((substringp "hrp2jsk" test)
-    (send ik-client-test :hrp2jsk-test))
+    (send ik-client-test :hrp2jsk-test :foot? foot?))
    ((substringp "pr2" test)
-    (send ik-client-test :pr2-test))
+    (send ik-client-test :pr2-test :foot? foot?))
    ((substringp "atlas" test)
-    (send ik-client-test :atlas-test))
+    (send ik-client-test :atlas-test :foot? foot?))
    ))

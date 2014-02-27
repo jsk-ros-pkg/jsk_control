@@ -1,6 +1,20 @@
 <launch>
-  <include file="$(find jsk_ik_server)/test/hrp2jsk-ik-server-test.launch" />
-  <include file="$(find jsk_ik_server)/test/hrp2jsknt-ik-server-test.launch" />
-  <include file="$(find jsk_ik_server)/test/pr2-ik-server-test.launch" />
-  <include file="$(find jsk_ik_server)/test/atlas-ik-server-test.launch" />
+  <arg name="IK_CLIENT_TEST_WITH_LEG" default="False" />
+
+  <include file="$(find jsk_ik_server)/test/hrp2jsk-ik-server-test.launch">
+    <env name="IK_CLIENT_TEST_WITH_LEG"
+	 value="$(arg IK_CLIENT_TEST_WITH_LEG)" />
+  </include>
+  <include file="$(find jsk_ik_server)/test/hrp2jsknt-ik-server-test.launch">
+    <env name="IK_CLIENT_TEST_WITH_LEG"
+	 value="$(arg IK_CLIENT_TEST_WITH_LEG)" />
+  </include>
+  <include file="$(find jsk_ik_server)/test/pr2-ik-server-test.launch">
+    <env name="IK_CLIENT_TEST_WITH_LEG"
+	 value="$(arg IK_CLIENT_TEST_WITH_LEG)" />
+  </include>
+  <include file="$(find jsk_ik_server)/test/atlas-ik-server-test.launch">
+    <env name="IK_CLIENT_TEST_WITH_LEG"
+	 value="$(arg IK_CLIENT_TEST_WITH_LEG)" />
+  </include>
 </launch>
