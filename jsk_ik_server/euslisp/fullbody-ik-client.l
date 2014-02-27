@@ -15,7 +15,7 @@
     &key
     (robot *robot*)
     (origin-link (car (send robot :links)))
-    (frame_id (format nil "/~A" origin-link))
+    (frame_id (format nil "/~A" (send origin-link :name)))
     (origin (send origin-link :copy-worldcoords))
     (coords-from-origin
      (send origin :transformation coords))
@@ -324,8 +324,8 @@
 	     (send self :coords2posestamped
 		   (car target-coords)
 		   :origin-link (car (send robot :links))
-		   :frame_id "/odom"
-		   :origin (make-coords)
+		   ;;:frame_id "/odom"
+		   ;;:origin (make-coords)
 		   :robot robot))
        ;;(send req :ik_request :pose_stamped :header :frame_id
        ;;(format nil "/~A" (send (car (send robot :links)) :name))
@@ -340,8 +340,8 @@
 	    #'(lambda (tc) (send self :coords2posestamped
 				 tc
 				 :origin-link (car (send robot :links))
-				 :frame_id "/odom"
-				 :origin (make-coords)
+				 ;;:frame_id "/odom"
+				 ;;:origin (make-coords)
 				 :robot robot))
 	    (cdr target-coords)))
      ;;(send-all
