@@ -160,7 +160,8 @@
 	  (t
 	   (scale (/ 1.0 (length support-links))
 		  (reduce #'v+
-			  (send-all support-links :worldpos)))))))
+			  (send-all support-links :worldpos))))))
+   )
   (:loop-ik-server
    nil
    (do-until-key
@@ -517,16 +518,29 @@
 		 (let ((mt (cadr (member :move-target ik-param)))
 		       (tc (cadr (member :target-coords ik-param)))
 		       target)
+		   (format t "[:support-link] ~A~%"
+			   (send-all support-links :name))
+		   (format t "[:move-target] ~A~%"
+			   (send-all (send-all mt :parent) :name))
 		   (mapcar
 		    #'(lambda (l)
-			(setq target
-			      (find-if
-			       #'(lambda (mttc) (eq (send (car mttc) :parent) l))
-			       (mapcar #'cons mt tc)))
-			(if target
-			    (send (send (car target) :copy-worldcoords)
-				  :transformation (cdr target))
-			  (make-coords)))
+			(cond
+			 ((setq target
+				(find-if
+				 #'(lambda (mttc)
+				     (eq (send (car mttc) :parent) l))
+				 (mapcar #'cons mt tc)))
+			  (send (send (car target) :copy-worldcoords)
+				:transformation (cdr target)))
+			 ((setq target
+				(find-if
+				 #'(lambda (mttc)
+				     (find (send (car mttc) :parent)
+					   (send robot :link-list l)))
+				 (mapcar #'cons mt tc)))
+			  (send (send (car target) :copy-worldcoords)
+				:transformation (cdr target)))
+			 (t (make-coords))))
 		    support-links))
 		 :force? t)
 	   ;;

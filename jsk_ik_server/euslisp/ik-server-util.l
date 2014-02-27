@@ -88,7 +88,7 @@
     (mapcar
      #'(lambda (l c)
 	 (let ((l2 (copy-object l)))
-	   (send l2 :transform c)
+	   (send l2 :transform c :local)
 	   (flatten (send-all (send l2 :faces) :vertices))))
      support-links support-link-target-transform-coords))
    (support-height
@@ -104,29 +104,7 @@
   ;;
   (format t "[foot-convex] ")
   (cond
-   ((or
-     force?
-     (null foot-convex)
-     ;; (and *fix-limb-coords*
-     ;; 	  (flatten
-     ;; 	   (mapcar
-     ;; 	    #'(lambda (k)
-     ;; 		(or
-     ;; 		 (not (assoc k *fix-limb-coords*))
-     ;; 		 (> (norm
-     ;; 		     (send
-     ;; 		      (send robot k :end-coords :worldcoords)
-     ;; 		      :difference-position
-     ;; 		      (cdr (assoc k *fix-limb-coords*))))
-     ;; 		    50)
-     ;; 		 (> (norm
-     ;; 		     (send
-     ;; 		      (send robot k :end-coords :worldcoords)
-     ;; 		      :difference-rotation
-     ;; 		      (cdr (assoc k *fix-limb-coords*))))
-     ;; 		    (deg2rad 10))))
-     ;; 	    foot-key))))
-     )
+   ((or force? (null foot-convex))
     (format t "update~%")
     (setq foot-convex
 	  (make-prism
@@ -145,18 +123,8 @@
 	      support-height)))
 	   5))
     (send foot-convex :set-color #F(0 0 1))
-    ;; (setq *fix-limb-coords*
-    ;; 	  (append
-    ;; 	   (remove-if
-    ;; 	    #'(lambda (kf) (find (car kf) '(:rleg :lleg)))
-    ;; 	    *fix-limb-coords*)
-    ;; 	   (mapcar
-    ;; 	    #'(lambda (k)
-    ;; 		(cons
-    ;; 		 k
-    ;; 		 (send robot k :end-coords :copy-worldcoords)))
-    ;; 	    foot-key)))
     (gl::transparent foot-convex 0.3)
+    (setq support-centroid-pos (send foot-convex :centroid))
     )
    (t (format t "reject~%"))))
   (:make-centroid-object
@@ -180,11 +148,13 @@
   (:fix-centroid-object
    (&optional
     (centroid (send robot :centroid))
-    (leg-h (scale 0.5
-		  (v+
-		   (if (send robot :rleg) (send robot :rleg :end-coords :worldpos) (float-vector 0 0 0))
-		   (if (send robot :lleg) (send robot :lleg :end-coords :worldpos) (float-vector 0 0 0))
-		   ))))
+    (leg-h
+     (cond
+      ((null support-links) #F(0 0 0))
+      ((> (length support-links) 1)
+       (scale (/ 1.0 (length support-links))
+	      (reduce #'v+ (send-all support-links :worldpos))))
+      (t (send (car support-links) :worldpos)))))
    (if (and centroid-object (find-method centroid-object :newcoords))
        (send centroid-object
 	     :newcoords
