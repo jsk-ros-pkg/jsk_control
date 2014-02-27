@@ -526,20 +526,39 @@
 		    #'(lambda (l)
 			(cond
 			 ((setq target
-				(find-if
-				 #'(lambda (mttc)
-				     (eq (send (car mttc) :parent) l))
-				 (mapcar #'cons mt tc)))
-			  (send (send (car target) :copy-worldcoords)
-				:transformation (cdr target)))
-			 ((setq target
-				(find-if
-				 #'(lambda (mttc)
-				     (find (send (car mttc) :parent)
-					   (send robot :link-list l)))
-				 (mapcar #'cons mt tc)))
-			  (send (send (car target) :copy-worldcoords)
-				:transformation (cdr target)))
+				(or
+				 (find-if
+				  #'(lambda (mttc)
+				      (eq (send (car mttc) :parent) l))
+				  (mapcar #'cons mt tc))
+				 (find-if
+				  #'(lambda (mttc)
+				      (find l (send robot
+						    :link-list
+						    (send (car mttc) :parent))))
+				  (mapcar #'cons mt tc))
+				 (find-if
+				  #'(lambda (mttc)
+				      (find (send (car mttc) :parent)
+					    (send robot :link-list l)))
+				  (mapcar #'cons mt tc))))
+			  (send (send l :copy-worldcoords)
+				:transformation
+				(send
+				 (send (copy-object (cdr target))
+				       :transform
+				       (send
+					(send (car target) :copy-worldcoords)
+					:transformation
+					(send (send (car target) :parent)
+					      :copy-worldcoords))
+				       :local)
+				 :transform
+				 (send (send (send (car target) :parent)
+					     :copy-worldcoords)
+				       :transformation
+				       (send l :copy-worldcoords))
+				 :local)))
 			 (t (make-coords))))
 		    support-links))
 		 :force? t)
@@ -548,7 +567,9 @@
 	    (viewer
 	     (send viewer :objects
 		   (list robot centroid-object foot-convex arrow))
-	     (send viewer :draw-objects)))
+	     (send viewer :draw-objects)
+	     ;;(unix:sleep 3)
+	     ))
 	   ;;
 	   (setq ret
 		 (send* self :fullbody-ik-main

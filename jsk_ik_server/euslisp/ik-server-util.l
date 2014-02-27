@@ -89,6 +89,7 @@
      #'(lambda (l c)
 	 (let ((l2 (copy-object l)))
 	   (send l2 :transform c :local)
+	   (send l2 :worldcoords)
 	   (flatten (send-all (send l2 :faces) :vertices))))
      support-links support-link-target-transform-coords))
    (support-height
@@ -102,6 +103,7 @@
   ;;(return-from :make-foot-convex nil))
   (when (null support-links) (return-from :make-foot-convex nil))
   ;;
+  (format t "[foot-convex] offset=~A~%" support-link-target-transform-coords)
   (format t "[foot-convex] ")
   (cond
    ((or force? (null foot-convex))
