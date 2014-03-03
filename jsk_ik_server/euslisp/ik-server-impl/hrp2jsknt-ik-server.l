@@ -17,13 +17,6 @@
   (:init
    (&rest args)
    (setq robot (hrp2jsknt))
-   ;; (mapcar
-   ;;  #'(lambda (k)
-   ;; 	(let* ((mt (send robot k :end-coords))
-   ;; 	       (l (send mt :parent)))
-   ;; 	  (send l :dissoc mt)
-   ;; 	  (send (send l :parent) :assoc mt)))
-   ;;  '(:rleg :lleg))
    (mapcar
     #'(lambda (k hl)
 	(mapcar
@@ -59,6 +52,20 @@
       (send (send robot :hand :rarm) :links)
       (send (send robot :hand :larm) :links)))
     :root-link-frame-id nil
+    :default-end-coords
+    (append
+     (mapcar
+      #'(lambda (k) (cons k (send robot k :end-coords)))
+      '(:rarm :larm))
+     (mapcar
+      #'(lambda (k)
+	  (cons
+	   k
+	   (make-cascoords
+	    :coords (send (send robot k :end-coords) :copy-worldcoords)
+	    :parent (send (send (send robot k :end-coords) :parent) :parent)
+	    :name (read-from-string (format nil "~a-default-end-coords" k)))))
+      '(:rleg :lleg)))
     args)
    )
   )

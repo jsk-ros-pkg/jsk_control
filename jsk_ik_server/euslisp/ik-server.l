@@ -34,6 +34,7 @@
    root-link-frame-id
    success-state-collection
    ;;
+   default-end-coords
    default-collision-avoidance-link-pair
    ;;
    ik-server-name
@@ -71,6 +72,12 @@
 	       (send l :joint)))
        link-list)))
     (move-target-hash (make-hash-table))
+    (default-end-coords
+      (apply
+       #'append
+       (mapcar
+	#'(lambda (k) (if (find-method robot k) (list (cons k (send robot k :end-coords)))))
+	'(:rarm :larm :rleg :lleg))))
     (ik-server-client
      (instance fullbody-ik-client :init))
     &allow-other-keys
@@ -82,6 +89,7 @@
    (send self :joint-list joint-list)
    (send self :move-target-hash move-target-hash)
    (send self :ik-server-client ik-server-client)
+   (send self :set-default-end-coords default-end-coords)
    )
   (:ik-service-cb
    (req)
@@ -136,6 +144,8 @@
    (ros::rate 10)
    (send self :loop-ik-server)
    )
+  (:set-default-end-coords (c) (setq default-end-coords c))
+  (:default-end-coords (k) (cdr (assoc k default-end-coords)))
   (:update-support-links
    (name-list
     &key
@@ -145,8 +155,8 @@
        #'(lambda (name)
 	   (cond
 	    ((and (keywordp name)
-		  (find-method robot name))
-	     (send robot name :end-coords :parent))
+		  (send self :default-end-coords name))
+	     (send (send self :default-end-coords) :parent))
 	    (t (find-link-from-name name :link-list
 				    (send-all joint-list :child-link)))))
        name-list))))
@@ -381,9 +391,7 @@
      (setq buf
 	   (flatten
 	    (mapcar
-	     #'(lambda (k)
-		 (if (find-method robot k)
-		     (send robot k :end-coords)))
+	     #'(lambda (k) (send self :default-end-coords k))
 	     (cadr (member :fix-limbs opt)))))
      (append
       (list

@@ -126,7 +126,8 @@
 	   5))
     (send foot-convex :set-color #F(0 0 1))
     (gl::transparent foot-convex 0.3)
-    (setq support-centroid-pos (send foot-convex :centroid))
+    (send foot-convex :worldcoords)
+    (setq support-centroid-pos (copy-object (send foot-convex :centroid)))
     )
    (t (format t "reject~%"))))
   (:make-centroid-object
@@ -218,6 +219,7 @@
     (max #F(1000 1000 1000 200 200 200))
     (min-vec min) ;; for mm
     (max-vec max)
+    (stop 15)
     (thre (mapcar #'(lambda (a) 4) move-target))
     (rthre (mapcar #'(lambda (a) (deg2rad 3)) move-target))
     (translation-axis (mapcar #'(lambda (a) t) move-target))
@@ -234,6 +236,9 @@
     (avoid-collision-joint-gain 0.3)
     &allow-other-keys
     )
+   (format t "[target-centroid-pos] check ~A~%" target-centroid-pos)
+   (if (not (vectorp target-centroid-pos))
+       (format t "CAUSION!!! target-centroid-pos is not a vector~%"))
    (let (ret)
      (setq target-coords ;; for mm
 	   (mapcar
@@ -266,6 +271,7 @@
 	       :avoid-collision-joint-gain avoid-collision-joint-gain
 	       :min min-vec
 	       :max max-vec
+	       :stop stop
 	       :thre thre
 	       :rthre rthre
 	       :translation-axis translation-axis
