@@ -20,15 +20,15 @@
   (:init
    (&rest args)
    (setq robot (hrp2jsk))
-   (send self :update-support-links '(:rleg :lleg))
-   (send self :make-foot-convex :force? t)
-   (send self :make-centroid-object)
    (send-super* :init
 		:robot robot
 		:ik-server-name "hrp2jsk_ik_server"
 		:ik-server-service-name "/solve_ik"
 		:root-link-frame-id nil
 		args)
+   (send self :update-support-links '(:rleg :lleg))
+   (send self :make-foot-convex :force? t)
+   (send self :make-centroid-object)
    )
   )
 

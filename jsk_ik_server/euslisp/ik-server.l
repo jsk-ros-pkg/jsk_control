@@ -156,7 +156,7 @@
 	   (cond
 	    ((and (keywordp name)
 		  (send self :default-end-coords name))
-	     (send (send self :default-end-coords) :parent))
+	     (send (send self :default-end-coords name) :parent))
 	    (t (find-link-from-name name :link-list
 				    (send-all joint-list :child-link)))))
        name-list))))

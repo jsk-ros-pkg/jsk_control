@@ -27,10 +27,6 @@
    (send robot :torso :waist-p :max-angle 10)
    (send robot :torso :waist-p :min-angle -10)
    ;;
-   (send self :update-support-links '(:rleg :lleg))
-   (send self :make-foot-convex :force? t)
-   (send self :make-centroid-object)
-   ;;
    (send (send robot :utorso_lk) :make-pqpmodel :fat 30)
    (send-super*
     :init
@@ -39,6 +35,10 @@
     :ik-server-service-name "/solve_ik"
     :root-link-frame-id "/pelvis"
     args)
+   ;;
+   (send self :update-support-links '(:rleg :lleg))
+   (send self :make-foot-convex :force? t)
+   (send self :make-centroid-object)
    )
   )
 
