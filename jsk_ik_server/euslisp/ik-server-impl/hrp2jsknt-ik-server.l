@@ -17,21 +17,22 @@
   (:init
    (&rest args)
    (setq robot (hrp2jsknt))
-   (mapcar
-    #'(lambda (k hl)
-	(mapcar
-	 #'(lambda (h)
-	     (cond
-	      ((null (send h :parent-link)))
-	      ((null (send (send h :parent-link) :parent-link))
-	       (send h :add-parent-link
-		     (send robot k :end-coords :parent))
-	       (send (send robot k :end-coords :parent)
-		     :add-child-links h))))
-	 hl))
-    '(:rarm :larm)
-    (list (send robot :hand :rarm :links)
-	  (send robot :hand :larm :links)))
+   (if (find-method robot :hand)
+       (mapcar
+	#'(lambda (k hl)
+	    (mapcar
+	     #'(lambda (h)
+		 (cond
+		  ((null (send h :parent-link)))
+		  ((null (send (send h :parent-link) :parent-link))
+		   (send h :add-parent-link
+			 (send robot k :end-coords :parent))
+		   (send (send robot k :end-coords :parent)
+			 :add-child-links h))))
+	     hl))
+	'(:rarm :larm)
+	(list (send robot :hand :rarm :links)
+	      (send robot :hand :larm :links))))
    ;;
    (send self :update-support-links
 	 nil
@@ -49,8 +50,10 @@
     (flatten
      (append
       (send robot :links)
-      (send (send robot :hand :rarm) :links)
-      (send (send robot :hand :larm) :links)))
+      (if (find-method robot :hand)
+	  (list
+	   (send (send robot :hand :rarm) :links)
+	   (send (send robot :hand :larm) :links)))))
     :root-link-frame-id nil
     :default-end-coords
     (append

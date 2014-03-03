@@ -68,19 +68,23 @@
    (defvar *end-coords-from-hand*
      (mapcar
       #'(lambda (k)
-	  (make-cascoords
-	   :name
-	   (read-from-string (format nil "~A-end-coords-without-toe" k))
-	   :parent (car (last (send *robot* :hand k :links)))
-	   :coords
-	   (copy-object
-	    (send (car (last (send *robot* :hand k :links))) :worldcoords))))
+	  (if (find-method *robot* :hand)
+	      (make-cascoords
+	       :name
+	       (read-from-string (format nil "~A-end-coords-without-toe" k))
+	       :parent (car (last (send *robot* :hand k :links)))
+	       :coords
+	       (copy-object
+		(send (car (last (send *robot* :hand k :links))) :worldcoords)))
+	    (send *robot* k :end-coords)))
       '(:rarm :larm)))
    (do-until-key
     (send *robot* :reset-manip-pose)
     (send *robot* :fix-leg-to-coords (make-coords))
-    (send *robot* :hand :rarm :close-pose)
-    (send *robot* :hand :larm :close-pose)
+    (cond
+     ((find-method *robot* :hand)
+      (send *robot* :hand :rarm :close-pose)
+      (send *robot* :hand :larm :close-pose)))
     (send* self :test-fullbody-ik
 	   :all-links
 	   (remove-if
@@ -90,8 +94,10 @@
 	    (flatten
 	     (append
 	      (send *robot* :links)
-	      (send (send *robot* :hand :rarm) :links)
-	      (send (send *robot* :hand :larm) :links))))
+	      (if (find-method *robot* :hand)
+		  (list
+		   (send (send *robot* :hand :rarm) :links)
+		   (send (send *robot* :hand :larm) :links))))))
 	   :move-target
 	   (append
 	    ;;(mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
