@@ -7,4 +7,9 @@
 - git:
     uri: https://github.com/jsk-ros-pkg/jsk_roseus.git
     local-name: jsk-ros-pkg/jsk_roseus
+# rviz stuff
+- git:
+    local-name: view_controller_msgs
+    uri: 'https://github.com/ros-visualization/view_controller_msgs'
+    version: hydro-devel
 
