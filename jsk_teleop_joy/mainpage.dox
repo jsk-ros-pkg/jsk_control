@@ -2,7 +2,7 @@
 \mainpage
 \htmlinclude manifest.html
 
-\b jsk_joy 
+\b jsk_teleop_joy 
 
 <!-- 
 Provide an overview of your package.

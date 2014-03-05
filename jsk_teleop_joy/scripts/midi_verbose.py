@@ -4,8 +4,8 @@ import pygame.midi
 import sys
 import time
 import roslib
-roslib.load_manifest('jsk_joy')
-from jsk_joy.midi_util import MIDICommand, MIDIParse
+roslib.load_manifest('jsk_teleop_joy')
+from jsk_teleop_joy.midi_util import MIDICommand, MIDIParse
 
 def checkUpperByte(ref, val):
   return ((ref | val) >> 4 == (ref >> 4))

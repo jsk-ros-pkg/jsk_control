@@ -6,7 +6,7 @@
     <param name="autorepeat_rate" value="40" />
     <param name="coalesce_interval" value="0.025" />
   </node>
-  <node pkg="jsk_joy" type="joy.py" name="joy" output="screen">
+  <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen">
     <remap from="pose" to="$(arg POSE_REMAP)" />
     <param name="controller_type" value="xbox" />
     <param name="follow_view" value="true" />

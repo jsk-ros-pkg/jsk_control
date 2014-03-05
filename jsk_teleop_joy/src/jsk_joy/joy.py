@@ -10,7 +10,7 @@ import sys
 
 # only if groovy
 if os.environ["ROS_DISTRO"] == "groovy":
-  roslib.load_manifest('jsk_joy')
+  roslib.load_manifest('jsk_teleop_joy')
     
 
 from sensor_msgs.msg import Joy
@@ -57,7 +57,7 @@ class JoyManager():
           break
         else:
           rospy.sleep(1)
-    self.plugin_manager = PluginManager('jsk_joy')
+    self.plugin_manager = PluginManager('jsk_teleop_joy')
     self.loadPlugins()
   def loadPlugins(self):
     self.plugin_manager.loadPlugins()
@@ -91,7 +91,7 @@ class JoyManager():
 def main():
   global g_manager
   rospy.sleep(1)
-  rospy.init_node('jsk_joy')
+  rospy.init_node('jsk_teleop_joy')
   g_manager = JoyManager()
   g_manager.start()
   rospy.spin()

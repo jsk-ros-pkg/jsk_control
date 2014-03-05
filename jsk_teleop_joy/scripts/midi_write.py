@@ -10,8 +10,8 @@ import time
 import re
 from optparse import OptionParser
 
-roslib.load_manifest('jsk_joy')
-from jsk_joy.midi_util import MIDICommand, MIDIParse
+roslib.load_manifest('jsk_teleop_joy')
+from jsk_teleop_joy.midi_util import MIDICommand, MIDIParse
 
 class MIDIWriteError(Exception):
   pass

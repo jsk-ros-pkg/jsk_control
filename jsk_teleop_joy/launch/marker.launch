@@ -1,5 +1,5 @@
 <launch>
-  <include file="$(find jsk_joy)/launch/xbox.launch">
+  <include file="$(find jsk_teleop_joy)/launch/xbox.launch">
     <arg name="POSE_REMAP" value="/marker_6dof/move_marker" />
     <arg name="CONTROLLER_TYPE" default="ps3wired" />
   </include>

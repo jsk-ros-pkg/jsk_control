@@ -1,13 +1,13 @@
 <package>
-  <name>jsk_joy</name>
+  <name>jsk_teleop_joy</name>
   <description>
-     jsk_joy
+     jsk_teleop_joy
   </description>
   <author email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</author>
   <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
   <version>0.1.0</version>
   <license>BSD</license>
-  <url>http://ros.org/wiki/jsk_joy</url>
+  <url>http://ros.org/wiki/jsk_teleop_joy</url>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>ps3joy</build_depend>
   <build_depend>tf</build_depend>
@@ -24,7 +24,7 @@
   <run_depend>jsk_footstep_msgs</run_depend>
   
   <export>
-    <jsk_joy plugin="${prefix}/plugin.xml"/>
+    <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>
     
 </package>

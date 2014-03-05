@@ -1,7 +1,7 @@
 # joy_rviz_view_controller
 
-from jsk_joy.joy_plugin import JSKJoyPlugin
-from jsk_joy.camera_view import CameraView
+from jsk_teleop_joy.joy_plugin import JSKJoyPlugin
+from jsk_teleop_joy.camera_view import CameraView
 from view_controller_msgs.msg import CameraPlacement
 
 import tf

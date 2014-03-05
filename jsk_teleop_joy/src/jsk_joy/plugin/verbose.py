@@ -1,4 +1,4 @@
-from jsk_joy.joy_plugin import JSKJoyPlugin
+from jsk_teleop_joy.joy_plugin import JSKJoyPlugin
 
 import rospy
 

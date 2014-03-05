@@ -1,4 +1,4 @@
-# jsk_joy package
+# jsk_teleop_joy package
 
 ## MIDI controllers
 ### `interactive_midi_config.py`

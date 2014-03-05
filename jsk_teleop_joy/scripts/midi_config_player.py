@@ -9,9 +9,9 @@ import roslib
 
 from sensor_msgs.msg import Joy, JoyFeedbackArray
 
-roslib.load_manifest('jsk_joy')
+roslib.load_manifest('jsk_teleop_joy')
 
-from jsk_joy.midi_util import MIDIParse, MIDICommand, MIDIException, openMIDIInputByName, openMIDIOutputByName
+from jsk_teleop_joy.midi_util import MIDIParse, MIDICommand, MIDIException, openMIDIInputByName, openMIDIOutputByName
 
 def feedback_array_cb(out_controller, config, msg_arr):
   output_config = config["output"]

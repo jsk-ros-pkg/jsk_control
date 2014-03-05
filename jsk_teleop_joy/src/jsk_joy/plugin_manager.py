@@ -35,7 +35,7 @@ class PluginManager():
     return self.plugins
   def loadPlugins(self):
     """
-    load plugins of jsk_joy defined in the packages.
+    load plugins of jsk_teleop_joy defined in the packages.
     """
     self.plugin_defs = {}
     p = Popen(["rospack", 'plugins', '--attrib', 'plugin', self.package_name],

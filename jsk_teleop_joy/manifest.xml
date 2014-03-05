@@ -1,13 +1,13 @@
 <package>
-  <description brief="jsk_joy">
+  <description brief="jsk_teleop_joy">
 
-     jsk_joy
+     jsk_teleop_joy
 
   </description>
   <author>Ryohei Ueda</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/jsk_joy</url>
+  <url>http://ros.org/wiki/jsk_teleop_joy</url>
   <rosdep name="python-pygame" />
   <rosdep name="ps3joy" />
   <rosdep name="tf" />
@@ -17,7 +17,7 @@
   <depend package="jsk_footstep_msgs" />
   <depend package="jsk_footstep_planner" />
   <export>
-    <jsk_joy plugin="${prefix}/plugin.xml"/>
+    <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>
     
 </package>

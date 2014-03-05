@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import jsk_joy.joy
+import jsk_teleop_joy.joy
 
 if __name__ == '__main__':
-  jsk_joy.joy.main()
+  jsk_teleop_joy.joy.main()
