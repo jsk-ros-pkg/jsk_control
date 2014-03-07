@@ -24,6 +24,15 @@ represents a function such as "specify 6D pose of the end effector".
 You can enable some plugins and choose which plugin you want to use by
 "Pushing Select Button".
 
+### Plugins out of box
+* VerboseStatus
+* JoyPose6D
+* JoyFootstep
+* JoyFootstepPlanner
+* JoyFootstepPlannerDemo
+* JoyMoveIt
+* JoyGoPos
+
 ## MIDI controllers
 ### [`interactive_midi_config.py`](scripts/interactive_midi_config.py)
 You can configure MIDI devices by this script interactively.
