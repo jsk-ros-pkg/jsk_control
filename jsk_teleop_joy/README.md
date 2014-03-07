@@ -19,6 +19,10 @@ see [this instruction](http://wiki.ros.org/ps3joy/Tutorials/PairingJoystickAndBl
 ### `interactive_midi_config.py`
 You can configure MIDI devices by this script interactively.
 
+<iframe width="560" height="315" src="//www.youtube.com/embed/1JOKra7gZVs?list=UUhjqu8hzbR1Aqj9J6tiHl7g"
+  frameborder="0" allowfullscreen>
+</iframe>
+
 0. Connect you MIDI device.
 1. First, the script asks the name of device, please choose the device you want to use.
 2. Second, please push the buttons/slide the faders in the order you want to get as `sensor_msgs/Joy`.
