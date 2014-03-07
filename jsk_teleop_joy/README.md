@@ -17,11 +17,7 @@ see [this instruction](http://wiki.ros.org/ps3joy/Tutorials/PairingJoystickAndBl
 
 ## MIDI controllers
 ### `interactive_midi_config.py`
-You can configure MIDI devices by this script interactively.
-
-<iframe width="560" height="315" src="//www.youtube.com/embed/1JOKra7gZVs?list=UUhjqu8hzbR1Aqj9J6tiHl7g"
-  frameborder="0" allowfullscreen>
-</iframe>
+You can configure MIDI devices by this script interactively. [movie](http://www.youtube.com/watch?v=1JOKra7gZVs)
 
 0. Connect you MIDI device.
 1. First, the script asks the name of device, please choose the device you want to use.
@@ -30,8 +26,8 @@ The script maps those buttons to `sensor_msgs/Joy/axes` (and `sensor_msgs/Joy/bu
 3. Please type `q` to quit. And the configure will be saved into `/tmp/midi.yaml`.
 
 ### `midi_write.py`
-LEDやアクティブフェーダなどを制御するには、MIDIのoutputを計算機から叩く必要がある。そのための便利スクリプト。
-`-w`オプションを利用することで、yamlファイルに追記することができる。
+In order to control LEDs and active faders, need to output some MIDI commands from you computer.
+The script `midi_write.py` helps to dig the command and you can save the configuration to a yaml file by `-w` option.
 
 ### `midi_config_player.py`
 This script publishes `sensor_msgs/Joy` to `/joy` based on a yaml file configured by
