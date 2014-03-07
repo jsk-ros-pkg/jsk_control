@@ -31,6 +31,9 @@ def autoJoyDetect(msg):
   elif len(msg.axes) == 8 and len(msg.buttons) == 11:
     rospy.loginfo("auto detected as xbox")
     AUTO_DETECTED_CLASS = XBoxStatus
+  elif len(msg.axes) == 20 and len(msg.buttons) == 17:
+    rospy.loginfo("auto detected as ps3")
+    AUTO_DETECTED_CLASS = PS3Status
   else:
     rospy.logfatal("unknown joy type")
     sys.exit(1)
