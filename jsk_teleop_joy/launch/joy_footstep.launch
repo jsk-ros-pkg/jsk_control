@@ -8,7 +8,7 @@
   </node>
   <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen">
     <remap from="pose" to="$(arg POSE_REMAP)" />
-    <param name="controller_type" value="xbox" />
+    <param name="controller_type" value="auto" />
     <param name="follow_view" value="true" />
     <param name="frame_id" value="/camera_depth_optical_frame" />
     <rosparam>

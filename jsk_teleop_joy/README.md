@@ -1,5 +1,19 @@
 # jsk_teleop_joy package
 
+## introduction
+This package provides physical UI for teleoperatoin for example joy sticks,
+game controllers and midi instruments.
+
+## Supported Game controllers
+This package supports following game controllers:
+1. XBox360 controller
+2. PS3 Controller (Bluetooth)
+3. PS3 Controller (USB)
+
+In order to use PS3 controller via Bluetooth,
+see [this instruction](http://wiki.ros.org/ps3joy/Tutorials/PairingJoystickAndBluetoothDongle).
+
+
 ## MIDI controllers
 ### `interactive_midi_config.py`
 このスクリプトを使うと、対話的にmidiデバイスの入力を設定できる。
