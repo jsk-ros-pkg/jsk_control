@@ -6,6 +6,7 @@ game controllers and midi instruments.
 
 ## Supported Game controllers
 This package supports following game controllers:
+
 1. XBox360 controller
 2. PS3 Controller (Bluetooth)
 3. PS3 Controller (USB)
