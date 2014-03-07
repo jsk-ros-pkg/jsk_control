@@ -1,8 +1,8 @@
 # jsk_teleop_joy package
 
 ## Introduction
-This package provides physical UI for teleoperatoin for example joy sticks,
-game controllers and midi instruments.
+This package provides physical UI for teleoperatoin such as joy sticks,
+game controllers and MIDI instruments.
 
 ## Supported game controllers
 This package supports following game controllers:
@@ -24,7 +24,7 @@ represents a function such as "specify 6D pose of the end effector".
 You can enable some plugins and choose which plugin you want to use by
 "Pushing Select Button".
 
-### Plugins out of box
+## jsk\_teleop\_joy plugins out of box
 * VerboseStatus
 * JoyPose6D
 * JoyFootstep
@@ -32,6 +32,8 @@ You can enable some plugins and choose which plugin you want to use by
 * JoyFootstepPlannerDemo
 * JoyMoveIt
 * JoyGoPos
+
+
 
 ## MIDI controllers
 ### [`interactive_midi_config.py`](scripts/interactive_midi_config.py)
