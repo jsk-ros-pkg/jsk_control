@@ -33,7 +33,29 @@ You can enable some plugins and choose which plugin you want to use by
 * JoyMoveIt
 * JoyGoPos
 
+## How to implement a plugin
+1. write xml file to define plugins.
+2. export that xml file from `manifest.xml` or `package.xml`.
+3. implement plugin
 
+### Write xml file to define plugins
+jsk\_teleop\_joy reads the plugin definition from a xml file like [`plugin.xml`](plugin.xml).
+
+That xml should be like:
+```xml
+<library>
+  <class name="Foo" type="your_package.foo">
+  </class>
+</library>
+```
+
+The xml file should have `<library>` tag at the top level.
+And you can define plugins by `<class>` tag.
+
+* `name` attribute means the name of the plugin. You will choose plugins by this
+name in your launch files ([example](launch/joy.launch#L15)).
+* `type` attribute means the python class of the plugin. jsk\_teleop\_joy tries
+to instantiate plugin class using thie `type` name.
 
 ## MIDI controllers
 ### [`interactive_midi_config.py`](scripts/interactive_midi_config.py)
