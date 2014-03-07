@@ -1,10 +1,10 @@
 # jsk_teleop_joy package
 
-## introduction
+## Introduction
 This package provides physical UI for teleoperatoin for example joy sticks,
 game controllers and midi instruments.
 
-## Supported Game controllers
+## Supported game controllers
 This package supports following game controllers:
 
 1. XBox360 controller
@@ -14,6 +14,8 @@ This package supports following game controllers:
 In order to use PS3 controller via Bluetooth,
 see [this instruction](http://wiki.ros.org/ps3joy/Tutorials/PairingJoystickAndBluetoothDongle).
 
+## Architecture of jsk\_teleop\_joy
+jsk\_teleop\_joy (the main script is [`joy_main.py`](scripts/joy_main.py)) is based on plugin architecture.
 
 ## MIDI controllers
 ### `interactive_midi_config.py`
