@@ -92,13 +92,18 @@ of the active plugin.
 
 The 2nd argument of `joyCB` is an instance of [`JoyStatus`](src/joy_status.py).
 `JoyStatus` is one of `XboxStatus`, `PS3Status` and `PS3WiredStatus`.
-
-It means the latest message from `/joy`.
+This means the latest message from `/joy`.
+These 3 classes provide the same interface and you don't need to care about
+which controller the user uses.
 
 On the other hand, the 3rd argument of `joyCB` (`history`), is a sequence of
 `JoyStatus`. it's an instance of
 [`StatusHistory`](src/jsk_teleop_joy/status_history.py). It means a hisotry
 of recent `JoyStatus`.
+
+### SELECT button
+jsk\_teleop\_joy system occupies SELECT button so you cannot use SELECT button
+in your plugin. SELECT button is used for switching plugins.
 
 ## MIDI controllers
 ### [`interactive_midi_config.py`](scripts/interactive_midi_config.py)
