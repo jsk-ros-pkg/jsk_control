@@ -64,7 +64,41 @@ in your `manifest.xml` or `package.xml`.
 These two files, [`manifest.xml`](manifest.xml), [`package.xml`](package.xml),
 are good examples.
 
+### Implement a plugin
+Finally, you can implement a jsk\_teleop\_joy plugin.
 
+[VerboseStatus Plugin](src/jsk_teleop_joy/plugin/verbose.py) is a good example
+how to implement a plugin.
+
+#### `__init__` method
+All the plugins are required to inherits
+`jsk_teleop_joy.joy_plugin.JSKJoyPlugin` and call `JSKJoyPlugin.__init__` in
+its `__init__` constructor.
+
+```python
+class VerboseStatus(jsk_teleop_joy.joy_plugin.JSKJoyPlugin):
+  def __init__(self):
+    jsk_teleop_joy.joy_plugin.JSKJoyPlugin.__init__(self, 'VerbosePlugin')
+```
+
+#### `joyCB` method
+Each time jsk\_teleop\_joy receives `/joy` message, it calls `joyCB` method
+of the active plugin.
+
+```python
+  def joyCB(self, status, history):
+    rospy.loginfo('analog left (%f, %f)' % (status.left_analog_x, status.left_analog_y))
+```
+
+The 2nd argument of `joyCB` is an instance of [`JoyStatus`](src/joy_status.py).
+`JoyStatus` is one of `XboxStatus`, `PS3Status` and `PS3WiredStatus`.
+
+It means the latest message from `/joy`.
+
+On the other hand, the 3rd argument of `joyCB` (`history`), is a sequence of
+`JoyStatus`. it's an instance of
+[`StatusHistory`](src/jsk_teleop_joy/status_history.py). It means a hisotry
+of recent `JoyStatus`.
 
 ## MIDI controllers
 ### [`interactive_midi_config.py`](scripts/interactive_midi_config.py)
