@@ -35,7 +35,7 @@ You can enable some plugins and choose which plugin you want to use by
 
 ## How to implement a plugin
 1. write xml file to define plugins.
-2. export that xml file from `manifest.xml` or `package.xml`.
+2. Export the xml file from your ROS package using `manifest.xml` or `package.xml`.
 3. implement plugin
 
 ### Write xml file to define plugins
@@ -56,6 +56,15 @@ And you can define plugins by `<class>` tag.
 name in your launch files ([example](launch/joy.launch#L15)).
 * `type` attribute means the python class of the plugin. jsk\_teleop\_joy tries
 to instantiate plugin class using thie `type` name.
+
+### Export the xml file from your ROS package
+You need to export that xml file using `<export>` tag and `<jsk_teleop_joy>` tag
+in your `manifest.xml` or `package.xml`.
+
+These two files, [`manifest.xml`](manifest.xml), [`package.xml`](package.xml),
+are good examples.
+
+
 
 ## MIDI controllers
 ### [`interactive_midi_config.py`](scripts/interactive_midi_config.py)
