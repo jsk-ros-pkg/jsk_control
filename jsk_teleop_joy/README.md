@@ -21,6 +21,9 @@ is based on plugin architecture.
 ROS packages provides the plugins for jsk\_teleop\_joy and each plugin
 represents a function such as "specify 6D pose of the end effector".
 
+You can enable some plugins and choose which plugin you want to use by
+"Pushing Select Button".
+
 ## MIDI controllers
 ### [`interactive_midi_config.py`](scripts/interactive_midi_config.py)
 You can configure MIDI devices by this script interactively.
@@ -45,4 +48,7 @@ the configuration to a yaml file by `-w` option.
 ### [`midi_config_player.py`](scripts/midi_config_player.py)
 This script publishes `sensor_msgs/Joy` to `/joy` based on a yaml file
 configured by `interactive_midi_config.py` and `midi_write.py`.
+
+[`configs`](configs) directory includes some yaml files for several MIDI
+devices.
 
