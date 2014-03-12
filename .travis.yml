@@ -57,7 +57,7 @@ script: # All commands must exit with code 0 on success. Anything else is consid
   - rospack profile
   - export CATKIN_PACKAGES="`find $CI_SOURCE_PATH -name package.xml | xargs -n 1 dirname | xargs -n 1 basename`"
   - if [ $BUILDER = catkin ]; then catkin_make -j4; else rosmake $BUILD_PACKAGES --profile --pjobs=4; fi
-  - if [ $BUILDER = catkin ]; then ([ "$CATKIN_PACKAGES" != "" ] && catkin_make test --pkg $CATKIN_PACKAGES) || 0; else rosmake $BUILD_PACKAGES --test-only; fi
+  - if [ $BUILDER = catkin ]; then if [ "$CATKIN_PACKAGES" != "" ]; then catkin_make test --pkg $CATKIN_PACKAGES fi; else rosmake $BUILD_PACKAGES --test-only; fi
   - if [ $BUILDER = catkin ]; then catkin_make install; fi
   - if [ $BUILDER = catkin ]; then rm -fr devel src build; source install/setup.bash; else source setup.sh; fi
 after_failure:
