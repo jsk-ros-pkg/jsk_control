@@ -42,11 +42,11 @@ install: # Use this to install any prerequisites or dependencies necessary to ru
   - if [ $ROSWS = rosws ] ; then $ROSWS merge /opt/ros/$ROS_DISTRO/.rosinstall; fi
   - $ROSWS update -j10
   - if [ $ROSWS = rosws ] ; then $ROSWS set --git $REPOSITORY_NAME https://dummy.com/dummy -y; fi
-  - ln -s $CI_SOURCE_PATH $REPOSITORY_NAME # Link the repo we are testing to the new workspace
+  - ln -s $CI_SOURCE_PATH . # Link the repo we are testing to the new workspace
   - cd ../
   # Install dependencies for source repos
   - find src -name package.xml -exec dirname {} \; | xargs -n 1 -i find {} -name manifest.xml | xargs -n 1 -i mv {} {}.deprecated
-  - find src -name package.xml
+  - find .
   - rosdep install -r -n --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
   - find src -name manifest.xml.deprecated | xargs -n 1 -i dirname {} | xargs -n 1 -i ln -sf `pwd`/{}/manifest.xml.deprecated `pwd`/{}/manifest.xml
   - if [ $BUILDER = rosbuild ]; then source src/setup.sh; rosdep install -a -y -n -r; fi
