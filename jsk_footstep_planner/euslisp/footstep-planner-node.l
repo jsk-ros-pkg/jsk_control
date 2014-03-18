@@ -256,7 +256,7 @@
     (while (ros::ok)
       (send s :worker)
       (ros::spin-once)
-      (x::window-main-one)
+      (if *debug* (x::window-main-one))
       (ros::sleep))
     ))
 
