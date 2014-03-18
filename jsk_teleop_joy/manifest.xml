@@ -14,6 +14,7 @@
   <rosdep name="view_controller_msgs" />
   <rosdep name="interactive_markers" />
   <rosdep name="visualization_msgs" />
+  <depend package="view_controller_msgs" />
   <depend package="jsk_footstep_msgs" />
   <depend package="jsk_footstep_planner" />
   <export>
