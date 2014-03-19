@@ -2,7 +2,7 @@ import rospy
 import actionlib
 from joy_pose_6d import JoyPose6D
 from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray
-from std_msgs.msg import UInt8
+from std_msgs.msg import UInt8, Empty
 import tf
 from tf.transformations import *
 
@@ -21,6 +21,7 @@ class JoyFootstepPlanner(JoyPose6D):
     self.rfoot_offset = tf_ext.xyzxyzwToMatrix(rospy.get_param('~rfoot_offset'))
     
     self.command_pub = rospy.Publisher('/menu_command', UInt8)
+    self.execute_pub = rospy.Publisher('execute', Empty)
     self.tf_listener = tf.TransformListener()
     # initialize self.pre_pose
     rospy.loginfo("waiting %s" % (self.lfoot_frame_id))
@@ -57,6 +58,9 @@ class JoyFootstepPlanner(JoyPose6D):
     self.pre_pose.pose.orientation.y = mid_quaternion[1]
     self.pre_pose.pose.orientation.z = mid_quaternion[2]
     self.pre_pose.pose.orientation.w = mid_quaternion[3]
+  def executePlan(self):
+    # publish execute with std_msgs/empty 
+    self.execute_pub.publish(Empty())
   def joyCB(self, status, history):    
     JoyPose6D.joyCB(self, status, history)
     latest = history.latest()
@@ -66,4 +70,6 @@ class JoyFootstepPlanner(JoyPose6D):
       self.command_pub.publish(UInt8(1))
     elif status.cross and not latest.cross:   #reset
       self.resetGoalPose()
+    elif status.circle and not latest.circle:   #execute
+      self.executePlan()
     
