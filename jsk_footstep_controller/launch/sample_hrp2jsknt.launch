@@ -46,6 +46,10 @@
     <remap from="move_marker" to="$(arg POSE_REMAP)" />
     <param name="wait_snapit_server" value="false" />
     <rosparam>
+      lfoot_frame_id: LLEG_LINK5
+      rfoot_frame_id: RLEG_LINK5
+      lfoot_offset: [0.035589, 0.01, -0.105, 0, 0, 0, 1]
+      rfoot_offset: [0.035589, -0.01, -0.105, 0, 0, 0, 1]
       use_footstep_planner: true
       use_initial_footstep_tf: true
       footstep_margin: 0.2
