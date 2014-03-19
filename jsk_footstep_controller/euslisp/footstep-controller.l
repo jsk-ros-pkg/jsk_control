@@ -31,7 +31,9 @@
          (ros::get-param "~interface_class" "hrp2jsknt-interface"))
         )
     (load interface-file)
-    (setq *ri* (instance (eval (read-from-string interface-class)) :init)))
+    (setq *ri* (instance (eval (read-from-string interface-class)) :init))
+    (send *ri* :start-st)
+    )
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
   (let ((s (instance ros::simple-action-server :init
