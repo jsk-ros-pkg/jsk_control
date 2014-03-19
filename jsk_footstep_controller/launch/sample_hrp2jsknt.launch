@@ -18,7 +18,17 @@
     timeout: 1
     </rosparam>
   </node>
-
+  <!-- controller -->
+  <node pkg="jsk_footstep_controller"
+        type="footstep-controller.l"
+        name="footstep_controller"
+        clear_params="true"
+        output="screen">
+    <rosparam>
+      interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
+      interface_class: "hrp2jsknt-interface"
+    </rosparam>
+  </node>
   <!-- visualization for rviz -->
   <arg name="POSE_REMAP" default="/footstep_marker/pose" />
   <arg name="DEV" default="/dev/input/js0" />
@@ -31,6 +41,7 @@
 
   <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen">
     <remap from="pose" to="$(arg POSE_REMAP)" />
+    <remap from="execute" to="/footstep_marker/execute" />
     <param name="controller_type" value="auto" />
     <param name="follow_view" value="true" />
     <param name="frame_id" value="/odom" />
