@@ -3,8 +3,8 @@
 ;; forostep-controller.l
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 
-(defun execute-cb (goal)
-  (let ((footstep (send goal :footstep)))
+(defun execute-cb (server goal)
+  (let ((footstep (send goal :goal :footstep)))
     (let ((frame-id (send footstep :header :frame_id)))
       (let ((footstep-coords
              (mapcar #'(lambda (footstep)      ;no tf transformation
@@ -18,7 +18,11 @@
                            coords))
                      (send footstep :footsteps))))
         (send *ri* :set-foot-steps footstep-coords)
-        ))))
+        )))
+  (let ((result (send server :result)))
+    (send server :set-succeeded result)
+    )
+  )
 
 (defun main()
   (ros::roseus "footstep_controller")
