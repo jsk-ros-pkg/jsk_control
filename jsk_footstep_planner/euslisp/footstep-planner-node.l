@@ -180,7 +180,7 @@
                              :render-leg-object *leg*)))
       (let ((solver-nodes (send asolver :solve prblm :verbose nil)))
         (let ((result (send server :result)))
-          (if solver-nodes
+          (if solver-nodes              ;successfully solved!
               (let ((footsteps (instance jsk_footstep_msgs::FootstepArray :init)))
                 (send footsteps :header (send goal :goal :initial_footstep :header))
                 (send footsteps :footsteps
@@ -210,8 +210,9 @@
                                              (find-if #'(lambda (s)
                                                           (= (cadr step-order) (car s)))
                                                       goal-foot-coords))))
-                      ;; append final steps
-                      (send footsteps :footsteps (append (send footsteps :footsteps)
+                      ;; append final steps and initial footstep
+                      (send footsteps :footsteps (append (send goal :goal :initial_footstep :footsteps)
+                                                         (send footsteps :footsteps)
                                                          (mapcar #'(lambda (s)
                                                                      (let ((f (instance jsk_footstep_msgs::Footstep :init)))
                                                                        (let ((pose (ros::coords->tf-pose (cdr s))))
