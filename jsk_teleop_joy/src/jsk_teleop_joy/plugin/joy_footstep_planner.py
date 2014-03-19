@@ -64,6 +64,6 @@ class JoyFootstepPlanner(JoyPose6D):
       return
     if status.triangle and not latest.triangle:
       self.command_pub.publish(UInt8(1))
-    elif status.cross and not latest.cross:
-      self.command_pub.publish(UInt8(2))
+    elif status.cross and not latest.cross:   #reset
+      self.resetGoalPose()
     
