@@ -26,6 +26,7 @@
       (ros::ros-info "done")
       )
     (setq *ri* (instance (eval (read-from-string interface-class)) :init))
+    (send *ri* :start-st)
     (setq *robot* (instance (eval (read-from-string robot-class)) :init))
     ;; convert pose-name to keyword
     (send *robot* (read-from-string (format nil ":~A" pose-name)))
