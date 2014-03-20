@@ -26,6 +26,7 @@
       interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
       interface_class: "hrp2jsknt-interface"
     </rosparam>
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
   </node>
   <!-- visualization for rviz -->
   <node pkg="jsk_footstep_controller"
