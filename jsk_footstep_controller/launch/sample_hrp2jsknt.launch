@@ -10,14 +10,9 @@
         name="footstep_planner"
         clear_params="true"
         output="log">
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <rosparam>
     use_planes: false
-#    x:     [-0.039375,0.0525,0.0525,0.020176,-0.02176,-0.08,0.0,0.0,0.075,0.15,0.0, 0.15,  0.1,  0.0]
-#    y:     [0.2475,0.26,0.26,0.206422,0.206422,0.21,0.27,0.19,0.21,0.21,0.21,        0.21, 0.21, 0.21]
-#    theta: [0.174533,-0.20944,0.20944,-0.261799,0.261799,0.0,0.0,0.0,0.0,0.0,0.0,    0.0,  0.0,  0.0]
-    x:     [-0.039375,0.0525,0.0525,0.027176,-0.027176,-0.08,0.0,0.0,0.075,0.15,0.0, 0.15,  0.1, 0.0,  0.15]
-    y:     [0.2475,0.26,0.26,0.206422,0.206422,0.21,0.27,0.19,0.21,0.21,0.21,        0.21, 0.21, 0.21, 0.21]
-    theta: [0.174533,-0.20944,0.20944,-0.261799,0.261799,0.0,0.0,0.0,0.0,0.0,0.0,    0.0,  0.0,  0.0,  0.0]
     timeout: 1
     </rosparam>
   </node>
@@ -52,14 +47,7 @@
        plugins: ['JoyFootstepPlanner']
     </rosparam>
     <!-- footstep parameters -->
-    <rosparam>
-      lfoot_frame_id: LLEG_LINK5
-      rfoot_frame_id: RLEG_LINK5
-#      lfoot_offset: [0.035589, 0.01, -0.105, 0, 0, 0, 1]
-#      rfoot_offset: [0.035589, -0.01, -0.105, 0, 0, 0, 1]
-      lfoot_offset: [0.052, 0.01, -0.105, 0, 0, 0, 1]
-      rfoot_offset: [0.052, -0.01, -0.105, 0, 0, 0, 1]
-    </rosparam>
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
   </node>
   
   <node pkg="jsk_interactive_marker"
@@ -70,14 +58,8 @@
         >
     <remap from="move_marker" to="$(arg POSE_REMAP)" />
     <param name="wait_snapit_server" value="false" />
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <rosparam>
-      lfoot_frame_id: LLEG_LINK5
-      rfoot_frame_id: RLEG_LINK5
-#      lfoot_offset: [0.035589, 0.01, -0.105, 0, 0, 0, 1]
-#      rfoot_offset: [0.035589, -0.01, -0.105, 0, 0, 0, 1]
-      lfoot_offset: [0.052, 0.01, -0.105, 0, 0, 0, 1]
-      rfoot_offset: [0.052, -0.01, -0.105, 0, 0, 0, 1]
-
       use_footstep_planner: true
       use_initial_footstep_tf: true
       footstep_margin: 0.21
