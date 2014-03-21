@@ -34,14 +34,18 @@
       (let* ((hrpsys->ros (send hrpsys-coords :transformation footstep-coords0))
              (ros->hrpsys (send hrpsys->ros :inverse-transformation)))
         (let ((transformed-footstep
-               (mapcar #'(lambda (footstep)
-                           (let ((coords
-                                  (send (send ros->hrpsys :copy-worldcoords)
-                                        :transform footstep)))
-                             (send coords :put :l/r (get footstep :l/r))
-                             coords))
-                       footstep-coords-rest)))
-          (print transformed-footstep)
+               (mapcar
+                #'(lambda (footstep)
+                    (let ((coords (send footstep :transform ros->hrpsys)))
+                      (send coords :put :l/r (get footstep :l/r))
+                      coords))
+                footstep-coords-rest)))
+          (ros::ros-info "original footstep: ~A"
+            (send-all footstep-coords :worldpos))
+          (ros::ros-info "ros->hrpsys: ~A"
+            (send ros->hrpsys :worldpos))
+          (ros::ros-info "transformed footstep: ~A"
+            (send-all transformed-footstep :worldpos))
           (send *ri* :set-foot-steps transformed-footstep)))))
     (let ((result (send server :result)))
     (send server :set-succeeded result)))
