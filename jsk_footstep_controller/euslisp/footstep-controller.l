@@ -42,8 +42,8 @@
                 footstep-coords-rest)))
           (ros::ros-info "original footstep: ~A"
             (send-all footstep-coords :worldpos))
-          (ros::ros-info "ros->hrpsys: ~A"
-            (send ros->hrpsys :worldpos))
+          (ros::ros-info "hrpsys-coords: ~A" (send hrpsys-coords :worldpos))
+          (ros::ros-info "ros->hrpsys: ~A" (send ros->hrpsys :worldpos))
           (ros::ros-info "transformed footstep: ~A"
             (send-all transformed-footstep :worldpos))
           (send *ri* :set-foot-steps transformed-footstep)))))
