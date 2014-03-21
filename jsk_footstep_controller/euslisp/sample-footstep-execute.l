@@ -18,7 +18,7 @@
       (xrange '(-2000 2000))
       (yrange '(-2000 2000)))
   (ros::sleep 10)
-  (while (ros::ok)
+  ;;(while (ros::ok)
     (ros::spin-once)
     (let ((next-coords (make-coords)))
       (send next-coords :locate (float-vector
@@ -37,5 +37,5 @@
     (ros::sleep 5)
     (ros::publish "/footstep_marker/execute" (instance std_msgs::empty :init))
     (ros::sleep 30)
-    )
+  ;;  )
   )

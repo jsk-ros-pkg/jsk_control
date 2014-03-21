@@ -48,9 +48,7 @@
             (send-all transformed-footstep :worldpos))
           (send *ri* :set-foot-steps transformed-footstep)))))
     (let ((result (send server :result)))
-    (send server :set-succeeded result)))
-
-
+      (send server :set-succeeded result)))
   
 (defun main()
   (ros::roseus "footstep_controller")
