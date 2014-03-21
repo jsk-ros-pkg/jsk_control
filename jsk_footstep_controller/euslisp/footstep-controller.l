@@ -32,20 +32,22 @@
               :lleg
             :rleg))
     coords))
-  
+
+(defun footstep-origin-coords ()
+  (midcoords
+   0.5
+   (send *ri* :abc-footstep->eus-footstep
+         (send (send *ri* :get-foot-step-param) :rleg_coords))
+   (send *ri* :abc-footstep->eus-footstep
+         (send (send *ri* :get-foot-step-param) :lleg_coords))))
+
 (defun execute-cb (server goal)
   ;; coordinate transformation:
   ;;  1. convert all the coordinates to end-coords
   ;;     the retrieved coordinates are written in center-foot.
   ;;  2. convert all the coordinates relative to the coords
   ;;     used in rtm-ros-robot-interface.l (`rtm-ros-coords')
-  (let* ((rtm-ros-coords
-          (midcoords
-           0.5
-           (send *ri* :abc-footstep->eus-footstep
-                 (send (send *ri* :get-foot-step-param) :rleg_coords))
-           (send *ri* :abc-footstep->eus-footstep
-                 (send (send *ri* :get-foot-step-param) :lleg_coords))))
+  (let* ((rtm-ros-coords (footstep-origin-coords))
          (footstep (send goal :goal :footstep)) ;jsk_footstep_msgs/FootstepArray
          (frame-id (send footstep :header :frame_id)))
     (let ((footstep-coords            ; convert footstep to euslisp coords
