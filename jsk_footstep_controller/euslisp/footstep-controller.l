@@ -31,9 +31,8 @@
           (if (= (send footstep :leg) jsk_footstep_msgs::Footstep::*LEFT*)
               :lleg
             :rleg))
-    coords)
-
-
+    coords))
+  
 (defun execute-cb (server goal)
   ;; coordinate transformation:
   ;;  1. convert all the coordinates to end-coords
