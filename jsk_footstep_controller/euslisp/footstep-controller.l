@@ -15,10 +15,18 @@
             :rleg))
     coords))
 
+(defun hrpsys-init-coords ()
+  (let ((param (send *ri* :get-foot-step-param)))
+    (midcoords
+     0.5
+     (send *ri* :abc-footstep->eus-footstep (send param :rleg_coords))
+     (send *ri* :abc-footstep->eus-footstep (send param :lleg_coords)))))
+
 (defun execute-cb (server goal)
   ;; coordinate transformation:
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
   ;; 2. apply the inverse transformation to footstep-ocorods[1:]
+  ;; 3. convert the footstep respected to hrpsys-mid-coords
   (let* ((footstep (send goal :goal :footstep)) ;jsk_footstep_msgs/FootstepArray
          (frame-id (send footstep :header :frame_id)))
     (let* ((footstep-coords            ; convert footstep to euslisp coords
@@ -30,23 +38,27 @@
            (hrpsys-coords (send *ri* :abc-footstep->eus-footstep
                                 (send (send *ri* :get-foot-step-param)
                                       (if (eq (get footstep-coords0 :l/r) :lleg)
-                                          :lleg_coords :rleg_coords)))))
+                                          :lleg_coords :rleg_coords))))
+           (hrpsys-mid-coords (hrpsys-init-coords)))
       (let* ((hrpsys->ros (send hrpsys-coords :transformation footstep-coords0))
              (ros->hrpsys (send hrpsys->ros :inverse-transformation)))
         (let ((transformed-footstep
                (mapcar
                 #'(lambda (footstep)
-                    (let ((coords (send footstep :transform ros->hrpsys)))
-                      (send coords :put :l/r (get footstep :l/r))
+                    (let ((coords (send (send ros->hrpsys :copy-worldcoords)
+                                        :transform footstep)))
+                      (setf (get coords :l/r) (get footstep :l/r))
                       coords))
                 footstep-coords-rest)))
-          (ros::ros-info "original footstep: ~A"
-            (send-all footstep-coords :worldpos))
-          (ros::ros-info "hrpsys-coords: ~A" (send hrpsys-coords :worldpos))
-          (ros::ros-info "ros->hrpsys: ~A" (send ros->hrpsys :worldpos))
-          (ros::ros-info "transformed footstep: ~A"
-            (send-all transformed-footstep :worldpos))
-          (send *ri* :set-foot-steps transformed-footstep)))))
+          (let ((final-footstep
+                 (mapcar
+                  #'(lambda (footstep)
+                      (let ((c (send hrpsys-mid-coords
+                                     :transformation footstep)))
+                        (setf (get c :l/r) (get footstep :l/r))
+                        c))
+                  transformed-footstep)))
+            (send *ri* :set-foot-steps final-footstep))))))
     (let ((result (send server :result)))
       (send server :set-succeeded result)))
   

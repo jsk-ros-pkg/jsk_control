@@ -54,7 +54,7 @@
         type="footstep_marker"
         name="footstep_marker"
         clear_params="true"
-        output="screen"
+        output="log"
         >
     <remap from="move_marker" to="$(arg POSE_REMAP)" />
     <param name="wait_snapit_server" value="false" />
