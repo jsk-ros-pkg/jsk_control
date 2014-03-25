@@ -1,0 +1,16 @@
+<package>
+  <description brief="jsk_footstep_planner">
+
+     jsk_footstep_planner
+
+  </description>
+  <author>Ryohei Ueda</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="jsk_footstep_msgs" />
+  <depend package="jsk_footstep_planner" />
+  <url>http://ros.org/wiki/jsk_footstep_planner</url>
+
+</package>
+
+

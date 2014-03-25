@@ -12,7 +12,7 @@ catkin_package(
  CATKIN_DEPENDS jsk_footstep_msgs jsk_footstep_planner
 #  DEPENDS system_lib
 )
-install(DIRECTORY euslisp
+install(DIRECTORY euslisp launch
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   USE_SOURCE_PERMISSIONS
   PATTERN ".svn" EXCLUDE

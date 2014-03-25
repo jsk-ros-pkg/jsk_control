@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="jsk_footstep_controller"
+        type="resetpose.l"
+        name="resetpose"
+        output="screen"
+        clear_params="true">
+    <param name="pose_name" value="reset-manip-pose"/>
+  </node>
+</launch>

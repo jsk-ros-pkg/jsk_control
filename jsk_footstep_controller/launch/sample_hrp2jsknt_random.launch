@@ -1,0 +1,56 @@
+<launch>
+  <!-- please launch gazebo_hrp2jsknt_no_controllers.launch of hrpsys_gazebo_tutorials with roslaunch -->
+  <!-- and hrp2jsknt_hrpsys_bringup.launch of hrpsys_gazebo_tutorials with rtmlaunch -->
+  <!-- Please launch rviz to make footsteps -->
+  <!-- move the robot to reset-pose -->
+  <include file="$(find jsk_footstep_controller)/launch/resetmanippose.launch" />
+  <!-- planner -->
+  <node pkg="jsk_footstep_planner"
+        type="footstep-planner-node.l"
+        name="footstep_planner"
+        clear_params="true"
+        output="log">
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+    <rosparam>
+    use_planes: false
+    timeout: 1
+    </rosparam>
+  </node>
+  <!-- controller -->
+  <node pkg="jsk_footstep_controller"
+        type="footstep-controller.l"
+        name="footstep_controller"
+        clear_params="true"
+        output="screen">
+    <rosparam>
+      interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
+      interface_class: "hrp2jsknt-interface"
+    </rosparam>
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+  </node>
+  <!-- visualization for rviz -->
+  <node pkg="jsk_footstep_controller"
+        type="sample-footstep-execute.l"
+        name="sample_footstep"
+        clear_parmas="true"
+        >
+  </node>
+  <arg name="POSE_REMAP" default="/footstep_marker/pose" />
+  <node pkg="jsk_interactive_marker"
+        type="footstep_marker"
+        name="footstep_marker"
+        clear_params="true"
+        output="screen"
+        >
+    <remap from="move_marker" to="$(arg POSE_REMAP)" />
+    <param name="wait_snapit_server" value="false" />
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+    <rosparam>
+      use_footstep_planner: true
+      use_initial_footstep_tf: true
+      footstep_margin: 0.21
+      foot_size_z: 0.01
+    </rosparam>
+    <param name="frame_id" value="/odom" />
+  </node>
+</launch>
