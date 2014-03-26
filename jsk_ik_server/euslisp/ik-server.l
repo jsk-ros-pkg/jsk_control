@@ -583,6 +583,7 @@
 		 (send* self :fullbody-ik-main
 			ik-param))
 	   (vectorp ret))
+	 (format t "[:fik-service-cb] output ...~%")
 	 ;;(format t "[ik-server] SUCCESS!!~%")
 	 (send res :error_code :val moveit_msgs::MoveItErrorCodes::*SUCCESS*)
 	 (if viewer (send viewer :draw-objects))

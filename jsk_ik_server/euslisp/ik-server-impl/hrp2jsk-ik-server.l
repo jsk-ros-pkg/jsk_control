@@ -11,7 +11,6 @@
 
 (ros::roseus "hrp2jsk_ik_server")
 
-
 (defclass hrp2jsk-ik-server
   :super ik-server
   )
