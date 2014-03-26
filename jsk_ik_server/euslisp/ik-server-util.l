@@ -2,18 +2,39 @@
 
 (defmethod cascaded-link
   (:cog-convergence-check
-   (centroid-thre target-centroid-pos &optional centroid-offset-func)
+   (centroid-thre target-centroid-pos
+		  &key
+		  (centroid-offset-func)
+		  (translation-axis :z)
+		  (update-mass-properties t))
    (let ((cdiff
-	  (send self :difference-cog-position target-centroid-pos centroid-offset-func)))
+	  (send self :difference-cog-position target-centroid-pos
+		:centroid-offset-func centroid-offset-func
+		:translation-axis translation-axis
+		:update-mass-properties update-mass-properties)))
      (cond
       ((numberp centroid-thre) (> centroid-thre (norm cdiff)))
       ((functionp centroid-thre) (funcall centroid-thre cdiff))
+      ((vectorp centroid-thre) (v< (map float-vector #'abs cdiff) centroid-thre))
       ((vectorp centroid-thre)
        (v< (map float-vector #'abs cdiff) centroid-thre))
       ((and (class centroid-thre)
-	    (find-method centroid-thre :cog-convergence-check))
+  	    (find-method centroid-thre :cog-convergence-check))
        (send centroid-thre :cog-convergence-check cdiff)))))
   )
+;; (:cog-convergence-check
+;;  (centroid-thre target-centroid-pos &optional centroid-offset-func)
+;;  (let ((cdiff
+;; 	  (send self :difference-cog-position target-centroid-pos centroid-offset-func)))
+;;    (cond
+;;     ((numberp centroid-thre) (> centroid-thre (norm cdiff)))
+;;     ((functionp centroid-thre) (funcall centroid-thre cdiff))
+;;     ((vectorp centroid-thre)
+;;      (v< (map float-vector #'abs cdiff) centroid-thre))
+;;     ((and (class centroid-thre)
+;; 	    (find-method centroid-thre :cog-convergence-check))
+;;      (send centroid-thre :cog-convergence-check cdiff)))))
+;; )
 
 (defmethod cascaded-link
   (:fullbody-inverse-kinematics-with-error
@@ -41,8 +62,13 @@
      (if (atom translation-axis) (setq translation-axis (list translation-axis)))
      (if (atom thre) (setq thre (list thre)))
      (if (atom rthre) (setq rthre (list rthre)))
-     (send* self :fullbody-inverse-kinematics target-coords
-	    :revert-if-fail nil args)
+     (print 1)
+     (send* self :fullbody-inverse-kinematics
+	    target-coords
+	    (append
+	     (list :revert-if-fail nil)
+	     args))
+     (print 2)
      (setq dif-pos
 	   (mapcar #'(lambda (mv tc trans-axis)
 		       (send mv :difference-position tc
@@ -57,13 +83,14 @@
       (target-centroid-pos
        (setq cdiff
 	     (send self :difference-cog-position
-		   target-centroid-pos centroid-offset-func)))
+		   target-centroid-pos
+		   :centroid-offset-func centroid-offset-func)))
       (t (setq cdiff 0)))
      (setq success
 	   (send self :ik-convergence-check
 		 t dif-pos dif-rot
 		 rotation-axis translation-axis thre rthre
-		 centroid-thre target-centroid-pos centroid-offset-func))
+		 centroid-thre target-centroid-pos centroid-offset-func :z))
      (cond
       ((and (not success) revert-if-fail)
        (send self :angle-vector initial-av)
