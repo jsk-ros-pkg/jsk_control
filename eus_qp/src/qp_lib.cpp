@@ -96,7 +96,8 @@ double* solve_eiquadprog(double* G, double* g0, double* CE, double* ce0, double*
 	for (int i = 0; i < x_buf.size(); i++)
 				x[i] = x_buf(i) ;
 
-	flag = check_constraints(CE, ce0, CI, ci0, x, x_len, eqthre, ce_len, ci_len, ce_err, ci_err);
+	flag = check_constraints(CE, ce0, CI, ci0, x, x_len, ce_len, ci_len, eqthre, ce_err, ci_err);
+	//flag = check_constraints(CE, ce0, CI, ci0, x, x_len, eqthre, ce_len, ci_len, ce_err, ci_err);
 	if (debug>0) {
 		std::cout << "[eus-eiquadprog]" << std::endl;
 		std::cout << "  :minimized-object "
