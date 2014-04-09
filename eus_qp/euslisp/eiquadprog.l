@@ -1,4 +1,24 @@
-(defvar *eiquadprog-plugin* (load-foreign "../lib/libeus_qp.so"))
+
+(defvar *eiquadprog-plugin*
+  (labels
+   ((library_search
+     (str &optional colon-pos lib-path)
+     (cond
+      ((eq (length str) 0) (throw :qp_plugin_not_found 'not-build-yet))
+      ((and (setq colon-pos (position #\: str))
+	    (setq colon-pos (if (not (numberp colon-pos))
+				(length str) colon-pos))
+	    (setq lib-path (subseq str 0 colon-pos))
+	    (setq lib-path
+		  (if (eq (aref lib-path (- (length lib-path) 1)) #\/)
+		      (subseq lib-path 0 (- (length lib-path) 1))
+		    lib-path))
+	    (probe-file (setq lib-path
+			      (format nil "~A/libeus_qp.so" lib-path))))
+       (load-foreign lib-path))
+      (t
+       (library_search (subseq str (+ colon-pos 1)))))))
+   (library_search (format nil "~A:." (unix:getenv "LD_LIBRARY_PATH")))))
 
 (defforeign _solve-eiquadprog
   *eiquadprog-plugin*
