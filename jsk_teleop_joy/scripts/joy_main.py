@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+# only if groovy
+import os
+if os.environ["ROS_DISTRO"] == "groovy":
+  roslib.load_manifest('jsk_teleop_joy')
+
 import jsk_teleop_joy.joy
 
 if __name__ == '__main__':
