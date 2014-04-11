@@ -13,4 +13,6 @@
   </class>
   <class name="JoyGoPos" type="jsk_teleop_joy.plugin.gopos.JoyGoPos">
   </class>
+  <class name="JSKInteractiveMarkerEndeffector" type="jsk_teleop_joy.plugin.jsk_interactive_marker.EndEffector">
+  </class>
 </library>
