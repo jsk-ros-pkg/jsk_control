@@ -15,6 +15,7 @@ class EndEffector(JoyPose6D):
   def joyCB(self, status, history):
     if status.circle:
       menu = MarkerMenu()
+      menu.menu = MarkerMenu.MOVE
       self.marker_menu_pub.publish(menu)
       
     JoyPose6D.joyCB(self, status, history)
