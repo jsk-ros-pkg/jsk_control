@@ -1,7 +1,13 @@
-
 import rospy
 import actionlib
 from joy_pose_6d import JoyPose6D
+
+try:
+  imp.find("std_msgs")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
+
 from std_msgs.msg import String, Empty
 from geometry_msgs.msg import PoseStamped
 import xml.etree.ElementTree as ET

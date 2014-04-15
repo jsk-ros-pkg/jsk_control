@@ -2,6 +2,14 @@
 
 from jsk_teleop_joy.joy_plugin import JSKJoyPlugin
 from jsk_teleop_joy.camera_view import CameraView
+
+import imp
+try:
+  imp.find("view_controller_msgs")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
+
 from view_controller_msgs.msg import CameraPlacement
 
 import tf
