@@ -1,4 +1,11 @@
 import rospy
+
+import imp
+try:
+  imp.find("actionlib")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
 import actionlib
 from joy_pose_6d import JoyPose6D
 from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray

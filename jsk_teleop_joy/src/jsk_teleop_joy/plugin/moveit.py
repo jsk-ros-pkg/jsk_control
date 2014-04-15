@@ -1,6 +1,13 @@
 import rospy
-import actionlib
 from joy_pose_6d import JoyPose6D
+
+import imp
+try:
+  imp.find("actionlib")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
+import actionlib
 from std_msgs.msg import String, Empty
 import xml.etree.ElementTree as ET
 
