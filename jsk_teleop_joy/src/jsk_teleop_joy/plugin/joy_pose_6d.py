@@ -2,7 +2,7 @@ from joy_rviz_view_controller import RVizViewController
 
 import imp
 try:
-  imp.find("geometry_msgs")
+  imp.find_module("geometry_msgs")
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 

@@ -5,7 +5,7 @@ from jsk_teleop_joy.camera_view import CameraView
 
 import imp
 try:
-  imp.find("view_controller_msgs")
+  imp.find_module("view_controller_msgs")
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 
