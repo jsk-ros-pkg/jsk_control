@@ -3,7 +3,7 @@ import actionlib
 from joy_pose_6d import JoyPose6D
 
 try:
-  imp.find("std_msgs")
+  imp.find_module("std_msgs")
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 

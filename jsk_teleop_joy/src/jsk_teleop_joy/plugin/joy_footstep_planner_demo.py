@@ -2,7 +2,7 @@ import rospy
 
 import imp
 try:
-  imp.find("actionlib")
+  imp.find_module("actionlib")
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 

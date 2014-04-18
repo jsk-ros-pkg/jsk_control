@@ -9,7 +9,7 @@ import sys
 
 import imp
 try:
-  imp.find("sensor_msgs")
+  imp.find_module("sensor_msgs")
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 
