@@ -1,4 +1,30 @@
-(defvar *eiquadprog-plugin* (load-foreign "../lib/libeus_qp.so"))
+
+(defvar *eiquadprog-plugin*
+  (labels
+      ((library_search
+	(str &key
+	     (depth 0)
+	     colon-pos lib-path)
+	(format t "  [~A] target=" depth)
+	(cond
+	 ((eq (length str) 0)
+	  (format t "~% qp_plugin_not_found in eiquadprog.l~%")
+	  (exit -1))
+	 ((and (setq colon-pos (or (position #\: str) (length str)))
+	       (setq lib-path (subseq str 0 colon-pos))
+	       (setq lib-path
+		     (if (eq (aref lib-path (- (length lib-path) 1)) #\/)
+			 (subseq lib-path 0 (- (length lib-path) 1))
+		       lib-path))
+	       (probe-file (setq lib-path
+				 (print (format nil "~A/libeus_qp.so" lib-path)))))
+	  (load-foreign lib-path))
+	 (t
+	  (library_search (subseq str (min (length str) (+ colon-pos 1)))
+			  :depth (+ depth 1))))))
+    (library_search (format nil "~A:~A/lib"
+			    (unix:getenv "LD_LIBRARY_PATH")
+			    (read-line (piped-fork "rospack find eus_qp"))))))
 
 (defforeign _solve-eiquadprog
   *eiquadprog-plugin*
@@ -66,6 +92,74 @@
   ret
   )
 
+;; always there will be some answers
+;;
+;; min xTGx/2 + g0x + eeT Gee ee + eiT Gei ei
+;;   CEx + ce + ee = 0
+;;   CIx + ci + ei > 0
+;;
+(defun solve-eiquadprog-raw-with-error
+  (&key
+   (x0 (float-vector 0 0))
+   (ce0 (float-vector 0))
+   (ci0 (float-vector 0))
+   (x_len (length x0))
+   (ce_len (length ce0))
+   (ci_len (length ci0))
+   ;;
+   (G (unit-matrix x_len))
+   (g0 (instantiate float-vector x_len))
+   (CE (make-matrix ce_len x_len))
+   (CI (make-matrix ci_len x_len))
+   ;;
+   (ee (instantiate float-vector (length ce0)))
+   (ei (instantiate float-vector (length ci0)))
+   (x0+ee+ei (concatenate float-vector x0 ee ei))
+   (error-gain 1e+6)
+   (Gee (scale-matrix error-gain (unit-matrix (length ee))))
+   (Gei (scale-matrix error-gain (unit-matrix (length ei))))
+   (g0+0 (concatenate
+	  float-vector
+	  g0
+	  (instantiate float-vector (+ (length ee) (length ei)))))
+   (G+Gee+Gei (matrix-append (list G Gee Gei) '(1 1)))
+   (CE+I+0 (matrix-append
+	    (list CE
+		  (unit-matrix (length ce0))
+		  (make-matrix (length ce0) (length ei)))
+	    '(0 1)))
+   (CI+0+I (matrix-append
+	    (list CI
+		  (make-matrix (length ci0) (length ee))
+		  (unit-matrix (length ci0)))
+	    '(0 1)))
+   ;;
+   (debug? nil)
+   (eqthre 1e-1)
+   (ret_buf #F(0))
+   (ce_err (instantiate float-vector ce_len))
+   (ci_err (instantiate float-vector ci_len))
+   ret
+   &allow-other-keys)
+  (setq
+   ret
+   (_solve-eiquadprog
+    (send G+Gee+Gei :get-val 'entity)
+    g0+0
+    (send CE+I+0 :get-val 'entity)
+    ce0
+    (send CI+0+I :get-val 'entity)
+    ci0
+    x0+ee+ei
+    (length x0+ee+ei) ce_len ci_len
+    eqthre
+    (if debug? 1 0)
+    ret_buf ce_err ci_err
+    ))
+  (dotimes (i (length x0)) (setf (aref x0 i) (aref x0+ee+ei i)))
+  x0
+  )
+
 (defun matrix-set
   (mom sun x y
        &optional
@@ -116,6 +210,7 @@
    ;;(ce_err (instantiate float-vector (length ))
    ;;(ci_err (instantiate float-vector ci_len))
    (ok? #i(-1))
+   (eiquadprog-function 'solve-eiquadprog-raw)
    )
   (let* ((x0 initial-state)
 	 (G eval-weight-matrix)
@@ -145,7 +240,8 @@
 	 ret)
     (setq
      ret
-     (solve-eiquadprog-raw
+     (funcall
+      eiquadprog-function
       :x0 x0 :G G :g0 g0 :CE CE :ce0 ce0 :CI CI :ci0 ci0
       :eqthre eqthre
       :ret_buf ret_buf ;;:ce_err ce_err :ci_err ci_err

@@ -1,3 +1,10 @@
+import imp
+try:
+  imp.find_module("geometry_msgs")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
+
 from geometry_msgs.msg import PoseStamped, Pose
 from joy_pose_6d import JoyPose6D
 from jsk_footstep_msgs.msg import FootstepArray, Footstep
