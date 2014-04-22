@@ -13,10 +13,21 @@ class EndEffector(JoyPose6D):
     self.frame_id = rospy.get_param('~frame_id', 'base_link')
     self.marker_menu_pub = rospy.Publisher('marker_menu', MarkerMenu)
   def joyCB(self, status, history):
-    if status.circle:
-      menu = MarkerMenu()
+    if history.length() > 0:
+      latest = history.latest()
+    else:
+      latest = None
+
+    menu = MarkerMenu()
+    if status.circle and latest !=None and not latest.circle:
       menu.menu = MarkerMenu.MOVE
       self.marker_menu_pub.publish(menu)
-      
-    JoyPose6D.joyCB(self, status, history)
-    
+
+    elif status.triangle and latest !=None and not latest.triangle:
+      if status.R1:
+        pass
+      elif status.L1:
+        pass
+
+    else:
+      JoyPose6D.joyCB(self, status, history)
