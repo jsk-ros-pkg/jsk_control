@@ -4,14 +4,15 @@ import math
 import numpy
 
 import rospy
-import roslib
 import os
 import sys
 
-# only if groovy
-if os.environ["ROS_DISTRO"] == "groovy":
-  roslib.load_manifest('jsk_teleop_joy')
-    
+import imp
+try:
+  imp.find_module("sensor_msgs")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
 
 from sensor_msgs.msg import Joy
 import tf.transformations

@@ -3,9 +3,12 @@ import math
 import numpy
 import tf
 import rospy
-import roslib
-roslib.load_manifest('jsk_teleop_joy')
-import view_controller_msgs
+import imp
+try:
+  imp.find_module("view_controller_msgs")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
 from view_controller_msgs.msg import CameraPlacement
 
 class CameraView():

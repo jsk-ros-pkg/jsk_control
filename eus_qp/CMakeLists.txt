@@ -1,13 +1,10 @@
 project(eus_qp)
 
-#include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 cmake_minimum_required(VERSION 2.4.6)
 
-#rosbuild_init()
-#rosbuild_find_ros_package(nlopt)
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+find_package(catkin COMPONENTS cmake_modules)
 find_package(Eigen REQUIRED)
+
 include_directories(${Eigen_INCLUDE_DIRS})
 include_directories(${EIGEN_INCLUDE_DIRS})
 
