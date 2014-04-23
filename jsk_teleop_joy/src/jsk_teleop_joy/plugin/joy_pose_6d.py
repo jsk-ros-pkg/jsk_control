@@ -28,8 +28,15 @@ class JoyPose6D(RVizViewController):
     self.publish_pose = publish_pose
     if self.publish_pose:
       self.pose_pub = rospy.Publisher('pose', PoseStamped)
+    self.puse_sub = rospy.Subscriber('set_pose', PoseStamped, self.setPoseCB)
     self.support_follow_view = True
     self.frame_id = rospy.get_param('~frame_id', '/map')
+
+  def setPoseCB(self, pose):
+    self.pre_pose = pose
+    if self.publish_pose:
+      self.pose_pub.publish(pose)
+
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
     if history.length() > 0:
