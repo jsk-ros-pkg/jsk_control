@@ -12,6 +12,8 @@ import tf
 import rospy
 import numpy
 import math
+import tf
+import numpy
 
 def signedSquare(val):
  if val > 0:
@@ -31,11 +33,14 @@ class JoyPose6D(RVizViewController):
     self.puse_sub = rospy.Subscriber('set_pose', PoseStamped, self.setPoseCB)
     self.support_follow_view = True
     self.frame_id = rospy.get_param('~frame_id', '/map')
+    self.tf_listener = tf.TransformListener()
 
   def setPoseCB(self, pose):
-    self.pre_pose = pose
+    pose.header.stamp = rospy.Time(0)
+    self.pre_pose = self.tf_listener.transformPose(self.frame_id, pose)
+
     if self.publish_pose:
-      self.pose_pub.publish(pose)
+      self.pose_pub.publish(self.pre_pose)
 
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
