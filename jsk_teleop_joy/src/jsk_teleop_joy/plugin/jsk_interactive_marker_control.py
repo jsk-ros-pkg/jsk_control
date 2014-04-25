@@ -38,5 +38,17 @@ class EndEffector(JoyPose6D):
       elif status.L1 and not latest.L1:
         self.publishMarkerMenu(MarkerMenu.SET_MOVE_LARM)
 
+      if status.up and not latest.up:
+        self.publishMarkerMenu(MarkerMenu.IK_ROTATION_AXIS_T)
+
+      if status.down and not latest.down:
+        self.publishMarkerMenu(MarkerMenu.PLAN)
+        
+      if status.right and not latest.right:
+        self.publishMarkerMenu(MarkerMenu.START_GRASP)
+
+      if status.left and not latest.left:
+        self.publishMarkerMenu(MarkerMenu.STOP_GRASP)
+
     else:
       JoyPose6D.joyCB(self, status, history)
