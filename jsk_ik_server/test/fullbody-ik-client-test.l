@@ -116,6 +116,17 @@
     (send *hrp2jsk* :fix-leg-to-coords (make-coords))
     (send* self :test-fullbody-ik :robot *hrp2jsk* args))
    )
+  (:staro-test
+   (&rest args)
+   (require "package://hrpsys_ros_bridge_tutorials/models/staro.l")
+   (defvar *staro* (staro))
+   (objects (list *staro*))
+   (ros::roseus "fullbody_ik_client_test")
+   (do-until-key
+    (send *staro* :reset-manip-pose)
+    (send *staro* :fix-leg-to-coords (make-coords))
+    (send* self :test-fullbody-ik :robot *staro* args))
+   )
   (:atlas-test
    (&rest args)
    (require "package://hrpsys_gazebo_atlas/euslisp/atlas-model.l")
@@ -173,6 +184,8 @@
     (send ik-client-test :hrp2jsknt-test :foot? foot?))
    ((substringp "hrp2jsk" test)
     (send ik-client-test :hrp2jsk-test :foot? foot?))
+   ((substringp "staro" test)
+    (send ik-client-test :staro-test :foot? foot?))
    ((substringp "pr2" test)
     (send ik-client-test :pr2-test :foot? foot?))
    ((substringp "atlas" test)
