@@ -141,10 +141,11 @@
    (ros::roseus ik-server-name)
    (when (ros::has-param "~additional_ik_options")
      (let ((str (ros::get-param "~additional_ik_options")))
-       (setq additional-ik-options
-             (if (= (elt str 0) #\()
-                 (read-from-string str)
-               (read-from-string (format nil "(~A)" str))))
+       (if (> (length str) 1)
+           (setq additional-ik-options
+                 (if (= (elt str 0) #\()
+                     (read-from-string str)
+                   (read-from-string (format nil "(~A)" str)))))
        ))
    (ros::advertise-service ik-server-service-name
 			   moveit_msgs::GetPositionIK
