@@ -45,6 +45,7 @@
    support-centroid-pos
    viewer
    move-target-hash
+   additional-ik-options
    ))
 
 (defmethod ik-server
@@ -138,6 +139,13 @@
    (setq *tf* (instance ros::transform-listener :init))
    ;;
    (ros::roseus ik-server-name)
+   (when (ros::has-param "~additional_ik_options")
+     (let ((str (ros::get-param "~additional_ik_options")))
+       (setq additional-ik-options
+             (if (= (elt str 0) #\()
+                 (read-from-string str)
+               (read-from-string (format nil "(~A)" str))))
+       ))
    (ros::advertise-service ik-server-service-name
 			   moveit_msgs::GetPositionIK
 			   #'send self :ik-service-cb)
@@ -445,6 +453,18 @@
 		 (append
 		  (send self :inverse-kinematics-group-options opt)
 		  opt)))
+       ;; merge additional-ik-options, additional options might be overwritten by opt
+       (let (tmp (aop additional-ik-options))
+         (while aop
+           (let* ((key (car aop))
+                  (val (assoc key opt)))
+             (unless val
+               (push (cadr aop) tmp)
+               (push key tmp))
+             (setq aop (cddr aop))
+             ))
+         (setq additional-ik-options tmp))
+       (setq opt (append opt additional-ik-options))
        ;;
        (format t "[:fik-service-cb] options: ~A~%" opt)
        ;; joint angle update
