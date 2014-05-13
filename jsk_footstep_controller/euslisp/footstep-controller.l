@@ -71,7 +71,8 @@
         (interface-class
          (ros::get-param "~interface_class" "hrp2jsknt-interface")))
     (load interface-file)
-    (setq *ri* (instance (eval (read-from-string interface-class)) :init))
+    (setq *ri* (instance (eval (read-from-string interface-class)) :init
+                         :controller-timeout nil))
     (send *ri* :start-st)
     )
   ;; interface
