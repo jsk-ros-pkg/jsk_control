@@ -7,9 +7,11 @@ import yaml
 import rospy
 import roslib
 
-from sensor_msgs.msg import Joy, JoyFeedbackArray
-
-roslib.load_manifest('jsk_teleop_joy')
+try:
+  from sensor_msgs.msg import Joy, JoyFeedbackArray
+except:
+  roslib.load_manifest('jsk_teleop_joy')
+  from sensor_msgs.msg import Joy, JoyFeedbackArray
 
 from jsk_teleop_joy.midi_util import MIDIParse, MIDICommand, MIDIException, openMIDIInputByName, openMIDIOutputByName
 
