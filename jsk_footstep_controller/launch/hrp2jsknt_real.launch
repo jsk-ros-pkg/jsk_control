@@ -28,7 +28,7 @@
   </node>
   <!-- visualization for rviz -->
   <arg name="POSE_REMAP" default="/footstep_marker/pose" />
-  <arg name="DEV" default="/dev/input/js1" />
+  <arg name="DEV" default="/dev/input/ps3joy" />
   <node pkg="joy" type="joy_node" name="joy0" output="screen" >
     <param name="dev" type="string" value="$(arg DEV)" />
     <param name="deadzone" value="0.2" />
