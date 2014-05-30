@@ -15,10 +15,12 @@ except:
 
 
 from sensor_msgs.msg import Joy
+from diagnostic_msgs.msg import DiagnosticStatus, DiagnosticArray
 import tf.transformations
 from joy_status import XBoxStatus, PS3Status, PS3WiredStatus
 from plugin_manager import PluginManager
 from status_history import StatusHistory
+
 
 AUTO_DETECTED_CLASS = None
 
@@ -36,16 +38,21 @@ def autoJoyDetect(msg):
     rospy.loginfo("auto detected as ps3")
     AUTO_DETECTED_CLASS = PS3Status
   else:
-    rospy.logfatal("unknown joy type")
-    sys.exit(1)
+    AUTO_DETECTED_CLASS = "UNKNOWN"
     
 class JoyManager():
+  def publishDiagnostic(self, statuses):
+    diagnostic = DiagnosticArray()
+    diagnostic.header.stamp = rospy.Time.now()
+    diagnostic.status = statuses
+    self.diagnostic_pub.publish(diagnostic)
   def __init__(self):
     self.pre_status = None
     self.history = StatusHistory(max_length=10)
     self.controller_type = rospy.get_param('~controller_type', 'xbox')
     self.plugins = rospy.get_param('~plugins', [])
     self.current_plugin_index = 0
+    self.diagnostic_pub = rospy.Publisher("/diagnostics", DiagnosticArray)
     if self.controller_type == 'xbox':
       self.JoyStatus = XBoxStatus
     elif self.controller_type == 'ps3':
@@ -54,8 +61,17 @@ class JoyManager():
       self.JoyStatus = PS3WiredStatus
     elif self.controller_type == 'auto':
       s = rospy.Subscriber('/joy', Joy, autoJoyDetect)
+      error_message_published = False
       while not rospy.is_shutdown():
-        if AUTO_DETECTED_CLASS:
+        if AUTO_DETECTED_CLASS == "UNKNOWN":
+          if not error_message_published:
+            rospy.logfatal("unknown joy type")
+            error_message_published = True
+            # update diagnostic
+          status = DiagnosticStatus(name = '%s: JSKTeleopJoy' % (rospy.get_name()), level = DiagnosticStatus.ERROR, message = "unknown joy type")
+          self.publishDiagnostic([status])
+          rospy.sleep(1)
+        elif AUTO_DETECTED_CLASS:
           self.JoyStatus = AUTO_DETECTED_CLASS
           s.unregister()
           break
@@ -84,7 +100,8 @@ class JoyManager():
     
   def joyCB(self, msg):
     status = self.JoyStatus(msg)
-    
+    diag_status = DiagnosticStatus(name = '%s: JSKTeleopJoy' % (rospy.get_name()), level = DiagnosticStatus.OK)
+    self.publishDiagnostic([diag_status])
     if self.pre_status and status.select and not self.pre_status.select:
       self.nextPlugin()
     else:
