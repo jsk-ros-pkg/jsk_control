@@ -17,6 +17,7 @@
   <depend package="view_controller_msgs" />
   <depend package="jsk_footstep_msgs" />
   <depend package="jsk_footstep_planner" />
+  <depend package="diagnostic_msgs" />
   <export>
     <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>
