@@ -24,17 +24,18 @@
                                                      (send polygon :polygon :points))))
                                  (instance face :init :vertices points))))
                          polygons)))
-      (let ((fc (instance faceset :init :faces faces)))
-        (setq *planes* faces)
-        (when *debug*
-          (if (null (send *irtviewer* :objects))
-              (progn
-                (objects (list fc)))
-            (progn
-              (send *irtviewer* :objects (list fc))
-              (send *irtviewer* :draw-objects))
-            )
-          )))))
+      (if faces
+          (let ((fc (instance faceset :init :faces faces)))
+            (setq *planes* faces)
+            (when *debug*
+              (if (null (send *irtviewer* :objects))
+                  (progn
+                    (objects (list fc)))
+                (progn
+                  (send *irtviewer* :objects (list fc))
+                  (send *irtviewer* :draw-objects))
+                )
+              ))))))
 
 (defclass ros-footstep-parameter
   :super footstep-parameter
@@ -250,7 +251,6 @@
   (setq *tf* (instance ros::transform-listener :init))
   (when *use-planes*
     (ros::subscribe "planes" jsk_pcl_ros::PolygonArray #'planes-cb))
-  
   (let ((s (instance ros::simple-action-server :init
                      "footstep_planner" jsk_footstep_msgs::PlanFootstepsAction
                      :execute-cb 'plan-execute-cb)))
