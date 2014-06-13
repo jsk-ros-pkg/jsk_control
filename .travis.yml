@@ -10,12 +10,10 @@ env:
   - ROS_DISTRO=groovy ROSWS=rosws BUILDER=rosbuild BUILD_PACKAGES="eus_nlopt  eus_qp  jsk_footstep_controller  jsk_footstep_planner  jsk_ik_server  jsk_teleop_joy"
   - ROS_DISTRO=hydro ROSWS=wstool BUILDER=catkin
   - ROS_DISTRO=groovy ROSWS=wstool BUILDER=catkin
-#notifications:
-#  email:
-#    recipients:
-#      - roseus@jsk.t.u-tokyo.ac.jp
-#    on_success: always #[always|never|change] # default: change
-#    on_failure: always #[always|never|change] # default: always
+notifications:
+  email:
+    on_success: always
+    on_failure: always
 before_install: # Use this to prepare the system to install prerequisites or dependencies
   # Define some config vars
   - export CI_SOURCE_PATH=$(pwd)

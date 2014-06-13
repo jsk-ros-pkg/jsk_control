@@ -42,6 +42,7 @@
 	  (subseq (reverse (send robot :lleg :links)) 0 2)))
    (send self :make-foot-convex :force? t)
    (send self :make-centroid-object)
+   ;;(setq additional-ik-options (list :centroid-thre 10)) ;; sample for changing default centroid threhold
    (send-super*
     :init
     :ik-server-name "hrp2jsknt_ik_server"
