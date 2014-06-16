@@ -1,10 +1,11 @@
 if(NOT USE_ROSBUILD)
+  message("  eus_nlopt: use catkin_make")
   include(catkin.cmake)
   return()
 endif()
 
 project(eus_nlopt)
-
+message("  eus_nlopt: use rosmake")
 #include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 cmake_minimum_required(VERSION 2.4.6)
 
