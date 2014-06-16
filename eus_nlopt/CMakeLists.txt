@@ -1,4 +1,9 @@
-project(eus_nlopt_wrapper)
+if(NOT USE_ROSBUILD)
+  include(catkin.cmake)
+  return()
+endif()
+
+project(eus_nlopt)
 
 #include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 cmake_minimum_required(VERSION 2.4.6)
