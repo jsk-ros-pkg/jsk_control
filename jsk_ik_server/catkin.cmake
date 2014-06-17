@@ -13,3 +13,5 @@ install(DIRECTORY euslisp test
   USE_SOURCE_PERMISSIONS
   PATTERN ".svn" EXCLUDE
   )
+
+add_rostest(test/test-sample-robot.test)
