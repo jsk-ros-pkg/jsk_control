@@ -1,19 +1,24 @@
 <launch>
-  <!-- please launch gazebo_hrp2jsknt_no_controllers.launch of hrpsys_gazebo_tutorials with roslaunch -->
-  <!-- and hrp2jsknt_hrpsys_bringup.launch of hrpsys_gazebo_tutorials with rtmlaunch -->
-  <!-- Please launch rviz to make footsteps -->
-  <!-- move the robot to reset-pose -->
-  <!-- planner -->
+  1. please launch gazebo_hrp2jsknt_no_controllers.launch of hrpsys_gazebo_tutorials with roslaunch
+  and hrp2jsknt_hrpsys_bringup.launch of hrpsys_gazebo_tutorials with rtmlaunch
+  2. Please launch rviz to make footsteps
+  3. move the robot to reset-pose
+  <arg name="USE_PLANE" default="false" />
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
         clear_params="true"
-        output="log">
+        respawn="true"
+        output="screen">
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
-    <rosparam>
-    use_planes: false
-    timeout: 1
+    <remap from="planes" to="/polygon_estimator/output_polygons" />
+    <rosparam subst_value="true">
+    use_planes: $(arg USE_PLANE)
+    use_env_server: $(arg USE_PLANE)
+    timeout: 10
     </rosparam>
+    <remap from="env_lock" to="/env_server/lock" />
+    <remap from="polygon_on_env" to="/env_server/polygon_on_environment" />
   </node>
   <!-- controller -->
   <node pkg="jsk_footstep_controller"

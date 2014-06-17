@@ -2,6 +2,7 @@
 
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-msgs "jsk_pcl_ros")
+(ros::roseus-add-srvs "jsk_pcl_ros")
 (load "package://jsk_footstep_planner/euslisp/footstep-planner.l")
 
 
@@ -124,8 +125,7 @@
 
 (defun footstep->consed-coords (leg-step)
   (let ((pose-stamped
-         (instance geometry_msgs::PoseStamped
-                   :init)))
+         (instance geometry_msgs::PoseStamped :init)))
     (send pose-stamped :header (send goal :goal :initial_footstep :header))
     (send pose-stamped :pose (send leg-step :pose))
     (cons (send leg-step :leg)
@@ -161,6 +161,12 @@
                            jsk_footstep_msgs::Footstep::*LEFT*)
                         :rleg :lleg))
          (support-leg (if (eq start-leg :lleg) :rleg :lleg)))
+    ;; cheep hack
+    (setq *goal-header* (send goal :goal :initial_footstep :header))
+    (if *use-env-server*
+        (let ((req (instance jsk_pcl_ros::EnvironmentLockRequest :init)))
+          (let ((res (ros::service-call "env_lock" req t)))
+            (setq *env-id* (send res :environment_id)))))
     ;; creating initial step node from goal msg
     (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
       (send prblm :start-state
@@ -248,6 +254,13 @@
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
   (setq *use-planes* (ros::get-param "~use_planes" nil))
+  (setq *use-env-server* (ros::get-param "~use_env_server" nil))
+  (when *use-env-server*
+    (ros::ros-info "waiting for the env server")
+    (ros::wait-for-service "env_lock")
+    (ros::wait-for-service "polygon_on_env")
+    (ros::ros-info "found the server")
+    )
   (setq *tf* (instance ros::transform-listener :init))
   (when *use-planes*
     (ros::subscribe "planes" jsk_pcl_ros::PolygonArray #'planes-cb))
