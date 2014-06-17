@@ -1,4 +1,5 @@
-if(NOT (USE_ROSBUILD OR "$ENV{BUILDER}" STREQUAL "rosbuild"))
+##if(NOT (USE_ROSBUILD OR "$ENV{BUILDER}" STREQUAL "rosbuild"))
+if(NOT USE_ROSBUILD)
   message("  eus_nlopt: use catkin_make")
   include(catkin.cmake)
   return()
