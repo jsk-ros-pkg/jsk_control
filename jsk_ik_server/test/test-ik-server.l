@@ -16,4 +16,4 @@
   )
 
 (run-all-tests)
-(exit)
+(exit 0)
