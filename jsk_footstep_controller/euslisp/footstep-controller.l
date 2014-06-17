@@ -2,6 +2,10 @@
 
 ;; forostep-controller.l
 (ros::roseus-add-msgs "jsk_footstep_msgs")
+(ros::roseus-add-srvs "jsk_footstep_controller")
+
+(defvar *all-the-results* nil)
+;; ((footstep footstep ....) (footstep footstep ....) ...)
 
 (defun footstep->coords (footstep frame-id)
   ;; convert jsk_footstep_msgs/Footstep to euslisp coodinates
@@ -58,10 +62,18 @@
                         (setf (get c :l/r) (get footstep :l/r))
                         c))
                   transformed-footstep)))
+            (push final-footstep *all-the-results*)
             (send *ri* :set-foot-steps final-footstep))))))
     (let ((result (send server :result)))
       (send server :set-succeeded result)))
-  
+
+(defun require-log-service-callback (req)
+  (let ((res (send req :response)))
+    (let ((*print-object* t) (*print-circle* t)
+          (*print-level* nil) (*print-length* nil))
+      (send res :sexp (format nil "~A" *all-the-results*))
+      res)))
+
 (defun main()
   (ros::roseus "footstep_controller")
   ;; *ri*
@@ -77,6 +89,9 @@
     )
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
+  (ros::advertise-service "require_log"
+    jsk_footstep_controller::RequireLog
+    #'require-log-service-callback)
   (let ((s (instance ros::simple-action-server :init
                      "footstep_controller"
                      jsk_footstep_msgs::ExecFootstepsAction
