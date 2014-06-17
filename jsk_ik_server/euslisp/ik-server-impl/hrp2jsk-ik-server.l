@@ -11,25 +11,25 @@
 
 (ros::roseus "hrp2jsk_ik_server")
 
-(defclass hrp2jsk-ik-server
-  :super ik-server
-  )
+;; (defclass hrp2jsk-ik-server
+;;   :super ik-server
+;;   )
 
-(defmethod hrp2jsk-ik-server
-  (:init
-   (&rest args)
-   (setq robot (hrp2jsk))
-   (send-super* :init
-		:robot robot
-		:ik-server-name "hrp2jsk_ik_server"
-		:ik-server-service-name "/solve_ik"
-		:root-link-frame-id nil
-		args)
-   (send self :update-support-links '(:rleg :lleg))
-   (send self :make-foot-convex :force? t)
-   (send self :make-centroid-object)
-   )
-  )
+;; (defmethod hrp2jsk-ik-server
+;;   (:init
+;;    (&rest args)
+;;    (setq robot (hrp2jsk))
+;;    (send-super* :init
+;; 		:robot robot
+;; 		:ik-server-name "hrp2jsk_ik_server"
+;; 		:ik-server-service-name "/solve_ik"
+;; 		:root-link-frame-id nil
+;; 		args)
+;;    (send self :update-support-links '(:rleg :lleg))
+;;    (send self :make-foot-convex :force? t)
+;;    (send self :make-centroid-object)
+;;    )
+;;   )
 
-(defvar *hrp2jsk-ik-server* (instance hrp2jsk-ik-server :init))
+(defvar *hrp2jsk-ik-server* (instance ik-server :init :robot (hrp2jsk)))
 (send *hrp2jsk-ik-server* :start-ik-server)

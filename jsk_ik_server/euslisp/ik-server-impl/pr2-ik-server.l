@@ -10,25 +10,25 @@
 
 (ros::roseus "pr2_ik_server")
 
-(defclass pr2-ik-server
-  :super ik-server
-  )
+;; (defclass pr2-ik-server
+;;   :super ik-server
+;;   )
 
-(defmethod pr2-ik-server
-  (:init
-   (&rest args)
-   (setq robot (pr2))
-   (send-super*
-    :init
-    :robot robot
-    :ik-server-name "pr2_ik_server"
-    :ik-server-service-name "/solve_ik"
-    :root-link-frame-id "/base_link"
-    args)
-   )
-  )
+;; (defmethod pr2-ik-server
+;;   (:init
+;;    (&rest args)
+;;    (setq robot (pr2))
+;;    (send-super*
+;;     :init
+;;     :robot robot
+;;     :ik-server-name "pr2_ik_server"
+;;     :ik-server-service-name "/solve_ik"
+;;     :root-link-frame-id "/base_link"
+;;     args)
+;;    )
+;;   )
 
-(defvar *pr2-ik-server* (instance pr2-ik-server :init))
+(defvar *pr2-ik-server* (instance ik-server :init :robot (pr2) :root-link-frame-id "/base_link"))
 (send *pr2-ik-server* :start-ik-server)
 
 
