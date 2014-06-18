@@ -138,6 +138,18 @@
     (send *atlas* :fix-leg-to-coords (make-coords))
     (send* self :test-fullbody-ik :robot *atlas* args)
     ))
+  (:sample-robot-test
+   (&rest args)
+   (require "irteus/demo/sample-robot-model.l")
+   (defvar *sample-robot* (instance sample-robot :init))
+   (send *sample-robot* :fix-leg-to-coords (make-coords))
+   (ros::roseus "fullbody_ik_client_test")
+   (objects (list *sample-robot*))
+   (do-until-key
+    (send *sample-robot* :reset-pose)
+    (send *sample-robot* :fix-leg-to-coords (make-coords))
+    (send* self :test-fullbody-ik :robot *sample-robot* args)
+    ))
   (:pr2-test
    (&rest args)
    (require :pr2 "package://pr2eus/pr2.l")
@@ -190,4 +202,6 @@
     (send ik-client-test :pr2-test :foot? foot?))
    ((substringp "atlas" test)
     (send ik-client-test :atlas-test :foot? foot?))
+   ((substringp "sample-robot" test)
+    (send ik-client-test :sample-robot-test :foot? foot?))
    ))

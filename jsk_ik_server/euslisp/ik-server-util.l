@@ -202,7 +202,7 @@
     (convex (send self :convex-pos-list))
     (center support-centroid-pos))
    ;;(print convex)
-   (x::window-main-one)
+   (if viewer (x::window-main-one))
    (let* ((diff (concatenate float-vector diff (list 0)))
 	  (target (v+ diff center))
 	  (t-vec (mapcar
@@ -285,10 +285,6 @@
 	       :move-target move-target
 	       :link-list link-list
 	       :target-centroid-pos target-centroid-pos
-	       ;;:centroid-offset-func
-	       ;;#'(lambda nil
-	       ;;(x::window-main-one)
-	       ;;(send robot :centroid))
 	       :centroid-thre centroid-thre
 	       ;;
 	       :collision-avoidance-link-pair
