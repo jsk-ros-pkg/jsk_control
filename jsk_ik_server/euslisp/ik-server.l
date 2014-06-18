@@ -9,20 +9,6 @@
 (require "models/arrow-object.l")
 (require "fullbody-ik-client.l")
 
-;; (defmethod cascaded-link
-;;   (:find-link-route
-;;    (to &optional from)
-;;    (let ((pl (send to :parent-link)))
-;;      (cond
-;;       ;;((and pl (not (find to (send self :links))))
-;;       ;;(send self :find-link-route pl from))
-;;       ((and pl (not (eq to from)))
-;;        (append (send self :find-link-route pl from) (list to)))
-;;       ((and pl (eq to from))
-;;        (list from))
-;;       )))
-;;   )
-
 (defclass ik-server
   :slots
   (robot
