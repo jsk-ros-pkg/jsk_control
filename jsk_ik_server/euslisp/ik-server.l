@@ -9,20 +9,6 @@
 (require "models/arrow-object.l")
 (require "fullbody-ik-client.l")
 
-(defmethod cascaded-link
-  (:find-link-route
-   (to &optional from)
-   (let ((pl (send to :parent-link)))
-     (cond
-      ;;((and pl (not (find to (send self :links))))
-      ;;(send self :find-link-route pl from))
-      ((and pl (not (eq to from)))
-       (append (send self :find-link-route pl from) (list to)))
-      ((and pl (eq to from))
-       (list from))
-      )))
-  )
-
 (defclass ik-server
   :slots
   (robot
@@ -81,6 +67,8 @@
 	'(:rarm :larm :rleg :lleg))))
     (ik-server-client
      (instance fullbody-ik-client :init))
+    (ik-server-name (format nil "~A_ik_server" (send robot :name)))
+    (ik-server-service-name "/solve_ik")
     &allow-other-keys
     )
    (while args
@@ -91,6 +79,13 @@
    (send self :move-target-hash move-target-hash)
    (send self :ik-server-client ik-server-client)
    (send self :set-default-end-coords default-end-coords)
+   (send self :ik-server-name ik-server-name)
+   (send self :ik-server-service-name ik-server-service-name)
+   (cond
+    ((find-method robot :rleg)
+     (send self :update-support-links '(:rleg :lleg))
+     (send self :make-foot-convex :force? t)
+     (send self :make-centroid-object)))
    )
   (:ik-service-cb
    (req)
@@ -105,6 +100,7 @@
    (setq arrow (arrow))
    ;; check viewer
    (cond
+    ((or (null x::*display*) (= x::*display* 0)) nil)
     ((and (boundp '*irtviewer*) *irtviewer*)
      (setq viewer *irtviewer*))
     ((and (boundp '*pickview*) *pickview*)
