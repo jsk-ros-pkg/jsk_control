@@ -1,4 +1,30 @@
-(defvar *nlopt-plugin* (load-foreign "../lib/libnlopt_wrapper.so"))
+;; (defvar *nlopt-plugin* (load-foreign "../lib/libnlopt_wrapper.so"))
+(defvar *nlopt-plugin*
+  (labels
+      ((library_search
+	(str &key
+	     (depth 0)
+	     colon-pos lib-path)
+	(format t "  [~A] target=" depth)
+	(cond
+	 ((eq (length str) 0)
+	  (format t "~% nlopt_plugin_not_found in nlopt.l~%")
+	  (exit -1))
+	 ((and (setq colon-pos (or (position #\: str) (length str)))
+	       (setq lib-path (subseq str 0 colon-pos))
+	       (setq lib-path
+		     (if (eq (aref lib-path (- (length lib-path) 1)) #\/)
+			 (subseq lib-path 0 (- (length lib-path) 1))
+		       lib-path))
+	       (probe-file (setq lib-path
+				 (print (format nil "~A/libnlopt_wrapper.so" lib-path)))))
+	  (load-foreign lib-path))
+	 (t
+	  (library_search (subseq str (min (length str) (+ colon-pos 1)))
+			  :depth (+ depth 1))))))
+    (library_search (format nil "~A:~A/lib"
+			    (unix:getenv "LD_LIBRARY_PATH")
+			    (read-line (piped-fork "rospack find eus_nlopt"))))))
 
 ;; algorithm
 (defconstant DIRECT 0)
@@ -199,7 +225,7 @@
   ret
   )
 
-(defun test nil
+(defun test-nlopt nil
   (dolist
       (alg
        (list DIRECT
