@@ -31,7 +31,8 @@
       (setq *robot* *staro*))
      (t
       (setq *robot* (staro))
-      (objects (list *robot*))))
+      (objects (list *robot*)))
+     )
     )
    (t ;;(substringp "hrp2jsknt" robot-name)
     (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
@@ -43,7 +44,9 @@
       (setq *robot* (hrp2jsknt))
       (objects (list *robot*))))
     )
-   ))
+   )
+  (objects (list *robot*))
+  )
 
 (defvar *updated* nil)
 (defvar *target-limb* :rarm)
