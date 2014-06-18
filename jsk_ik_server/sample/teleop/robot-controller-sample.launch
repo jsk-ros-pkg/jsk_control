@@ -3,7 +3,7 @@
   <arg name="CONTROL_ROBOT" default="staro" />
 
   <node pkg="roseus" type="roseus" name="staro_ik_server" output="screen"
-	args="$(find jsk_ik_server)/euslisp/ik-server-impl/staro-ik-server.l">
+	      args="$(find jsk_ik_server)/euslisp/ik-server-impl/$(arg CONTROL_ROBOT)-ik-server.l">
     <param name="robot" value="$(arg CONTROL_ROBOT)"/>
     <remap from="/staro_ik_server/solve" to="/solve_ik" />
   </node>
