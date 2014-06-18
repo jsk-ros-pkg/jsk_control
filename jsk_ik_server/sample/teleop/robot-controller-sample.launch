@@ -1,7 +1,8 @@
 <launch>
 
   <arg name="CONTROL_ROBOT" default="staro" />
-
+  <arg name="USE_JOY" default="false" />
+  <arg name="DEV" default="/dev/input/js1" />
   <node pkg="roseus" type="roseus" name="staro_ik_server" output="screen"
 	      args="$(find jsk_ik_server)/euslisp/ik-server-impl/$(arg CONTROL_ROBOT)-ik-server.l">
     <param name="robot" value="$(arg CONTROL_ROBOT)"/>
@@ -20,4 +21,9 @@
   <node pkg="roseus" type="roseus" name="spacenav_to_posestamped" output="screen"
 	args="$(find jsk_ik_server)/sample/teleop/spacenav2posestamped.l">
   </node>
+  <include file="$(find jsk_teleop_joy)/launch/joy.launch">
+    <arg name="DEV" value="$(arg DEV)" />
+    <arg name="POSE_REMAP" value="/robot_joint_command/absolute_larm_posestamped" />
+    <arg name="FRAME_ID" value="BODY" />
+  </include>
 </launch>
