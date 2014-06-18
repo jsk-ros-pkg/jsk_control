@@ -41,7 +41,7 @@
       :target-coords target-coords
       :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
       ;;:fix-limbs '(:rleg :lleg)
-      ;;:centroid-thre 100
+      :centroid-thre :support-convex
       :stop 50
       :use-toes '(nil nil)
       )
