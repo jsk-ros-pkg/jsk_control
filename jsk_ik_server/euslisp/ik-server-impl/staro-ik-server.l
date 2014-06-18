@@ -11,25 +11,5 @@
 
 (ros::roseus "staro_ik_server")
 
-;; (defclass staro-ik-server
-;;   :super ik-server
-;;   )
-
-;; (defmethod staro-ik-server
-;;   (:init
-;;    (&rest args)
-;;    (setq robot (staro))
-;;    (send-super* :init
-;; 		:robot robot
-;; 		:ik-server-name "staro_ik_server"
-;; 		:ik-server-service-name "/solve_ik"
-;; 		:root-link-frame-id nil
-;; 		args)
-;;    (send self :update-support-links '(:rleg :lleg))
-;;    (send self :make-foot-convex :force? t)
-;;    (send self :make-centroid-object)
-;;    )
-;;   )
-
 (defvar *staro-ik-server* (instance ik-server :init :robot (staro)))
 (send *staro-ik-server* :start-ik-server)
