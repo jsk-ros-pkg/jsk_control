@@ -11,12 +11,15 @@
   </node>
 
   <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen">
-    <param name="frame_id" value="odom" />
-    <remap from="pose" to="$(arg POSE_REMAP)" />
     <param name="controller_type" value="$(arg CONTROLLER_TYPE)" />
-    <param name="follow_view" value="true" />
-    <rosparam>
-      plugins: ['JoyGoPos']
+    <rosparam subst_value="true">
+      plugins:
+        'go-pos':
+           class: 'JoyGoPos'
+           args:
+             follow_view: true
+             pose: $(arg POSE_REMAP)
+             frame_id: "odom"
     </rosparam>
     <remap from="/joy" to="/gopos/joy" />
   </node>

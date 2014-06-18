@@ -28,11 +28,11 @@ def signedSquare(val):
   return val * val * sign
 
 class RVizViewController(JSKJoyPlugin):
-  def __init__(self, name):
-    JSKJoyPlugin.__init__(self, name)
+  def __init__(self, name, args):
+    JSKJoyPlugin.__init__(self, name, args)
     self.camera_pub = rospy.Publisher('/rviz/camera_placement', CameraPlacement)
     self.pre_view = CameraView()
-    self.follow_view = rospy.get_param('~follow_view', False)
+    self.follow_view = self.getArg('follow_view', False)
     self.counter = 0
     self.prev_time = rospy.Time.from_sec(time.time())
   def joyCB(self, status, history):
