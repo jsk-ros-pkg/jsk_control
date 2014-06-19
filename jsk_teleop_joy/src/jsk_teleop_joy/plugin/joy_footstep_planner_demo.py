@@ -41,7 +41,7 @@ def matrixToPose(mat):
 class JoyFootstepPlannerDemo(JoyPose6D):
   def __init__(self, name, args):
     JoyPose6D.__init__(self, name, args)
-    self.support_follow_view = True
+    self.supportFollowView(True)
     self.frame_id = self.getArg('frame_id', '/map')
     self.lleg_frame_id = self.getArg('lleg_frame_id', '/lfsensor')
     self.rleg_frame_id = self.getArg('rleg_frame_id', '/rfsensor')
