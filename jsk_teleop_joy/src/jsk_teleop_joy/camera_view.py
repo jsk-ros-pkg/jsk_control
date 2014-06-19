@@ -46,20 +46,23 @@ class CameraView():
     return m
   def cameraPlacement(self):
     #TIME = 0.05
-    TIME = 1.0 / 40 * 2.0
+    #TIME = 1.0 / 40 * 2.0
+    TIME = 1.0 / 30
     view_point = self.viewPoint()
     placement = CameraPlacement()
     placement.interpolation_mode = CameraPlacement.LINEAR
+    #placement.interpolation_mode = CameraPlacement.SPHERICAL
     placement.time_from_start = rospy.Duration(TIME)
-    placement.eye.header.stamp = rospy.Time(0.0)
+    # placement.eye.header.stamp = rospy.Time(0.0)
+    placement.eye.header.stamp = rospy.Time.now()
     placement.eye.point.x = view_point[0]
     placement.eye.point.y = view_point[1]
     placement.eye.point.z = view_point[2]
-    placement.focus.header.stamp = rospy.Time(0.0)
+    placement.focus.header.stamp = rospy.Time.now()
     placement.focus.point.x = self.focus[0]
     placement.focus.point.y = self.focus[1]
     placement.focus.point.z = self.focus[2]
-    placement.up.header.stamp = rospy.Time(0.0)
+    placement.up.header.stamp = rospy.Time.now()
     placement.up.vector.x = self.z_up[0]
     placement.up.vector.y = self.z_up[1]
     placement.up.vector.z = self.z_up[2]

@@ -9,20 +9,6 @@
 (require "models/arrow-object.l")
 (require "fullbody-ik-client.l")
 
-(defmethod cascaded-link
-  (:find-link-route
-   (to &optional from)
-   (let ((pl (send to :parent-link)))
-     (cond
-      ;;((and pl (not (find to (send self :links))))
-      ;;(send self :find-link-route pl from))
-      ((and pl (not (eq to from)))
-       (append (send self :find-link-route pl from) (list to)))
-      ((and pl (eq to from))
-       (list from))
-      )))
-  )
-
 (defclass ik-server
   :slots
   (robot
@@ -77,7 +63,8 @@
       (apply
        #'append
        (mapcar
-	#'(lambda (k) (if (find-method robot k) (list (cons k (send robot k :end-coords)))))
+	#'(lambda (k) (if (and (find-method robot k) (send robot k))
+			  (list (cons k (send robot k :end-coords)))))
 	'(:rarm :larm :rleg :lleg))))
     (ik-server-client
      (instance fullbody-ik-client :init))
@@ -193,16 +180,39 @@
    )
   (:loop-ik-server
    nil
+   (send self :publish-default-end-coords :init? t)
    (do-until-key
     (if (not (ros::ok)) (return-from nil nil))
     (unless (or (null x::*display*) (= x::*display* 0))
       (x::window-main-one))
+    (ros::spin-once)
+    (send self :publish-default-end-coords :init? nil)
     (ros::sleep)
-    (ros::spin-once))
+    ;;(unix:usleep (* 100 1000))
+    )
    )
   ;;
   ;;
   ;;
+  (:publish-default-end-coords
+   (&key (init? nil))
+   (mapcar
+    #'(lambda (dec)
+	(if init?
+	    (ros::advertise
+	     (format nil "~A/default_end_coords/~A"
+		     ik-server-name
+		     (remove #\: (format nil "~A" (car dec))))
+	     geometry_msgs::posestamped 1))
+	(ros::publish
+	 (format nil "~A/default_end_coords/~A"
+		 ik-server-name
+		 (remove #\: (format nil "~A" (car dec))))
+	 (send ik-server-client :coords2posestamped
+	       (send (cdr dec) :copy-worldcoords)
+	       :robot robot))
+	)
+    default-end-coords))
   (:local-transform
    (frame-id
     pose

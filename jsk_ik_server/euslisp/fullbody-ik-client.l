@@ -394,3 +394,23 @@
     (list (instance fullbody-ik-client :init) :ik-server-call)
     args)))
 
+#|
+
+(let* ((key '(:rarm :rleg :lleg))
+       (mt
+	(mapcar
+	 #'(lambda (k) (send *robot* k :end-coords))
+	 key))
+       (tc (send-all mt :copy-worldcoords))
+       (ll
+	(mapcar
+	 #'(lambda (mt)
+	     (send *robot* :link-list (send mt :parent)))
+	 mt)))
+  (send (car tc) :translate #F(150 0 0) :world)
+  (ik-server-call
+   :target-coords tc
+   :move-target mt
+   :link-list ll
+   :debug-view :no-message
+   ))

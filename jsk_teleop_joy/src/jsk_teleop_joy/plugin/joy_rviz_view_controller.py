@@ -18,6 +18,8 @@ import rospy
 import numpy
 import math
 
+import time
+
 def signedSquare(val):
   if val > 0:
     sign = 1
@@ -32,6 +34,7 @@ class RVizViewController(JSKJoyPlugin):
     self.pre_view = CameraView()
     self.follow_view = rospy.get_param('~follow_view', False)
     self.counter = 0
+    self.prev_time = rospy.Time.from_sec(time.time())
   def joyCB(self, status, history):
     self.counter = self.counter + 1
     if self.counter > 1024:
@@ -109,7 +112,10 @@ class RVizViewController(JSKJoyPlugin):
       view.yaw = yaw
       z_up = numpy.dot(mat, numpy.array((1, 0, 0, 1)))
       view.z_up = z_up[:3]
-    if view_updated and self.counter % 10 == 0:
-      placement = view.cameraPlacement()
+    now = rospy.Time.from_sec(time.time())
+    placement = view.cameraPlacement()
+    placement.time_from_start = now - self.prev_time
+    if (now - self.prev_time).to_sec() > 1 / 10.0:
       self.camera_pub.publish(placement)
+      self.prev_time = now
     self.pre_view = view

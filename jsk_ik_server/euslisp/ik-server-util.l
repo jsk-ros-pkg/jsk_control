@@ -1,110 +1,5 @@
 (ros::load-ros-manifest "jsk_ik_server")
 
-(defmethod cascaded-link
-  (:cog-convergence-check
-   (centroid-thre target-centroid-pos
-		  &key
-		  (centroid-offset-func)
-		  (translation-axis :z)
-		  (update-mass-properties t))
-   (let ((cdiff
-	  (send self :difference-cog-position target-centroid-pos
-		:centroid-offset-func centroid-offset-func
-		:translation-axis translation-axis
-		:update-mass-properties update-mass-properties)))
-     (cond
-      ((numberp centroid-thre) (> centroid-thre (norm cdiff)))
-      ((functionp centroid-thre) (funcall centroid-thre cdiff))
-      ((vectorp centroid-thre) (v< (map float-vector #'abs cdiff) centroid-thre))
-      ((vectorp centroid-thre)
-       (v< (map float-vector #'abs cdiff) centroid-thre))
-      ((and (class centroid-thre)
-  	    (find-method centroid-thre :cog-convergence-check))
-       (send centroid-thre :cog-convergence-check cdiff)))))
-  )
-;; (:cog-convergence-check
-;;  (centroid-thre target-centroid-pos &optional centroid-offset-func)
-;;  (let ((cdiff
-;; 	  (send self :difference-cog-position target-centroid-pos centroid-offset-func)))
-;;    (cond
-;;     ((numberp centroid-thre) (> centroid-thre (norm cdiff)))
-;;     ((functionp centroid-thre) (funcall centroid-thre cdiff))
-;;     ((vectorp centroid-thre)
-;;      (v< (map float-vector #'abs cdiff) centroid-thre))
-;;     ((and (class centroid-thre)
-;; 	    (find-method centroid-thre :cog-convergence-check))
-;;      (send centroid-thre :cog-convergence-check cdiff)))))
-;; )
-
-(defmethod cascaded-link
-  (:fullbody-inverse-kinematics-with-error
-   (target-coords
-    &rest
-    args
-    &key
-    (revert-if-fail t)
-    link-list move-target
-    rotation-axis translation-axis thre rthre
-    target-centroid-pos centroid-thre centroid-offset-func
-    &allow-other-keys)
-   (let* ((initial-av (copy-object (send self :angle-vector)))
-	  (inital-coords (copy-object (send self :worldcoords)))
-	  (target-coords
-	   (mapcar #'(lambda (x)
-		       (if (functionp x) (funcall x) x))
-		   target-coords))
-	  dif-pos dif-rot success cdiff
-	  )
-     (if (atom (car link-list)) (setq link-list (list link-list)))
-     (if (atom move-target) (setq move-target (list move-target)))
-     (if (atom target-coords) (setq target-coords (list target-coords)))
-     (if (atom rotation-axis) (setq rotation-axis (list rotation-axis)))
-     (if (atom translation-axis) (setq translation-axis (list translation-axis)))
-     (if (atom thre) (setq thre (list thre)))
-     (if (atom rthre) (setq rthre (list rthre)))
-     (print 1)
-     (send* self :fullbody-inverse-kinematics
-	    target-coords
-	    (append
-	     (list :revert-if-fail nil)
-	     args))
-     (print 2)
-     (setq dif-pos
-	   (mapcar #'(lambda (mv tc trans-axis)
-		       (send mv :difference-position tc
-			     :translation-axis trans-axis))
-		   move-target target-coords translation-axis))
-     (setq dif-rot
-	   (mapcar #'(lambda (mv tc rot-axis)
-		       (send mv :difference-rotation tc
-			     :rotation-axis rot-axis))
-		   move-target target-coords rotation-axis))
-     (cond
-      (target-centroid-pos
-       (setq cdiff
-	     (send self :difference-cog-position
-		   target-centroid-pos
-		   :centroid-offset-func centroid-offset-func)))
-      (t (setq cdiff 0)))
-     (setq success
-	   (send self :ik-convergence-check
-		 t dif-pos dif-rot
-		 rotation-axis translation-axis thre rthre
-		 centroid-thre target-centroid-pos centroid-offset-func :z))
-     (cond
-      ((and (not success) revert-if-fail)
-       (send self :angle-vector initial-av)
-       (send self :newcoords inital-coords)
-       (list
-	(cons :dif-pos dif-pos)
-	(cons :dif-rot dif-rot)
-	(cons :thre thre)
-	(cons :rthre rthre)
-	(cons :cog-dif cdiff)
-	(cons :cthre centroid-thre))
-       )
-      (t (send self :angle-vector))))))
-
 (defmethod ik-server
   (:make-foot-convex
   (&key
@@ -130,7 +25,8 @@
   ;;(return-from :make-foot-convex nil))
   (when (null support-links) (return-from :make-foot-convex nil))
   ;;
-  (format t "[foot-convex] offset=~A~%" support-link-target-transform-coords)
+  (format t "[foot-convex] offset=~A~%"
+	  support-link-target-transform-coords)
   (format t "[foot-convex] ")
   (cond
    ((or force? (null foot-convex))
@@ -251,7 +147,8 @@
     (rthre (mapcar #'(lambda (a) (deg2rad 3)) move-target))
     (translation-axis (mapcar #'(lambda (a) t) move-target))
     (rotation-axis (mapcar #'(lambda (a) t) move-target))
-    (centroid-thre self)
+    (centroid-thre 5)
+    ;;#'(lambda (cdiff) (send self :cog-convergence-check cdiff)))
     ;;
     (initial-av (copy-seq (send robot :angle-vector)))
     (initial-coords (copy-object (send robot :worldcoords)))
@@ -264,6 +161,11 @@
     &allow-other-keys
     )
    (format t "[target-centroid-pos] check ~A~%" target-centroid-pos)
+   (cond
+    ((eq centroid-thre :support-convex)
+     (format t "[centroid-thre] use support convex as centroid-thre~%")
+     (setq centroid-thre
+	   #'(lambda (cdiff) (send self :cog-convergence-check cdiff)))))
    (if (not (vectorp target-centroid-pos))
        (format t "CAUSION!!! target-centroid-pos is not a vector~%"))
    (let (ret)
@@ -278,7 +180,7 @@
      (setq
       ret
       (send* robot
-	     :fullbody-inverse-kinematics-with-error
+	     :fullbody-inverse-kinematics;; -with-error
 	     (append
 	      (list
 	       target-coords
