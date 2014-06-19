@@ -21,15 +21,18 @@ def signedSquare(val):
  return val * val * sign
 
 class JoyPose6D(RVizViewController):
-  def __init__(self, name='JoyPose6D', publish_pose=True):
-    RVizViewController.__init__(self, name)
+  #def __init__(self, name='JoyPose6D', publish_pose=True):
+  def __init__(self, name, args):
+    RVizViewController.__init__(self, name, args)
     self.pre_pose = PoseStamped()
     self.pre_pose.pose.orientation.w = 1
-    self.publish_pose = publish_pose
+    self.publish_pose = self.getArg('publish_pose', True)
+    self.frame_id = self.getArg('frame_id', '/map')
     if self.publish_pose:
-      self.pose_pub = rospy.Publisher('pose', PoseStamped)
+      self.pose_pub = rospy.Publisher(self.getArg('pose', 'pose'), 
+                                      PoseStamped)
     self.support_follow_view = True
-    self.frame_id = rospy.get_param('~frame_id', '/map')
+    
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
     if history.length() > 0:

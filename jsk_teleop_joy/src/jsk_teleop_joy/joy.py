@@ -64,13 +64,14 @@ class JoyManager():
     else:
         stat.summary(DiagnosticStatus.OK, 
                      "%d plugins are loaded" % (len(self.plugin_instances)))
+        stat.add("instances", ", ".join([p.name for p in self.plugin_instances]))
     return stat
   def __init__(self):
     self.state = self.STATE_INITIALIZATION
     self.pre_status = None
     self.history = StatusHistory(max_length=10)
     self.controller_type = rospy.get_param('~controller_type', 'auto')
-    self.plugins = rospy.get_param('~plugins', [])
+    self.plugins = rospy.get_param('~plugins', {})
     self.current_plugin_index = 0
     #you can specify the limit of the rate via ~diagnostic_period
     self.diagnostic_updater = DiagnosticUpdater()

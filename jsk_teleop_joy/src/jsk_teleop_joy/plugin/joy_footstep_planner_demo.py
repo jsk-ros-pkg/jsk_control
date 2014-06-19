@@ -39,12 +39,12 @@ def matrixToPose(mat):
     
 
 class JoyFootstepPlannerDemo(JoyPose6D):
-  def __init__(self):
-    JoyPose6D.__init__(self, name='JoyFootstepPlannerDemo')
+  def __init__(self, name, args):
+    JoyPose6D.__init__(self, name, args)
     self.support_follow_view = True
-    self.frame_id = rospy.get_param('~frame_id', '/map')
-    self.lleg_frame_id = rospy.get_param('~lleg_frame_id', '/lfsensor')
-    self.rleg_frame_id = rospy.get_param('~rleg_frame_id', '/rfsensor')
+    self.frame_id = self.getArg('frame_id', '/map')
+    self.lleg_frame_id = self.getArg('lleg_frame_id', '/lfsensor')
+    self.rleg_frame_id = self.getArg('rleg_frame_id', '/rfsensor')
     self.br = tf.TransformBroadcaster()
     self.lleg_pose = Pose()
     self.lleg_pose.position.y = 0.1

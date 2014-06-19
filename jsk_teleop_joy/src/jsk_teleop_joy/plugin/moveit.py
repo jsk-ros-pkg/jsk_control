@@ -12,14 +12,14 @@ from std_msgs.msg import String, Empty
 import xml.etree.ElementTree as ET
 
 class JoyMoveIt(JoyPose6D):
-  def __init__(self):
-    JoyPose6D.__init__(self, name='JoyMoveIt')
+  def __init__(self, name, args):
+    JoyPose6D.__init__(self, name, args)
     self.support_follow_view = True
-    self.frame_id = rospy.get_param('~frame_id', '/map')
+    self.frame_id = self.getArg('frame_id', '/map')
     # parse srdf to get planning_groups
     srdf = rospy.get_param("/robot_description_semantic")
     root = ET.fromstring(srdf)
-    self.planning_groups = rospy.get_param("~planning_groups", [])
+    self.planning_groups = self.getArg("planning_groups", [])
     if (self.planning_groups) == 0: # auto detect
       for group in root.iter("group"):
         counter = 0
