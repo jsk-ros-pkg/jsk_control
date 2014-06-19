@@ -31,14 +31,14 @@ class JoyPose6D(RVizViewController):
     if self.publish_pose:
       self.pose_pub = rospy.Publisher(self.getArg('pose', 'pose'), 
                                       PoseStamped)
-    self.support_follow_view = True
+    self.supportFollowView(True)
     
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
     if history.length() > 0:
       latest = history.latest()
       if status.R3 and status.L2 and status.R2 and not (latest.R3 and latest.L2 and latest.R2):
-        self.follow_view = not self.follow_view
+        self.followView(not self.followView())
     RVizViewController.joyCB(self, status, history)
     new_pose = PoseStamped()
     new_pose.header.frame_id = self.frame_id

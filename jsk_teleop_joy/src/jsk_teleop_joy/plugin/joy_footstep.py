@@ -40,7 +40,7 @@ class JoyFootstep(JoyPose6D):
   def __init__(self, name, args):
     args['publish_pose'] = False
     JoyPose6D.__init__(self, name, args)
-    self.support_follow_view = True
+    self.supportFollowView(True)
     self.footstep_pub = rospy.Publisher('/footstep', FootstepArray)
     self.footsteps = []
     self.frame_id = self.getArg('frame_id', '/map')

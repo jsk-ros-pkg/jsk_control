@@ -39,29 +39,24 @@
              frame_id: BODY
              publish_pose: True
              pose: /robot_joint_command/absolute_larm_posestamped
-             follow_view: true
         '1RARM':
            class: 'JoyPose6D'
            args:
              frame_id: BODY
              publish_pose: True
              pose: /robot_joint_command/absolute_rarm_posestamped
-             follow_view: true
         '2LLEG':
            class: 'JoyPose6D'
            args:
              frame_id: BODY
              publish_pose: True
              pose: /robot_joint_command/absolute_lleg_posestamped
-             follow_view: true
         '3RLEG':
            class: 'JoyPose6D'
            args:
              frame_id: BODY
              publish_pose: True
              pose: /robot_joint_command/absolute_rleg_posestamped
-             follow_view: true
-
     </rosparam>
   </node>
   </group>

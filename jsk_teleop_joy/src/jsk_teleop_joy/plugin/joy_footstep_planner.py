@@ -18,7 +18,7 @@ import jsk_teleop_joy.tf_ext as tf_ext
 class JoyFootstepPlanner(JoyPose6D):
   def __init__(self, name, args):
     JoyPose6D.__init__(self, name, args)
-    self.support_follow_view = True
+    self.supportFollowView(True)
     self.frame_id = self.getArg('frame_id', '/map')
     self.lfoot_frame_id = rospy.get_param('~lfoot_frame_id', '/LLEG_LINK5')
     self.rfoot_frame_id = rospy.get_param('~rfoot_frame_id', '/RLEG_LINK5')

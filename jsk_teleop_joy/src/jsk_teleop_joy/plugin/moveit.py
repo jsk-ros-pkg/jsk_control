@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 class JoyMoveIt(JoyPose6D):
   def __init__(self, name, args):
     JoyPose6D.__init__(self, name, args)
-    self.support_follow_view = True
+    self.supportFollowView(True)
     self.frame_id = self.getArg('frame_id', '/map')
     # parse srdf to get planning_groups
     srdf = rospy.get_param("/robot_description_semantic")

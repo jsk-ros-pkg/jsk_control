@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 class JoyGoPos(JoyPose6D):
   def __init__(self, name, args):
     JoyPose6D.__init__(self, name, args)
-    self.support_follow_view = True
+    self.supportFollowView(True)
     self.frame_id = self.getArg('frame_id', '/map')
     # parse srdf to get planning_groups
     self.goal_pub = rospy.Publisher("goal", PoseStamped)
