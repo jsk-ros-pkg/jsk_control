@@ -3,7 +3,7 @@
   <!-- and hrp2jsknt_hrpsys_bringup.launch of hrpsys_gazebo_tutorials with rtmlaunch -->
   <!-- Please launch rviz to make footsteps -->
   <!-- move the robot to reset-pose -->
-  <include file="$(find jsk_footstep_controller)/launch/resetmanippose.launch" />
+  <!-- <include file="$(find jsk_footstep_controller)/launch/resetmanippose.launch" /> -->
   <!-- planner -->
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"

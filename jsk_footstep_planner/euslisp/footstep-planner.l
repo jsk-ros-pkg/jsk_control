@@ -59,21 +59,38 @@ footstep-parameter"))
   t)
 
 (defun face-on-faces (f support-faces)
-  (dolist (v (send f :vertices))
-    (let ((on-face-p nil))
-      (dolist (support-face support-faces)
-        (when (and (eps= (send support-face :distance v) 0.0)
-                   (not (eq (send support-face :insidep v) :outside)))
-          ;; the v is ok
-          (setq on-face-p t)
-          (return-from nil nil)
+  (if *use-env-server*
+      (progn
+        (let ((req (instance jsk_pcl_ros::PolygonOnEnvironmentRequest :init)))
+          ;;(send req :environment_id *env-id*)
+          (send req :environment_id 0)
+          ;; build polygon samped
+          (send req :polygon :header *goal-header*)
+          (send req :polygon :polygon :points
+                (mapcar #'(lambda (v)
+                            (instance geometry_msgs::Point32 :init
+                                      :x (* 0.001 (elt v 0))
+                                      :y (* 0.001 (elt v 1))
+                                      :z (* 0.001 (elt v 2))))
+                        (send f :vertices)))
+          (let ((res (ros::service-call "polygon_on_env" req t)))
+            (send res :result))))
+    (progn
+      (dolist (v (send f :vertices))
+        (let ((on-face-p nil))
+          (dolist (support-face support-faces)
+            (when (and (eps= (send support-face :distance v) 0.0)
+                       (not (eq (send support-face :insidep v) :outside)))
+              ;; the v is ok
+              (setq on-face-p t)
+              (return-from nil nil)
+              )
+            )
+          (unless on-face-p
+            (return-from face-on-faces nil))
           )
         )
-      (unless on-face-p
-        (return-from face-on-faces nil))
-      )
-    )
-  t)
+      t)))
 
 ;; for debug
 (defun make-arrow-for-direction (direction)
@@ -133,7 +150,7 @@ footstep-parameter"))
                                             ret)))))
                               planes)))
       (let ((non-null-candidates (remove-if #'null candidates)))
-        (if non-null-candidates (car non-null-candidates)
+        (if non-null-candidates non-null-candidates ;car is not good
           nil)))))
 
 (defun leg-index->leg-symbol (index)
@@ -318,13 +335,26 @@ footstep-parameter"))
                                          (send state :step-name))))
         ;; mapping to the planes if needed
         (when (and planes z-axis)
-          (setq next-coords-candidate
-                (remove-if #'(lambda (x) (null (cdr x)))
-                           (mapcar #'(lambda (c)
-                                       (cons (car c)
-                                             (project-coords-on-to-plane
-                                              (cdr c) planes z-axis)))
-                                   next-coords-candidate))))
+          (let ((candidates-set
+                 (mapcar #'(lambda (c)
+                             (let ((candidate-set2
+                                    (project-coords-on-to-plane
+                                     (cdr c) planes z-axis)))
+                               (if candidate-set2
+                                   (mapcar #'(lambda (s)
+                                               (cons (car c) s))
+                                           candidate-set2)
+                                 nil)))
+                         next-coords-candidate)))
+            (let ((new-candidate nil))
+              (dolist (candidates candidates-set)
+                (dolist (c candidates)
+                  (if (and c (cdr c))
+                      (if new-candidate
+                          (setq new-candidate (append new-candidate (list c)))
+                        (setq new-candidate (list c))
+                        ))))
+                (setq next-coords-candidate new-candidate))))
         ;; remove steps collide with obstacles
         (let ((ret nil))
           (dolist (c next-coords-candidate)

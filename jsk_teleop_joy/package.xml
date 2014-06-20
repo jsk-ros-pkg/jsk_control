@@ -16,7 +16,8 @@
   <build_depend>visualization_msgs</build_depend>
   <build_depend>jsk_footstep_msgs</build_depend>
   <build_depend>diagnostic_msgs</build_depend>
-
+  <build_depend>diagnostic_updater</build_depend>
+  
   <run_depend>ps3joy</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>view_controller_msgs</run_depend>
@@ -24,7 +25,7 @@
   <run_depend>visualization_msgs</run_depend>
   <run_depend>jsk_footstep_msgs</run_depend>
   <run_depend>diagnostic_msgs</run_depend>
-    
+  <run_depend>diagnostic_updater</run_depend>
   <export>
     <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>

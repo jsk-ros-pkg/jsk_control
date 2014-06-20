@@ -73,7 +73,7 @@ class XBoxStatus():
         self.left_analog_y = msg.axes[1]
         self.right_analog_x = msg.axes[3]
         self.right_analog_y = msg.axes[4]
-
+        self.orig_msg = msg
 
 class PS3Status():
     def __init__(self, msg):
@@ -146,7 +146,7 @@ class PS3Status():
         self.left_analog_y = msg.axes[1]
         self.right_analog_x = msg.axes[2]
         self.right_analog_y = msg.axes[3]
-
+        self.orig_msg = msg
 
 class PS3WiredStatus():
     def __init__(self, msg):
@@ -219,3 +219,4 @@ class PS3WiredStatus():
         self.left_analog_y = msg.axes[1]
         self.right_analog_x = msg.axes[2]
         self.right_analog_y = msg.axes[3]
+        self.orig_msg = msg
