@@ -3,6 +3,8 @@
   </class>
   <class name="Relay" type="jsk_teleop_joy.plugin.relay.Relay">
   </class>
+  <class name="RelayAndConvertToPS3" type="jsk_teleop_joy.plugin.relay.RelayAndConvertToPS3">
+  </class>
   <class name="JoyPose6D" type="jsk_teleop_joy.plugin.joy_pose_6d.JoyPose6D">
   </class>
   <class name="JoyFootstep" type="jsk_teleop_joy.plugin.joy_footstep.JoyFootstep">
