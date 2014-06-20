@@ -1,6 +1,8 @@
 <library path="src">
   <class name="VerboseStatus" type="jsk_teleop_joy.plugin.verbose.VerboseStatus">
   </class>
+  <class name="Relay" type="jsk_teleop_joy.plugin.relay.Relay">
+  </class>
   <class name="JoyPose6D" type="jsk_teleop_joy.plugin.joy_pose_6d.JoyPose6D">
   </class>
   <class name="JoyFootstep" type="jsk_teleop_joy.plugin.joy_footstep.JoyFootstep">
