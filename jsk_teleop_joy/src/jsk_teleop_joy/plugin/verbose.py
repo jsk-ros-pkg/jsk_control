@@ -41,6 +41,7 @@ class VerboseStatus(JSKJoyPlugin):
       rospy.loginfo('square')
     if status.cross:
       rospy.loginfo('cross')
-    
+    if status.center:
+      rospy.loginfo('center')    
 
       
