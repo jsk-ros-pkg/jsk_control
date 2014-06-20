@@ -3,6 +3,7 @@
   and hrp2jsknt_hrpsys_bringup.launch of hrpsys_gazebo_tutorials with rtmlaunch
   2. Please launch rviz to make footsteps
   3. move the robot to reset-pose
+  
   <arg name="USE_PLANE" default="false" />
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
@@ -11,11 +12,11 @@
         respawn="true"
         output="screen">
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
-    <remap from="planes" to="/polygon_estimator/output_polygons" />
+    <remap from="planes" to="/env_server/occlusion_result_polygons" />
     <rosparam subst_value="true">
     use_planes: $(arg USE_PLANE)
     use_env_server: $(arg USE_PLANE)
-    timeout: 10
+    timeout: 2
     </rosparam>
     <remap from="env_lock" to="/env_server/lock" />
     <remap from="polygon_on_env" to="/env_server/polygon_on_environment" />
@@ -61,12 +62,15 @@
         type="footstep_marker"
         name="footstep_marker"
         clear_params="true"
-        output="log"
+        output="screen"
         >
+    <remap from="~planes" to="/env_server/occlusion_result_polygons" />
+    <remap from="~planes_coefficients" to="/env_server/occlusion_result_coefficients" />
     <remap from="move_marker" to="$(arg POSE_REMAP)" />
     <param name="wait_snapit_server" value="false" />
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <rosparam>
+      use_plane_snap: true
       use_footstep_planner: true
       use_initial_footstep_tf: true
       footstep_margin: 0.21
