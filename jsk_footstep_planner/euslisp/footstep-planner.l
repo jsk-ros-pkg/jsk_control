@@ -62,7 +62,8 @@ footstep-parameter"))
   (if *use-env-server*
       (progn
         (let ((req (instance jsk_pcl_ros::PolygonOnEnvironmentRequest :init)))
-          (send req :environment_id *env-id*)
+          ;;(send req :environment_id *env-id*)
+          (send req :environment_id 0)
           ;; build polygon samped
           (send req :polygon :header *goal-header*)
           (send req :polygon :polygon :points

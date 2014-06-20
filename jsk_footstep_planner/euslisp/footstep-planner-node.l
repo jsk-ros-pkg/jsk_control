@@ -163,10 +163,12 @@
          (support-leg (if (eq start-leg :lleg) :rleg :lleg)))
     ;; cheep hack
     (setq *goal-header* (send goal :goal :initial_footstep :header))
-    (if *use-env-server*
-        (let ((req (instance jsk_pcl_ros::EnvironmentLockRequest :init)))
-          (let ((res (ros::service-call "env_lock" req t)))
-            (setq *env-id* (send res :environment_id)))))
+    
+    ;; (if *use-env-server*
+    ;;     (let ((req (instance jsk_pcl_ros::EnvironmentLockRequest :init)))
+    ;;       (let ((res (ros::service-call "env_lock" req t)))
+    ;;         (setq *env-id* (send res :environment_id)))))
+    
     ;; creating initial step node from goal msg
     (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
       (send prblm :start-state

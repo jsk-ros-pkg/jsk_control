@@ -3,8 +3,8 @@ from jsk_teleop_joy.joy_plugin import JSKJoyPlugin
 import rospy
 
 class VerboseStatus(JSKJoyPlugin):
-  def __init__(self):
-    JSKJoyPlugin.__init__(self, 'VerbosePlugin')
+  def __init__(self, name, args):
+    JSKJoyPlugin.__init__(self, name, args)
   def joyCB(self, status, history):
     rospy.loginfo('analog left (%f, %f)' % (status.left_analog_x, status.left_analog_y))
 
