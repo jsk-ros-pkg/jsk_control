@@ -11,6 +11,10 @@ except:
 
 class XBoxStatus():
     def __init__(self, msg):
+        if msg.buttons[8] == 1:
+            self.center = True
+        else:
+            self.center = False
         if msg.buttons[6] == 1:
             self.select = True
         else:
@@ -84,6 +88,10 @@ class XBoxStatus():
 class PS3Status():
     def __init__(self, msg):
         # creating from sensor_msgs/Joy
+        if msg.buttons[16] == 1:
+            self.center = True
+        else:
+            self.center = False
         if msg.buttons[0] == 1:
             self.select = True
         else:
@@ -157,6 +165,10 @@ class PS3Status():
 class PS3WiredStatus():
     def __init__(self, msg):
         # creating from sensor_msgs/Joy
+        if msg.buttons[16] == 1:
+            self.center = True
+        else:
+            self.center = False
         if msg.buttons[0] == 1:
             self.select = True
         else:
@@ -231,6 +243,8 @@ class PS3WiredStatus():
         joy.header = self.orig_msg.header
         joy.buttons = [0] * 17
         joy.axes = [0] * 20
+        if self.center:
+            joy.buttons[16] = 1
         if self.select:
             joy.buttons[0] = 1
         if self.start:
