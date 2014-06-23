@@ -21,9 +21,43 @@
   <node pkg="roseus" type="roseus" name="spacenav_to_posestamped" output="screen"
 	args="$(find jsk_ik_server)/sample/teleop/spacenav2posestamped.l">
   </node>
-  <include file="$(find jsk_teleop_joy)/launch/joy.launch">
-    <arg name="DEV" value="$(arg DEV)" />
-    <arg name="POSE_REMAP" value="/robot_joint_command/absolute_larm_posestamped" />
-    <arg name="FRAME_ID" value="BODY" />
-  </include>
+  <group if="$(arg USE_JOY)">
+    <node pkg="joy" type="joy_node" name="joy" output="screen" >
+      <param name="dev" type="string" value="$(arg DEV)" />
+      <param name="deadzone" value="0.2" />
+      <param name="autorepeat_rate" value="40" />
+      <param name="coalesce_interval" value="0.025" />
+    </node>
+    <node pkg="jsk_teleop_joy" type="joy.py" name="joy_manager" output="screen"
+          clear_params="true">
+      <param name="controller_type" value="auto" />
+      <rosparam>
+      plugins:
+        '0LARM':
+           class: 'JoyPose6D'
+           args:
+             frame_id: BODY
+             publish_pose: True
+             pose: /robot_joint_command/absolute_larm_posestamped
+        '1RARM':
+           class: 'JoyPose6D'
+           args:
+             frame_id: BODY
+             publish_pose: True
+             pose: /robot_joint_command/absolute_rarm_posestamped
+        '2LLEG':
+           class: 'JoyPose6D'
+           args:
+             frame_id: BODY
+             publish_pose: True
+             pose: /robot_joint_command/absolute_lleg_posestamped
+        '3RLEG':
+           class: 'JoyPose6D'
+           args:
+             frame_id: BODY
+             publish_pose: True
+             pose: /robot_joint_command/absolute_rleg_posestamped
+    </rosparam>
+  </node>
+  </group>
 </launch>

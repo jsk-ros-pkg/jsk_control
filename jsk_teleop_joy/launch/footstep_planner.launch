@@ -11,10 +11,13 @@
   <node pkg="jsk_teleop_joy" type="joy_main.py" name="joy" output="screen">
     <remap from="pose" to="$(arg POSE_REMAP)" />
     <param name="controller_type" value="$(arg CONTROLLER_TYPE)" />
-    <param name="follow_view" value="true" />
-    <param name="frame_id" value="/odom" />
     <rosparam>
-      plugins: ['JoyFootstepPlannerDemo']
+      plugins:
+        'Footstep Planner':
+           class: 'JoyFootstepPlannerDemo'
+           args:
+             follow_view: true
+             frame_id: "/odom"
     </rosparam>
   </node>
 
