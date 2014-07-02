@@ -19,6 +19,7 @@
   <depend package="jsk_footstep_planner" />
   <depend package="diagnostic_msgs" />
   <depend package="diagnostic_updater" />
+  <depend package="jsk_rviz_plugins" />
   <export>
     <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>
