@@ -9,20 +9,6 @@
 (require "models/arrow-object.l")
 (require "fullbody-ik-client.l")
 
-(defmethod cascaded-link
-  (:find-link-route
-   (to &optional from)
-   (let ((pl (send to :parent-link)))
-     (cond
-      ;;((and pl (not (find to (send self :links))))
-      ;;(send self :find-link-route pl from))
-      ((and pl (not (eq to from)))
-       (append (send self :find-link-route pl from) (list to)))
-      ((and pl (eq to from))
-       (list from))
-      )))
-  )
-
 (defclass ik-server
   :slots
   (robot
@@ -45,6 +31,7 @@
    support-centroid-pos
    viewer
    move-target-hash
+   additional-ik-options
    ))
 
 (defmethod ik-server
@@ -76,10 +63,13 @@
       (apply
        #'append
        (mapcar
-	#'(lambda (k) (if (find-method robot k) (list (cons k (send robot k :end-coords)))))
+	#'(lambda (k) (if (and (find-method robot k) (send robot k))
+			  (list (cons k (send robot k :end-coords)))))
 	'(:rarm :larm :rleg :lleg))))
     (ik-server-client
      (instance fullbody-ik-client :init))
+    (ik-server-name (format nil "~A_ik_server" (send robot :name)))
+    (ik-server-service-name "/solve_ik")
     &allow-other-keys
     )
    (while args
@@ -90,6 +80,13 @@
    (send self :move-target-hash move-target-hash)
    (send self :ik-server-client ik-server-client)
    (send self :set-default-end-coords default-end-coords)
+   (send self :ik-server-name ik-server-name)
+   (send self :ik-server-service-name ik-server-service-name)
+   (cond
+    ((find-method robot :rleg)
+     (send self :update-support-links '(:rleg :lleg))
+     (send self :make-foot-convex :force? t)
+     (send self :make-centroid-object)))
    )
   (:ik-service-cb
    (req)
@@ -104,6 +101,7 @@
    (setq arrow (arrow))
    ;; check viewer
    (cond
+    ((or (null x::*display*) (= x::*display* 0)) nil)
     ((and (boundp '*irtviewer*) *irtviewer*)
      (setq viewer *irtviewer*))
     ((and (boundp '*pickview*) *pickview*)
@@ -138,6 +136,14 @@
    (setq *tf* (instance ros::transform-listener :init))
    ;;
    (ros::roseus ik-server-name)
+   (when (ros::has-param "~additional_ik_options")
+     (let ((str (ros::get-param "~additional_ik_options")))
+       (if (> (length str) 1)
+           (setq additional-ik-options
+                 (if (= (elt str 0) #\()
+                     (read-from-string str)
+                   (read-from-string (format nil "(~A)" str)))))
+       ))
    (ros::advertise-service ik-server-service-name
 			   moveit_msgs::GetPositionIK
 			   #'send self :ik-service-cb)
@@ -174,16 +180,39 @@
    )
   (:loop-ik-server
    nil
+   (send self :publish-default-end-coords :init? t)
    (do-until-key
     (if (not (ros::ok)) (return-from nil nil))
     (unless (or (null x::*display*) (= x::*display* 0))
       (x::window-main-one))
+    (ros::spin-once)
+    (send self :publish-default-end-coords :init? nil)
     (ros::sleep)
-    (ros::spin-once))
+    ;;(unix:usleep (* 100 1000))
+    )
    )
   ;;
   ;;
   ;;
+  (:publish-default-end-coords
+   (&key (init? nil))
+   (mapcar
+    #'(lambda (dec)
+	(if init?
+	    (ros::advertise
+	     (format nil "~A/default_end_coords/~A"
+		     ik-server-name
+		     (remove #\: (format nil "~A" (car dec))))
+	     geometry_msgs::posestamped 1))
+	(ros::publish
+	 (format nil "~A/default_end_coords/~A"
+		 ik-server-name
+		 (remove #\: (format nil "~A" (car dec))))
+	 (send ik-server-client :coords2posestamped
+	       (send (cdr dec) :copy-worldcoords)
+	       :robot robot))
+	)
+    default-end-coords))
   (:local-transform
    (frame-id
     pose
@@ -445,6 +474,18 @@
 		 (append
 		  (send self :inverse-kinematics-group-options opt)
 		  opt)))
+       ;; merge additional-ik-options, additional options might be overwritten by opt
+       (let (tmp (aop additional-ik-options))
+         (while aop
+           (let* ((key (car aop))
+                  (val (assoc key opt)))
+             (unless val
+               (push (cadr aop) tmp)
+               (push key tmp))
+             (setq aop (cddr aop))
+             ))
+         (setq additional-ik-options tmp))
+       (setq opt (append opt additional-ik-options))
        ;;
        (format t "[:fik-service-cb] options: ~A~%" opt)
        ;; joint angle update

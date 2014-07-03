@@ -1,0 +1,21 @@
+<launch>
+  <arg name="IK_OPTIONS" default="" />
+
+  <node pkg="roseus" type="roseus" name="staro_ik_server" output="screen"
+	args="$(find jsk_ik_server)/euslisp/ik-server-impl/staro-ik-server.l">
+    <param name="robot" value="staro"/>
+    <remap to="/staro_ik_server/solve" from="/solve_ik" />
+    <param name="additional_ik_options" value="$(arg IK_OPTIONS)" />
+  </node>
+  <!--
+  <node pkg="roseus" type="roseus" name="atlas_ik_client" output="screen"
+	args="$(find jsk_ik_server)/euslisp/old-ik-client.l">
+    <param name="root_link" value="/pelvis"/>
+  </node>
+  -->
+  <node pkg="roseus" type="roseus" name="staro_ik_client" output="screen"
+	args="$(find jsk_ik_server)/test/fullbody-ik-client-test.l">
+    <env name="IK_CLIENT_TEST" value="staro"/>
+    <remap to="/staro_ik_server/solve" from="/solve_ik" />
+  </node>
+</launch>

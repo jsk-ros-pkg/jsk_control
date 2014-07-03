@@ -1,19 +1,25 @@
 <launch>
-  <!-- please launch gazebo_hrp2jsknt_no_controllers.launch of hrpsys_gazebo_tutorials with roslaunch -->
-  <!-- and hrp2jsknt_hrpsys_bringup.launch of hrpsys_gazebo_tutorials with rtmlaunch -->
-  <!-- Please launch rviz to make footsteps -->
-  <!-- move the robot to reset-pose -->
-  <!-- planner -->
+  1. please launch gazebo_hrp2jsknt_no_controllers.launch of hrpsys_gazebo_tutorials with roslaunch
+  and hrp2jsknt_hrpsys_bringup.launch of hrpsys_gazebo_tutorials with rtmlaunch
+  2. Please launch rviz to make footsteps
+  3. move the robot to reset-pose
+  
+  <arg name="USE_PLANE" default="false" />
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
         clear_params="true"
-        output="log">
+        respawn="true"
+        output="screen">
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
-    <rosparam>
-    use_planes: false
-    timeout: 1
+    <remap from="planes" to="/env_server/occlusion_result_polygons" />
+    <rosparam subst_value="true">
+    use_planes: $(arg USE_PLANE)
+    use_env_server: $(arg USE_PLANE)
+    timeout: 2
     </rosparam>
+    <remap from="env_lock" to="/env_server/lock" />
+    <remap from="polygon_on_env" to="/env_server/polygon_on_environment" />
   </node>
   <!-- controller -->
   <node pkg="jsk_footstep_controller"
@@ -27,38 +33,44 @@
     </rosparam>
   </node>
   <!-- visualization for rviz -->
+
   <arg name="POSE_REMAP" default="/footstep_marker/pose" />
   <arg name="DEV" default="/dev/input/js1" />
-  <node pkg="joy" type="joy_node" name="joy0" output="screen" >
+  <node pkg="joy" type="joy_node" name="ps3_joy0" output="screen" >
     <param name="dev" type="string" value="$(arg DEV)" />
     <param name="deadzone" value="0.2" />
     <param name="autorepeat_rate" value="40" />
     <param name="coalesce_interval" value="0.025" />
   </node>
 
-  <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen">
-    <remap from="pose" to="$(arg POSE_REMAP)" />
-    <remap from="execute" to="/footstep_marker/execute" />
+  <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen"
+        clear_params="true">
     <param name="controller_type" value="auto" />
-    <param name="follow_view" value="true" />
-    <param name="frame_id" value="/odom" />
-    <rosparam>
-       plugins: ['JoyFootstepPlanner']
+    <rosparam subst_value="true">
+      plugins:
+        'Footstep Planner':
+           class: 'JoyFootstepPlanner'
+           args:
+             pose: $(arg POSE_REMAP)
+             follow_view: true
+             publish_pose: true
+             frame_id: odom
     </rosparam>
-    <!-- footstep parameters -->
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
   </node>
-  
   <node pkg="jsk_interactive_marker"
         type="footstep_marker"
         name="footstep_marker"
         clear_params="true"
-        output="log"
+        output="screen"
         >
+    <remap from="~planes" to="/env_server/occlusion_result_polygons" />
+    <remap from="~planes_coefficients" to="/env_server/occlusion_result_coefficients" />
     <remap from="move_marker" to="$(arg POSE_REMAP)" />
     <param name="wait_snapit_server" value="false" />
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <rosparam>
+      use_plane_snap: true
       use_footstep_planner: true
       use_initial_footstep_tf: true
       footstep_margin: 0.21
