@@ -17,6 +17,15 @@
            class: 'RelayAndConvertToPS3'
            args:
              output_topic: /joy_other
+        'usage':
+           class: 'Usage'
+           args:
+             width: 1200
+             text: "
+      * Hello, PR2\n
+      * Center button to invoke menu\n
+      * If you want to use the original PR2 interface, please check out 'PR2 original'.\n
+     "
     </rosparam>
   </node>
 </launch>
