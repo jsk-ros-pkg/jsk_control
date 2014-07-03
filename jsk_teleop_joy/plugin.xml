@@ -1,4 +1,6 @@
 <library path="src">
+  <class name="Usage" type="jsk_teleop_joy.plugin.util.Usage">
+  </class>
   <class name="VerboseStatus" type="jsk_teleop_joy.plugin.verbose.VerboseStatus">
   </class>
   <class name="Relay" type="jsk_teleop_joy.plugin.relay.Relay">
