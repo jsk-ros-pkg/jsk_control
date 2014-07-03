@@ -72,5 +72,7 @@ class EndEffector(JoyPose6D):
     elif self.mode == self.JOY_MODE:
       if history.new(status, "triangle"):
         self.mode = self.MENU_MODE
+      elif history.new(status, "circle"):
+        self.publishMarkerMenu(MarkerMenu.MOVE)
       else:
         JoyPose6D.joyCB(self, status, history)
