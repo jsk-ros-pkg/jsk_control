@@ -230,6 +230,8 @@
                                                                          f)))
                                                                  final-steps))))))
                 (send result :result footsteps)
+                ;; publish the result for visualization
+                (ros::publish "/footstep" footsteps)
                 (send server :set-succeeded result))
               (send server :set-aborted result))
           ))
@@ -266,6 +268,7 @@
   (setq *tf* (instance ros::transform-listener :init))
   (when *use-planes*
     (ros::subscribe "planes" jsk_pcl_ros::PolygonArray #'planes-cb))
+  (ros::advertise "/footstep" jsk_footstep_msgs::FootstepArray)
   (let ((s (instance ros::simple-action-server :init
                      "footstep_planner" jsk_footstep_msgs::PlanFootstepsAction
                      :execute-cb 'plan-execute-cb)))
