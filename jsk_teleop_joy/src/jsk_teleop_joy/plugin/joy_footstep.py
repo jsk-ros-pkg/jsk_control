@@ -1,3 +1,10 @@
+import imp
+try:
+  imp.find_module("geometry_msgs")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
+
 from geometry_msgs.msg import PoseStamped, Pose
 from joy_pose_6d import JoyPose6D
 from jsk_footstep_msgs.msg import FootstepArray, Footstep
@@ -30,12 +37,13 @@ def FootstepCoordsToROSMsg(footsteps):
   pass
 
 class JoyFootstep(JoyPose6D):
-  def __init__(self):
-    JoyPose6D.__init__(self, name='JoyFootstep', publish_pose=False)
-    self.support_follow_view = True
+  def __init__(self, name, args):
+    args['publish_pose'] = False
+    JoyPose6D.__init__(self, name, args)
+    self.supportFollowView(True)
     self.footstep_pub = rospy.Publisher('/footstep', FootstepArray)
     self.footsteps = []
-    self.frame_id = rospy.get_param('~frame_id', '/map')
+    self.frame_id = self.getArg('frame_id', '/map')
     
   def joyCB(self, status, history):
     JoyPose6D.joyCB(self, status, history)

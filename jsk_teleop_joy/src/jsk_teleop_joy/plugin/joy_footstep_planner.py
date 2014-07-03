@@ -1,4 +1,11 @@
 import rospy
+
+import imp
+try:
+  imp.find_module("actionlib")
+except:
+  import roslib; roslib.load_manifest('jsk_teleop_joy')
+
 import actionlib
 from joy_pose_6d import JoyPose6D
 from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray
@@ -9,12 +16,10 @@ from tf.transformations import *
 import jsk_teleop_joy.tf_ext as tf_ext
 
 class JoyFootstepPlanner(JoyPose6D):
-  
-    
-  def __init__(self):
-    JoyPose6D.__init__(self, name='JoyFootstepPlanner')
-    self.support_follow_view = True
-    self.frame_id = rospy.get_param('~frame_id', '/map')
+  def __init__(self, name, args):
+    JoyPose6D.__init__(self, name, args)
+    self.supportFollowView(True)
+    self.frame_id = self.getArg('frame_id', '/map')
     self.lfoot_frame_id = rospy.get_param('~lfoot_frame_id', '/LLEG_LINK5')
     self.rfoot_frame_id = rospy.get_param('~rfoot_frame_id', '/RLEG_LINK5')
     self.lfoot_offset = tf_ext.xyzxyzwToMatrix(rospy.get_param('~lfoot_offset'))

@@ -1,8 +1,11 @@
 <launch>
+  <arg name="IK_OPTIONS" default="" />
+
   <node pkg="roseus" type="roseus" name="hrp2jsk_ik_server" output="screen"
 	args="$(find jsk_ik_server)/euslisp/ik-server-impl/hrp2jsk-ik-server.l">
     <param name="robot" value="hrp2jsk"/>
     <remap to="/hrp2jsk_ik_server/solve" from="/solve_ik" />
+    <param name="additional_ik_options" value="$(arg IK_OPTIONS)" />
   </node>
   <!--
   <node pkg="roseus" type="roseus" name="atlas_ik_client" output="screen"

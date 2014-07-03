@@ -9,5 +9,6 @@
   <depend package="moveit_msgs" />
   <depend package="roseus"/>
   <depend package="tf"/>
+  <rosdep name="rostest" />
 
 </package>

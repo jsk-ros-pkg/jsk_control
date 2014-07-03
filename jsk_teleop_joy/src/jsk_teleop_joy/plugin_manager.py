@@ -13,13 +13,25 @@ class PluginManager():
   def __init__(self, package_name):
     self.package_name = package_name
   def loadPluginInstances(self, plugins):
+    """
+    plugins := {name: spec, name: spec, ...}
+    spec := {class: class, args: args}
+    """
     self.plugins = []
-    for plugin in plugins:
-      if not self.plugin_defs.has_key(plugin):
-        rospy.logerr('cannot find %s in plugins for %s' % (plugin, self.package_name))
+
+    #for (instance_name, instance_spec) in plugins.items():
+    plugin_keys = plugins.keys()
+    plugin_keys.sort()
+    for instance_name in plugin_keys:
+      instance_spec = plugins[instance_name]
+      instance_class = instance_spec["class"]
+      instance_args = instance_spec["args"]
+      if not self.plugin_defs.has_key(instance_class):
+        rospy.logerr('cannot find %s in plugins for %s' % (instance_class,
+                                                           self.package_name))
       else:
         try:
-          module_path = self.plugin_defs[plugin]
+          module_path = self.plugin_defs[instance_class]
           module_name, class_from_class_type = module_path.rsplit('.', 1)
           module = __builtin__.__import__(module_name, 
                                           fromlist=[class_from_class_type],
@@ -28,9 +40,9 @@ class PluginManager():
           if class_ref is None:
             rospy.logfatal('cannot find %s' % (class_from_class_type))
           else:
-            self.plugins.append(class_ref())
+            self.plugins.append(class_ref(instance_name, instance_args))
         except:
-          rospy.logerr('failed to load %s' % (plugin))
+          rospy.logerr('failed to load %s' % (instance_class))
           traceback.print_exc(file=sys.stdout)
     return self.plugins
   def loadPlugins(self):
