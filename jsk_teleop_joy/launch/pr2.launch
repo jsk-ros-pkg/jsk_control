@@ -26,6 +26,15 @@
              pose: "jsk_interactive_marker_manipulation/move_marker"
              set_pose: "jsk_interactive_marker_manipulation/pose_update"
              marker_menu: "jsk_interactive_marker_manipulation/select_marker_menu"
+        'usage':
+           class: 'Usage'
+           args:
+             width: 1200
+             text: "
+      * Hello, PR2\n
+      * Center button to invoke menu\n
+      * If you want to use the original PR2 interface, please check out 'PR2 original'.\n
+     "
     </rosparam>
   </node>
 </launch>
