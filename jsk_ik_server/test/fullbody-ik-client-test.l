@@ -41,7 +41,7 @@
       :target-coords target-coords
       :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
       ;;:fix-limbs '(:rleg :lleg)
-      ;;:centroid-thre 100
+      :centroid-thre :support-convex
       :stop 50
       :use-toes '(nil nil)
       )
@@ -116,6 +116,17 @@
     (send *hrp2jsk* :fix-leg-to-coords (make-coords))
     (send* self :test-fullbody-ik :robot *hrp2jsk* args))
    )
+  (:staro-test
+   (&rest args)
+   (require "package://hrpsys_ros_bridge_tutorials/models/staro.l")
+   (defvar *staro* (staro))
+   (objects (list *staro*))
+   (ros::roseus "fullbody_ik_client_test")
+   (do-until-key
+    (send *staro* :reset-manip-pose)
+    (send *staro* :fix-leg-to-coords (make-coords))
+    (send* self :test-fullbody-ik :robot *staro* args))
+   )
   (:atlas-test
    (&rest args)
    (require "package://hrpsys_gazebo_atlas/euslisp/atlas-model.l")
@@ -126,6 +137,18 @@
     (send *atlas* :reset-manip-pose)
     (send *atlas* :fix-leg-to-coords (make-coords))
     (send* self :test-fullbody-ik :robot *atlas* args)
+    ))
+  (:sample-robot-test
+   (&rest args)
+   (require "irteus/demo/sample-robot-model.l")
+   (defvar *sample-robot* (instance sample-robot :init))
+   (send *sample-robot* :fix-leg-to-coords (make-coords))
+   (ros::roseus "fullbody_ik_client_test")
+   (objects (list *sample-robot*))
+   (do-until-key
+    (send *sample-robot* :reset-pose)
+    (send *sample-robot* :fix-leg-to-coords (make-coords))
+    (send* self :test-fullbody-ik :robot *sample-robot* args)
     ))
   (:pr2-test
    (&rest args)
@@ -173,8 +196,12 @@
     (send ik-client-test :hrp2jsknt-test :foot? foot?))
    ((substringp "hrp2jsk" test)
     (send ik-client-test :hrp2jsk-test :foot? foot?))
+   ((substringp "staro" test)
+    (send ik-client-test :staro-test :foot? foot?))
    ((substringp "pr2" test)
     (send ik-client-test :pr2-test :foot? foot?))
    ((substringp "atlas" test)
     (send ik-client-test :atlas-test :foot? foot?))
+   ((substringp "sample-robot" test)
+    (send ik-client-test :sample-robot-test :foot? foot?))
    ))

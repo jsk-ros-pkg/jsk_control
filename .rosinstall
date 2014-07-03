@@ -7,6 +7,9 @@
 - git:
     uri: https://github.com/jsk-ros-pkg/jsk_roseus.git
     local-name: jsk-ros-pkg/jsk_roseus
+- git:
+    uri: https://github.com/jsk-ros-pkg/jsk_visualization.git
+    local-name: jsk-ros-pkg/jsk_visualization
 # rviz stuff
 - git:
     local-name: view_controller_msgs

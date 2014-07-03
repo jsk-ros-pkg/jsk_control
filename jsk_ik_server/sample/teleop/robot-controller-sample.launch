@@ -1,0 +1,63 @@
+<launch>
+
+  <arg name="CONTROL_ROBOT" default="staro" />
+  <arg name="USE_JOY" default="false" />
+  <arg name="DEV" default="/dev/input/js1" />
+  <node pkg="roseus" type="roseus" name="staro_ik_server" output="screen"
+	      args="$(find jsk_ik_server)/euslisp/ik-server-impl/$(arg CONTROL_ROBOT)-ik-server.l">
+    <param name="robot" value="$(arg CONTROL_ROBOT)"/>
+    <remap from="/staro_ik_server/solve" to="/solve_ik" />
+  </node>
+  <node pkg="roseus" type="roseus" name="robot_controller" output="screen"
+	args="$(find jsk_ik_server)/sample/teleop/robot-controller-with-ik-server.l">
+    <env name="ROBOT_CONTROLLER_ROBOT_NAME" value="$(arg CONTROL_ROBOT)"/>
+    <env name="ROBOT_CONTROLLER_SIM_MODE" value="true"/>
+  </node>
+  <node pkg="roseus" type="roseus" name="pose_play_panel" output="screen"
+	args="$(find jsk_ik_server)/sample/teleop/pose-play-panel.l">
+    <env name="POSE_PLAY_PANEL_DATA_PATH" value="$(find jsk_ik_server)/sample/teleop/img" />
+  </node>
+  <node pkg="spacenav_node" type="spacenav_node" name="spacenav_node" output="screen" />
+  <node pkg="roseus" type="roseus" name="spacenav_to_posestamped" output="screen"
+	args="$(find jsk_ik_server)/sample/teleop/spacenav2posestamped.l">
+  </node>
+  <group if="$(arg USE_JOY)">
+    <node pkg="joy" type="joy_node" name="joy" output="screen" >
+      <param name="dev" type="string" value="$(arg DEV)" />
+      <param name="deadzone" value="0.2" />
+      <param name="autorepeat_rate" value="40" />
+      <param name="coalesce_interval" value="0.025" />
+    </node>
+    <node pkg="jsk_teleop_joy" type="joy.py" name="joy_manager" output="screen"
+          clear_params="true">
+      <param name="controller_type" value="auto" />
+      <rosparam>
+      plugins:
+        '0LARM':
+           class: 'JoyPose6D'
+           args:
+             frame_id: BODY
+             publish_pose: True
+             pose: /robot_joint_command/absolute_larm_posestamped
+        '1RARM':
+           class: 'JoyPose6D'
+           args:
+             frame_id: BODY
+             publish_pose: True
+             pose: /robot_joint_command/absolute_rarm_posestamped
+        '2LLEG':
+           class: 'JoyPose6D'
+           args:
+             frame_id: BODY
+             publish_pose: True
+             pose: /robot_joint_command/absolute_lleg_posestamped
+        '3RLEG':
+           class: 'JoyPose6D'
+           args:
+             frame_id: BODY
+             publish_pose: True
+             pose: /robot_joint_command/absolute_rleg_posestamped
+    </rosparam>
+  </node>
+  </group>
+</launch>
