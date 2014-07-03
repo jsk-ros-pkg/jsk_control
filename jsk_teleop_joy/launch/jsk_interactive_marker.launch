@@ -4,7 +4,7 @@
   <arg name="MENU_REMAP" default="jsk_interactive_marker_manipulation/select_marker_menu" />
   <remap from="/joy" to="/joy_teleop" />
   <arg name="CONTROLLER_TYPE" default="auto" />
-  <arg name="DEV" default="/dev/input/js2" />
+  <arg name="DEV" default="/dev/input/js0" />
   <node pkg="joy" type="joy_node" name="ps3_joy0" output="screen" >
     <param name="dev" type="string" value="$(arg DEV)" />
     <param name="deadzone" value="0.2" />
@@ -18,7 +18,10 @@
     <remap from="set_pose" to="$(arg SET_POSE_REMAP)" />
     <param name="controller_type" value="$(arg CONTROLLER_TYPE)" />
     <param name="follow_view" value="true" />
+    <!--
     <param name="frame_id" value="/base_link" />
+    -->
+    <param name="frame_id" value="/jsk_model_marker_interface/PR2/base_link" />
     <rosparam>
       plugins: ['JSKInteractiveMarkerEndeffector']
     </rosparam>
