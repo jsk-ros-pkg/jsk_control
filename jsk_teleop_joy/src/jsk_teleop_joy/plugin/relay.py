@@ -19,3 +19,10 @@ class Relay(JSKJoyPlugin):
     self.pub.publish(status.orig_msg)
  
 
+class RelayAndConvertToPS3(Relay):
+  def __init__(self, name, args):
+    Relay.__init__(self, name, args)
+  def joyCB(self, status, history):
+    self.pub.publish(status.toPS3Msg())
+ 
+

@@ -157,7 +157,7 @@ class JoyManager():
       if self.selecting_plugin_index < 0:
         self.selecting_plugin_index = len(self.plugin_instances) - 1
       self.publishMenu(self.selecting_plugin_index)
-    elif history.new(status, "cross") or history.new(status, "select"):
+    elif history.new(status, "cross") or history.new(status, "center"):
       self.publishMenu(self.selecting_plugin_index, close=True)
       self.mode = self.MODE_PLUGIN
     elif history.new(status, "circle"):
@@ -169,7 +169,7 @@ class JoyManager():
     if self.mode == self.MODE_MENU:
       self.processMenuMode(status, self.history)
     else:
-      if self.history.new(status, "select"):
+      if self.history.new(status, "center"):
         self.selecting_plugin_index = self.current_plugin_index
         self.publishMenu(self.current_plugin_index)
         self.mode = self.MODE_MENU

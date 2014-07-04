@@ -1,0 +1,23 @@
+<launch>
+  <arg name="CONTROLLER_TYPE" default="auto" />
+  <arg name="DEV" default="/dev/input/js1" />
+  <node pkg="joy" type="joy_node" name="joy_driver" output="screen" >
+    <param name="dev" type="string" value="$(arg DEV)" />
+    <param name="deadzone" value="0.2" />
+    <param name="autorepeat_rate" value="40" />
+    <param name="coalesce_interval" value="0.025" />
+  </node>
+  <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen"
+        clear_params="true">
+    <param name="controller_type" value="$(arg CONTROLLER_TYPE)" />
+    <rosparam subst_value="true">
+      plugins:
+        'Verbose':
+           class: 'VerboseStatus'
+           args:
+             publish_pose: True
+             pose: $(arg POSE_REMAP)
+             follow_view: true
+    </rosparam>
+  </node>
+</launch>
