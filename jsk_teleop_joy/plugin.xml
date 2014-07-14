@@ -1,4 +1,6 @@
 <library path="src">
+  <class name="Usage" type="jsk_teleop_joy.plugin.util.Usage">
+  </class>
   <class name="VerboseStatus" type="jsk_teleop_joy.plugin.verbose.VerboseStatus">
   </class>
   <class name="Relay" type="jsk_teleop_joy.plugin.relay.Relay">
@@ -16,5 +18,7 @@
   <class name="JoyMoveIt" type="jsk_teleop_joy.plugin.moveit.JoyMoveIt">
   </class>
   <class name="JoyGoPos" type="jsk_teleop_joy.plugin.gopos.JoyGoPos">
+  </class>
+  <class name="JSKInteractiveMarkerEndeffector" type="jsk_teleop_joy.plugin.jsk_interactive_marker_control.EndEffector">
   </class>
 </library>

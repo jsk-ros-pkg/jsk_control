@@ -307,6 +307,7 @@ footstep-parameter"))
                   (next-leg-face nil)
                   &allow-other-keys)
     "this method is called after robot model is moved."
+    (incf *evaled-node-num*)
     (and
      (cond (collision-robot-model
             (not (send self :collision-with-obstacles-collision-robot-model-p
@@ -656,3 +657,96 @@ building and searching."
 
 ;;(provide :footstep-planner)
 
+(defclass ros-footstep-parameter
+  :super footstep-parameter
+  :slots (left-footsteps right-footsteps size-x size-y size-z))
+(defmethod ros-footstep-parameter
+  (:init (x y)
+    (setq size-x x)
+    (setq size-y y)
+    (send-super :init :legs-num 2))
+  (:foot-vertices (leg coords)
+    ;;     x     x
+    ;;
+    ;;        c
+    ;;
+    ;;     x     x
+    (let* ((size-x/2 (/ size-x 2))
+           (size-y/2 (/ size-y 2))
+           (local-vertices (list
+                            (float-vector size-x/2 size-y/2 0)
+                            (float-vector (- size-x/2) size-y/2 0)
+                            (float-vector (- size-x/2) (- size-y/2) 0)
+                            (float-vector size-x/2 (- size-y/2) 0))))
+      (mapcar #'(lambda (v)
+                  (let ((vv (send coords :transform-vector v)))
+                    ;;(format t "~A -> ~A~%" v vv)
+                    vv))
+              local-vertices)))
+  (:gen-footstep (&rest args)
+    (send self :gen-left-footstep)
+    (send self :gen-right-footstep)
+    )
+  (:gen-left-footstep ()
+    (let ((footsteps
+           (mapcar #'(lambda (x y theta)
+                       (let ((c (make-coords :pos (float-vector (* 1000.0 x)
+                                                                (* 1000.0 y) 0))))
+                         (send c :rotate theta :z)
+                         c))
+                   *footstep-xs* *footstep-ys* *footstep-thetas*)))
+      (dotimes (i (length footsteps))
+        (let ((f (elt footsteps i)))
+          (send self :gen-step :left i f)))
+      ))
+  (:gen-right-footstep ()
+    (let ((footsteps
+           (mapcar #'(lambda (x y theta)
+                       (let ((c (make-coords :pos (float-vector (* 1000.0 x)
+                                                                (* -1000.0 y)
+                                                                0))))
+                         (send c :rotate (- theta) :z)
+                         c))
+                   *footstep-xs* *footstep-ys* *footstep-thetas*)))
+      (dotimes (i (length footsteps))
+        (let ((f (elt footsteps i)))
+          (send self :gen-step :right i f)))
+      ))
+  (:gen-step (l/r name coords)
+    (let ((s (cons name coords)))
+      (case l/r
+        ((:left :lleg) (push s left-footsteps))
+        ((:right :rleg) (push s right-footsteps))
+        (t (error "unkown leg ~A" l/r)))
+      ))
+  (:transformation-by-leg-and-step-name (leg-name step-name)
+    (case leg-name
+      ((:left :lleg) (cdr (assoc step-name left-footsteps)))
+      ((:right :rleg) (cdr (assoc step-name right-footsteps)))
+      (t (error "unkown leg ~A" leg-name))))
+  (:next-leg (l/r)
+    (if (eq l/r :lleg) :rleg :lleg))
+  (:next-step-coords (support-leg-coords l/r &optional (name nil))
+    (let ((transformations
+           (case l/r
+             ((:left :lleg) left-footsteps)
+             ((:right :rleg) right-footsteps)
+             (t (error "unkown leg ~A" l/r)))))
+      (mapcar #'(lambda (trans)
+                  (cons (car trans)
+                        (send (send support-leg-coords :copy-worldcoords)
+                              :transform (cdr trans))))
+              transformations)))
+  (:move-robot-model (&rest args) nil)
+  (:calc-robot-coords (a-leg b-leg &rest args) ;dummy argumentsn
+    (midcoords 0.5 a-leg b-leg))
+  )
+
+(defun footstep->consed-coords (leg-step)
+  (let ((pose-stamped
+         (instance geometry_msgs::PoseStamped :init)))
+    (send pose-stamped :header (send goal :goal :initial_footstep :header))
+    (send pose-stamped :pose (send leg-step :pose))
+    (cons (send leg-step :leg)
+          (send *tf* :transform-pose *global-frame-id* pose-stamped)))
+  )
