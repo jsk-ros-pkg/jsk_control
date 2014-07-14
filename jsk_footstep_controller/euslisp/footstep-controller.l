@@ -5,6 +5,10 @@
 (ros::roseus-add-srvs "jsk_footstep_controller")
 
 (defvar *all-the-results* nil)
+(setq *footstep-list* nil)
+(setq *goal-id* nil)
+(setq *interruptible-mode* nil)
+
 ;; ((footstep footstep ....) (footstep footstep ....) ...)
 
 (defun footstep->coords (footstep frame-id)
@@ -26,7 +30,7 @@
      (send *ri* :abc-footstep->eus-footstep (send param :rleg_coords))
      (send *ri* :abc-footstep->eus-footstep (send param :lleg_coords)))))
 
-(defun execute-cb (server goal)
+(defun new-goal-cb (server goal)
   ;; coordinate transformation:
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
   ;; 2. apply the inverse transformation to footstep-ocorods[1:]
@@ -63,9 +67,39 @@
                         c))
                   transformed-footstep)))
             (push final-footstep *all-the-results*)
-            (send *ri* :set-foot-steps final-footstep))))))
-    (let ((result (send server :result)))
-      (send server :set-succeeded result)))
+            (setq *footstep-list* final-footstep)
+            (setq *goal-id* (send goal :goal_id :id))
+            ))))))
+
+(defun proc-goal-cb (server goal)
+  (if *interruptible-mode*
+      (progn
+        (if (<= (length *footstep-list*) 1)
+            (let ((result (send server :result)))
+              (send server :set-succeeded result))
+          (let ((first-step (pop *footstep-list*))
+                (second-step (car *footstep-list*)))
+            (send *ri* :set-foot-steps (list first-step second-step)))))
+    (progn
+      (send *ri* :set-foot-steps *footstep-list*)
+      (setq *footstep-list* nil)
+      (send server :set-succeeded (send server :result))
+      )
+    ))
+
+(defun preempt-cb (server goal)
+  (print 'preempt-cb)
+  (setq *footstep-list* nil)
+  (send server :set-preempted)
+  (setq *goal-id* nil)
+  )
+
+(defun execute-cb (server goal)
+  (print 'execute-cb)
+  (if (or (null *goal-id*)
+          (not (string= *goal-id* (send goal :goal_id :id))))
+      (new-goal-cb server goal)
+    (proc-goal-cb server goal)))
 
 (defun require-log-service-callback (req)
   (let ((res (send req :response)))
@@ -82,6 +116,9 @@
            "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"))
         (interface-class
          (ros::get-param "~interface_class" "hrp2jsknt-interface")))
+    (setq *interruptible-mode* (ros::get-param "~interruptible_mode" nil))
+    (if *interruptible-mode*
+        (ros::ros-info "footstep controller running in interruptible mode"))
     (load interface-file)
     (setq *ri* (instance (eval (read-from-string interface-class)) :init
                          :controller-timeout nil))
@@ -95,7 +132,8 @@
   (let ((s (instance ros::simple-action-server :init
                      "footstep_controller"
                      jsk_footstep_msgs::ExecFootstepsAction
-                     :execute-cb 'execute-cb)))
+                     :execute-cb 'execute-cb
+                     :preempt-cb 'preempt-cb)))
     (ros::rate 10)
     (while (ros::ok)
       (send s :worker)
