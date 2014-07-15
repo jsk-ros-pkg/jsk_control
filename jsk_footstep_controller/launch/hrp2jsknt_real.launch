@@ -5,6 +5,7 @@
   3. move the robot to reset-pose
   
   <arg name="USE_PLANE" default="false" />
+  <arg name="INTERRUPTIBLE" default="false" />
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
@@ -27,7 +28,8 @@
         name="footstep_controller"
         clear_params="true"
         output="screen">
-    <rosparam>
+    <rosparam subst_value="true">
+      interruptible_mode: $(arg INTERRUPTIBLE)
       interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
       interface_class: "hrp2jsknt-interface"
     </rosparam>
