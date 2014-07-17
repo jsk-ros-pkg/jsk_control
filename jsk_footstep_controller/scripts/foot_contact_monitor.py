@@ -6,6 +6,10 @@ import message_filters
 import tf
 import numpy
 from tf.transformations import *
+import diagnostic_updater
+from diagnostic_msgs.msg import DiagnosticStatus
+
+g_contact_state = None
 
 def offsetPose(offset):
     pose = PoseStamped()
@@ -76,7 +80,7 @@ def publishSingleCoords(leg, stamp):
                      pose_stamped.header.frame_id)
 
 def callback(lfoot_force_msg, rfoot_force_msg):
-    global force_thr
+    global force_thr, g_contact_state
     if lfoot_force_msg.wrench.force.z > force_thr:
         lfoot_contact = True
     else:
@@ -87,21 +91,47 @@ def callback(lfoot_force_msg, rfoot_force_msg):
         rfoot_contact = False
     try:
         if lfoot_contact and rfoot_contact:
+            g_contact_state = "both"
             publishMidCoords(lfoot_force_msg.header.stamp)
         elif lfoot_contact:
+            g_contact_state = "lleg"
             publishSingleCoords("left", lfoot_force_msg.header.stamp)
         elif rfoot_contact:
+            g_contact_state = "rleg"
             publishSingleCoords("right", rfoot_force_msg.header.stamp)
         else:
+            g_contact_state = "air"
             publishMidCoords(lfoot_force_msg.header.stamp)
+        updater.update()
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
         rospy.logerr("tf error, ignored")
 
 
+def contactStateDiagnostic(stats):
+    if g_contact_state == "both":
+        stats.summary(DiagnosticStatus.OK,
+                      "BOTH legs on the floor")
+    elif g_contact_state == "lleg":
+        stats.summary(DiagnosticStatus.OK,
+                      "LEFT leg on the floor")
+    elif g_contact_state == "rleg":
+        stats.summary(DiagnosticStatus.OK,
+                      "RIGHT leg on the floor")
+    elif g_contact_state == "air":
+        stats.summary(DiagnosticStatus.WARN,
+                      "robot on the AIR")
+    else:
+        stats.summary(DiagnosticStatus.ERROR,
+                      "failed to estimate contact state")
+    stats.add("contact state", g_contact_state)
+
 if __name__ == "__main__":
     rospy.init_node("foot_contact_monitor")
     tf_listener = tf.TransformListener()
-    force_thr = rospy.get_param('~force_thr', 10)
+    updater = diagnostic_updater.Updater()
+    updater.setHardwareID(rospy.get_name())
+    updater.add('ContactState', contactStateDiagnostic)
+    force_thr = rospy.get_param('~force_thr', 100)
     ground_frame = rospy.get_param('~ground_frame', 'ground')
     parent_frame = rospy.get_param('~parent_frame', 'BODY')
     lfoot_frame = rospy.get_param('~lfoot_frame_id')
