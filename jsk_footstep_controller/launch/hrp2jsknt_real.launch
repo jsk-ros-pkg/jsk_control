@@ -80,4 +80,12 @@
     </rosparam>
     <param name="frame_id" value="/odom" />
   </node>
+
+  <node pkg="jsk_footstep_controller"
+        type="foot_contact_monitor.py"
+        output="screen"
+        name="foot_contact_monitor">
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+  </node>
+
 </launch>
