@@ -75,6 +75,7 @@
       use_plane_snap: true
       use_footstep_planner: true
       use_initial_footstep_tf: true
+      initial_reference_frame: '/ground'
       footstep_margin: 0.21
       foot_size_z: 0.01
     </rosparam>
