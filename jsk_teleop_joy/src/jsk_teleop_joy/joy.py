@@ -129,6 +129,7 @@ class JoyManager():
     rospy.loginfo('switching to next plugin')
     self.switchPlugin(self, self.current_plugin_index + 1)
   def start(self):
+    self.publishMenu(0, close=True) # close menu anyway
     self.diagnostic_updater.force_update()
     if len(self.plugin_instances) == 0:
       rospy.logfatal('no valid plugins are loaded')
