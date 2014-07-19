@@ -8,7 +8,7 @@ except:
 
 import actionlib
 from joy_pose_6d import JoyPose6D
-from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray
+from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray, ExecFootstepsAction
 from std_msgs.msg import UInt8, Empty
 import tf
 from tf.transformations import *
@@ -26,7 +26,7 @@ class JoyFootstepPlanner(JoyPose6D):
     self.rfoot_offset = tf_ext.xyzxyzwToMatrix(rospy.get_param('~rfoot_offset'))
     
     self.command_pub = rospy.Publisher('/menu_command', UInt8)
-    self.execute_pub = rospy.Publisher('execute', Empty)
+    self.execute_pub = rospy.Publisher(self.getArg('execute', 'execute'), Empty)
     self.tf_listener = tf.TransformListener()
     # initialize self.pre_pose
     rospy.loginfo("waiting %s" % (self.lfoot_frame_id))
@@ -35,6 +35,8 @@ class JoyFootstepPlanner(JoyPose6D):
     rospy.loginfo("waiting %s" % (self.rfoot_frame_id))
     self.tf_listener.waitForTransform(self.frame_id, self.rfoot_frame_id, 
                                       rospy.Time(0.0), rospy.Duration(100.0))
+    self.exec_client = actionlib.SimpleActionClient('/footstep_controller',
+                                                    ExecFootstepsAction)
     self.resetGoalPose()
   def resetGoalPose(self):
     # initial pose will be the center 
@@ -68,13 +70,11 @@ class JoyFootstepPlanner(JoyPose6D):
     self.execute_pub.publish(Empty())
   def joyCB(self, status, history):    
     JoyPose6D.joyCB(self, status, history)
-    latest = history.latest()
-    if not latest:
-      return
-    if status.triangle and not latest.triangle:
+    if history.new(status, "triangle"):
       self.command_pub.publish(UInt8(1))
-    elif status.cross and not latest.cross:   #reset
+    elif history.new(status, "cross"):
       self.resetGoalPose()
-    elif status.circle and not latest.circle:   #execute
+      self.exec_client.cancel_all_goals()
+    elif history.new(status, "circle"):
       self.executePlan()
     
