@@ -7,6 +7,8 @@
 (defvar *all-the-results* nil)
 (setq *footstep-list* nil)
 (setq *goal-id* nil)
+(setq *footstep-list-bak* nil)
+(setq *goal-id-bak* nil)
 (setq *interruptible-mode* nil)
 
 ;; ((footstep footstep ....) (footstep footstep ....) ...)
@@ -35,41 +37,48 @@
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
   ;; 2. apply the inverse transformation to footstep-ocorods[1:]
   ;; 3. convert the footstep respected to hrpsys-mid-coords
-  (let* ((footstep (send goal :goal :footstep)) ;jsk_footstep_msgs/FootstepArray
-         (frame-id (send footstep :header :frame_id)))
-    (let* ((footstep-coords            ; convert footstep to euslisp coords
-            (mapcar #'(lambda (footstep)
-                        (footstep->coords footstep frame-id))
-                    (send footstep :footsteps)))
-           (footstep-coords0 (car footstep-coords))
-           (footstep-coords-rest (cdr footstep-coords))
-           (hrpsys-coords (send *ri* :abc-footstep->eus-footstep
-                                (send (send *ri* :get-foot-step-param)
-                                      (if (eq (get footstep-coords0 :l/r) :lleg)
-                                          :lleg_coords :rleg_coords))))
-           (hrpsys-mid-coords (hrpsys-init-coords)))
-      (let* ((hrpsys->ros (send hrpsys-coords :transformation footstep-coords0))
-             (ros->hrpsys (send hrpsys->ros :inverse-transformation)))
-        (let ((transformed-footstep
-               (mapcar
-                #'(lambda (footstep)
-                    (let ((coords (send (send ros->hrpsys :copy-worldcoords)
-                                        :transform footstep)))
-                      (setf (get coords :l/r) (get footstep :l/r))
-                      coords))
-                footstep-coords-rest)))
-          (let ((final-footstep
-                 (mapcar
-                  #'(lambda (footstep)
-                      (let ((c (send hrpsys-mid-coords
-                                     :transformation footstep)))
-                        (setf (get c :l/r) (get footstep :l/r))
-                        c))
-                  transformed-footstep)))
-            (push final-footstep *all-the-results*)
-            (setq *footstep-list* final-footstep)
-            (setq *goal-id* (send goal :goal_id :id))
-            ))))))
+  (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
+         (progn
+           (print 'resuming)
+           (setq *footstep-list* *footstep-list-bak*)
+           (setq *footstep-list-bak* nil)
+           (setq *goal-id* (send goal :goal_id :id))))
+        ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*NEW_TARGET*)
+         (let* ((footstep (send goal :goal :footstep)) ;jsk_footstep_msgs/FootstepArray
+                (frame-id (send footstep :header :frame_id)))
+           (let* ((footstep-coords            ; convert footstep to euslisp coords
+                   (mapcar #'(lambda (footstep)
+                               (footstep->coords footstep frame-id))
+                           (send footstep :footsteps)))
+                  (footstep-coords0 (car footstep-coords))
+                  (footstep-coords-rest (cdr footstep-coords))
+                  (hrpsys-coords (send *ri* :abc-footstep->eus-footstep
+                                       (send (send *ri* :get-foot-step-param)
+                                             (if (eq (get footstep-coords0 :l/r) :lleg)
+                                                 :lleg_coords :rleg_coords))))
+                  (hrpsys-mid-coords (hrpsys-init-coords)))
+             (let* ((hrpsys->ros (send hrpsys-coords :transformation footstep-coords0))
+                    (ros->hrpsys (send hrpsys->ros :inverse-transformation)))
+               (let ((transformed-footstep
+                      (mapcar
+                       #'(lambda (footstep)
+                           (let ((coords (send (send ros->hrpsys :copy-worldcoords)
+                                               :transform footstep)))
+                             (setf (get coords :l/r) (get footstep :l/r))
+                             coords))
+                       footstep-coords-rest)))
+                 (let ((final-footstep
+                        (mapcar
+                         #'(lambda (footstep)
+                             (let ((c (send hrpsys-mid-coords
+                                            :transformation footstep)))
+                               (setf (get c :l/r) (get footstep :l/r))
+                               c))
+                         transformed-footstep)))
+                   (push final-footstep *all-the-results*)
+                   (setq *footstep-list* final-footstep)
+                   (setq *goal-id* (send goal :goal_id :id))
+                   ))))))))
 
 (defun proc-goal-cb (server goal)
   (if *interruptible-mode*
@@ -89,8 +98,10 @@
 
 (defun preempt-cb (server goal)
   (print 'preempt-cb)
+  (setq *footstep-list-bak* *footstep-list*)
   (setq *footstep-list* nil)
   (send server :set-preempted)
+  (setq *goal-id-bak* *goal-id*)
   (setq *goal-id* nil)
   )
 
