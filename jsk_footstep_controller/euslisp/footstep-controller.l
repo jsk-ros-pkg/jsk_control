@@ -123,6 +123,7 @@
     (setq *ri* (instance (eval (read-from-string interface-class)) :init
                          :controller-timeout nil))
     (send *ri* :start-st)
+    (send *ri* :start-auto-balancer)
     )
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
