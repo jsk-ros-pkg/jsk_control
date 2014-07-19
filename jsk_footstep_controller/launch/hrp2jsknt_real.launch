@@ -4,6 +4,9 @@
   2. Please launch rviz to make footsteps
   3. move the robot to reset-pose
   <remap from="/diagnostics" to="/diagnostics_footstep" />
+  <remap from="/diagnostics_agg" to="/diagnostics_footstep_agg" />
+  <remap from="/diagnostics_toplevel_state"
+         to="/diagnostics_footstep_toplevel_state" />
   <arg name="USE_PLANE" default="false" />
   <arg name="INTERRUPTIBLE" default="false" />
   <node pkg="jsk_footstep_planner"
@@ -45,7 +48,7 @@
     <param name="coalesce_interval" value="0.025" />
   </node>
 
-  <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen"
+  <node pkg="jsk_teleop_joy" type="joy.py" name="teleop_manager0" output="screen"
         clear_params="true">
     <param name="controller_type" value="auto" />
     <rosparam subst_value="true">
@@ -92,9 +95,9 @@
   <!-- aggregator -->
   <node pkg="diagnostic_aggregator" type="aggregator_node"
         name="footstep_aggregator">
-    <remap from="/diagnostics" to="/diagnostics_footstep" />
     <rosparam command="load" 
               file="$(find jsk_footstep_controller)/config/diagnostics.yaml" />
   </node>
-
+  <node pkg="rqt_robot_monitor" type="rqt_robot_monitor"
+        name="footstep_robot_monitor" />
 </launch>
