@@ -14,7 +14,7 @@ from jsk_rviz_plugins.msg import OverlayMenu
 from std_msgs.msg import UInt8, Empty
 import tf
 from tf.transformations import *
-
+from geometry_msgs.msg import PoseStamped
 import jsk_teleop_joy.tf_ext as tf_ext
 
 class JoyFootstepPlanner(JoyPose6D):
@@ -22,15 +22,16 @@ class JoyFootstepPlanner(JoyPose6D):
   PLANNING = 2
   WAIT_FOR_CANCEL = 3
   CANCELED = 4
-  CANCELED_MENUS = ["cancel", 
-                    "ignore and proceed",
-                    "use larger successors",
-                    "use middle successors",
-                    "use smaller successors"]
+  CANCELED_MENUS = ["Cancel", 
+                    "Ignore and proceed",
+                    "Use larger footsteps",
+                    "Use middle footsteps",
+                    "Use smaller footsteps"]
   def __init__(self, name, args):
     JoyPose6D.__init__(self, name, args)
     self.supportFollowView(True)
     self.mode = self.PLANNING
+    self.snapped_pose = None
     self.ignore_next_status_flag = False
     self.prev_mode = self.PLANNING
     self.frame_id = self.getArg('frame_id', '/map')
@@ -55,10 +56,15 @@ class JoyFootstepPlanner(JoyPose6D):
                                                     ExecFootstepsAction)
     self.status_sub = rospy.Subscriber("/footstep_controller/status", GoalStatusArray,
                                        self.statusCB, queue_size=1)
-    
+    self.snap_sub = rospy.Subscriber(self.getArg("snapped_pose", "/footstep_marker/snapped_pose"), 
+                                     PoseStamped,
+                                     self.snapCB,
+                                     queue_size=1)
     self.status_lock = threading.Lock()
     self.current_selecting_index = 0
     self.resetGoalPose()
+  def snapCB(self, msg):
+    self.snapped_pose = msg
   def statusCB(self, msg):
     if len(msg.status_list) == 0:
       return                    # do nothing
@@ -116,12 +122,12 @@ class JoyFootstepPlanner(JoyPose6D):
     self.menu_pub.publish(menu)
   def procCancelMenu(self, index):
     selected_title = self.CANCELED_MENUS[index]
-    if selected_title == "cancel":
+    if selected_title == "Cancel":
       self.status_lock.acquire()
       self.mode = self.PLANNING
       self.status_lock.release()
       self.publishMenu(close=True)
-    elif selected_title == "ignore and proceed":
+    elif selected_title == "Ignore and proceed":
       # re-execute the plan left
       self.resumePlan()
       self.status_lock.acquire()
@@ -141,6 +147,9 @@ class JoyFootstepPlanner(JoyPose6D):
         self.status_lock.release()
       elif history.new(status, "cross"):
         self.resetGoalPose()
+      elif history.new(status, "triangle"):
+        if self.snapped_pose:
+          self.pre_pose = self.snapped_pose
     elif self.mode == self.CANCELED:
       # show menu
       if history.new(status, "circle"):
@@ -158,9 +167,9 @@ class JoyFootstepPlanner(JoyPose6D):
           self.current_selecting_index = 0
         self.publishMenu()
     elif self.mode == self.EXECUTING:
-      if history.new(status, "triangle"):
-        self.command_pub.publish(UInt8(1))
-      elif history.new(status, "cross"):
+      # if history.new(status, "triangle"):
+      #   self.command_pub.publish(UInt8(1))
+      if history.new(status, "cross"):
         self.status_lock.acquire()
         self.exec_client.cancel_all_goals()
         self.mode = self.WAIT_FOR_CANCEL
