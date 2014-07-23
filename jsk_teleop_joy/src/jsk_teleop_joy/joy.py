@@ -81,7 +81,7 @@ class JoyManager():
     self.current_plugin_index = 0
     #you can specify the limit of the rate via ~diagnostic_period
     self.diagnostic_updater = DiagnosticUpdater()
-    self.diagnostic_updater.setHardwareID("none")
+    self.diagnostic_updater.setHardwareID("teleop_manager")
     self.diagnostic_updater.add("State", self.stateDiagnostic)
     self.diagnostic_updater.add("Plugin Status", self.pluginStatusDiagnostic)
     #self.diagnostic_updater.add("Joy Input", self.joyInputDiagnostic)
@@ -129,6 +129,7 @@ class JoyManager():
     rospy.loginfo('switching to next plugin')
     self.switchPlugin(self, self.current_plugin_index + 1)
   def start(self):
+    self.publishMenu(0, close=True) # close menu anyway
     self.diagnostic_updater.force_update()
     if len(self.plugin_instances) == 0:
       rospy.logfatal('no valid plugins are loaded')
