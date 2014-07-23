@@ -3,6 +3,7 @@
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-msgs "jsk_pcl_ros")
 (ros::roseus-add-srvs "jsk_pcl_ros")
+(ros::roseus-add-srvs "std_srvs")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner.l" (ros::rospack-find "jsk_footstep_planner")))
 (load "footstep_planner")
@@ -43,6 +44,9 @@
 
 (defun plan-execute-cb (server goal)
   (setq *evaled-node-num* 0)
+  (let ((req (instance std_srvs::EmptyRequest :init)))
+    (ros::service-call "primitive_lock" req)
+    )  
   (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
          (start-time (ros::time-now))
          (prblm (instance footstep-planner-graph :init
@@ -152,7 +156,11 @@
               (send server :set-aborted result))
           ))
       )
-    ))
+    )
+  (let ((req (instance std_srvs::EmptyRequest :init)))
+    (ros::service-call "primitive_unlock" req)
+    )
+  )
 
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
@@ -179,6 +187,8 @@
     (ros::ros-info "waiting for the env server")
     (ros::wait-for-service "env_lock")
     (ros::wait-for-service "polygon_on_env")
+    (ros::wait-for-service "primitive_lock")
+    (ros::wait-for-service "primitive_unlock")
     (ros::ros-info "found the server")
     )
   (setq *tf* (instance ros::transform-listener :init))
