@@ -20,8 +20,10 @@
     <rosparam subst_value="true">
     use_planes: $(arg USE_PLANE)
     use_env_server: $(arg USE_PLANE)
-    timeout: 2
+    timeout: 0.5
     </rosparam>
+    <remap from="primitive_lock" to="/env_server/primitive_lock" />
+    <remap from="primitive_unlock" to="/env_server/primitive_unlock" />
     <remap from="env_lock" to="/env_server/lock" />
     <remap from="polygon_on_env" to="/env_server/polygon_on_environment" />
   </node>
@@ -69,7 +71,7 @@
         type="footstep_marker"
         name="footstep_marker"
         clear_params="true"
-        output="log"
+        output="screen"
         >
     <remap from="~planes" to="/env_server/occlusion_result_polygons" />
     <remap from="~planes_coefficients" to="/env_server/occlusion_result_coefficients" />
