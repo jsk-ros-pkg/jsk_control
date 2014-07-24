@@ -1,0 +1,21 @@
+type: AnalyzerGroup
+pub_rate: 1.0 # Optional
+base_path: '' # Optional, prepended to all diagnostic output
+analyzers:
+  PS3State:
+    type: diagnostic_aggregator/GenericAnalyzer
+    path: 'PS3 Joy Stick State'
+    timeout: 5.0
+    startswith: ['ps3_joy']
+    remove_prefix: 'ps3_joy'
+  JSKTeleopManagerState:
+    type: diagnostic_aggregator/GenericAnalyzer
+    path: 'TeleopManager'
+    timeout: 5.0
+    startswith: ['teleop_manager']
+    remove_prefix: 'teleop_manager'
+  FootContactMonitorState:
+    type: diagnostic_aggregator/GenericAnalyzer
+    path: 'ContactMonitor'
+    timeout: 5.0
+    startswith: ['foot_contact_monitor']

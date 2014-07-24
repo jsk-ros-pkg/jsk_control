@@ -1,20 +1,33 @@
 <launch>
   <arg name="POSE_REMAP" default="/rviz/moveit/goal/move_marker" />
-  <arg name="CONTROLLER_TYPE" default="ps3wired" />
   <node pkg="joy" type="joy_node" name="ps3_joy0" output="screen" >
-    <param name="dev" type="string" value="/dev/input/js2" />
+    <param name="dev" type="string" value="/dev/input/js1" />
     <param name="deadzone" value="0.2" />
     <param name="autorepeat_rate" value="40" />
     <param name="coalesce_interval" value="0.025" />
   </node>
   <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen">
-    <remap from="pose" to="$(arg POSE_REMAP)" />
-    <param name="controller_type" value="$(arg CONTROLLER_TYPE)" />
-    <param name="follow_view" value="true" />
-    <param name="frame_id" value="/odom_combined" />
-    <rosparam>
-      plugins: ['JoyMoveIt']
-      planning_groups: ["left_arm", "right_arm"]
+    <param name="controller_type" value="auto" />
+    <rosparam subst_value="true">
+      plugins:
+        '0rarm':
+           class: 'JoyMoveIt'
+           args:
+             frame_id: '/odom_combined'
+             pose: "/rviz/moveit/move_marker/goal_r_wrist_roll_link"
+             planning_group: "right_arm"
+        '1larm':
+           class: 'JoyMoveIt'
+           args:
+             frame_id: '/odom_combined'
+             pose: "/rviz/moveit/move_marker/goal_l_wrist_roll_link"
+             planning_group: "left_arm"
+        '2base':
+           class: 'JoyMoveIt'
+           args:
+             frame_id: '/odom_combined'
+             pose: "/rviz/moveit/move_marker/goal_base_footprint"
+             planning_group: "base"
     </rosparam>
   </node>
 </launch>

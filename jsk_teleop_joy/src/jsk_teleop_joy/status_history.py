@@ -20,3 +20,8 @@ class StatusHistory():
       return None
   def length(self):
     return len(self.buffer)
+  def new(self, status, attr):
+    if self.latest == None:
+      return True
+    else:
+      return getattr(status, attr) and not getattr(self.latest(), attr)

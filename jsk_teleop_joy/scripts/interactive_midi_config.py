@@ -7,9 +7,11 @@ import sys
 import yaml
 import roslib
 
-roslib.load_manifest("jsk_teleop_joy")
-
-from jsk_teleop_joy.midi_util import MIDIParse, MIDICommand, MIDIException
+try:
+  from jsk_teleop_joy.midi_util import MIDIParse, MIDICommand, MIDIException
+except:
+  roslib.load_manifest("jsk_teleop_joy")
+  from jsk_teleop_joy.midi_util import MIDIParse, MIDICommand, MIDIException
 
 G_DEVICE_INFO = {
   "device_name": "",
