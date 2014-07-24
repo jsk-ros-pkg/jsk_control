@@ -9,14 +9,14 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/jsk_teleop_joy</url>
   <rosdep name="python-pygame" />
-  <rosdep name="ps3joy" />
-  <rosdep name="tf" />
-  <rosdep name="view_controller_msgs" />
-  <rosdep name="interactive_markers" />
-  <rosdep name="visualization_msgs" />
+  <depend package="visualization_msgs" />
   <depend package="view_controller_msgs" />
   <depend package="jsk_footstep_msgs" />
   <depend package="jsk_footstep_planner" />
+  <depend package="jsk_interactive_marker" />
+  <depend package="diagnostic_msgs" />
+  <depend package="diagnostic_updater" />
+  <depend package="jsk_rviz_plugins" />
   <export>
     <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>

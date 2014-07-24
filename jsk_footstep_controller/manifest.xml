@@ -9,6 +9,10 @@
   <review status="unreviewed" notes=""/>
   <depend package="jsk_footstep_msgs" />
   <depend package="jsk_footstep_planner" />
+  <depend package="genmsg" />
+  <depend package="message_generation" />
+  <depend package="diagnostic_updater" />
+  <depend package="diagnostic_msgs" />
   <url>http://ros.org/wiki/jsk_footstep_planner</url>
 
 </package>

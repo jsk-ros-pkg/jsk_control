@@ -12,6 +12,8 @@ import tf
 import rospy
 import numpy
 import math
+import tf
+import numpy
 
 def signedSquare(val):
  if val > 0:
@@ -21,21 +23,35 @@ def signedSquare(val):
  return val * val * sign
 
 class JoyPose6D(RVizViewController):
-  def __init__(self, name='JoyPose6D', publish_pose=True):
-    RVizViewController.__init__(self, name)
+  #def __init__(self, name='JoyPose6D', publish_pose=True):
+  def __init__(self, name, args):
+    RVizViewController.__init__(self, name, args)
     self.pre_pose = PoseStamped()
     self.pre_pose.pose.orientation.w = 1
-    self.publish_pose = publish_pose
+    self.publish_pose = self.getArg('publish_pose', True)
+    self.frame_id = self.getArg('frame_id', '/map')
     if self.publish_pose:
-      self.pose_pub = rospy.Publisher('pose', PoseStamped)
-    self.support_follow_view = True
+      self.pose_pub = rospy.Publisher(self.getArg('pose', 'pose'), 
+                                      PoseStamped)
+    self.supportFollowView(True)
+
+    self.puse_sub = rospy.Subscriber('set_pose', PoseStamped, self.setPoseCB)
     self.frame_id = rospy.get_param('~frame_id', '/map')
+    self.tf_listener = tf.TransformListener()
+
+  def setPoseCB(self, pose):
+    pose.header.stamp = rospy.Time(0)
+    self.pre_pose = self.tf_listener.transformPose(self.frame_id, pose)
+
+    if self.publish_pose:
+      self.pose_pub.publish(self.pre_pose)
+
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
     if history.length() > 0:
       latest = history.latest()
       if status.R3 and status.L2 and status.R2 and not (latest.R3 and latest.L2 and latest.R2):
-        self.follow_view = not self.follow_view
+        self.followView(not self.followView())
     RVizViewController.joyCB(self, status, history)
     new_pose = PoseStamped()
     new_pose.header.frame_id = self.frame_id
