@@ -18,6 +18,7 @@
            class: 'RelayAndConvertToPS3'
            args:
              output_topic: /joy_other
+             joy_mux: /multiple_joystick_mux
         'JSK teleop':
            class: 'JSKInteractiveMarkerEndeffector'
            args:
