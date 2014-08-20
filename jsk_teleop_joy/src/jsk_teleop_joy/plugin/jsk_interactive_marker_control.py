@@ -20,7 +20,7 @@ class EndEffector(JoyPose6D):
                                                        MarkerMenu)
     self.menu_pub = rospy.Publisher("/overlay_menu", OverlayMenu)
     self.menus = ['LARM', 'RARM', 
-                  'start grasp', 'stop grasp']
+                  'close hand', 'open hand', 'toggle ik rotation']
     self.mode = self.JOY_MODE
     self.current_index = 0
   def publishMenu(self, index, close=False):
@@ -41,7 +41,7 @@ class EndEffector(JoyPose6D):
     else:
       return
     if self.mode == self.MENU_MODE:
-      if history.new(status, "triangle"):
+      if history.new(status, "triangle") or history.new(status, "cross"):
         self.mode = self.JOY_MODE
         self.publishMenu(self.current_index, True)
       elif history.new(status, "up"):
@@ -61,10 +61,12 @@ class EndEffector(JoyPose6D):
           self.publishMarkerMenu(MarkerMenu.SET_MOVE_RARM)
         elif self.menus[self.current_index] == "LARM":
           self.publishMarkerMenu(MarkerMenu.SET_MOVE_LARM)
-        elif self.menus[self.current_index] == "start grasp":
+        elif self.menus[self.current_index] == "close hand":
           self.publishMarkerMenu(MarkerMenu.START_GRASP)
-        elif self.menus[self.current_index] == "stop grasp":
+        elif self.menus[self.current_index] == "open hand":
           self.publishMarkerMenu(MarkerMenu.STOP_GRASP)
+        elif self.menus[self.current_index] == "toggle ik rotation":
+          self.publishMarkerMenu(MarkerMenu.IK_ROTATION_AXIS_T)
         self.publishMenu(self.current_index, True)
         self.mode = self.JOY_MODE
       else:
@@ -74,5 +76,9 @@ class EndEffector(JoyPose6D):
         self.mode = self.MENU_MODE
       elif history.new(status, "circle"):
         self.publishMarkerMenu(MarkerMenu.MOVE)
+      elif history.new(status, "start"):
+        self.publishMarkerMenu(MarkerMenu.PLAN)
+      elif history.new(status, "select"):
+        self.publishMarkerMenu(MarkerMenu.RESET_JOINT)
       else:
         JoyPose6D.joyCB(self, status, history)

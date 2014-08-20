@@ -5,8 +5,8 @@
     <remap from="/joy" to="$(arg REMAPPED_JOY)" />
     <param name="dev" type="string" value="$(arg DEV)" />
     <param name="deadzone" value="0.2" />
-    <!-- <param name="autorepeat_rate" value="0" /> -->
-    <!-- <param name="coalesce_interval" value="0.025" /> -->
+    <param name="autorepeat_rate" value="40" />
+    <param name="coalesce_interval" value="0.025" />
   </node>
   <node pkg="jsk_teleop_joy" type="joy.py" name="joy_manager" output="screen"
         clear_params="true">
@@ -18,6 +18,7 @@
            class: 'RelayAndConvertToPS3'
            args:
              output_topic: /joy_other
+             joy_mux: /multiple_joystick_mux
         'JSK teleop':
            class: 'JSKInteractiveMarkerEndeffector'
            args:
