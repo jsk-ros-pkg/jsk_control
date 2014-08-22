@@ -1,0 +1,15 @@
+<launch>
+  <arg name="DEV" default="/dev/input/mouse0" />
+  <node pkg="joy_mouse"
+        type="disable_mouse.py"
+        name="disable_kensington"
+        args="Kensington" />
+  <node pkg="joy_mouse"
+        type="mouse.py"
+        name="kensington_joy"
+        output="screen"
+        >
+    <param name="dev" value="$(arg DEV)" />
+    <remap from="joy" to="trackball_joy" />
+  </node>
+</launch>
