@@ -1,0 +1,10 @@
+<launch>
+  <include file="$(find joy_mouse)/launch/kensington_trackball.launch">
+    <arg name="AUTOREPEAT_RATE" value="30.0" />
+  </include>
+  <node pkg="jsk_teleop_joy"
+        type="head_control_by_trackball.py"
+        name="head_trackball_control"
+        output="screen">
+  </node>
+</launch>
