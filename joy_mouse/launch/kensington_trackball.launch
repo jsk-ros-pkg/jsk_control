@@ -1,5 +1,6 @@
 <launch>
   <arg name="DEV" default="/dev/input/mouse0" />
+  <arg name="AUTOREPEAT_RATE" default="0.0" />
   <node pkg="joy_mouse"
         type="disable_mouse.py"
         name="disable_kensington"
@@ -9,7 +10,8 @@
         name="kensington_joy"
         output="screen"
         >
-    <param name="dev" value="$(arg DEV)" />
+    <param name="autorepeat_rate" value="$(arg AUTOREPEAT_RATE)" />
+    <PARAM name="dev" value="$(arg DEV)" />
     <remap from="joy" to="trackball_joy" />
   </node>
 </launch>
