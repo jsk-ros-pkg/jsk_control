@@ -14,6 +14,7 @@ import numpy
 import math
 import tf
 import numpy
+import time
 
 def signedSquare(val):
  if val > 0:
@@ -28,6 +29,7 @@ class JoyPose6D(RVizViewController):
     RVizViewController.__init__(self, name, args)
     self.pre_pose = PoseStamped()
     self.pre_pose.pose.orientation.w = 1
+    self.prev_time = rospy.Time.from_sec(time.time())
     self.publish_pose = self.getArg('publish_pose', True)
     self.frame_id = self.getArg('frame_id', '/map')
     if self.publish_pose:
@@ -149,7 +151,13 @@ class JoyPose6D(RVizViewController):
     new_pose.pose.orientation.y = new_q[1]
     new_pose.pose.orientation.z = new_q[2]
     new_pose.pose.orientation.w = new_q[3]
-    if self.publish_pose:
-      self.pose_pub.publish(new_pose)
-    self.pre_pose = new_pose
 
+    # publish at 10hz
+    if self.publish_pose:
+      now = rospy.Time.from_sec(time.time())
+      # placement.time_from_start = now - self.prev_time
+      if (now - self.prev_time).to_sec() > 1 / 30.0:
+        self.pose_pub.publish(new_pose)
+        self.prev_time = now
+
+    self.pre_pose = new_pose
