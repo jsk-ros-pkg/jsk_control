@@ -1,0 +1,14 @@
+<launch>
+  <arg name="DEV" default="/dev/input/mouse0" />
+  <arg name="JOINT_STATES" default="/joint_states" />
+  <include file="$(find joy_mouse)/launch/kensington_trackball.launch">
+    <arg name="AUTOREPEAT_RATE" value="30.0" />
+    <arg name="DEV" value="$(arg DEV)" />
+  </include>
+  <node pkg="jsk_teleop_joy"
+        type="head_control_by_trackball.py"
+        name="head_trackball_control"
+        output="screen">
+    <remap from="/joint_states" to="$(arg JOINT_STATES)"/>
+  </node>
+</launch>

@@ -29,6 +29,9 @@
   <run_depend>diagnostic_msgs</run_depend>
   <run_depend>diagnostic_updater</run_depend>
   <run_depend>jsk_rviz_plugins</run_depend>
+  <build_depend>joy_mouse</build_depend>
+  <run_depend>joy_mouse</run_depend>
+  <run_depend>image_view2</run_depend>
   <export>
     <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>
