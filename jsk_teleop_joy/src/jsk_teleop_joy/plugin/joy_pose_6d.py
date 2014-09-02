@@ -37,7 +37,7 @@ class JoyPose6D(RVizViewController):
                                       PoseStamped)
     self.supportFollowView(True)
 
-    self.puse_sub = rospy.Subscriber('set_pose', PoseStamped, self.setPoseCB)
+    self.puse_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'), PoseStamped, self.setPoseCB)
     self.frame_id = rospy.get_param('~frame_id', '/map')
     self.tf_listener = tf.TransformListener()
 
