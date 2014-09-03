@@ -3,21 +3,27 @@
   and hrp2jsknt_hrpsys_bringup.launch of hrpsys_gazebo_tutorials with rtmlaunch
   2. Please launch rviz to make footsteps
   3. move the robot to reset-pose
-  
+  <remap from="/diagnostics" to="/diagnostics_footstep" />
+  <remap from="/diagnostics_agg" to="/diagnostics_footstep_agg" />
+  <remap from="/diagnostics_toplevel_state"
+         to="/diagnostics_footstep_toplevel_state" />
   <arg name="USE_PLANE" default="false" />
+  <arg name="INTERRUPTIBLE" default="false" />
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
         clear_params="true"
         respawn="true"
-        output="screen">
+        output="log">
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <remap from="planes" to="/env_server/occlusion_result_polygons" />
     <rosparam subst_value="true">
     use_planes: $(arg USE_PLANE)
     use_env_server: $(arg USE_PLANE)
-    timeout: 2
+    timeout: 0.5
     </rosparam>
+    <remap from="primitive_lock" to="/env_server/primitive_lock" />
+    <remap from="primitive_unlock" to="/env_server/primitive_unlock" />
     <remap from="env_lock" to="/env_server/lock" />
     <remap from="polygon_on_env" to="/env_server/polygon_on_environment" />
   </node>
@@ -27,7 +33,8 @@
         name="footstep_controller"
         clear_params="true"
         output="screen">
-    <rosparam>
+    <rosparam subst_value="true">
+      interruptible_mode: $(arg INTERRUPTIBLE)
       interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
       interface_class: "hrp2jsknt-interface"
     </rosparam>
@@ -35,7 +42,7 @@
   <!-- visualization for rviz -->
 
   <arg name="POSE_REMAP" default="/footstep_marker/pose" />
-  <arg name="DEV" default="/dev/input/js1" />
+  <arg name="DEV" default="/dev/input/ps3joy" />
   <node pkg="joy" type="joy_node" name="ps3_joy0" output="screen" >
     <param name="dev" type="string" value="$(arg DEV)" />
     <param name="deadzone" value="0.2" />
@@ -43,7 +50,7 @@
     <param name="coalesce_interval" value="0.025" />
   </node>
 
-  <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen"
+  <node pkg="jsk_teleop_joy" type="joy.py" name="teleop_manager0" output="screen"
         clear_params="true">
     <param name="controller_type" value="auto" />
     <rosparam subst_value="true">
@@ -54,6 +61,8 @@
              pose: $(arg POSE_REMAP)
              follow_view: true
              publish_pose: true
+             execute: '/footstep_marker/execute'
+             resume: '/footstep_marker/resume'
              frame_id: odom
     </rosparam>
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
@@ -73,9 +82,26 @@
       use_plane_snap: true
       use_footstep_planner: true
       use_initial_footstep_tf: true
+      initial_reference_frame: '/ground'
       footstep_margin: 0.21
       foot_size_z: 0.01
     </rosparam>
     <param name="frame_id" value="/odom" />
   </node>
+
+  <node pkg="jsk_footstep_controller"
+        type="foot_contact_monitor.py"
+        output="screen"
+        name="foot_contact_monitor">
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+  </node>
+
+  <!-- aggregator -->
+  <node pkg="diagnostic_aggregator" type="aggregator_node"
+        name="footstep_aggregator">
+    <rosparam command="load" 
+              file="$(find jsk_footstep_controller)/config/diagnostics.yaml" />
+  </node>
+  <node pkg="rqt_robot_monitor" type="rqt_robot_monitor"
+        name="footstep_robot_monitor" />
 </launch>

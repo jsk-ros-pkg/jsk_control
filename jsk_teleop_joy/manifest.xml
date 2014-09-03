@@ -17,6 +17,7 @@
   <depend package="diagnostic_msgs" />
   <depend package="diagnostic_updater" />
   <depend package="jsk_rviz_plugins" />
+  <depend package="image_view2" />
   <export>
     <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>
