@@ -2,8 +2,8 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.1 (2014-09-04)
+------------------
 * use find_package(catkin COMPONENTS cmake_modules)
 * add dependancies of euslisp and eigen
 * bag fix load-library functions

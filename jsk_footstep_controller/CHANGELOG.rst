@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.1 (2014-09-04)
+------------------
 * fix the menu when walking is canceled and update the pose from joy stick according
   to the snapped pose availble by marker
 * pop menu when cancel the footstep and support resuming from joystick
