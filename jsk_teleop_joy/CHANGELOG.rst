@@ -2,8 +2,8 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.1 (2014-09-04)
+------------------
 * remap joint states and DEV
 * add script to control head via trackball
 * remove trackpoint_joy.py
