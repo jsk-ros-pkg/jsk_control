@@ -11,4 +11,5 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>euslisp</build_depend>
   <build_depend>mk</build_depend>
+  <build_depend>subversion</build_depend>
 </package>
