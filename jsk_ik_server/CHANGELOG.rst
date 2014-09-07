@@ -2,6 +2,9 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.1 (2014-09-04)
 ------------------
 * use singleton class to maintain view point of rviz to have persistency
