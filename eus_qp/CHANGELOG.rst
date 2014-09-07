@@ -2,8 +2,8 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.2 (2014-09-08)
+------------------
 * eigen is no longer ros package
 * add catkin_package()
 * Contributors: Kei Okada
