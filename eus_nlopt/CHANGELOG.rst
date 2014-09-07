@@ -2,6 +2,9 @@
 Changelog for package eus_nlopt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.1 (2014-09-04)
 ------------------
 * catkinize, add package.xml and catkin.cmake, use ROS_BUILD flag, and fix lib loader to use LD_LIBRARY_PATH
