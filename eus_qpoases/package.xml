@@ -1,15 +1,17 @@
 <?xml version="1.0"?>
 <package>
-  <name> eus_qp </name>
+  <name> eus_qpoases </name>
   <description>
-    eus_qp is an interface of euslisp to solve qp problems with linear constraints.
+    eus_qpoases
   </description>
   <version>0.1.2</version>
-  <maintainer email="s-noda@jsk.t.u-tokyo.ac.jp">Noda Shintaro</maintainer>
+  <maintainer email="nozawa@jsk.t.u-tokyo.ac.jp">Shunichi Nozawa</maintainer>
   <license>Apache License 2.0</license>
   <export> </export>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>euslisp</build_depend>
-  <build_depend>cmake_modules</build_depend>
+  <build_depend>mk</build_depend>
+  <build_depend>subversion</build_depend>
+
   <run_depend>euslisp</run_depend>
 </package>
