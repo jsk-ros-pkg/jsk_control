@@ -40,9 +40,9 @@ class EndEffector(JoyPose6D):
       latest = history.latest()
     else:
       return
-    print status.left_analog_up
+
     if self.mode == self.MENU_MODE:
-      if history.new(status, "triangle"):
+      if history.new(status, "triangle") or history.new(status, "cross"):
         self.mode = self.JOY_MODE
         self.publishMenu(self.current_index, True)
       elif history.new(status, "up")  or history.new(status, "left_analog_up"):

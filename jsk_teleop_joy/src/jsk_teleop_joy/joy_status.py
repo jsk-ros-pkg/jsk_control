@@ -42,8 +42,15 @@ class JoyStatus():
         if self.left_analog_x > self.analog_threshold:
             self.left_analog_left = True
 
+        if self.left_analog_x < -self.analog_threshold:
+            self.left_analog_right = True
+
         if self.left_analog_y > self.analog_threshold:
             self.left_analog_up = True
+
+        if self.left_analog_y < -self.analog_threshold:
+            self.left_analog_down = True
+
 
     def toPS3Msg(self):
         joy = Joy()
@@ -178,6 +185,7 @@ class XBoxStatus(JoyStatus):
         self.left_analog_y = msg.axes[1]
         self.right_analog_x = msg.axes[3]
         self.right_analog_y = msg.axes[4]
+        self.checkAnalogStick()
         self.orig_msg = msg
 
 class PS3Status(JoyStatus):
@@ -256,6 +264,7 @@ class PS3Status(JoyStatus):
         self.left_analog_y = msg.axes[1]
         self.right_analog_x = msg.axes[2]
         self.right_analog_y = msg.axes[3]
+        self.checkAnalogStick()
         self.orig_msg = msg
 
 class PS3WiredStatus(JoyStatus):
