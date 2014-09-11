@@ -1,0 +1,12 @@
+<launch>
+  <arg name="DEV" default="/dev/input/mouse0" />
+  <node pkg="joy_mouse"
+        type="mouse.py"
+        name="trackpoint_joy"
+        output="screen"
+        >
+    <param name="dev" value="$(arg DEV)" />
+    <remap from="joy" to="/trackpoint/joy" />
+  </node>
+
+</launch>
