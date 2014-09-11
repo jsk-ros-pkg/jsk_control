@@ -9,6 +9,7 @@
          to="/diagnostics_footstep_toplevel_state" />
   <arg name="USE_PLANE" default="false" />
   <arg name="INTERRUPTIBLE" default="false" />
+  <arg name="RUN_CONTACT_MONITOR" default="false" />
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
@@ -89,7 +90,8 @@
     <param name="frame_id" value="/odom" />
   </node>
 
-  <node pkg="jsk_footstep_controller"
+  <node if="$(arg RUN_CONTACT_MONITOR)"
+        pkg="jsk_footstep_controller"
         type="foot_contact_monitor.py"
         output="screen"
         name="foot_contact_monitor">
