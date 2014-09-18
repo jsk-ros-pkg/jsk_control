@@ -116,11 +116,12 @@ class TrackballController:
         marker.scale = 10                  #5 px
         self.marker_pub.publish(marker)
     def main(self):
-        self.ac_client = actionlib.SimpleActionClient("/head_traj_controller/follow_joint_trajectory",
+        self.joint_trajectory_action_name = rospy.get_param("~joint_trajectory_action", "/head_traj_controller/follow_joint_trajectory")
+        self.ac_client = actionlib.SimpleActionClient(self.joint_trajectory_action_name,
                                                       control_msgs.msg.FollowJointTrajectoryAction)
         self.ac_client.wait_for_server()
-        self.pitch_joint_name = rospy.get_param("pitch_joint", "head_pan_joint")
-        self.yaw_joint_name = rospy.get_param("yaw_joint", "head_tilt_joint")
+        self.pitch_joint_name = rospy.get_param("~pitch_joint", "head_pan_joint")
+        self.yaw_joint_name = rospy.get_param("~yaw_joint", "head_tilt_joint")
         #self.marker_pub = rospy.Publisher("/image_marker", ImageMarker2)
         s = rospy.Subscriber("/trackball_joy", Joy, self.joyCB)
         scam = rospy.Subscriber("camera_info", CameraInfo, self.camCB)
