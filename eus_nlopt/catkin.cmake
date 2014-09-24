@@ -16,7 +16,7 @@ if(nlopt_FOUND_CATKIN_PROJECT)
   if(NOT ${nlopt_INCLUDE_DIRS} STREQUAL "")
     FIND_PATH(NLOPT_INCLUDE_DIR nlopt.h PATHS ${nlopt_INCLUDE_DIRS})
   else()
-    FIND_PATH(NLOPT_INCLUDE_DIR nlopt.h PATHS ${nlopt_SOURCE_PREFIX}/include ${catkin_INCLUDE_DIRS})
+    FIND_PATH(NLOPT_INCLUDE_DIR nlopt.h PATHS ${nlopt_SOURCE_PREFIX}/include ${catkin_INCLUDE_DIRS} ${nlopt_PREFIX}/include/nlopt)
   endif()
   ##
   SET (NLOPT_NAMES nlopt nlopt_cxx)
@@ -48,13 +48,8 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 ## add_executable(nlopt_test src/test.cpp src/nlopt_solver.cpp)
 ## add_library(nlopt_solver SHARED src/nlopt_solver.cpp)
-add_library(nlopt_wrapper SHARED src/nlopt_wrapper.cpp src/nlopt_solver.cpp)
-#add_executable(nlopt_wrapper_test src/nlopt_wrapper.cpp src/nlopt_solver.cpp)
-
-#rosbuild_genmsg()
-
 if(NLOPT_FOUND)
-##  TARGET_LINK_LIBRARIES(nlopt_test ${NLOPT_LIBRARY})
-##  TARGET_LINK_LIBRARIES(nlopt_wrapper_test ${NLOPT_LIBRARY})
+  add_library(nlopt_wrapper SHARED src/nlopt_wrapper.cpp src/nlopt_solver.cpp)
   TARGET_LINK_LIBRARIES(nlopt_wrapper ${NLOPT_LIBRARY})
 endif(NLOPT_FOUND)
+
