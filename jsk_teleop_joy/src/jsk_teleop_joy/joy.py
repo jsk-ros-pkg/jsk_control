@@ -148,12 +148,12 @@ class JoyManager():
       menu.action = OverlayMenu.ACTION_CLOSE
     self.menu_pub.publish(menu)
   def processMenuMode(self, status, history):
-    if history.new(status, "down"):
+    if history.new(status, "down") or history.new(status, "left_analog_down"):
       self.selecting_plugin_index = self.selecting_plugin_index + 1
       if self.selecting_plugin_index >= len(self.plugin_instances):
         self.selecting_plugin_index = 0
       self.publishMenu(self.selecting_plugin_index)
-    elif history.new(status, "up"):
+    elif history.new(status, "up") or history.new(status, "left_analog_up"):
       self.selecting_plugin_index = self.selecting_plugin_index - 1
       if self.selecting_plugin_index < 0:
         self.selecting_plugin_index = len(self.plugin_instances) - 1

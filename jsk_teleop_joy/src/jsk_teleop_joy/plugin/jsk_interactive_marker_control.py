@@ -40,16 +40,17 @@ class EndEffector(JoyPose6D):
       latest = history.latest()
     else:
       return
+
     if self.mode == self.MENU_MODE:
       if history.new(status, "triangle") or history.new(status, "cross"):
         self.mode = self.JOY_MODE
         self.publishMenu(self.current_index, True)
-      elif history.new(status, "up"):
+      elif history.new(status, "up")  or history.new(status, "left_analog_up"):
         self.current_index = self.current_index - 1
         if self.current_index < 0:
           self.current_index = len(self.menus) - 1
         self.publishMenu(self.current_index)
-      elif history.new(status, "down"):
+      elif history.new(status, "down") or history.new(status, "left_analog_down"):
         self.current_index = self.current_index + 1
         if self.current_index >= len(self.menus):
           self.current_index = 0
