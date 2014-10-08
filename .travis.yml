@@ -10,6 +10,10 @@ env:
   - ROS_DISTRO=groovy ROSWS=rosws BUILDER=rosbuild BUILD_PACKAGES="eus_nlopt  eus_qp  jsk_footstep_controller  jsk_footstep_planner  jsk_ik_server  jsk_teleop_joy"
   - ROS_DISTRO=hydro ROSWS=wstool BUILDER=catkin
   - ROS_DISTRO=groovy ROSWS=wstool BUILDER=catkin
+matrix:
+  allow_failures:
+    - env: ROS_DISTRO=groovy ROSWS=rosws BUILDER=rosbuild BUILD_PACKAGES="eus_nlopt  eus_qp  jsk_footstep_controller  jsk_footstep_planner  jsk_ik_server  jsk_teleop_joy"
+    - env: ROS_DISTRO=groovy ROSWS=wstool BUILDER=catkin
 notifications:
   email:
     on_success: always
