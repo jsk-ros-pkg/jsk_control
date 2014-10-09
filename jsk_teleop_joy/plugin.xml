@@ -1,4 +1,7 @@
 <library path="src">
+  <class name="EnvironmentPlaneModelingClient"
+         type="jsk_teleop_joy.plugin.environment_plane_modeling_client.EnvironmentPlaneModelingClient"
+         />
   <class name="Usage" type="jsk_teleop_joy.plugin.util.Usage">
   </class>
   <class name="VerboseStatus" type="jsk_teleop_joy.plugin.verbose.VerboseStatus">

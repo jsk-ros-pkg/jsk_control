@@ -9,16 +9,24 @@
    (support-vertices
     (mapcar
      #'(lambda (l c)
-	 (let ((l2 (copy-object l)))
-	   (send l2 :transform c :local)
-	   (send l2 :worldcoords)
-	   (flatten (send-all (send l2 :faces) :vertices))))
+         (let* ((wc (send l :copy-worldcoords)) ret)
+           (send l :transform c :local)
+           (send l :worldcoords)
+           (setq ret
+                 (copy-object
+                  (flatten (send-all (send l :faces) :vertices))))
+           (send l :transform
+                 (send (send l :copy-worldcoords) :transformation wc)
+                 :local)
+           (send l :worldcoords)
+           ret
+           ))
      support-links support-link-target-transform-coords))
    (support-height
     (mapcar #'(lambda (hl) (apply #'min hl))
-	    (mapcar #'(lambda (vl)
-			(mapcar #'(lambda (v) (aref v 2)) vl))
-		    support-vertices)))
+           (mapcar #'(lambda (vl)
+                       (mapcar #'(lambda (v) (aref v 2)) vl))
+                   support-vertices)))
    (force? nil))
   ;;
   ;;(when (position nil (mapcar #'(lambda (l) (send robot l)) foot-key))
@@ -152,7 +160,7 @@
     ;;
     (initial-av (copy-seq (send robot :angle-vector)))
     (initial-coords (copy-object (send robot :worldcoords)))
-    (debug-view :no-message)
+    (debug-view nil) ;;:no-message)
     (collision-pair)
     (collision-avoidance-link-pair collision-pair)
     (avoid-collision-distance 10)
@@ -224,17 +232,17 @@
        (send self :fix-centroid-object)
        (if viewer (send viewer :draw-objects))
        (if (or
-	    (null success-state-collection)
-	    (> (norm (v- ret initial-av)) 1))
-	   (setq success-state-collection
-		 (subseq
-		  (cons
-		   (list (cons :angle-vector (copy-seq ret))
-			 (cons :worldcoords
-			       (copy-object
-				(send robot :worldcoords))))
-		   success-state-collection)
-		  0 500)))
+            (null success-state-collection)
+            (> (norm (v- ret initial-av)) 1))
+           (setq success-state-collection
+        	 (subseq
+        	  (cons
+        	   (list (cons :angle-vector (copy-seq ret))
+        		 (cons :worldcoords
+        		       (copy-object
+        			(send robot :worldcoords))))
+        	   success-state-collection)
+        	  0 500)))
        )
       (t
        (format t "[ik-main] fail!!~%")
