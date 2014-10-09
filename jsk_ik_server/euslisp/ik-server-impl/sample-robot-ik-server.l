@@ -1,4 +1,3 @@
-
 #!/usr/bin/env roseus
 
 (ros::load-ros-manifest "jsk_ik_server")
@@ -8,5 +7,5 @@
 
 (ros::roseus "sample_robot_ik_server")
 
-(defvar *sample-robot-ik-server* (instance ik-server :init :robot (instance sample-robot :init)))
+(defvar *sample-robot-ik-server* (instance ik-server :init :robot (instance sample-robot :init) :ik-server-name "sample_robot_ik_server"))
 (send *sample-robot-ik-server* :start-ik-server)
