@@ -1,4 +1,5 @@
 <launch>
+  <remap from="/joy" to="/joy_menu" />
   <arg name="POSE_REMAP" default="pose" />
   <arg name="CONTROLLER_TYPE" default="auto" />
   <arg name="FRAME_ID" default="odom" />
@@ -14,8 +15,8 @@
     <param name="controller_type" value="$(arg CONTROLLER_TYPE)" />
     <rosparam subst_value="true">
       plugins:
-        'JoyPose6D0':
-           class: 'JoyPose6D'
+        'Env Server':
+           class: 'EnvironmentPlaneModelingClient'
            args:
              publish_pose: True
              pose: $(arg POSE_REMAP)
