@@ -15,12 +15,24 @@
   <build_depend>genmsg</build_depend>
   <build_depend>diagnostic_updater</build_depend>
   <build_depend>diagnostic_msgs</build_depend>
+  <build_depend>message_filters</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>tf2</build_depend>
+  <build_depend>jsk_topic_tools</build_depend>
   <run_depend>jsk_footstep_msgs</run_depend>
   <run_depend>jsk_footstep_planner</run_depend>
   <run_depend>message_generation</run_depend>
   <run_depend>genmsg</run_depend>
   <run_depend>diagnostic_updater</run_depend>
   <run_depend>diagnostic_msgs</run_depend>
+  <run_depend>message_filters</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>tf2</run_depend>
+  <run_depend>jsk_topic_tools</run_depend>
+  <run_depend>geometry_msgs</run_depend>
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- You can specify that this package is a metapackage here: -->
