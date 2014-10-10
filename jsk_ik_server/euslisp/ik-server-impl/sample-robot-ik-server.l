@@ -1,4 +1,3 @@
-
 #!/usr/bin/env roseus
 
 (ros::load-ros-manifest "jsk_ik_server")

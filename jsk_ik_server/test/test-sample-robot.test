@@ -1,8 +1,6 @@
 <launch>
-  <!-- <test test-name="sample_robot_ik_server" pkg="roseus" type="roseus"
-  	args="$(find jsk_ik_server)/test/test-ik-server.l" time-limit="10.0" /> -->
-  <node name="sample_robot_ik_server" pkg="roseus" type="roseus"
-  	args="$(find jsk_ik_server)/euslisp/ik-server-impl/sample-robot-ik-server.l" />
-  <test test-name="sample_robot_ik_server_client" pkg="roseus" type="roseus"
-  	args="$(find jsk_ik_server)/test/test-ik-server-client.l" time-limit="10.0" />
+  <node name="sample_robot_ik_server" pkg="jsk_ik_server" type="sample-robot-ik-server.l">
+  </node>
+  <test test-name="sample_robot_ik_server_client" pkg="jsk_ik_server" type="test-ik-server-client.l" time-limit="10.0">
+  </test>
 </launch>
