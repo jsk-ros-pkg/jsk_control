@@ -2,8 +2,8 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.3 (2014-10-10)
+------------------
 * add ik-server wait function, in travis, ik-server is slow to start
 * install euslisp in share directory
 * change ik-server files all exectable

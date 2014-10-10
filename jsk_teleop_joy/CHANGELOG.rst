@@ -2,8 +2,8 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.3 (2014-10-10)
+------------------
 * add b_control_status.py
 * add config file of b-control
 * Add joystick interface for jsk_pcl_ros/EnvironmentPlaneModeling
