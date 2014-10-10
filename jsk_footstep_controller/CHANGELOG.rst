@@ -2,6 +2,12 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Add footcoords to jsk_footstep_controller to compute tf like "/odom on ground"
+  by monitoring foot force sensors
+* do not run foot_contact_monitor in hrp2jsknt_real.launch. that script will be launched in default startup launch file
+
 0.1.2 (2014-09-08)
 ------------------
 
