@@ -4,13 +4,19 @@ project(jsk_footstep_controller)
 find_package(catkin REQUIRED COMPONENTS
   jsk_footstep_msgs
   jsk_footstep_planner
+  actionlib_msgs
   message_generation genmsg message_filters sensor_msgs geometry_msgs tf jsk_topic_tools
 )
 
 add_service_files(FILES
   RequireLog.srv)
 
-generate_messages()
+add_action_files(
+  DIRECTORY action
+  FILES LookAroundGround.action
+)
+generate_messages(
+  DEPENDENCIES actionlib_msgs)
 
 catkin_package(
 #  INCLUDE_DIRS include
