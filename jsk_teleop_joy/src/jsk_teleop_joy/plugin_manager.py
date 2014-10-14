@@ -12,7 +12,7 @@ import __builtin__
 class PluginManager():
   def __init__(self, package_name):
     self.package_name = package_name
-  def loadPluginInstances(self, plugins):
+  def loadPluginInstances(self, plugins, manager):
     """
     plugins := {name: spec, name: spec, ...}
     spec := {class: class, args: args}
@@ -41,6 +41,7 @@ class PluginManager():
             rospy.logfatal('cannot find %s' % (class_from_class_type))
           else:
             self.plugins.append(class_ref(instance_name, instance_args))
+            self.plugins[-1].registerManager(manager)
         except:
           rospy.logerr('failed to load %s' % (instance_class))
           traceback.print_exc(file=sys.stdout)

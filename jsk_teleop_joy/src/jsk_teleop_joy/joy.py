@@ -79,6 +79,7 @@ class JoyManager():
     self.controller_type = rospy.get_param('~controller_type', 'auto')
     self.plugins = rospy.get_param('~plugins', {})
     self.current_plugin_index = 0
+    self.selecting_plugin_index = 0
     #you can specify the limit of the rate via ~diagnostic_period
     self.diagnostic_updater = DiagnosticUpdater()
     self.diagnostic_updater.setHardwareID("teleop_manager")
@@ -115,7 +116,7 @@ class JoyManager():
     self.loadPlugins()
   def loadPlugins(self):
     self.plugin_manager.loadPlugins()
-    self.plugin_instances = self.plugin_manager.loadPluginInstances(self.plugins)
+    self.plugin_instances = self.plugin_manager.loadPluginInstances(self.plugins, self)
   def switchPlugin(self, index):
     self.current_plugin_index = index
     if len(self.plugin_instances) <= self.current_plugin_index:
@@ -147,13 +148,18 @@ class JoyManager():
     if close:
       menu.action = OverlayMenu.ACTION_CLOSE
     self.menu_pub.publish(menu)
+  def forceToPluginMenu(self, publish_menu=False):
+    self.selecting_plugin_index = self.current_plugin_index
+    if publish_menu:
+      self.publishMenu(self.current_plugin_index)
+    self.mode = self.MODE_MENU
   def processMenuMode(self, status, history):
-    if history.new(status, "down"):
+    if history.new(status, "down") or history.new(status, "left_analog_down"):
       self.selecting_plugin_index = self.selecting_plugin_index + 1
       if self.selecting_plugin_index >= len(self.plugin_instances):
         self.selecting_plugin_index = 0
       self.publishMenu(self.selecting_plugin_index)
-    elif history.new(status, "up"):
+    elif history.new(status, "up") or history.new(status, "left_analog_up"):
       self.selecting_plugin_index = self.selecting_plugin_index - 1
       if self.selecting_plugin_index < 0:
         self.selecting_plugin_index = len(self.plugin_instances) - 1
@@ -165,15 +171,15 @@ class JoyManager():
       self.publishMenu(self.selecting_plugin_index, close=True)
       self.mode = self.MODE_PLUGIN
       self.switchPlugin(self.selecting_plugin_index)
+    else:
+      self.publishMenu(self.selecting_plugin_index)
   def joyCB(self, msg):
     status = self.JoyStatus(msg)
     if self.mode == self.MODE_MENU:
       self.processMenuMode(status, self.history)
     else:
       if self.history.new(status, "center"):
-        self.selecting_plugin_index = self.current_plugin_index
-        self.publishMenu(self.current_plugin_index)
-        self.mode = self.MODE_MENU
+        self.forceToPluginMenu()
       else:
         self.current_plugin.joyCB(status, self.history)
     self.pre_status = status

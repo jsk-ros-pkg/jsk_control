@@ -19,7 +19,7 @@
   (let ((coords (ros::tf-pose->coords (send footstep :pose))))
     ;; in order to specify :lleg or :rleg, we need to set property list
     ;; of coordinates object, it will be read by robot-interface.
-    (send coords :put :l/r
+    (send coords :name
           (if (= (send footstep :leg) jsk_footstep_msgs::Footstep::*LEFT*)
               :lleg
             :rleg))
@@ -54,7 +54,7 @@
                   (footstep-coords-rest (cdr footstep-coords))
                   (hrpsys-coords (send *ri* :abc-footstep->eus-footstep
                                        (send (send *ri* :get-foot-step-param)
-                                             (if (eq (get footstep-coords0 :l/r) :lleg)
+                                             (if (eq (send footstep-coords0 :name) :lleg)
                                                  :lleg_coords :rleg_coords))))
                   (hrpsys-mid-coords (hrpsys-init-coords)))
              (let* ((hrpsys->ros (send hrpsys-coords :transformation footstep-coords0))
@@ -64,7 +64,7 @@
                        #'(lambda (footstep)
                            (let ((coords (send (send ros->hrpsys :copy-worldcoords)
                                                :transform footstep)))
-                             (setf (get coords :l/r) (get footstep :l/r))
+                             (send coords :name (send footstep :name))
                              coords))
                        footstep-coords-rest)))
                  (let ((final-footstep
@@ -72,7 +72,7 @@
                          #'(lambda (footstep)
                              (let ((c (send hrpsys-mid-coords
                                             :transformation footstep)))
-                               (setf (get c :l/r) (get footstep :l/r))
+                               (send c :name (send footstep :name))
                                c))
                          transformed-footstep)))
                    (push final-footstep *all-the-results*)
@@ -88,8 +88,10 @@
               (send server :set-succeeded result))
           (let ((first-step (pop *footstep-list*))
                 (second-step (car *footstep-list*)))
-            (send *ri* :set-foot-steps (list first-step second-step)))))
+            (send *ri* :set-foot-steps (list first-step second-step))
+            )))
     (progn
+      (print (send-all *footstep-list* :name))
       (send *ri* :set-foot-steps *footstep-list*)
       (setq *footstep-list* nil)
       (send server :set-succeeded (send server :result))
