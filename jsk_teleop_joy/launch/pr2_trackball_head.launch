@@ -1,0 +1,12 @@
+<launch>
+  <arg name="DEV" default="/dev/input/mouse0" />
+  <arg name="JOINT_STATES" default="/joint_states" />
+
+  <include file="$(find jsk_teleop_joy)/launch/robot_trackball_head.launch">
+    <arg name="DEV" value="$(arg DEV)" />
+    <arg name="JOINT_STATES" value="$(arg JOINT_STATES)" />
+    <arg name="JOINT_TRAJECTORY_ACTION" value="/head_traj_controller/follow_joint_trajectory" />
+    <arg name="PITCH_JOINT" value="head_pan_joint" />
+    <arg name="YAW_JOINT" value="head_tilt_joint" />
+  </include>
+</launch>
