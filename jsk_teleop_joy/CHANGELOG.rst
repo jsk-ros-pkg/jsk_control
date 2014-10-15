@@ -2,6 +2,19 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.3 (2014-10-10)
+------------------
+* add b_control_status.py
+* add config file of b-control
+* Add joystick interface for jsk_pcl_ros/EnvironmentPlaneModeling
+* use scripts/head_control_by_trackball.py for general robot. implimented launch file for pr2 and hrp2
+* Merge branch 'master' into select-menu-with-analog-stick
+* autorepeat joy input
+* check analog input
+* remap tf
+* test analog check
+* get argument  for set pose
+
 0.1.2 (2014-09-08)
 ------------------
 
