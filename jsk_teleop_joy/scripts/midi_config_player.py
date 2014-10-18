@@ -16,6 +16,7 @@ except:
   from jsk_teleop_joy.midi_util import MIDIParse, MIDICommand, MIDIException, openMIDIInputByName, openMIDIOutputByName
 
 def feedback_array_cb(out_controller, config, msg_arr):
+  global joy
   output_config = config["output"]
   for msg in msg_arr.array:
     if len(output_config) <= msg.id:
@@ -34,9 +35,14 @@ def feedback_array_cb(out_controller, config, msg_arr):
     else:
       param1 = the_config[3]
       out_controller.write_short(command | channel, param1, val)
-    
+      try:
+        index = config["analogs"].index((MIDICommand.CONTINUOUS_CONTROLLER,param1))
+        joy.axes[index] = msg.intensity
+      except:
+        pass
 
 def main():
+  global joy
   pygame.midi.init()
   rospy.init_node('midi_joy')
   # parse the arg
