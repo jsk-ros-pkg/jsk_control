@@ -2,6 +2,11 @@
 Changelog for package eus_nlopt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.3 (2014-10-10)
+------------------
+* Use deb files to install jsk programs
+* Fix path to find nlopt headers and libraries
+
 0.1.2 (2014-09-08)
 ------------------
 
