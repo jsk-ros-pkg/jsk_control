@@ -1,0 +1,10 @@
+<launch>
+  <node pkg="jsk_footstep_controller"
+        type="footstep-refinement.l"
+        name="footstep_refinement"
+        output="screen" />
+  <node pkg="jsk_footstep_controller"
+        type="test-footstep-refinement.l"
+        name="test_footstep_refinement"
+        output="screen" />
+</launch>
