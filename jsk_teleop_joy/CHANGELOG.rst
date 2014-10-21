@@ -2,6 +2,15 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge pull request #112 from mmurooka/overwrite-write-command-in-midi-player
+  Overwrite writing command in midi_config_player.py
+* overwrite writing command in midi_config_player.py
+* add pr2_relay.launch
+* publish joy topic only when midi state is changed.
+* add feedback config to b-control.yaml
+
 0.1.3 (2014-10-10)
 ------------------
 * add b_control_status.py

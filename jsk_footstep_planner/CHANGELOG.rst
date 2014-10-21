@@ -2,6 +2,9 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.3 (2014-10-10)
 ------------------
 
