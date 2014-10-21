@@ -1,0 +1,9 @@
+<launch>
+
+  <node pkg="roseus" type="roseus" name="hrp2jsknts_ik_server" output="screen"
+	args="$(find jsk_ik_server)/euslisp/ik-server-impl/hrp2jsknts-ik-server.l">
+    <param name="robot" value="hrp2jsknts"/>
+    <param name="additional_ik_options" value=":centroid-thre 10" />
+  </node>
+
+</launch>
