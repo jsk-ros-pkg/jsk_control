@@ -2,8 +2,8 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.4 (2014-10-21)
+------------------
 * add eigen to depend
 
 0.1.3 (2014-10-10)

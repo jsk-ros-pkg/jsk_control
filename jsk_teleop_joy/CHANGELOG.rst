@@ -2,8 +2,8 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.4 (2014-10-21)
+------------------
 * Merge pull request #112 from mmurooka/overwrite-write-command-in-midi-player
   Overwrite writing command in midi_config_player.py
 * overwrite writing command in midi_config_player.py

@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.4 (2014-10-21)
+------------------
 * Refine footsteps to snapped to plane
 * Add simple motion to look around the floor near from legs and
   update minor stuff for the latest EnvironmentPlaneModeling
