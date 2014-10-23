@@ -187,8 +187,8 @@
       (x::window-main-one))
     (ros::spin-once)
     (send self :publish-default-end-coords :init? nil)
-    (ros::sleep)
-    ;;(unix:usleep (* 100 1000))
+    ;;(ros::sleep)
+   ( unix:usleep (* 10 1000))
     )
    )
   ;;
