@@ -17,4 +17,4 @@ install(DIRECTORY euslisp
   PATTERN ".svn" EXCLUDE
   )
 
-## add_rostest(test/test-sample-robot.test)
+
