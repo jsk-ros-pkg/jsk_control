@@ -16,6 +16,7 @@ except:
   from jsk_teleop_joy.midi_util import MIDIParse, MIDICommand, MIDIException, openMIDIInputByName, openMIDIOutputByName
 
 def feedback_array_cb(out_controller, config, msg_arr):
+  global joy
   output_config = config["output"]
   for msg in msg_arr.array:
     if len(output_config) <= msg.id:
@@ -34,9 +35,14 @@ def feedback_array_cb(out_controller, config, msg_arr):
     else:
       param1 = the_config[3]
       out_controller.write_short(command | channel, param1, val)
-    
+      try:
+        index = config["analogs"].index((MIDICommand.CONTINUOUS_CONTROLLER,param1))
+        joy.axes[index] = msg.intensity
+      except:
+        pass
 
 def main():
+  global joy
   pygame.midi.init()
   rospy.init_node('midi_joy')
   # parse the arg
@@ -46,6 +52,11 @@ def main():
     sys.exit(1)
   config_file = argv[1]
   joy_pub = rospy.Publisher("/joy", Joy)
+  autorepeat_rate = rospy.get_param("~autorepeat_rate", 0)
+  if autorepeat_rate == 0:
+    r = rospy.Rate(1000)
+  else:
+    r = rospy.Rate(autorepeat_rate)
   with open(config_file, "r") as f:
     config = yaml.load(f)
     # open the device
@@ -62,9 +73,11 @@ def main():
     joy.buttons = [0] * len(button_configs)
     while not rospy.is_shutdown():
       joy.header.stamp = rospy.Time.now()
+      p = False
       while controller.poll():
         data = controller.read(1)
         for elem_set in data:
+          p = True
           (command, ind, val) = MIDIParse(elem_set)
           try:
             index = config["analogs"].index((command, ind))
@@ -77,8 +90,9 @@ def main():
                 joy.buttons[button_index] = 1
           except:
             rospy.logwarn("unknown MIDI message: (%d, %d, %f)" % (command, ind, val))
-      joy_pub.publish(joy)
-      rospy.sleep(1.0 / 100.0)
+      if (autorepeat_rate != 0) or p:
+        joy_pub.publish(joy)
+      r.sleep()
 if __name__ == '__main__':
   main()
   

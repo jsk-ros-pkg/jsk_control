@@ -105,6 +105,65 @@
 	    *end-coords-without-toe*)
 	   args))
    )
+  (:hrp2jsknts-test
+   (&rest args)
+   (require :hrp2jsknts "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknts.l")
+   (when (probe-file (ros::resolve-ros-path "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-utils.l"))
+     (require :hrp2jsknts-utils "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-utils.l"))
+   (defvar *robot* (hrp2jsknts))
+   (objects (list *robot*))
+   (ros::roseus "fullbody_ik_client_test")
+   (defvar *end-coords-without-toe*
+     (mapcar
+      #'(lambda (k)
+	  (make-cascoords
+	   :name
+	   (read-from-string (format nil "~A-end-coords-without-toe" k))
+	   :parent
+	   (send (send *robot* k :end-coords :parent) :parent)
+	   :coords
+	   (send *robot* k :end-coords :copy-worldcoords)))
+      '(:rleg :lleg)))
+   (defvar *end-coords-from-hand*
+     (mapcar
+      #'(lambda (k)
+	  (if (find-method *robot* :hand)
+	      (make-cascoords
+	       :name
+	       (read-from-string (format nil "~A-end-coords-without-toe" k))
+	       :parent (car (last (send *robot* :hand k :links)))
+	       :coords
+	       (copy-object
+		(send (car (last (send *robot* :hand k :links))) :worldcoords)))
+	    (send *robot* k :end-coords)))
+      '(:rarm :larm)))
+   (do-until-key
+    (send *robot* :reset-manip-pose)
+    (send *robot* :fix-leg-to-coords (make-coords))
+    (cond
+     ((find-method *robot* :hand)
+      (send *robot* :hand :rarm :close-pose)
+      (send *robot* :hand :larm :close-pose)))
+    (send* self :test-fullbody-ik
+	   :all-links
+	   (remove-if
+	    #'(lambda (l)
+		(not (and (find-method l :joint)
+			  (send l :joint))))
+	    (flatten
+	     (append
+	      (send *robot* :links)
+	      (if (find-method *robot* :hand)
+		  (list
+		   (send (send *robot* :hand :rarm) :links)
+		   (send (send *robot* :hand :larm) :links))))))
+	   :move-target
+	   (append
+	    ;;(mapcar #'(lambda (k) (send *robot* k :end-coords)) '(:rarm :larm))
+	    *end-coords-from-hand*
+	    *end-coords-without-toe*)
+	   args))
+   )
   (:hrp2jsk-test
    (&rest args)
    (require "package://hrpsys_ros_bridge_tutorials/models/hrp2jsk.l")
@@ -194,6 +253,8 @@
    ((null test))
    ((substringp "hrp2jsknt" test)
     (send ik-client-test :hrp2jsknt-test :foot? foot?))
+   ((substringp "hrp2jsknts" test)
+    (send ik-client-test :hrp2jsknts-test :foot? foot?))
    ((substringp "hrp2jsk" test)
     (send ik-client-test :hrp2jsk-test :foot? foot?))
    ((substringp "staro" test)

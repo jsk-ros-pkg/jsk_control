@@ -1,5 +1,6 @@
 all: installed
 
+SVN_CMDLINE = svn --trust-server-cert --non-interactive 
 SVN_DIR = build/qpOASES-source
 PATCH_DIR = $(CURDIR)
 # qpOASES's Makefile version utilizes .so library, therfore we use it.
