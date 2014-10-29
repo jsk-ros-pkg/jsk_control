@@ -2,6 +2,11 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.4 (2014-10-21)
+------------------
+* support hrp2jsknts in ik-server
+* adding hrp2w-ik-server.l
+
 0.1.3 (2014-10-10)
 ------------------
 * add ik-server wait function, in travis, ik-server is slow to start
