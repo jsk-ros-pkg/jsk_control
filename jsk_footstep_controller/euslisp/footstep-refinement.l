@@ -18,12 +18,26 @@
     (send new-footstep :pose (ros::coords->tf-pose coords))
     new-footstep))
 
+(defun dot2rad (dot)
+  (cond
+   ((> dot 1.0)
+    (acos 1.0))
+   ((< dot -1.0)
+    (acos -1.0))
+   (t
+    (acos dot))))
+
+(defun z-vec-angle-diff (a b)
+  (dot2rad (v. (send a :rotate-vector (float-vector 0  0 1))
+               (send b :rotate-vector (float-vector 0  0 1)))))
+
 (defun refine-footstep (org-msg)
   (let ((new-msg (instance jsk_footstep_msgs::FootstepArray :init))
         (refined-footsteps nil)
         (prev-footstep nil)
         (prev-refined-footstep nil)
-        (group 0))
+        (group 1)
+        (i 0))
     (send new-msg :header (send org-msg :header))
     (dolist (footstep (send org-msg :footsteps))
       (if prev-footstep
@@ -36,33 +50,37 @@
                     (ros::tf-pose->coords (send footstep :pose)))
                    (next-coords nil)
                    (trans
-                    (send prev-coords :transformation
-                          (ros::tf-pose->coords (send footstep :pose)))))
-              (let ((parallelp (< (acos (v. (send prev-coords :rotate-vector (float-vector 0 0 1))
-                                            (send raw-next-coords :rotate-vector (float-vector 0 0 1))))
-                                  *angle-threshold*))
-                    (sameheightp (< (abs (- (elt (send prev-coords :worldpos) 2)
-                                            (elt (send raw-next-coords :worldpos) 2)))
-                                    *z-threshold*)))
-                (cond
-                 ((and parallelp sameheightp)
-                  (send trans :rpy (car (car (send trans :rpy-angle))) 0 0)
-                  (send trans :locate-z 0))
-                 (parallelp
-                  (send trans :rpy (car (car (send trans :rpy-angle))) 0 0))
-                 (sameheightp
-                  (send trans :locate-z 0)))
-                (setq next-coords (send (send prev-refined-coords :copy-worldcoords) :transform trans))
+                    (send prev-coords :transformation raw-next-coords)))
+              (let ((angle-diff (z-vec-angle-diff prev-coords raw-next-coords))
+                    (z-diff (abs (elt (send trans :worldpos) 2))))
+                (let ((parallelp (< angle-diff *angle-threshold*))
+                      (sameheightp (< z-diff *z-threshold*)))
+                  (ros::ros-info "(~A)parallelp: ~A, angle-diff: ~A (~A)"
+                    i parallelp angle-diff (rad2deg angle-diff))
+                  (ros::ros-info "(~A)sameheightp: ~A, z-diff: ~A"
+                    i sameheightp z-diff)
+                  (cond
+                   ((and parallelp sameheightp)
+                    (send trans :rpy (car (car (send trans :rpy-angle))) 0 0)
+                    (send trans :locate-z 0))
+                   (parallelp
+                    (send trans :rpy (car (car (send trans :rpy-angle))) 0 0))
+                   (sameheightp
+                    (send trans :locate-z 0)))
+                  (setq next-coords
+                        (send (send prev-refined-coords :copy-worldcoords)
+                              :transform trans))
                 (if (not (and parallelp sameheightp))
                     (incf group))
                 (let ((new-footstep (make-footstep footstep next-coords)))
                   (send new-footstep :footstep_group group)
                   (push new-footstep refined-footsteps)
-                  (setq prev-refined-footstep new-footstep)))))
+                  (setq prev-refined-footstep new-footstep))))))
         (progn
           (setq prev-refined-footstep footstep)
           (push footstep refined-footsteps)))
-      (setq prev-footstep footstep))
+      (setq prev-footstep footstep)
+      (incf i))
     (send new-msg :footsteps (reverse refined-footsteps))
     new-msg))
 
