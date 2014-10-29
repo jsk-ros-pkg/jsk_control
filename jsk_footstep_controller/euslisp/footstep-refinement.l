@@ -18,7 +18,7 @@
     (send new-footstep :pose (ros::coords->tf-pose coords))
     new-footstep))
 
-(defun refinement (org-msg)
+(defun refine-footstep (org-msg)
   (let ((new-msg (instance jsk_footstep_msgs::FootstepArray :init))
         (refined-footsteps nil)
         (prev-footstep nil)
@@ -63,8 +63,17 @@
           (setq prev-refined-footstep footstep)
           (push footstep refined-footsteps)))
       (setq prev-footstep footstep))
-  (send new-msg :footsteps (reverse refined-footsteps))
-  (ros::publish "refined_footstep" new-msg)))
+    (send new-msg :footsteps (reverse refined-footsteps))
+    new-msg))
+
+(defun refinement (org-msg)
+  (let ((new-msg (refine-footstep org-msg)))
+    (ros::publish "refined_footstep" new-msg)))
+
+(defun refine-actionlib-result (msg)
+  (let ((planning-result (send msg :result :result)))
+    (send msg :result :result (refine-footstep planning-result))
+    (ros::publish "refined_footstep_result" msg)))
 
 (defun main()
   (ros::roseus "footstep_refinement")
@@ -72,7 +81,9 @@
   (setq *angle-threshold* (ros::get-param "~angle_threshold" (deg2rad 5)))
   (setq *z-threshold* (ros::get-param "~z_threshold" 30))
   (ros::advertise "refined_footstep" jsk_footstep_msgs::FootstepArray 1)
+  (ros::advertise "refined_footstep_result" jsk_footstep_msgs::PlanFootstepsActionResult 1)
   (ros::subscribe "footstep" jsk_footstep_msgs::FootstepArray #'refinement)
+  (ros::subscribe "planner_result" jsk_footstep_msgs::PlanFootstepsActionResult #'refine-actionlib-result)
   (ros::spin)
   )
 

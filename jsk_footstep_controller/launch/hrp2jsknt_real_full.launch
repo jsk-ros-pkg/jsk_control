@@ -1,5 +1,5 @@
 <launch>
-  <arg name="INTERRUPTIBLE" default="false" />
+  <arg name="INTERRUPTIBLE" default="true" />
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
@@ -9,14 +9,15 @@
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <remap from="planes" to="/env_server/old/polygons" />
     <rosparam subst_value="true">
-    use_planes: false
-    use_env_server: false
+    use_planes: true
+    use_env_server: true
     timeout: 0.5
     </rosparam>
     <remap from="primitive_lock" to="/env_server/primitive_lock" />
     <remap from="primitive_unlock" to="/env_server/primitive_unlock" />
     <remap from="env_lock" to="/env_server/lock" />
     <remap from="polygon_on_env" to="/env_server/polygon_on_environment" />
+    <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" />
   </node>
   <!-- controller -->
   <node pkg="jsk_footstep_controller"
@@ -81,5 +82,13 @@
     </rosparam>
     <param name="frame_id" value="/odom" />
   </node>
+  <node pkg="jsk_footstep_controller" type="footstep-refinement.l"
+        name="footstep_refinement">
+    <remap from="planner_result" to="footstep_planner/result_non_refined"/>
+    <remap from="refined_footstep_result" to="footstep_planner/result" />
+  </node>
   <include file="$(find jsk_pcl_ros)/launch/footstep_recognition.launch" />
+  <node pkg="roseus" type="roseus" name="lookaround_ground"
+        args="$(find jsk_footstep_controller)/euslisp/lookaround-ground.l">
+  </node>
 </launch>
