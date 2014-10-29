@@ -27,6 +27,12 @@
    (t
     (acos dot))))
 
+(defun pitch-angle-diff (a b)
+  (abs (cadr (car (send (send a :transformation b) :rpy-angle)))))
+
+(defun roll-angle-diff (a b)
+  (abs (car (car (send (send a :transformation b) :rpy-angle)))))
+
 (defun z-vec-angle-diff (a b)
   (dot2rad (v. (send a :rotate-vector (float-vector 0  0 1))
                (send b :rotate-vector (float-vector 0  0 1)))))
@@ -51,12 +57,15 @@
                    (next-coords nil)
                    (trans
                     (send prev-coords :transformation raw-next-coords)))
-              (let ((angle-diff (z-vec-angle-diff prev-coords raw-next-coords))
+              (let ((pitch-diff (pitch-angle-diff prev-coords raw-next-coords))
+                    (roll-diff (roll-angle-diff prev-coords raw-next-coords))
                     (z-diff (abs (elt (send trans :worldpos) 2))))
-                (let ((parallelp (< angle-diff *angle-threshold*))
+                (let ((parallelp (and (< pitch-diff *pitch-threshold*)
+                                      (< roll-diff *roll-threshold*)))
                       (sameheightp (< z-diff *z-threshold*)))
-                  (ros::ros-info "(~A)parallelp: ~A, angle-diff: ~A (~A)"
-                    i parallelp angle-diff (rad2deg angle-diff))
+                  (ros::ros-info
+                    "(~A)parallelp: ~A, pitch-diff: ~A, roll-diff: ~A "
+                    i parallelp (rad2deg pitch-diff) (rad2deg roll-diff))
                   (ros::ros-info "(~A)sameheightp: ~A, z-diff: ~A"
                     i sameheightp z-diff)
                   (cond
@@ -78,6 +87,7 @@
                   (setq prev-refined-footstep new-footstep))))))
         (progn
           (setq prev-refined-footstep footstep)
+          (send footstep :footstep_group group)
           (push footstep refined-footsteps)))
       (setq prev-footstep footstep)
       (incf i))
@@ -96,7 +106,8 @@
 (defun main()
   (ros::roseus "footstep_refinement")
   ;; read parameters
-  (setq *angle-threshold* (ros::get-param "~angle_threshold" (deg2rad 5)))
+  (setq *pitch-threshold* (ros::get-param "~pitch_threshold" (deg2rad 5)))
+  (setq *roll-threshold* (ros::get-param "~roll_threshold" (deg2rad 5)))
   (setq *z-threshold* (ros::get-param "~z_threshold" 30))
   (ros::advertise "refined_footstep" jsk_footstep_msgs::FootstepArray 1)
   (ros::advertise "refined_footstep_result" jsk_footstep_msgs::PlanFootstepsActionResult 1)
