@@ -665,6 +665,10 @@ building and searching."
     (setq size-x x)
     (setq size-y y)
     (send-super :init :legs-num 2))
+  (:left-footsteps ()
+    left-footsteps)
+  (:right-footsteps ()
+    right-footsteps)
   (:foot-vertices (leg coords)
     ;;     x     x
     ;;

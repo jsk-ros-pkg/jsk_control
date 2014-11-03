@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <depend package="jsk_footstep_msgs" />
   <depend package="jsk_pcl_ros" />
+  <depend package="jsk_rviz_plugins" />
   <url>http://ros.org/wiki/jsk_footstep_planner</url>
 
 </package>
