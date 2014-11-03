@@ -20,7 +20,9 @@
   <run_depend>jsk_pcl_ros</run_depend>
 
   <run_depend>roseus</run_depend>
-  
+
+  <build_depend>jsk_rviz_plugins</build_depend>
+  <run_depend>jsk_rviz_plugins</run_depend>
   <export>
 
   </export>
