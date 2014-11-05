@@ -350,7 +350,7 @@
      ;;(format nil "/~A" (send (car (send robot :links)) :name))
      ;;)
      ;;
-     (setq res (ros::service-call ik-server-service-name req))
+     (setq res (ros::service-call ik-server-service-name req t))
      (cond
       ((= (send res :error_code :val) moveit_msgs::MoveItErrorCodes::*SUCCESS*)
        (send self :update-joint-states

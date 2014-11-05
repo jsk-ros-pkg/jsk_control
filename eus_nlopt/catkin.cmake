@@ -3,7 +3,6 @@ project(eus_nlopt)
 cmake_minimum_required(VERSION 2.4.6)
 
 find_package(catkin REQUIRED COMPONENTS nlopt)
-find_package(Eigen REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src)
