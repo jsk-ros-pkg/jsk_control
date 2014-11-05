@@ -31,7 +31,7 @@
   (abs (cadr (car (send (send a :transformation b) :rpy-angle)))))
 
 (defun roll-angle-diff (a b)
-  (abs (car (car (send (send a :transformation b) :rpy-angle)))))
+  (abs (caddr (car (send (send a :transformation b) :rpy-angle)))))
 
 (defun z-vec-angle-diff (a b)
   (dot2rad (v. (send a :rotate-vector (float-vector 0  0 1))
