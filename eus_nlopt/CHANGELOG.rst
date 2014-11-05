@@ -2,6 +2,10 @@
 Changelog for package eus_nlopt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.4 (2014-10-21)
+------------------
+* add eigen
+
 0.1.3 (2014-10-10)
 ------------------
 * Use deb files to install jsk programs
