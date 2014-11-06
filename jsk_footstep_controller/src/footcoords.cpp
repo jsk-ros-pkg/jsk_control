@@ -41,139 +41,140 @@
 namespace jsk_footstep_controller
 {
 
-    Footcoords::Footcoords()
-    {
-        ros::NodeHandle nh, pnh("~");
-        tf_listener_.reset(new tf::TransformListener());
-        ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
-        // read parameter
-        ground_offset_.resize(3);
-        jsk_topic_tools::readVectorParameter(pnh, "ground_offset", ground_offset_);
-        pnh.param("output_frame_id", output_frame_id_, std::string("odom_on_ground"));
-        pnh.param("parent_frame_id", parent_frame_id_, std::string("odom"));
-        pnh.param("lfoot_frame_id", lfoot_frame_id_, std::string("LLEG_LINK5"));
-        pnh.param("rfoot_frame_id", rfoot_frame_id_, std::string("RLEG_LINK5"));
-        pnh.param("force_threshold", force_thr_, 1.0);
-        pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
-        before_on_the_air_ = true;
-        sub_lfoot_force_.subscribe(nh, "lfsensor", 1);
-        sub_rfoot_force_.subscribe(nh, "rfsensor", 1);
-        sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
-        sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_);
-        sync_->registerCallback(boost::bind(&Footcoords::filter, this, _1, _2));
+  Footcoords::Footcoords()
+  {
+    ros::NodeHandle nh, pnh("~");
+    tf_listener_.reset(new tf::TransformListener());
+    ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
+    // read parameter
+    ground_offset_.resize(3);
+    jsk_topic_tools::readVectorParameter(pnh, "ground_offset", ground_offset_);
+    pnh.param("output_frame_id", output_frame_id_, std::string("odom_on_ground"));
+    pnh.param("parent_frame_id", parent_frame_id_, std::string("odom"));
+    pnh.param("lfoot_frame_id", lfoot_frame_id_, std::string("LLEG_LINK5"));
+    pnh.param("rfoot_frame_id", rfoot_frame_id_, std::string("RLEG_LINK5"));
+    pnh.param("force_threshold", force_thr_, 1.0);
+    pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
+    before_on_the_air_ = true;
+    sub_lfoot_force_.subscribe(nh, "lfsensor", 1);
+    sub_rfoot_force_.subscribe(nh, "rfsensor", 1);
+    sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
+    sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_);
+    sync_->registerCallback(boost::bind(&Footcoords::filter, this, _1, _2));
+  }
+
+  Footcoords::~Footcoords()
+  {
+
+  }
+
+
+
+  void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
+                          const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
+  {
+    if (lfoot->wrench.force.z < force_thr_ &&
+        rfoot->wrench.force.z < force_thr_) {
+      before_on_the_air_ = true;
+      publishState("air");
     }
-
-    Footcoords::~Footcoords()
-    {
-
+    else {
+      if (lfoot->wrench.force.z > force_thr_ &&
+          rfoot->wrench.force.z > force_thr_) {
+        // on ground
+        publishState("ground");
+        if (before_on_the_air_) {
+          if(updateGroundTF(lfoot->header.stamp)) {
+            before_on_the_air_ = false;
+          }
+        }
+      }
+      else if (lfoot->wrench.force.z > force_thr_) {
+        // only left
+        publishState("lfoot");
+      }
+      else if (rfoot->wrench.force.z > force_thr_) {
+        // only right
+        publishState("rfoot");
+      }
     }
+    publishGroundTF(lfoot->header.stamp);
+  }
+  void Footcoords::publishState(const std::string& state)
+  {
+    std_msgs::String state_msg;
+    state_msg.data = state;
+    pub_state_.publish(state_msg);
+  }
 
-
-
-    void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                            const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
-    {
-        if (lfoot->wrench.force.z < force_thr_ &&
-            rfoot->wrench.force.z < force_thr_) {
-            before_on_the_air_ = true;
-            publishState("air");
-        }
-        else {
-            if (lfoot->wrench.force.z > force_thr_ &&
-                rfoot->wrench.force.z > force_thr_) {
-                // on ground
-                publishState("ground");
-                if (before_on_the_air_) {
-                    if(updateGroundTF(lfoot->header.stamp)) {
-                        before_on_the_air_ = false;
-                    }
-                }
-            }
-            else if (lfoot->wrench.force.z > force_thr_) {
-                // only left
-                publishState("lfoot");
-            }
-            else if (rfoot->wrench.force.z > force_thr_) {
-                // only right
-                publishState("rfoot");
-            }
-        }
-        publishGroundTF(lfoot->header.stamp);
+  bool Footcoords::updateGroundTF(const ros::Time& stamp)
+  {
+    // lookup tf between lfoot_frame_id -> rfoot_frame_id and 
+    // odom -> lfoot_frame_id
+    if (!tf_listener_->waitForTransform(
+          parent_frame_id_, lfoot_frame_id_, stamp, ros::Duration(1.0))) {
+      ROS_ERROR("failed to lookup transform between %s and %s",
+                parent_frame_id_.c_str(),
+                lfoot_frame_id_.c_str());
+      return false;
     }
-    void Footcoords::publishState(const std::string& state)
-    {
-        std_msgs::String state_msg;
-        state_msg.data = state;
-        pub_state_.publish(state_msg);
-        //ROS_INFO("state: %s", state.c_str());
+    else if (!tf_listener_->waitForTransform(
+               parent_frame_id_, rfoot_frame_id_, stamp, ros::Duration(1.0))) {
+      ROS_ERROR("failed to lookup transform between %s and %s",
+                parent_frame_id_.c_str(),
+                rfoot_frame_id_.c_str());
+      return false;
     }
-
-    bool Footcoords::updateGroundTF(const ros::Time& stamp)
-    {
-        // lookup tf between lfoot_frame_id -> rfoot_frame_id and 
-        // odom -> lfoot_frame_id
-        if (!tf_listener_->waitForTransform(parent_frame_id_, lfoot_frame_id_, stamp, ros::Duration(1.0))) {
-            ROS_ERROR("failed to lookup transform between %s and %s", parent_frame_id_.c_str(),
-                      lfoot_frame_id_.c_str());
-            return false;
-        }
-        else if (!tf_listener_->waitForTransform(parent_frame_id_, rfoot_frame_id_, stamp, ros::Duration(1.0))) {
-            ROS_ERROR("failed to lookup transform between %s and %s", parent_frame_id_.c_str(),
-                      rfoot_frame_id_.c_str());
-            return false;
-        }
-        else {                 
-            try 
-            {
-                // tf::StampedTransform foot_transform;
-                // tf_listener_->lookupTransform(rfoot_frame_id_, lfoot_frame_id_, stamp, foot_transform);
-                // tf::StampedTransform odom_foot_ransform;
-                // tf_listener_->lookupTransform(lfoot_frame_id_, parent_frame_id_, stamp, odom_foot_transform);
-                // Eigen::Affine3d foot_transform_eigen, odom_foot_transform_eigen;
-                // tf::transformTFToEigen(foot_transform, foot_transform_eigen);
-                // tf::transformTFToEigen(odom_foot_transform, odom_foot_transform_eigen);
-                tf::StampedTransform lfoot_transform;
-                tf_listener_->lookupTransform(parent_frame_id_, lfoot_frame_id_, stamp, lfoot_transform);
-                tf::StampedTransform rfoot_transform;
-                tf_listener_->lookupTransform(parent_frame_id_, rfoot_frame_id_, stamp, rfoot_transform);
-                tf::Quaternion lfoot_rot = lfoot_transform.getRotation();
-                tf::Quaternion rfoot_rot = rfoot_transform.getRotation();
-                tf::Quaternion mid_rot = lfoot_rot.slerp(rfoot_rot, 0.5);
-                tf::Vector3 lfoot_pos = lfoot_transform.getOrigin();
-                tf::Vector3 rfoot_pos = rfoot_transform.getOrigin();
-                tf::Vector3 mid_pos = lfoot_pos.lerp(rfoot_pos, 0.5);
-                ground_transform_.setOrigin(mid_pos + tf::Vector3(ground_offset_[0], ground_offset_[1], ground_offset_[2]));
-                ground_transform_.setRotation(mid_rot);
-                return true;
-            }
-            catch (tf2::ConnectivityException &e)
-            {
-                ROS_ERROR("transform error: %s", e.what());
-                return false;
-            }
-            catch (tf2::InvalidArgumentException &e)
-            {
-                ROS_ERROR("transform error: %s", e.what());
-                return false;
-            }
+    else {                 
+      try 
+      {
+        tf::StampedTransform lfoot_transform;
+        tf_listener_->lookupTransform(
+          parent_frame_id_, lfoot_frame_id_, stamp, lfoot_transform);
+        tf::StampedTransform rfoot_transform;
+        tf_listener_->lookupTransform(
+          parent_frame_id_, rfoot_frame_id_, stamp, rfoot_transform);
+        tf::Quaternion lfoot_rot = lfoot_transform.getRotation();
+        tf::Quaternion rfoot_rot = rfoot_transform.getRotation();
+        tf::Quaternion mid_rot = lfoot_rot.slerp(rfoot_rot, 0.5);
+        tf::Vector3 lfoot_pos = lfoot_transform.getOrigin();
+        tf::Vector3 rfoot_pos = rfoot_transform.getOrigin();
+        tf::Vector3 mid_pos = lfoot_pos.lerp(rfoot_pos, 0.5);
+        ground_transform_.setOrigin(
+          mid_pos + tf::Vector3(ground_offset_[0],
+                                ground_offset_[1],
+                                ground_offset_[2]));
+        ground_transform_.setRotation(mid_rot);
+        return true;
+      }
+      catch (tf2::ConnectivityException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
+        return false;
+      }
+      catch (tf2::InvalidArgumentException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
+        return false;
+      }
             
-        }
     }
+  }
 
-    void Footcoords::publishGroundTF(const ros::Time& stamp)
-    {
-        tf_broadcaster_.sendTransform(tf::StampedTransform(ground_transform_, 
-                                                           stamp,
-                                                           parent_frame_id_,
-                                                           output_frame_id_
-                                                           ));
+  void Footcoords::publishGroundTF(const ros::Time& stamp)
+  {
+    tf_broadcaster_.sendTransform(tf::StampedTransform(ground_transform_, 
+                                                       stamp,
+                                                       parent_frame_id_,
+                                                       output_frame_id_
+                                    ));
                                           
-    }
+  }
 }
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "footcoords");
-    jsk_footstep_controller::Footcoords c;
-    ros::spin();
+  ros::init(argc, argv, "footcoords");
+  jsk_footstep_controller::Footcoords c;
+  ros::spin();
 }
