@@ -7,6 +7,7 @@ import rospy
 from sensor_msgs.msg import Joy, CameraInfo, JointState
 import actionlib
 import control_msgs.msg
+import hrpsys_ros_bridge.srv
 # try:
 #     from image_view2.msg import ImageMarker2
 # except:
@@ -30,7 +31,6 @@ class TrackballController:
     current_cursor = (0, 0)
     camera_info_lock = threading.Lock()
     joint_state_lock = threading.Lock()
-    msg_sequence = []
     def camCB(self, msg):
         with self.camera_info_lock:
             if self.camera_info == None:
@@ -46,8 +46,8 @@ class TrackballController:
             dx = - reduce(add, [msg.axes[0] for msg in sequence])
             dy = reduce(add, [msg.axes[1] for msg in sequence])
             print (dx, dy)
-            dpitch_deg = dx / 20.0
-            dyaw_deg = dy / 20.0
+            dpitch_deg = dx / 2.0
+            dyaw_deg = dy / 2.0
             dpitch_rad = dpitch_deg / 180.0 * math.pi
             dyaw_rad = dyaw_deg / 180.0 * math.pi
             joint_state = self.getJointState()
@@ -71,13 +71,21 @@ class TrackballController:
                                                self.yaw_joint_name]
                 p = JointTrajectoryPoint()
                 p.positions = [next_pitch, next_yaw]
-                p.time_from_start = rospy.Duration(1.0)   #1 sec
+                p.time_from_start = rospy.Duration(0.2)   #0.2 sec
                 goal.trajectory.points = [p]
                 self.ac_client.send_goal(goal)
-                #self.ac_client.wait_for_result()
+                self.ac_client.wait_for_result()
             else:
                 rospy.logwarn("the joint for pitch and yaw cannot be found in joint_states")
                 return
+    def enableHeadGroupControl(self):
+        print 'enable head joint group'
+        self.enable_head_joint_group_srv(gname='head', jnames=[self.pitch_joint_name, self.yaw_joint_name])
+        self.enable_head_control_flag = True
+    def disableHeadGroupControl(self):
+        print 'disable head joint group'
+        self.disable_head_joint_group_srv(gname='head')
+        self.enable_head_control_flag = False
     def jointCB(self, msg):
         with self.joint_state_lock:
             self.joint_state = msg
@@ -85,16 +93,15 @@ class TrackballController:
         with self.joint_state_lock:
             return self.joint_state
     def joyCB(self, msg):
-        if (msg.axes[0] == 0.0 and msg.axes[1] == 0.0
-            and msg.buttons[0] == 0 and msg.buttons[1] == 0
-            and msg.buttons[2] == 0):
-            # the end of sequence
-            self.procSequence(self.msg_sequence)
-            self.msg_sequence = []
-        elif msg.axes[0] == 0.0 and msg.axes[1] == 0.0:
-            pass                          #button...?
-        else:
-            self.msg_sequence.append(msg)
+        if not self.prev_buttons:
+            self.prev_buttons = msg.buttons
+        if (msg.buttons[0] == 1 and self.prev_buttons[0] == 0):
+            self.enableHeadGroupControl()
+        elif (msg.buttons[2] == 1 and self.prev_buttons[2] == 0):
+            self.disableHeadGroupControl()
+        elif (abs(msg.axes[0]) > 1.0 or abs(msg.axes[1]) > 1.0):
+            self.procSequence([msg])
+        self.prev_buttons = msg.buttons
     def joyCB2(self, msg):
         camera_info = self.getCameraInfo()
         if not camera_info:
@@ -116,14 +123,20 @@ class TrackballController:
         marker.scale = 10                  #5 px
         self.marker_pub.publish(marker)
     def main(self):
+        self.pitch_joint_name = rospy.get_param("~pitch_joint", "head_pan_joint")
+        self.yaw_joint_name = rospy.get_param("~yaw_joint", "head_tilt_joint")
+        self.enable_head_joint_group_srv = rospy.ServiceProxy('/SequencePlayerServiceROSBridge/addJointGroup',
+                                                         hrpsys_ros_bridge.srv.OpenHRP_SequencePlayerService_addJointGroup)
+        self.disable_head_joint_group_srv = rospy.ServiceProxy('/SequencePlayerServiceROSBridge/removeJointGroup',
+                                                         hrpsys_ros_bridge.srv.OpenHRP_SequencePlayerService_removeJointGroup)
+        self.enableHeadGroupControl()
+        self.prev_buttons = False
         self.joint_trajectory_action_name = rospy.get_param("~joint_trajectory_action", "/head_traj_controller/follow_joint_trajectory")
         self.ac_client = actionlib.SimpleActionClient(self.joint_trajectory_action_name,
                                                       control_msgs.msg.FollowJointTrajectoryAction)
         self.ac_client.wait_for_server()
-        self.pitch_joint_name = rospy.get_param("~pitch_joint", "head_pan_joint")
-        self.yaw_joint_name = rospy.get_param("~yaw_joint", "head_tilt_joint")
         #self.marker_pub = rospy.Publisher("/image_marker", ImageMarker2)
-        s = rospy.Subscriber("/trackball_joy", Joy, self.joyCB)
+        s = rospy.Subscriber("/trackball_joy", Joy, self.joyCB, queue_size=1)
         scam = rospy.Subscriber("camera_info", CameraInfo, self.camCB)
         sjs = rospy.Subscriber("/joint_states", JointState, self.jointCB)
         rospy.spin()
