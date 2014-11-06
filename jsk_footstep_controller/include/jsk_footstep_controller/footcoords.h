@@ -47,41 +47,41 @@
 
 namespace jsk_footstep_controller
 {
-    class Footcoords
-    {
-    public:
-        typedef message_filters::sync_policies::ExactTime<
-        geometry_msgs::WrenchStamped,
-        geometry_msgs::WrenchStamped> SyncPolicy;
+  class Footcoords
+  {
+  public:
+    typedef message_filters::sync_policies::ExactTime<
+    geometry_msgs::WrenchStamped,
+    geometry_msgs::WrenchStamped> SyncPolicy;
 
-        Footcoords();
-        virtual ~Footcoords();
-    protected:
+    Footcoords();
+    virtual ~Footcoords();
+  protected:
     
-        // methods
+    // methods
 
-        virtual void filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                            const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
-        virtual bool updateGroundTF(const ros::Time& stamp);
-        virtual void publishGroundTF(const ros::Time& stamp);
-        virtual void publishState(const std::string& state);
-        // ros variables
-        message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
-        message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
-        boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
-        ros::Publisher pub_state_;
-        boost::shared_ptr<tf::TransformListener> tf_listener_;
-        tf::TransformBroadcaster tf_broadcaster_;
-        // parameters
-        std::string output_frame_id_;
-        std::string parent_frame_id_;
-        double force_thr_;
-        bool before_on_the_air_;
-        std::string lfoot_frame_id_;
-        std::string rfoot_frame_id_;
-        std::vector<double> ground_offset_;
-        tf::Transform ground_transform_;
-    private:
-    };
+    virtual void filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
+                        const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
+    virtual bool updateGroundTF(const ros::Time& stamp);
+    virtual void publishGroundTF(const ros::Time& stamp);
+    virtual void publishState(const std::string& state);
+    // ros variables
+    message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
+    message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
+    boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
+    ros::Publisher pub_state_;
+    boost::shared_ptr<tf::TransformListener> tf_listener_;
+    tf::TransformBroadcaster tf_broadcaster_;
+    // parameters
+    std::string output_frame_id_;
+    std::string parent_frame_id_;
+    double force_thr_;
+    bool before_on_the_air_;
+    std::string lfoot_frame_id_;
+    std::string rfoot_frame_id_;
+    std::vector<double> ground_offset_;
+    tf::Transform ground_transform_;
+  private:
+  };
 }
 #endif
