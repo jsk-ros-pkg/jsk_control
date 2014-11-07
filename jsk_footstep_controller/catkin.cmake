@@ -5,6 +5,8 @@ find_package(catkin REQUIRED COMPONENTS
   jsk_footstep_msgs
   jsk_footstep_planner
   actionlib_msgs
+  jsk_pcl_ros
+  tf_conversions
   message_generation genmsg message_filters sensor_msgs geometry_msgs tf jsk_topic_tools
 )
 
