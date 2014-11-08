@@ -33,3 +33,6 @@ both of `lfsensor` and `rfsensor` provides enough force (the threshold is `~forc
 * `~rfoot_frame_id` (String, default: `rleg_end_coords`)
 
    frame\_ids of end effectors of two legs.
+* `~force_threshold` (Double, default: `10.0`)
+
+   Force threshold to judge which leg is on the ground
