@@ -58,7 +58,7 @@ namespace jsk_footstep_controller
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
               std::string("rleg_end_coords"));
-    pnh.param("force_threshold", force_thr_, 1.0);
+    pnh.param("force_threshold", force_thr_, 10.0);
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
     before_on_the_air_ = true;
     sub_lfoot_force_.subscribe(nh, "lfsensor", 1);
@@ -78,30 +78,33 @@ namespace jsk_footstep_controller
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                           const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
   {
-    computeMidCoords(lfoot->header.stamp);
+    
     if (lfoot->wrench.force.z < force_thr_ &&
         rfoot->wrench.force.z < force_thr_) {
       before_on_the_air_ = true;
       publishState("air");
+      computeMidCoords(lfoot->header.stamp);
+      // do not update odom_on_ground
     }
     else {
       if (lfoot->wrench.force.z > force_thr_ &&
           rfoot->wrench.force.z > force_thr_) {
         // on ground
         publishState("ground");
-        if (before_on_the_air_) {
-          if(updateGroundTF()) {
-            before_on_the_air_ = false;
-          }
-        }
+        computeMidCoords(lfoot->header.stamp);
+        updateGroundTF();
       }
       else if (lfoot->wrench.force.z > force_thr_) {
         // only left
         publishState("lfoot");
+        computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
+        updateGroundTF();
       }
       else if (rfoot->wrench.force.z > force_thr_) {
         // only right
         publishState("rfoot");
+        computeMidCoordsFromSingleLeg(lfoot->header.stamp, false);
+        updateGroundTF();
       }
     }
     publishTF(lfoot->header.stamp);
@@ -114,6 +117,41 @@ namespace jsk_footstep_controller
     pub_state_.publish(state_msg);
   }
 
+  bool Footcoords::computeMidCoordsFromSingleLeg(const ros::Time& stamp,
+                                                 bool use_left_leg)
+  {
+    if (!waitForEndEffectorTrasnformation(stamp)) {
+      ROS_ERROR("Failed to lookup endeffector transformation");
+      return false;
+    }
+    else {
+      try 
+      {
+        tf::StampedTransform foot_transform; // parent -> foot
+        if (use_left_leg) {     // left on the ground
+          tf_listener_->lookupTransform(
+            parent_frame_id_, lfoot_frame_id_, stamp, foot_transform);
+        }
+        else {                  // right on the ground
+          tf_listener_->lookupTransform(
+            parent_frame_id_, rfoot_frame_id_, stamp, foot_transform);
+        }
+        midcoords_ = foot_transform;
+        return true;
+      }
+      catch (tf2::ConnectivityException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
+        return false;
+      }
+      catch (tf2::InvalidArgumentException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
+        return false;
+      }
+    }
+  }
+  
   bool Footcoords::computeMidCoords(const ros::Time& stamp)
   {
     if (!waitForEndEffectorTrasnformation(stamp)) {
