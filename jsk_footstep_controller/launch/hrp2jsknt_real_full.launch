@@ -27,15 +27,16 @@
         output="screen">
     <rosparam subst_value="true">
       interruptible_mode: $(arg INTERRUPTIBLE)
-      interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
-      interface_class: "hrp2jsknt-interface"
+      interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l"
+      interface_class: "hrp2jsknts-interface"
     </rosparam>
   </node>
   <!-- visualization for rviz -->
 
   <arg name="POSE_REMAP" default="/footstep_marker/pose" />
-  <arg name="DEV" default="/dev/input/ps3joy" />
-  <node pkg="joy" type="joy_node" name="ps3_joy0" output="screen" >
+  <!-- <arg name="DEV" default="/dev/input/ps3joy" /> -->
+  <arg name="DEV" default="/dev/input/js3" />
+  <node pkg="joy" type="joy_node" name="joy_node" output="screen" >
     <param name="dev" type="string" value="$(arg DEV)" />
     <param name="deadzone" value="0.2" />
     <param name="autorepeat_rate" value="40" />
@@ -43,7 +44,6 @@
   </node>
 
   <node pkg="jsk_teleop_joy" type="joy.py" name="teleop_manager0" output="screen"
-        if="false"
         clear_params="true">
     <param name="controller_type" value="auto" />
     <rosparam subst_value="true">
@@ -88,7 +88,7 @@
     <remap from="refined_footstep_result" to="footstep_planner/result" />
   </node>
   <include file="$(find jsk_pcl_ros)/launch/footstep_recognition.launch" />
-  <node pkg="roseus" type="roseus" name="lookaround_ground"
+  <node pkg="roseus" type="roseus" name="lookaround_ground" if="false"
         args="$(find jsk_footstep_controller)/euslisp/lookaround-ground.l">
   </node>
 </launch>
