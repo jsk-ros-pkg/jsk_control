@@ -38,7 +38,8 @@
 
 #include <geometry_msgs/WrenchStamped.h>
 #include <tf/transform_listener.h>
-
+#include <diagnostic_updater/diagnostic_updater.h>
+#include <diagnostic_updater/publisher.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/synchronizer.h>
@@ -56,6 +57,12 @@ namespace jsk_footstep_controller
 
     Footcoords();
     virtual ~Footcoords();
+
+    enum SupportLegStatus
+    {
+      LLEG_GROUND, RLEG_GROUND, AIR, BOTH_GROUND
+    };
+
   protected:
     
     // methods
@@ -69,6 +76,7 @@ namespace jsk_footstep_controller
     virtual bool updateGroundTF();
     virtual void publishTF(const ros::Time& stamp);
     virtual void publishState(const std::string& state);
+    virtual void updateLegDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
     // ros variables
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
@@ -80,12 +88,15 @@ namespace jsk_footstep_controller
     std::string output_frame_id_;
     std::string parent_frame_id_;
     std::string midcoords_frame_id_;
+    SupportLegStatus support_status_;
     double force_thr_;
     bool before_on_the_air_;
     std::string lfoot_frame_id_;
     std::string rfoot_frame_id_;
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
+    boost::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
+
   private:
   };
 }
