@@ -63,6 +63,8 @@ namespace jsk_footstep_controller
     virtual void filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                         const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
     virtual bool computeMidCoords(const ros::Time& stamp);
+    virtual bool computeMidCoordsFromSingleLeg(const ros::Time& stamp,
+                                               bool use_left_leg);
     virtual bool waitForEndEffectorTrasnformation(const ros::Time& stamp);
     virtual bool updateGroundTF();
     virtual void publishTF(const ros::Time& stamp);
