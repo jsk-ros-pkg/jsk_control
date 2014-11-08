@@ -43,12 +43,16 @@
 namespace jsk_footstep_controller
 {
 
-  Footcoords::Footcoords()
+  Footcoords::Footcoords():
+    diagnostic_updater_(new diagnostic_updater::Updater)
   {
     ros::NodeHandle nh, pnh("~");
     tf_listener_.reset(new tf::TransformListener());
     ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
     midcoords_.setRotation(tf::Quaternion(0, 0, 0, 1));
+    diagnostic_updater_->setHardwareID("none");
+    diagnostic_updater_->add("Support Leg Status", this, 
+                             &Footcoords::updateLegDiagnostics);
     // read parameter
     pnh.param("output_frame_id", output_frame_id_,
               std::string("odom_on_ground"));
@@ -73,7 +77,25 @@ namespace jsk_footstep_controller
 
   }
 
-
+  void Footcoords::updateLegDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat)
+  {
+    // air -> warn
+    // single leg, dual leg -> ok
+    if (support_status_ == AIR) {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::WARN, "On Air");
+    }
+    else {
+      if (support_status_ == LLEG_GROUND) {
+        stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "Left leg on the ground");
+      }
+      else if (support_status_ == RLEG_GROUND) {
+        stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "Right leg on the ground");
+      }
+      else if (support_status_ == BOTH_GROUND) {
+        stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "Both legs on the ground");
+      }
+    }
+  }
 
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                           const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
@@ -82,6 +104,7 @@ namespace jsk_footstep_controller
     if (lfoot->wrench.force.z < force_thr_ &&
         rfoot->wrench.force.z < force_thr_) {
       before_on_the_air_ = true;
+      support_status_ = AIR;
       publishState("air");
       computeMidCoords(lfoot->header.stamp);
       // do not update odom_on_ground
@@ -90,24 +113,28 @@ namespace jsk_footstep_controller
       if (lfoot->wrench.force.z > force_thr_ &&
           rfoot->wrench.force.z > force_thr_) {
         // on ground
+        support_status_ = BOTH_GROUND;
         publishState("ground");
         computeMidCoords(lfoot->header.stamp);
         updateGroundTF();
       }
       else if (lfoot->wrench.force.z > force_thr_) {
         // only left
+        support_status_ = LLEG_GROUND;
         publishState("lfoot");
         computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
         updateGroundTF();
       }
       else if (rfoot->wrench.force.z > force_thr_) {
         // only right
+        support_status_ = RLEG_GROUND;
         publishState("rfoot");
         computeMidCoordsFromSingleLeg(lfoot->header.stamp, false);
         updateGroundTF();
       }
     }
     publishTF(lfoot->header.stamp);
+    diagnostic_updater_->update();
   }
   
   void Footcoords::publishState(const std::string& state)
