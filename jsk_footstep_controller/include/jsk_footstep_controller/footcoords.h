@@ -45,6 +45,7 @@
 #include <message_filters/synchronizer.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+#include <jsk_footstep_controller/GroundContactState.h>
 
 namespace jsk_footstep_controller
 {
@@ -77,11 +78,13 @@ namespace jsk_footstep_controller
     virtual void publishTF(const ros::Time& stamp);
     virtual void publishState(const std::string& state);
     virtual void updateLegDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
+    virtual void publishContactState(const ros::Time& stamp);
     // ros variables
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
     ros::Publisher pub_state_;
+    ros::Publisher pub_contact_state_;
     boost::shared_ptr<tf::TransformListener> tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
     // parameters
