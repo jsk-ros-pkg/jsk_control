@@ -37,6 +37,10 @@
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
   ;; 2. apply the inverse transformation to footstep-ocorods[1:]
   ;; 3. convert the footstep respected to hrpsys-mid-coords
+  (send *hrp2jsknts* :reset-manip-pose)
+  (send *hrp2jsknts* :legs :move-end-pos (float-vector 0 0 50))
+  (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+  (send *ri* :wait-interpolation)
   (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
          (progn
            (print 'resuming)
@@ -83,9 +87,13 @@
 (defun proc-goal-cb (server goal)
   (if *interruptible-mode*
       (progn
-        (if (<= (length *footstep-list*) 1)
-            (let ((result (send server :result)))
-              (send server :set-succeeded result))
+        (if (<= (length *footstep-list*) 1) ;finish
+            (progn
+              (send *hrp2jsknts* :reset-manip-pose)
+              (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+              (send *ri* :wait-interpolation)
+              (let ((result (send server :result)))
+                (send server :set-succeeded result)))
           (let ((first-step (pop *footstep-list*))
                 (second-step (car *footstep-list*)))
             (send *ri* :set-foot-steps (list first-step second-step))
@@ -94,6 +102,9 @@
       (print (send-all *footstep-list* :name))
       (send *ri* :set-foot-steps *footstep-list*)
       (setq *footstep-list* nil)
+      (send *hrp2jsknts* :reset-manip-pose)
+      (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+      (send *ri* :wait-interpolation)
       (send server :set-succeeded (send server :result))
       )
     ))
@@ -135,6 +146,8 @@
     (load interface-file)
     (setq *ri* (instance (eval (read-from-string interface-class)) :init
                          :controller-timeout nil))
+    ;; 
+    (hrp2jsknts-init)
     (send *ri* :start-st)
     (send *ri* :start-auto-balancer)
     )
@@ -155,3 +168,11 @@
       (ros::sleep))))
 
 (main)
+
+
+#|
+(setq aa '((#J(coordinates ((:name . :rleg)) #J(array nil #f(0.99987 0.002702 0.01588 -0.002847 0.999954 0.009123 -0.015855 -0.009167 0.999832) 2 nil 0 3 3 nil nil nil nil nil) #f(-2.5818 -134.762 -11.945)) #J(coordinates ((:name . :lleg)) #J(array nil #f(0.999716 0.000819 0.02382 -0.000794 0.999999 -0.001046 -0.023821 0.001027 0.999716) 2 nil 0 3 3 nil nil nil nil nil) #f(94.3242 52.2552 -16.8706)) #J(coordinates ((:name . :rleg)) #J(array nil #f(0.999716 0.000819 0.02382 -0.000794 0.999999 -0.001046 -0.023821 0.001027 0.999716) 2 nil 0 3 3 nil nil nil nil nil) #f(94.1522 -157.745 -17.0863)))))
+(dotimes (i (1- (length footsteps)))
+  (print (rad2deg (acos (v. (normalize-vector (send (elt footsteps i) :z-axis)) (normalize-vector (send (elt footsteps (1+ i)) :z-axis)))))
+  )
+|#
