@@ -9,7 +9,7 @@
             (format nil "    rpy: (~A, ~A, ~A)" 0 0 0))
     (let ((prev-coords (ros::tf-pose->coords (send prev-footstep :pose)))
           (coords (ros::tf-pose->coords (send next-footstep :pose))))
-      (let ((trans (send coords :transformation prev-coords)))
+      (let ((trans (send prev-coords :transformation coords)))
         (list (format nil "    pos: (~1,2f, ~1,2f, ~1,2f)" 
                       (* 0.001 (elt (send trans :worldpos) 0))
                       (* 0.001 (elt (send trans :worldpos) 1))
@@ -19,7 +19,7 @@
                       (rad2deg (caddr (car (send trans :rpy-angle))))
                       (rad2deg (cadr (car (send trans :rpy-angle))))
                       (rad2deg (car (car (send trans :rpy-angle))))))))))
-
+(setq *counter* 0)
 (defun publish-text (footstep)
   (let ((text (instance jsk_rviz_plugins::OverlayText :init)))
     (send text :width 500)
@@ -27,13 +27,11 @@
     (send text :text_size 12)
     (send text :bg_color :a 0.0)
     (send text :fg_color :a 1.0)
-    (send text :fg_color :r (/ 25.0 255.0))
-    (send text :fg_color :g 1)
-    (send text :fg_color :b 1)
     (send text :left 10)
     (send text :top 10)
-    (let ((texts (list (format nil "Footsteps: ~A"
-                               (length (send footstep :footsteps)))))
+    (let ((texts (list (format nil "Footsteps: ~A (~A)"
+                               (length (send footstep :footsteps))
+                               *counter*)))
           (prev-footstep nil))
       (dotimes (i (length (send footstep :footsteps)))
         (let ((f (elt (send footstep :footsteps) i)))
@@ -46,6 +44,16 @@
           (setq texts (append texts (footstep-transform-text prev-footstep f)))
           (setq prev-footstep f)))
       (send text :text (reduce #'(lambda (x y) (format nil "~A~%~A" x y)) texts)))
+    (if (= (length (send footstep :footsteps)) 0)
+        (progn
+          (send text :fg_color :r 1)
+          (send text :fg_color :g 0)
+          (send text :fg_color :b 0))
+      (progn
+          (send text :fg_color :r (/ 25.0 255.0))
+          (send text :fg_color :g 1)
+          (send text :fg_color :b 1)))
+    (incf *counter*)
     (ros::publish "footstep_text" text)))
 
 (defun footstep-callback (msg)
