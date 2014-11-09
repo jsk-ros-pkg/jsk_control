@@ -145,6 +145,12 @@
                                                                          (send f :leg (car s))
                                                                          f)))
                                                                  final-steps))))))
+                ;; set the size of footsteps
+                (send-all (send footsteps :footsteps)
+                          :dimensions (instance geometry_msgs::Vector3 :init
+                                                :x (* 0.001 *leg-size-x*)
+                                                :y (* 0.001 *leg-size-y*)
+                                                :z (* 0.001 *leg-size-z*)))
                 (send result :result footsteps)
                 ;; publish the result for visualization
                 (let ((str
