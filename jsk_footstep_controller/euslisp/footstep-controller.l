@@ -5,6 +5,13 @@
 (ros::roseus-add-srvs "jsk_footstep_controller")
 
 (defvar *all-the-results* nil)
+
+(setq *realp* nil)
+;; :standing
+;; :plane
+;; :climing-up
+(setq *walking-state* :standing)
+(setq *prev-footstep* nil)
 (setq *footstep-list* nil)
 (setq *goal-id* nil)
 (setq *footstep-list-bak* nil)
@@ -32,15 +39,41 @@
      (send *ri* :abc-footstep->eus-footstep (send param :rleg_coords))
      (send *ri* :abc-footstep->eus-footstep (send param :lleg_coords)))))
 
+(defun walking-pose
+  (robot
+   &key (root-link-height-offset 0) ;; [mm]
+        (root-link-pitch-offset 0) ;; [deg]
+        (fix-coords (make-coords))
+        (default-pose-method :reset-manip-pose))
+  (send robot default-pose-method)
+  (send robot :fix-leg-to-coords fix-coords)
+  (let ((lc (mapcar #'(lambda (l)
+                        (send robot l :end-coords :copy-worldcoords))
+                    '(:rleg :lleg))))
+    (send robot :move-coords
+          (send
+           (send (send (car (send robot :links)) :copy-worldcoords)
+                 :translate (float-vector 0 0 root-link-height-offset))
+           :rotate (deg2rad root-link-pitch-offset) :y)
+          (car (send robot :links)))
+    (mapcar #'(lambda (l c)
+                (send robot l :inverse-kinematics c))
+            '(:rleg :lleg) lc)
+    (send robot :move-centroid-on-foot :both '(:rleg :lleg))
+    (send robot :angle-vector)
+    ))
+
+
 (defun new-goal-cb (server goal)
   ;; coordinate transformation:
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
   ;; 2. apply the inverse transformation to footstep-ocorods[1:]
   ;; 3. convert the footstep respected to hrpsys-mid-coords
-  (send *hrp2jsknts* :reset-manip-pose)
-  (send *hrp2jsknts* :legs :move-end-pos (float-vector 0 0 50))
-  (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
-  (send *ri* :wait-interpolation)
+  (if (not *interruptible-mode*)
+      (when *realp*
+        (walking-pose *hrp2jsknts* :root-link-height-offset -50)
+        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (send *ri* :wait-interpolation)))
   (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
          (progn
            (print 'resuming)
@@ -84,27 +117,82 @@
                    (setq *goal-id* (send goal :goal_id :id))
                    ))))))))
 
+(defun change-standing-mode (first-step next-step)
+  (let ((next nil))
+    (cond ((and (null first-step) (null next-step))
+           (setq next :standing))
+          ((> (abs (elt (send (send next-step :transformation first-step) :worldpos) 2)) 10) ;1cm
+           (setq next :climing-up))
+          ((eq *walking-state* :climing-up)
+           (setq next :climing-up2))
+          (t
+           (setq next :plane)))
+    (ros::ros-info "walking state: ~A ==> ~A" *walking-state* next)
+    (cond
+     ;; N
+     ((or (and (eq next :standing) (eq *walking-state* :standing))
+          (and (eq next :plane) (eq *walking-state* :plane))
+          (and (eq *walking-state* :climing-up) (eq next :standing))
+          (and (eq *walking-state* :climing-up) (eq next :climing-up2))
+          (and (eq *walking-state* :climing-up2) (eq next :climing-up)))
+      (ros::ros-warn "do nothing about posture")
+      )
+     ;; G
+     ((or (and (eq *walking-state* :plane) (eq next :standing))
+          (and (eq *walking-state* :climing-up2) (eq next :standing)))
+      (when *realp*
+        (walking-pose *hrp2jsknts* :root-link-height-offset 0)
+        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (send *ri* :wait-interpolation)
+        (send *ri* :set-gait-generator-param :default-orbit-type :cycloid))
+      (ros::ros-warn "move down 0 mm and change mode to cycloid"))
+     ;; A
+     ((or (and (eq *walking-state* :standing) (eq next :plane))
+          (and (eq *walking-state* :climing-up2) (eq next :plane)))
+      (when *realp*
+        (walking-pose *hrp2jsknts* :root-link-height-offset -50)
+        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (send *ri* :wait-interpolation)
+        (send *ri* :set-gait-generator-param :default-orbit-type :cycloid))
+      (ros::ros-warn "move down -50 mm and change mode to cycloid"))
+     ;; B
+     ((or (and (eq *walking-state* :standing) (eq next :climing-up))
+          (and (eq *walking-state* :plane) (eq next :climing-up)))
+      
+      (when *realp*
+        (walking-pose *hrp2jsknts* :root-link-height-offset -90)
+        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (send *ri* :wait-interpolation)
+        (send *ri* :set-gait-generator-param :default-orbit-type :stair))
+      (ros::ros-warn "move down -90 mm and change mode to stair"))
+     (t
+      (ros::ros-error "Unknown mode change ~A => ~A" *walking-state* next)))
+    (setq *walking-state* next)))
+
 (defun proc-goal-cb (server goal)
   (if *interruptible-mode*
       (progn
+        (ros::ros-info "remaining footsteps: ~A" (length *footstep-list*))
         (if (<= (length *footstep-list*) 1) ;finish
             (progn
-              (send *hrp2jsknts* :reset-manip-pose)
-              (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
-              (send *ri* :wait-interpolation)
+              (change-standing-mode nil nil)
               (let ((result (send server :result)))
                 (send server :set-succeeded result)))
           (let ((first-step (pop *footstep-list*))
                 (second-step (car *footstep-list*)))
-            (send *ri* :set-foot-steps (list first-step second-step))
+            (change-standing-mode first-step second-step)
+            (when *realp*
+              (send *ri* :set-foot-steps (list first-step second-step)))
             )))
     (progn
       (print (send-all *footstep-list* :name))
-      (send *ri* :set-foot-steps *footstep-list*)
+      (when *realp*
+        (send *ri* :set-foot-steps *footstep-list*))
       (setq *footstep-list* nil)
-      (send *hrp2jsknts* :reset-manip-pose)
-      (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
-      (send *ri* :wait-interpolation)
+      (when *realp*
+        (walking-pose *hrp2jsknts* :root-link-height-offset 0)
+        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (send *ri* :wait-interpolation))
       (send server :set-succeeded (send server :result))
       )
     ))
@@ -147,10 +235,7 @@
     (setq *ri* (instance (eval (read-from-string interface-class)) :init
                          :controller-timeout nil))
     ;; 
-    (hrp2jsknts-init)
-    (send *ri* :start-st)
-    (send *ri* :start-auto-balancer)
-    )
+    (hrp2jsknts-init))
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
   (ros::advertise-service "require_log"
@@ -162,6 +247,7 @@
                      :execute-cb 'execute-cb
                      :preempt-cb 'preempt-cb)))
     (ros::rate 10)
+    (ros::ros-info "footstep controller is ready")
     (while (ros::ok)
       (send s :worker)
       (ros::spin-once)
