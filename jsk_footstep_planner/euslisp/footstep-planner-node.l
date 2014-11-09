@@ -226,7 +226,8 @@
   ;; read parameters
   
   ;; hrp2 footstep size is default
-  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
+  ;;(let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
+  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.227)))
         (leg-size-z (* 1000.0 (ros::get-param "~leg_height" 0.001)))
         (leg-size-y (* 1000.0 (ros::get-param "~leg_width" 0.135))))
     (setq *leg-size-x* leg-size-x)
