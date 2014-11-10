@@ -38,12 +38,14 @@
 
 #include <geometry_msgs/WrenchStamped.h>
 #include <tf/transform_listener.h>
-
+#include <diagnostic_updater/diagnostic_updater.h>
+#include <diagnostic_updater/publisher.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/synchronizer.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+#include <jsk_footstep_controller/GroundContactState.h>
 
 namespace jsk_footstep_controller
 {
@@ -56,6 +58,12 @@ namespace jsk_footstep_controller
 
     Footcoords();
     virtual ~Footcoords();
+
+    enum SupportLegStatus
+    {
+      LLEG_GROUND, RLEG_GROUND, AIR, BOTH_GROUND
+    };
+
   protected:
     
     // methods
@@ -63,27 +71,35 @@ namespace jsk_footstep_controller
     virtual void filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                         const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
     virtual bool computeMidCoords(const ros::Time& stamp);
+    virtual bool computeMidCoordsFromSingleLeg(const ros::Time& stamp,
+                                               bool use_left_leg);
     virtual bool waitForEndEffectorTrasnformation(const ros::Time& stamp);
     virtual bool updateGroundTF();
     virtual void publishTF(const ros::Time& stamp);
     virtual void publishState(const std::string& state);
+    virtual void updateLegDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
+    virtual void publishContactState(const ros::Time& stamp);
     // ros variables
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
     ros::Publisher pub_state_;
+    ros::Publisher pub_contact_state_;
     boost::shared_ptr<tf::TransformListener> tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
     // parameters
     std::string output_frame_id_;
     std::string parent_frame_id_;
     std::string midcoords_frame_id_;
+    SupportLegStatus support_status_;
     double force_thr_;
     bool before_on_the_air_;
     std::string lfoot_frame_id_;
     std::string rfoot_frame_id_;
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
+    boost::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
+
   private:
   };
 }
