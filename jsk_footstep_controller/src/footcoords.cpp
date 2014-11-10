@@ -43,12 +43,16 @@
 namespace jsk_footstep_controller
 {
 
-  Footcoords::Footcoords()
+  Footcoords::Footcoords():
+    diagnostic_updater_(new diagnostic_updater::Updater)
   {
     ros::NodeHandle nh, pnh("~");
     tf_listener_.reset(new tf::TransformListener());
     ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
     midcoords_.setRotation(tf::Quaternion(0, 0, 0, 1));
+    diagnostic_updater_->setHardwareID("none");
+    diagnostic_updater_->add("Support Leg Status", this, 
+                             &Footcoords::updateLegDiagnostics);
     // read parameter
     pnh.param("output_frame_id", output_frame_id_,
               std::string("odom_on_ground"));
@@ -58,8 +62,9 @@ namespace jsk_footstep_controller
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
               std::string("rleg_end_coords"));
-    pnh.param("force_threshold", force_thr_, 1.0);
+    pnh.param("force_threshold", force_thr_, 10.0);
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
+    pub_contact_state_ = pnh.advertise<jsk_footstep_controller::GroundContactState>("contact_state", 1);
     before_on_the_air_ = true;
     sub_lfoot_force_.subscribe(nh, "lfsensor", 1);
     sub_rfoot_force_.subscribe(nh, "rfsensor", 1);
@@ -73,38 +78,65 @@ namespace jsk_footstep_controller
 
   }
 
-
+  void Footcoords::updateLegDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat)
+  {
+    // air -> warn
+    // single leg, dual leg -> ok
+    if (support_status_ == AIR) {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::WARN, "On Air");
+    }
+    else {
+      if (support_status_ == LLEG_GROUND) {
+        stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "Left leg on the ground");
+      }
+      else if (support_status_ == RLEG_GROUND) {
+        stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "Right leg on the ground");
+      }
+      else if (support_status_ == BOTH_GROUND) {
+        stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "Both legs on the ground");
+      }
+    }
+  }
 
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                           const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
   {
-    computeMidCoords(lfoot->header.stamp);
+    
     if (lfoot->wrench.force.z < force_thr_ &&
         rfoot->wrench.force.z < force_thr_) {
       before_on_the_air_ = true;
+      support_status_ = AIR;
       publishState("air");
+      computeMidCoords(lfoot->header.stamp);
+      // do not update odom_on_ground
     }
     else {
       if (lfoot->wrench.force.z > force_thr_ &&
           rfoot->wrench.force.z > force_thr_) {
         // on ground
+        support_status_ = BOTH_GROUND;
         publishState("ground");
-        if (before_on_the_air_) {
-          if(updateGroundTF()) {
-            before_on_the_air_ = false;
-          }
-        }
+        computeMidCoords(lfoot->header.stamp);
+        updateGroundTF();
       }
       else if (lfoot->wrench.force.z > force_thr_) {
         // only left
+        support_status_ = LLEG_GROUND;
         publishState("lfoot");
+        computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
+        updateGroundTF();
       }
       else if (rfoot->wrench.force.z > force_thr_) {
         // only right
+        support_status_ = RLEG_GROUND;
         publishState("rfoot");
+        computeMidCoordsFromSingleLeg(lfoot->header.stamp, false);
+        updateGroundTF();
       }
     }
     publishTF(lfoot->header.stamp);
+    diagnostic_updater_->update();
+    publishContactState(lfoot->header.stamp);
   }
   
   void Footcoords::publishState(const std::string& state)
@@ -113,7 +145,84 @@ namespace jsk_footstep_controller
     state_msg.data = state;
     pub_state_.publish(state_msg);
   }
+  
+  void Footcoords::publishContactState(const ros::Time& stamp)
+  {
+    GroundContactState contact_state;
+    contact_state.header.stamp = stamp;
+    if (support_status_ == AIR) {
+      contact_state.contact_state
+        = GroundContactState::CONTACT_AIR;
+    }
+    else if (support_status_ == LLEG_GROUND) {
+      contact_state.contact_state 
+        = GroundContactState::CONTACT_LLEG_GROUND;
+    }
+    else if (support_status_ == RLEG_GROUND) {
+      contact_state.contact_state 
+        = GroundContactState::CONTACT_RLEG_GROUND;
+    }
+    else if (support_status_ == BOTH_GROUND) {
+      contact_state.contact_state
+        = GroundContactState::CONTACT_BOTH_GROUND;
+    }
+    try 
+    {
+      tf::StampedTransform foot_transform;
+      tf_listener_->lookupTransform(
+        lfoot_frame_id_, rfoot_frame_id_, stamp, foot_transform);
+      double roll, pitch, yaw;
+      foot_transform.getBasis().getRPY(roll, pitch, yaw);
+      contact_state.error_pitch_angle = std::abs(pitch);
+      contact_state.error_roll_angle = std::abs(roll);
+      contact_state.error_yaw_angle = std::abs(yaw);
+      pub_contact_state_.publish(contact_state);
+    }
+    catch (tf2::ConnectivityException &e)
+    {
+      ROS_ERROR("transform error: %s", e.what());
+    }
+    catch (tf2::InvalidArgumentException &e)
+    {
+      ROS_ERROR("transform error: %s", e.what());
+    }
+  }
 
+  bool Footcoords::computeMidCoordsFromSingleLeg(const ros::Time& stamp,
+                                                 bool use_left_leg)
+  {
+    if (!waitForEndEffectorTrasnformation(stamp)) {
+      ROS_ERROR("Failed to lookup endeffector transformation");
+      return false;
+    }
+    else {
+      try 
+      {
+        tf::StampedTransform foot_transform; // parent -> foot
+        if (use_left_leg) {     // left on the ground
+          tf_listener_->lookupTransform(
+            parent_frame_id_, lfoot_frame_id_, stamp, foot_transform);
+        }
+        else {                  // right on the ground
+          tf_listener_->lookupTransform(
+            parent_frame_id_, rfoot_frame_id_, stamp, foot_transform);
+        }
+        midcoords_ = foot_transform;
+        return true;
+      }
+      catch (tf2::ConnectivityException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
+        return false;
+      }
+      catch (tf2::InvalidArgumentException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
+        return false;
+      }
+    }
+  }
+  
   bool Footcoords::computeMidCoords(const ros::Time& stamp)
   {
     if (!waitForEndEffectorTrasnformation(stamp)) {
@@ -170,6 +279,15 @@ namespace jsk_footstep_controller
                 rfoot_frame_id_.c_str());
       return false;
     }
+    // lfoot -> rfoot
+    else if (!tf_listener_->waitForTransform(
+               lfoot_frame_id_, rfoot_frame_id_, stamp, ros::Duration(1.0))) {
+      ROS_ERROR("failed to lookup transform between %s and %s",
+                lfoot_frame_id_.c_str(),
+                rfoot_frame_id_.c_str());
+      return false;
+    }
+
     return true;
   }
   
