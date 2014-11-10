@@ -400,6 +400,19 @@ footstep-parameter"))
                         (setq new-candidate (list c))
                         ))))
                 (setq next-coords-candidate new-candidate))))
+        ;; check x transition
+        (dolist (c next-coords-candidate)
+          (let ((trans (send current-step-coords :transformation (cdr c))))
+            (when (> (elt (send trans :worldpos) 0) 250)
+              ;; force to use 250
+              (send trans :locate (float-vector
+                                   250
+                                   (elt (send trans :worldpos) 1)
+                                   (elt (send trans :worldpos) 2))
+                    :world)
+              (send (cdr c) :newcoords (send (send current-step-coords :copy-worldcoords) :transform trans))
+              (send (cdr c) :worldpos)
+              )))
         ;; check z transition
         (when (send state :prev-coords)
           (let* ((prev-step-coords (send (send state :prev-coords) :copy-worldcoords))
