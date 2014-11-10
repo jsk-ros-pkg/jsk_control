@@ -400,6 +400,24 @@ footstep-parameter"))
                         (setq new-candidate (list c))
                         ))))
                 (setq next-coords-candidate new-candidate))))
+        ;; check z transition
+        (when (send state :prev-coords)
+          (let* ((prev-step-coords (send (send state :prev-coords) :copy-worldcoords))
+                 (trans (send prev-step-coords :transformation (send current-step-coords :copy-worldcoords))))
+            (when (> (abs (elt (send trans :worldpos) 2)) 50) ;over 5cm change
+              ;; reduce next-coords-candidate
+              (setq next-coords-candidate 
+                    (remove-if #'(lambda (c)
+                                   (let* ((cc (cdr c)) ;cc is coordinate
+                                          (next-trans (send current-step-coords :transformation
+                                                            cc)))
+                                     (if (> (abs (elt (send next-trans :worldpos) 0)) 10) ;over 1cm 
+                                         (progn
+                                           (ros::ros-info "reduce candidate because ~A x transition"
+                                                          (elt (send next-trans :worldpos) 0))
+                                           nil)
+                                       c)))
+                               next-coords-candidate)))))
         ;; remove steps collide with obstacles
         (let ((ret nil))
           (dolist (c next-coords-candidate)
