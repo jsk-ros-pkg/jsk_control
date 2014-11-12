@@ -101,13 +101,13 @@ namespace jsk_footstep_controller
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                           const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
   {
-    
+    bool success_to_update = false;
     if (lfoot->wrench.force.z < force_thr_ &&
         rfoot->wrench.force.z < force_thr_) {
       before_on_the_air_ = true;
       support_status_ = AIR;
       publishState("air");
-      computeMidCoords(lfoot->header.stamp);
+      success_to_update = computeMidCoords(lfoot->header.stamp);
       // do not update odom_on_ground
     }
     else {
@@ -116,27 +116,29 @@ namespace jsk_footstep_controller
         // on ground
         support_status_ = BOTH_GROUND;
         publishState("ground");
-        computeMidCoords(lfoot->header.stamp);
+        success_to_update = computeMidCoords(lfoot->header.stamp);
         updateGroundTF();
       }
       else if (lfoot->wrench.force.z > force_thr_) {
         // only left
         support_status_ = LLEG_GROUND;
         publishState("lfoot");
-        computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
+        success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
         updateGroundTF();
       }
       else if (rfoot->wrench.force.z > force_thr_) {
         // only right
         support_status_ = RLEG_GROUND;
         publishState("rfoot");
-        computeMidCoordsFromSingleLeg(lfoot->header.stamp, false);
+        success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, false);
         updateGroundTF();
       }
     }
-    publishTF(lfoot->header.stamp);
-    diagnostic_updater_->update();
-    publishContactState(lfoot->header.stamp);
+    if (success_to_update) {
+      publishTF(lfoot->header.stamp);
+      diagnostic_updater_->update();
+      publishContactState(lfoot->header.stamp);
+    }
   }
   
   void Footcoords::publishState(const std::string& state)
@@ -186,6 +188,10 @@ namespace jsk_footstep_controller
     {
       ROS_ERROR("transform error: %s", e.what());
     }
+    catch (tf2::ExtrapolationException &e)
+    {
+      ROS_ERROR("transform error: %s", e.what());
+    }
   }
 
   bool Footcoords::computeMidCoordsFromSingleLeg(const ros::Time& stamp,
@@ -219,6 +225,10 @@ namespace jsk_footstep_controller
       {
         ROS_ERROR("transform error: %s", e.what());
         return false;
+      }
+      catch (tf2::ExtrapolationException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
       }
     }
   }
@@ -257,6 +267,10 @@ namespace jsk_footstep_controller
       {
         ROS_ERROR("transform error: %s", e.what());
         return false;
+      }
+      catch (tf2::ExtrapolationException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
       }
     }
   }
