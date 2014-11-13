@@ -178,6 +178,7 @@ namespace jsk_footstep_controller
       contact_state.error_pitch_angle = std::abs(pitch);
       contact_state.error_roll_angle = std::abs(roll);
       contact_state.error_yaw_angle = std::abs(yaw);
+      contact_state.error_z = std::abs(foot_transform.getOrigin().z());
       pub_contact_state_.publish(contact_state);
     }
     catch (tf2::ConnectivityException &e)

@@ -9,3 +9,4 @@ uint8 contact_state
 float64 error_pitch_angle
 float64 error_roll_angle
 float64 error_yaw_angle
+float64 error_z
