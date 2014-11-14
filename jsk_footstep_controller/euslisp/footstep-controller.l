@@ -2,10 +2,12 @@
 
 ;; forostep-controller.l
 (ros::roseus-add-msgs "jsk_footstep_msgs")
+(ros::roseus-add-msgs "jsk_rviz_plugins")
 (ros::roseus-add-srvs "jsk_footstep_controller")
 
 (defvar *all-the-results* nil)
 
+;;(setq *realp* t)
 (setq *realp* nil)
 ;; :standing
 ;; :plane
@@ -31,6 +33,11 @@
               :lleg
             :rleg))
     coords))
+
+(defun publish-breakpoint-text (text)
+  (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
+    (send msg :text text)
+    (ros::publish "breakpoint_text" msg)))
 
 (defun hrpsys-init-coords ()
   (let ((param (send *ri* :get-foot-step-param)))
@@ -117,14 +124,40 @@
                    (setq *goal-id* (send goal :goal_id :id))
                    ))))))))
 
+
+(defun walking-pose
+  (robot
+   &key (root-link-height-offset 0) ;; [mm]
+        (root-link-pitch-offset 0) ;; [deg]
+        (fix-coords (make-coords))
+        (default-pose-method :reset-manip-pose))
+  (send robot default-pose-method)
+  (send robot :fix-leg-to-coords fix-coords)
+  (let ((lc (mapcar #'(lambda (l)
+                        (send robot l :end-coords :copy-worldcoords))
+                    '(:rleg :lleg))))
+    (send robot :move-coords
+          (send
+           (send (send (car (send robot :links)) :copy-worldcoords)
+                 :translate (float-vector 0 0 root-link-height-offset))
+           :rotate (deg2rad root-link-pitch-offset) :y)
+          (car (send robot :links)))
+    (mapcar #'(lambda (l c)
+                (send robot l :inverse-kinematics c))
+            '(:rleg :lleg) lc)
+    (send robot :move-centroid-on-foot :both '(:rleg :lleg))
+    (send robot :angle-vector)
+    ))
+
 (defun change-standing-mode (first-step next-step)
   (let ((next nil))
     (cond ((and (null first-step) (null next-step))
            (setq next :standing))
           ((> (abs (elt (send (send next-step :transformation first-step) :worldpos) 2)) 10) ;1cm
            (setq next :climing-up))
-          ((eq *walking-state* :climing-up)
-           (setq next :climing-up2))
+          ;; hack
+          ;; ((eq *walking-state* :climing-up)
+          ;;  (setq next :climing-up2))
           (t
            (setq next :plane)))
     (ros::ros-info "walking state: ~A ==> ~A" *walking-state* next)
@@ -170,20 +203,33 @@
     (setq *walking-state* next)))
 
 (defun proc-goal-cb (server goal)
+  (publish-breakpoint-text " ")
   (if *interruptible-mode*
       (progn
         (ros::ros-info "remaining footsteps: ~A" (length *footstep-list*))
-        (if (<= (length *footstep-list*) 1) ;finish
-            (progn
-              (change-standing-mode nil nil)
-              (let ((result (send server :result)))
-                (send server :set-succeeded result)))
-          (let ((first-step (pop *footstep-list*))
-                (second-step (car *footstep-list*)))
-            (change-standing-mode first-step second-step)
-            (when *realp*
-              (send *ri* :set-foot-steps (list first-step second-step)))
-            )))
+        (cond ((<= (length *footstep-list*) 1) ;finish
+               (progn
+                 (change-standing-mode nil nil)
+                 (publish-breakpoint-text " ")
+                 (let ((result (send server :result)))
+                   (send server :set-succeeded result))))
+              (t
+               (publish-breakpoint-text " ")
+               (let ((first-step (pop *footstep-list*))
+                     (second-step (car *footstep-list*)))
+                 (change-standing-mode first-step second-step)
+                 (if (eq *walking-state* :climing-up) ;hack
+                     (progn
+                       (let ((third-step (cadr *footstep-list*)))
+                         (when *realp*
+                           (send *ri* :set-foot-steps (list first-step second-step third-step)))
+                         (pop *footstep-list*)))
+                   (when *realp*
+                     (send *ri* :set-foot-steps (list first-step second-step)))
+                   ))
+               (publish-breakpoint-text "Breakpoint!")
+               (unix:sleep 1)
+               )))
     (progn
       (print (send-all *footstep-list* :name))
       (when *realp*
@@ -241,6 +287,7 @@
   (ros::advertise-service "require_log"
     jsk_footstep_controller::RequireLog
     #'require-log-service-callback)
+  (ros::advertise "breakpoint_text" jsk_rviz_plugins::OverlayText)
   (let ((s (instance ros::simple-action-server :init
                      "footstep_controller"
                      jsk_footstep_msgs::ExecFootstepsAction
