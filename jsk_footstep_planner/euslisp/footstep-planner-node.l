@@ -145,6 +145,12 @@
                                                                          (send f :leg (car s))
                                                                          f)))
                                                                  final-steps))))))
+                ;; set the size of footsteps
+                (send-all (send footsteps :footsteps)
+                          :dimensions (instance geometry_msgs::Vector3 :init
+                                                :x (* 0.001 *leg-size-x*)
+                                                :y (* 0.001 *leg-size-y*)
+                                                :z (* 0.001 *leg-size-z*)))
                 (send result :result footsteps)
                 ;; publish the result for visualization
                 (let* ((now (ros::time-now))
@@ -235,7 +241,8 @@
   ;; read parameters
   
   ;; hrp2 footstep size is default
-  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
+  ;;(let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
+  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.227)))
         (leg-size-z (* 1000.0 (ros::get-param "~leg_height" 0.001)))
         (leg-size-y (* 1000.0 (ros::get-param "~leg_width" 0.135))))
     (setq *leg-size-x* leg-size-x)

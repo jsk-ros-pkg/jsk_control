@@ -7,7 +7,8 @@
 
 (defvar *all-the-results* nil)
 
-(setq *realp* t)
+;;(setq *realp* t)
+(setq *realp* nil)
 ;; :standing
 ;; :plane
 ;; :climing-up
@@ -45,15 +46,41 @@
      (send *ri* :abc-footstep->eus-footstep (send param :rleg_coords))
      (send *ri* :abc-footstep->eus-footstep (send param :lleg_coords)))))
 
+(defun walking-pose
+  (robot
+   &key (root-link-height-offset 0) ;; [mm]
+        (root-link-pitch-offset 0) ;; [deg]
+        (fix-coords (make-coords))
+        (default-pose-method :reset-manip-pose))
+  (send robot default-pose-method)
+  (send robot :fix-leg-to-coords fix-coords)
+  (let ((lc (mapcar #'(lambda (l)
+                        (send robot l :end-coords :copy-worldcoords))
+                    '(:rleg :lleg))))
+    (send robot :move-coords
+          (send
+           (send (send (car (send robot :links)) :copy-worldcoords)
+                 :translate (float-vector 0 0 root-link-height-offset))
+           :rotate (deg2rad root-link-pitch-offset) :y)
+          (car (send robot :links)))
+    (mapcar #'(lambda (l c)
+                (send robot l :inverse-kinematics c))
+            '(:rleg :lleg) lc)
+    (send robot :move-centroid-on-foot :both '(:rleg :lleg))
+    (send robot :angle-vector)
+    ))
+
+
 (defun new-goal-cb (server goal)
   ;; coordinate transformation:
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
   ;; 2. apply the inverse transformation to footstep-ocorods[1:]
   ;; 3. convert the footstep respected to hrpsys-mid-coords
-  (send *hrp2jsknts* :reset-manip-pose)
-  (send *hrp2jsknts* :legs :move-end-pos (float-vector 0 0 50))
-  (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
-  (send *ri* :wait-interpolation)
+  (if (not *interruptible-mode*)
+      (when *realp*
+        (walking-pose *hrp2jsknts* :root-link-height-offset -50)
+        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (send *ri* :wait-interpolation)))
   (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
          (progn
            (print 'resuming)
@@ -96,6 +123,7 @@
                    (setq *footstep-list* final-footstep)
                    (setq *goal-id* (send goal :goal_id :id))
                    ))))))))
+
 
 (defun walking-pose
   (robot
@@ -204,11 +232,13 @@
                )))
     (progn
       (print (send-all *footstep-list* :name))
-      (send *ri* :set-foot-steps *footstep-list*)
+      (when *realp*
+        (send *ri* :set-foot-steps *footstep-list*))
       (setq *footstep-list* nil)
-      (send *hrp2jsknts* :reset-manip-pose)
-      (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
-      (send *ri* :wait-interpolation)
+      (when *realp*
+        (walking-pose *hrp2jsknts* :root-link-height-offset 0)
+        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (send *ri* :wait-interpolation))
       (send server :set-succeeded (send server :result))
       )
     ))
@@ -251,10 +281,7 @@
     (setq *ri* (instance (eval (read-from-string interface-class)) :init
                          :controller-timeout nil))
     ;; 
-    (hrp2jsknts-init)
-    (send *ri* :start-st)
-    (send *ri* :start-auto-balancer)
-    )
+    (hrp2jsknts-init))
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
   (ros::advertise-service "require_log"
@@ -267,6 +294,7 @@
                      :execute-cb 'execute-cb
                      :preempt-cb 'preempt-cb)))
     (ros::rate 10)
+    (ros::ros-info "footstep controller is ready")
     (while (ros::ok)
       (send s :worker)
       (ros::spin-once)
