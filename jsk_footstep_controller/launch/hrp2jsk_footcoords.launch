@@ -3,8 +3,5 @@
         type="footcoords"
         name="footcoords"
         >
-    <rosparam>
-      ground_offset: [0, 0, -0.105]
-    </rosparam>
   </node>
 </launch>

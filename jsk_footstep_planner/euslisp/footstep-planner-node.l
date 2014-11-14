@@ -147,11 +147,26 @@
                                                                  final-steps))))))
                 (send result :result footsteps)
                 ;; publish the result for visualization
-                (let ((str
+                (let* ((now (ros::time-now))
+                       (str
                        (format nil "took ~A sec to plan~%~A node are evaled~%"
-                               (send (ros::time- (ros::time-now) start-time) :to-sec)
+                               (send (ros::time- now start-time) :to-sec)
                                *evaled-node-num*)))
-                  (ros::ros-warn str))
+                  (ros::ros-warn str)
+                  (let ((msg (instance std_msgs::Float32 :init)))
+                    (send msg :data (send (ros::time- now start-time) :to-sec))
+                    (ros::publish "/footstep_time" msg))
+                  (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
+                    (send msg :text (format nil "Planning took ~A sec" 
+                                            (send (ros::time- now start-time) :to-sec)))
+                    (ros::publish "/footstep_time_text" msg))
+                  (let ((msg (instance std_msgs::Float32 :init)))
+                    (send msg :data *evaled-node-num*)
+                    (ros::publish "/footstep_count" msg)))
+                (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
+                    (send msg :text (format nil "~A nodes are expanded" 
+                                            *evaled-node-num*))
+                    (ros::publish "/footstep_count_text" msg))
                 (ros::publish "/footstep" footsteps)
                 (send server :set-succeeded result))
               (send server :set-aborted result))
@@ -248,6 +263,10 @@
   (when *use-planes*
     (ros::subscribe "planes" jsk_pcl_ros::PolygonArray #'planes-cb))
   (ros::advertise "/footstep" jsk_footstep_msgs::FootstepArray)
+  (ros::advertise "/footstep_time" std_msgs::Float32)
+  (ros::advertise "/footstep_count" std_msgs::Float32)
+  (ros::advertise "/footstep_time_text" jsk_rviz_plugins::OverlayText)
+  (ros::advertise "/footstep_count_text" jsk_rviz_plugins::OverlayText)
   (ros::advertise "/footstep_successors" jsk_footstep_msgs::FootstepArray)
   (ros::advertise "/footstep_successors_text" jsk_rviz_plugins::OverlayText)
   (let ((s (instance ros::simple-action-server :init
