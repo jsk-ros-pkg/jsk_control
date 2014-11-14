@@ -62,7 +62,7 @@ namespace jsk_footstep_controller
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
               std::string("rleg_end_coords"));
-    pnh.param("force_threshold", force_thr_, 10.0);
+    pnh.param("force_threshold", force_thr_, 25.0);
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
     pub_contact_state_ = pnh.advertise<jsk_footstep_controller::GroundContactState>("contact_state", 1);
     before_on_the_air_ = true;
