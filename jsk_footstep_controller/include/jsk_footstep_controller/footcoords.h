@@ -38,50 +38,115 @@
 
 #include <geometry_msgs/WrenchStamped.h>
 #include <tf/transform_listener.h>
-
+#include <diagnostic_updater/diagnostic_updater.h>
+#include <diagnostic_updater/publisher.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/synchronizer.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+#include <jsk_footstep_controller/GroundContactState.h>
+
 
 namespace jsk_footstep_controller
 {
-    class Footcoords
+  template <class T>
+  class TimeStampedVector: public std::vector<T>
+  {
+  public:
+    typedef typename std::vector<T>::iterator iterator;
+    void removeBefore(const ros::Time& stamp)
     {
-    public:
-        typedef message_filters::sync_policies::ExactTime<
-        geometry_msgs::WrenchStamped,
-        geometry_msgs::WrenchStamped> SyncPolicy;
+      for (iterator it = std::vector<T>::begin();
+           it != std::vector<T>::end();) {
+        if (((*it)->header.stamp - stamp) < ros::Duration(0.0)) {
+          it = this->erase(it);
+        }
+        else {
+          ++it;
+        }
+      }
+    }
+  protected:
+  private:
+  };
 
-        Footcoords();
-        virtual ~Footcoords();
-    protected:
-    
-        // methods
+  
+  class ValueStamped
+  {
+  public:
+    typedef boost::shared_ptr<ValueStamped> Ptr;
+    std_msgs::Header header;
+    double value;
+    ValueStamped(const std_msgs::Header& aheader, double avalue):
+      header(aheader), value(avalue) {
+    }
+    ValueStamped() { }
+  };
 
-        virtual void filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                            const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
-        virtual bool updateGroundTF(const ros::Time& stamp);
-        virtual void publishGroundTF(const ros::Time& stamp);
-        virtual void publishState(const std::string& state);
-        // ros variables
-        message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
-        message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
-        boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
-        ros::Publisher pub_state_;
-        boost::shared_ptr<tf::TransformListener> tf_listener_;
-        tf::TransformBroadcaster tf_broadcaster_;
-        // parameters
-        std::string output_frame_id_;
-        std::string parent_frame_id_;
-        double force_thr_;
-        bool before_on_the_air_;
-        std::string lfoot_frame_id_;
-        std::string rfoot_frame_id_;
-        std::vector<double> ground_offset_;
-        tf::Transform ground_transform_;
-    private:
+  class Footcoords
+  {
+  public:
+    typedef message_filters::sync_policies::ExactTime<
+    geometry_msgs::WrenchStamped,
+    geometry_msgs::WrenchStamped> SyncPolicy;
+
+    Footcoords();
+    virtual ~Footcoords();
+
+    enum SupportLegStatus
+    {
+      LLEG_GROUND, RLEG_GROUND, AIR, BOTH_GROUND, UNSTABLE
     };
+
+  protected:
+    
+    // methods
+
+    virtual void filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
+                        const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
+    virtual bool computeMidCoords(const ros::Time& stamp);
+    virtual bool computeMidCoordsFromSingleLeg(const ros::Time& stamp,
+                                               bool use_left_leg);
+    virtual bool waitForEndEffectorTrasnformation(const ros::Time& stamp);
+    virtual bool updateGroundTF();
+    virtual void publishTF(const ros::Time& stamp);
+    virtual void publishState(const std::string& state);
+    virtual void updateLegDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
+    virtual void publishContactState(const ros::Time& stamp);
+    virtual double applyLowPassFilter(double current_val, double prev_val) const;
+    virtual bool allValueLargerThan(TimeStampedVector<ValueStamped::Ptr>& values,
+                                    double threshold);
+    virtual bool allValueSmallerThan(TimeStampedVector<ValueStamped::Ptr>& values,
+                                     double threshold);
+    // ros variables
+    message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
+    message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
+    boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
+    ros::Publisher pub_state_;
+    ros::Publisher pub_contact_state_;
+    boost::shared_ptr<tf::TransformListener> tf_listener_;
+    tf::TransformBroadcaster tf_broadcaster_;
+    // parameters
+    std::string output_frame_id_;
+    std::string parent_frame_id_;
+    std::string midcoords_frame_id_;
+    SupportLegStatus support_status_;
+    double force_thr_;
+    bool before_on_the_air_;
+    std::string lfoot_frame_id_;
+    std::string rfoot_frame_id_;
+    tf::Transform ground_transform_;
+    tf::Transform midcoords_;
+    boost::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
+    
+    double prev_lforce_;
+    double prev_rforce_;
+    double alpha_;
+    double sampling_time_;
+    TimeStampedVector<ValueStamped::Ptr> lforce_list_;
+    TimeStampedVector<ValueStamped::Ptr> rforce_list_;
+  private:
+  };
 }
 #endif
