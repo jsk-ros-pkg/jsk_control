@@ -10,8 +10,9 @@ import actionlib
 from joy_pose_6d import JoyPose6D
 from actionlib_msgs.msg import GoalStatusArray
 from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray, ExecFootstepsAction, ExecFootstepsGoal
-from jsk_rviz_plugins.msg import OverlayMenu
+from jsk_rviz_plugins.msg import OverlayMenu, OverlayText
 from std_msgs.msg import UInt8, Empty
+import std_srvs.srv
 import tf
 from tf.transformations import *
 from geometry_msgs.msg import PoseStamped
@@ -29,6 +30,7 @@ class JoyFootstepPlanner(JoyPose6D):
                     "Use smaller footsteps"]
   def __init__(self, name, args):
     JoyPose6D.__init__(self, name, args)
+    self.usage_pub = rospy.Publisher("/joy/usage", OverlayText)
     self.supportFollowView(True)
     self.mode = self.PLANNING
     self.snapped_pose = None
@@ -79,6 +81,31 @@ class JoyFootstepPlanner(JoyPose6D):
     elif self.mode == self.WAIT_FOR_CANCEL and msg.status_list[0].status == 0:
       self.mode = self.CANCELED
     self.status_lock.release()
+  def publishUsage(self):
+    overlay_text = OverlayText()
+    overlay_text.text = """
+Left Analog: x/y
+L2/R2      : +-z
+L1/R1      : +-yaw
+Left/Right : +-roll
+Up/Down    : +-pitch
+circle     : Go
+cross      : Reset/Cancel
+triangle   : Clear maps and look around ground
+up/down    : Move menu cursors
+"""
+    overlay_text.width = 500
+    overlay_text.height = 500
+    overlay_text.text_size = 12
+    overlay_text.left = 10
+    overlay_text.top = 10
+    overlay_text.font = "Ubuntu Mono Regular"
+    overlay_text.bg_color.a = 0
+    overlay_text.fg_color.r = 25 / 255.0
+    overlay_text.fg_color.g = 1
+    overlay_text.fg_color.b = 1
+    overlay_text.fg_color.a = 1
+    self.usage_pub.publish(overlay_text)
   def resetGoalPose(self):
     # initial pose will be the center 
     # of self.lfoot_frame_id and self.rfoot_frame_id
@@ -134,7 +161,16 @@ class JoyFootstepPlanner(JoyPose6D):
       self.mode = self.EXECUTING
       self.status_lock.release()
       self.publishMenu(close=True)
+  def lookAround(self):
+    try:
+      clear_maps = rospy.ServiceProxy('/env_server/clear_maps', std_srvs.srv.Empty)
+      clear_maps()
+      look_around = rospy.ServiceProxy('/lookaround_ground', std_srvs.srv.Empty)
+      look_around()
+    except Exception, e:
+      rospy.logerr("error when lookaround ground: %s", e.message)
   def joyCB(self, status, history):
+    self.publishUsage()
     if self.prev_mode != self.mode:
       print self.prev_mode, " -> ", self.mode
     if self.mode == self.PLANNING:
@@ -148,8 +184,7 @@ class JoyFootstepPlanner(JoyPose6D):
       elif history.new(status, "cross"):
         self.resetGoalPose()
       elif history.new(status, "triangle"):
-        if self.snapped_pose:
-          self.pre_pose = self.snapped_pose
+        self.lookAround()
     elif self.mode == self.CANCELED:
       # show menu
       if history.new(status, "circle"):

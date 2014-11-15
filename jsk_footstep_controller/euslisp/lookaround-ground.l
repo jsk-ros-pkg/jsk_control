@@ -73,7 +73,7 @@
   (send *ri* :wait-interpolation)
   (call-empty-service "/env_server/stop_building")
   (send *hrp2* :reset-manip-pose)
-  (send *ri* :angle-vector (send *hrp2* :angle-vector) 5000)
+  (send *ri* :angle-vector (send *hrp2* :angle-vector) 10000)
   (send *ri* :wait-interpolation)
   )
 

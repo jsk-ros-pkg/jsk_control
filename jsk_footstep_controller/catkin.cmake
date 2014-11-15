@@ -5,8 +5,14 @@ find_package(catkin REQUIRED COMPONENTS
   jsk_footstep_msgs
   jsk_footstep_planner
   actionlib_msgs
+  jsk_pcl_ros
+  tf_conversions
+  std_msgs
   message_generation genmsg message_filters sensor_msgs geometry_msgs tf jsk_topic_tools
 )
+
+add_message_files(FILES
+  GroundContactState.msg)
 
 add_service_files(FILES
   RequireLog.srv)
@@ -16,7 +22,7 @@ add_action_files(
   FILES LookAroundGround.action
 )
 generate_messages(
-  DEPENDENCIES actionlib_msgs)
+  DEPENDENCIES actionlib_msgs std_msgs)
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -27,6 +33,7 @@ catkin_package(
 include_directories(include ${catkin_INCLUDE_DIRS})
 add_executable(footcoords src/footcoords.cpp)
 target_link_libraries(footcoords ${catkin_LIBRARIES})
+add_dependencies(footcoords ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_gencpp)
 
 install(TARGETS footcoords
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

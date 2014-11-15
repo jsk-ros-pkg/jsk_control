@@ -126,6 +126,46 @@ footstep-parameter"))
     ;; anZ = -(D + nP)
     ;; a = -(D + nP) / nZ
     (let ((candidates (mapcar #'(lambda (pln)
+                                  (let ((projected-point (send pln :project point)))
+                                    ;; (ros::ros-info "projection result: ~A"
+                                    ;;                (send pln :insidep projected-point))
+                                    (if (not (eq (send pln :insidep projected-point) :outside))
+                                        ;;t
+                                        (let* ((n (send pln :normal))
+                                               (nf (matrix-column
+                                                    (send (send coords :copy-worldcoords) :worldrot) 2)))
+                                          (if (< (v. nf n) 0)
+                                              (setq n (scale -1.0 n)))
+                                          (let ((ret (send coords :copy-worldcoords)))
+                                            (send ret :locate projected-point :world)
+                                            (if (eps= (norm (v* n nf)) 0)
+                                                ret
+                                              (let* ((b (v* nf n))
+                                                     (b* (normalize-vector b))
+                                                     (theta (asin (norm b))))
+                                                ;;(send ret :rotate theta b* :world)
+                                                (send ret :rotate theta b* :local)
+                                                ret))))
+                                      nil)))
+                              planes)))
+      (let ((non-null-candidates (remove-if #'null candidates)))
+        ;; (ros::ros-info "project coordinates to ~A planes" (length non-null-candidates))
+        ;; (ros::ros-info "  ~A planes" (length planes))
+        ;; (ros::ros-info "  ~A failed to project" (- (length candidates) (length non-null-candidates)))
+        (if non-null-candidates non-null-candidates ;car is not good
+          nil)))))
+
+(defun project-coords-on-to-plane2 (coords planes z-axis)
+  (let ((point (send coords :worldpos)))
+    ;; first, creating line from the point and z-axis
+    ;; and, compute the points projected on the planes
+    ;; x = P + aZ: line
+    ;; nx + D = 0: plane
+    ;; n(P + aZ) + D = 0
+    ;; nP + anZ + D = 0
+    ;; anZ = -(D + nP)
+    ;; a = -(D + nP) / nZ
+    (let ((candidates (mapcar #'(lambda (pln)
                                   (let ((projected-point
                                          (let ((plane-normal (send pln :normal))
                                                (plane-D (- (send pln :plane-distance (float-vector 0 0 0)))))
@@ -150,8 +190,12 @@ footstep-parameter"))
                                             ret)))))
                               planes)))
       (let ((non-null-candidates (remove-if #'null candidates)))
+        (ros::ros-info "project coordinates to ~A planes" (length non-null-candidates))
+        (ros::ros-info "  ~A planes" (length planes))
+        (ros::ros-info "  ~A failed to project" (- (length candidates) (length non-null-candidates)))
         (if non-null-candidates non-null-candidates ;car is not good
           nil)))))
+
 
 (defun leg-index->leg-symbol (index)
   (if (eq index jsk_footstep_msgs::Footstep::*LEFT*)
@@ -356,6 +400,37 @@ footstep-parameter"))
                         (setq new-candidate (list c))
                         ))))
                 (setq next-coords-candidate new-candidate))))
+        ;; check x transition
+        (dolist (c next-coords-candidate)
+          (let ((trans (send current-step-coords :transformation (cdr c))))
+            (when (> (elt (send trans :worldpos) 0) 250)
+              ;; force to use 250
+              (send trans :locate (float-vector
+                                   250
+                                   (elt (send trans :worldpos) 1)
+                                   (elt (send trans :worldpos) 2))
+                    :world)
+              (send (cdr c) :newcoords (send (send current-step-coords :copy-worldcoords) :transform trans))
+              (send (cdr c) :worldpos)
+              )))
+        ;; check z transition
+        (when (send state :prev-coords)
+          (let* ((prev-step-coords (send (send state :prev-coords) :copy-worldcoords))
+                 (trans (send prev-step-coords :transformation (send current-step-coords :copy-worldcoords))))
+            (when (> (abs (elt (send trans :worldpos) 2)) 50) ;over 5cm change
+              ;; reduce next-coords-candidate
+              (setq next-coords-candidate 
+                    (remove-if #'(lambda (c)
+                                   (let* ((cc (cdr c)) ;cc is coordinate
+                                          (next-trans (send current-step-coords :transformation
+                                                            cc)))
+                                     (if (> (abs (elt (send next-trans :worldpos) 0)) 10) ;over 1cm 
+                                         (progn
+                                           (ros::ros-info "reduce candidate because ~A x transition"
+                                                          (elt (send next-trans :worldpos) 0))
+                                           nil)
+                                       c)))
+                               next-coords-candidate)))))
         ;; remove steps collide with obstacles
         (let ((ret nil))
           (dolist (c next-coords-candidate)
@@ -665,6 +740,10 @@ building and searching."
     (setq size-x x)
     (setq size-y y)
     (send-super :init :legs-num 2))
+  (:left-footsteps ()
+    left-footsteps)
+  (:right-footsteps ()
+    right-footsteps)
   (:foot-vertices (leg coords)
     ;;     x     x
     ;;
