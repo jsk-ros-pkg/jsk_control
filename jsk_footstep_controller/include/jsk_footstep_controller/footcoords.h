@@ -47,8 +47,43 @@
 #include <tf/transform_broadcaster.h>
 #include <jsk_footstep_controller/GroundContactState.h>
 
+
 namespace jsk_footstep_controller
 {
+  template <class T>
+  class TimeStampedVector: public std::vector<T>
+  {
+  public:
+    typedef typename std::vector<T>::iterator iterator;
+    void removeBefore(const ros::Time& stamp)
+    {
+      for (iterator it = std::vector<T>::begin();
+           it != std::vector<T>::end();) {
+        if (((*it)->header.stamp - stamp) < ros::Duration(0.0)) {
+          it = this->erase(it);
+        }
+        else {
+          ++it;
+        }
+      }
+    }
+  protected:
+  private:
+  };
+
+  
+  class ValueStamped
+  {
+  public:
+    typedef boost::shared_ptr<ValueStamped> Ptr;
+    std_msgs::Header header;
+    double value;
+    ValueStamped(const std_msgs::Header& aheader, double avalue):
+      header(aheader), value(avalue) {
+    }
+    ValueStamped() { }
+  };
+
   class Footcoords
   {
   public:
@@ -61,7 +96,7 @@ namespace jsk_footstep_controller
 
     enum SupportLegStatus
     {
-      LLEG_GROUND, RLEG_GROUND, AIR, BOTH_GROUND
+      LLEG_GROUND, RLEG_GROUND, AIR, BOTH_GROUND, UNSTABLE
     };
 
   protected:
@@ -80,6 +115,10 @@ namespace jsk_footstep_controller
     virtual void updateLegDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
     virtual void publishContactState(const ros::Time& stamp);
     virtual double applyLowPassFilter(double current_val, double prev_val) const;
+    virtual bool allValueLargerThan(TimeStampedVector<ValueStamped::Ptr>& values,
+                                    double threshold);
+    virtual bool allValueSmallerThan(TimeStampedVector<ValueStamped::Ptr>& values,
+                                     double threshold);
     // ros variables
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
@@ -104,6 +143,9 @@ namespace jsk_footstep_controller
     double prev_lforce_;
     double prev_rforce_;
     double alpha_;
+    double sampling_time_;
+    TimeStampedVector<ValueStamped::Ptr> lforce_list_;
+    TimeStampedVector<ValueStamped::Ptr> rforce_list_;
   private:
   };
 }

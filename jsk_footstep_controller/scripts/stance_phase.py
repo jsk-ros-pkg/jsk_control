@@ -18,6 +18,18 @@ def callback(msg):
         text.fg_color.r = 1
         text.fg_color.g = 0
         text.fg_color.b = 0
+    elif msg.contact_state == GroundContactState.CONTACT_UNSTABLE:
+        text.text = "Unstable"
+        text.fg_color.a = 1.0
+        text.fg_color.r = 1
+        text.fg_color.g = 0
+        text.fg_color.b = 0
+    elif msg.contact_state == GroundContactState.CONTACT_AIR:
+        text.text = "Air"
+        text.fg_color.a = 1.0
+        text.fg_color.r = 1
+        text.fg_color.g = 0
+        text.fg_color.b = 0
     pub.publish(text)
 
 def main():
