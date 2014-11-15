@@ -4,6 +4,7 @@
 (ros::roseus-add-msgs "jsk_pcl_ros")
 (ros::roseus-add-srvs "jsk_pcl_ros")
 (ros::roseus-add-srvs "std_srvs")
+(ros::roseus-add-srvs "jsk_footstep_planner")
 (ros::roseus-add-msgs "jsk_rviz_plugins")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner.l" (ros::rospack-find "jsk_footstep_planner")))
@@ -236,6 +237,21 @@
   (setq *previous-successor-published-stamp* (ros::time-now))
   (incf *successors-count*))
 
+(defun change-successor-cb (req)
+  (let ((m (send req :response)))
+    (cond ((string= (send req :type) "small")
+           (ros::ros-info "change to small footstep")
+           (setq *footstep-xs* *small-footstep-xs*)
+           (setq *footstep-ys* *small-footstep-ys*)
+           (setq *footstep-thetas* *small-footstep-thetas*))
+          ((string= (send req :type) "normal")
+           (ros::ros-info "change to normal footstep")
+           (setq *footstep-xs* *normal-footstep-xs*)
+           (setq *footstep-ys* *normal-footstep-ys*)
+           (setq *footstep-thetas* *normal-footstep-thetas*))
+          )
+    m))
+
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
   ;; read parameters
@@ -251,9 +267,15 @@
     (setq *leg* (make-cube leg-size-x leg-size-y leg-size-z))
     (setq *global-frame-id* (ros::get-param "~global_frame_id" "/odom"))
     (setq *tf* (instance ros::transform-listener :init)))
-  (setq *footstep-xs* (ros::get-param "~x"))
-  (setq *footstep-ys* (ros::get-param "~y"))
-  (setq *footstep-thetas* (ros::get-param "~theta"))
+  (setq *normal-footstep-xs* (ros::get-param "~x" nil))
+  (setq *normal-footstep-ys* (ros::get-param "~y" nil))
+  (setq *normal-footstep-thetas* (ros::get-param "~theta" nil))
+  (setq *small-footstep-xs* (ros::get-param "~small_x" nil))
+  (setq *small-footstep-ys* (ros::get-param "~small_y" nil))
+  (setq *small-footstep-thetas* (ros::get-param "~small_theta" nil))
+  (setq *footstep-xs* *normal-footstep-xs*)
+  (setq *footstep-ys* *normal-footstep-ys*)
+  (setq *footstep-thetas* *normal-footstep-thetas*)
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
   (setq *use-planes* (ros::get-param "~use_planes" nil))
@@ -276,6 +298,9 @@
   (ros::advertise "/footstep_count_text" jsk_rviz_plugins::OverlayText)
   (ros::advertise "/footstep_successors" jsk_footstep_msgs::FootstepArray)
   (ros::advertise "/footstep_successors_text" jsk_rviz_plugins::OverlayText)
+  (ros::advertise-service "/change_successor"
+    jsk_footstep_planner::ChangeSuccessor
+    #'change-successor-cb)
   (let ((s (instance ros::simple-action-server :init
                      "footstep_planner" jsk_footstep_msgs::PlanFootstepsAction
                      :execute-cb 'plan-execute-cb)))

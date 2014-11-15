@@ -17,7 +17,7 @@ import tf
 from tf.transformations import *
 from geometry_msgs.msg import PoseStamped
 import jsk_teleop_joy.tf_ext as tf_ext
-
+from jsk_footstep_planner.srv import ChangeSuccessor
 class JoyFootstepPlanner(JoyPose6D):
   EXECUTING = 1
   PLANNING = 2
@@ -147,6 +147,12 @@ up/down    : Move menu cursors
     if close:
       menu.action = OverlayMenu.ACTION_CLOSE
     self.menu_pub.publish(menu)
+  def changePlanningSuccessor(self, successor_type):
+    try:
+      change_successor = rospy.ServiceProxy('/change_successor', ChangeSuccessor)
+      change_successor(successor_type)
+    except rospy.ServiceException, e:
+      rospy.logerror("failed to call service: %s" % (e.message))
   def procCancelMenu(self, index):
     selected_title = self.CANCELED_MENUS[index]
     if selected_title == "Cancel":
@@ -159,6 +165,19 @@ up/down    : Move menu cursors
       self.resumePlan()
       self.status_lock.acquire()
       self.mode = self.EXECUTING
+      self.status_lock.release()
+      self.publishMenu(close=True)
+    elif selected_title == "Use smaller footsteps":
+      self.status_lock.acquire()
+      self.mode = self.PLANNING
+      self.changePlanningSuccessor("small")
+      self.status_lock.release()
+      self.publishMenu(close=True)
+    elif (selected_title == "Use larger footsteps" or 
+          selected_title == "Use middle footsteps"):
+      self.status_lock.acquire()
+      self.mode = self.PLANNING
+      self.changePlanningSuccessor("normal")
       self.status_lock.release()
       self.publishMenu(close=True)
   def lookAround(self):
