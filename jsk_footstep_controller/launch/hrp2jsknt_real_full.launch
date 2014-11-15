@@ -5,7 +5,7 @@
         name="footstep_planner"
         clear_params="true"
         respawn="true"
-        output="screen">
+        output="log">
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <remap from="planes" to="/env_server/old/polygons" />
     <rosparam subst_value="true">
