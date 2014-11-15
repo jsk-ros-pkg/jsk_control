@@ -47,6 +47,8 @@ namespace jsk_footstep_controller
     diagnostic_updater_(new diagnostic_updater::Updater)
   {
     ros::NodeHandle nh, pnh("~");
+    lforce_list_.resize(0);
+    rforce_list_.resize(0);
     tf_listener_.reset(new tf::TransformListener());
     ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
     midcoords_.setRotation(tf::Quaternion(0, 0, 0, 1));
@@ -55,6 +57,7 @@ namespace jsk_footstep_controller
                              &Footcoords::updateLegDiagnostics);
     // read parameter
     pnh.param("alpha", alpha_, 0.5);
+    pnh.param("sampling_time_", sampling_time_, 0.2);
     pnh.param("output_frame_id", output_frame_id_,
               std::string("odom_on_ground"));
     pnh.param("parent_frame_id", parent_frame_id_, std::string("odom"));
@@ -63,7 +66,7 @@ namespace jsk_footstep_controller
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
               std::string("rleg_end_coords"));
-    pnh.param("force_threshold", force_thr_, 25.0);
+    pnh.param("force_threshold", force_thr_, 100.0);
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
     pub_contact_state_ = pnh.advertise<jsk_footstep_controller::GroundContactState>("contact_state", 1);
     before_on_the_air_ = true;
@@ -104,6 +107,28 @@ namespace jsk_footstep_controller
     return prev_val + alpha_ * (current_val - prev_val);
   }
 
+  bool Footcoords::allValueLargerThan(TimeStampedVector<ValueStamped::Ptr>& values,
+                                      double threshold)
+  {
+    for (size_t i = 0; i < values.size(); i++) {
+      if (values[i]->value < threshold) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool Footcoords::allValueSmallerThan(TimeStampedVector<ValueStamped::Ptr>& values,
+                                        double threshold)
+  {
+    for (size_t i = 0; i < values.size(); i++) {
+      if (values[i]->value > threshold) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                           const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
   {
@@ -111,48 +136,59 @@ namespace jsk_footstep_controller
     // lowpass filter
     double lfoot_force = applyLowPassFilter(lfoot->wrench.force.z, prev_lforce_);
     double rfoot_force = applyLowPassFilter(rfoot->wrench.force.z, prev_rforce_);
+    lforce_list_.push_back(ValueStamped::Ptr(new ValueStamped(lfoot->header, lfoot_force)));
+    rforce_list_.push_back(ValueStamped::Ptr(new ValueStamped(rfoot->header, rfoot_force)));
+    // ROS_INFO("lforce_list: %lu", lforce_list_.size());
+    // ROS_INFO("rforce_list: %lu", rforce_list_.size());
     // ROS_INFO("%f -> %f", lfoot->wrench.force.z, lfoot_force);
     // ROS_INFO("%f -> %f", rfoot->wrench.force.z, rfoot_force);
     // update prev value
     prev_lforce_ = lfoot_force;
     prev_rforce_ = rfoot_force;
-    if (lfoot_force < force_thr_ &&
-        rfoot_force < force_thr_) {
+
+    if (allValueLargerThan(lforce_list_, force_thr_) &&
+        allValueLargerThan(rforce_list_, force_thr_)) {
+      // on ground
+      support_status_ = BOTH_GROUND;
+      publishState("ground");
+      success_to_update = computeMidCoords(lfoot->header.stamp);
+      updateGroundTF();
+    }
+    else if (allValueSmallerThan(lforce_list_, force_thr_) && 
+             allValueSmallerThan(rforce_list_, force_thr_)) {
       before_on_the_air_ = true;
       support_status_ = AIR;
       publishState("air");
       success_to_update = computeMidCoords(lfoot->header.stamp);
       // do not update odom_on_ground
     }
-    else {
-      if (lfoot_force > force_thr_ &&
-          rfoot_force > force_thr_) {
-        // on ground
-        support_status_ = BOTH_GROUND;
-        publishState("ground");
-        success_to_update = computeMidCoords(lfoot->header.stamp);
-        updateGroundTF();
-      }
-      else if (lfoot_force > force_thr_) {
-        // only left
-        support_status_ = LLEG_GROUND;
-        publishState("lfoot");
-        success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
-        updateGroundTF();
-      }
-      else if (rfoot_force > force_thr_) {
-        // only right
-        support_status_ = RLEG_GROUND;
-        publishState("rfoot");
-        success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, false);
-        updateGroundTF();
-      }
+    else if (allValueLargerThan(lforce_list_, force_thr_)) {
+      // only left
+      support_status_ = LLEG_GROUND;
+      publishState("lfoot");
+      success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
+      updateGroundTF();
     }
+    else if (allValueLargerThan(rforce_list_, force_thr_)) {
+      // only right
+      support_status_ = RLEG_GROUND;
+      publishState("rfoot");
+      success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, false);
+      updateGroundTF();
+    }
+    else {
+      // unstable
+      support_status_ = UNSTABLE;
+      publishState("unstable");
+    }
+    
     if (success_to_update) {
       publishTF(lfoot->header.stamp);
       diagnostic_updater_->update();
       publishContactState(lfoot->header.stamp);
     }
+    lforce_list_.removeBefore(lfoot->header.stamp - ros::Duration(sampling_time_));
+    rforce_list_.removeBefore(rfoot->header.stamp - ros::Duration(sampling_time_));
   }
   
   void Footcoords::publishState(const std::string& state)
