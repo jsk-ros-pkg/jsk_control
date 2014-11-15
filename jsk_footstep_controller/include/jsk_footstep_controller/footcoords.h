@@ -79,6 +79,7 @@ namespace jsk_footstep_controller
     virtual void publishState(const std::string& state);
     virtual void updateLegDiagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
     virtual void publishContactState(const ros::Time& stamp);
+    virtual double applyLowPassFilter(double current_val, double prev_val) const;
     // ros variables
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
@@ -99,7 +100,10 @@ namespace jsk_footstep_controller
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
     boost::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
-
+    
+    double prev_lforce_;
+    double prev_rforce_;
+    double alpha_;
   private:
   };
 }
