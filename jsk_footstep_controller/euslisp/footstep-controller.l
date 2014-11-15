@@ -4,11 +4,14 @@
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-msgs "jsk_rviz_plugins")
 (ros::roseus-add-srvs "jsk_footstep_controller")
+(ros::roseus-add-msgs "jsk_footstep_controller")
 
 (defvar *all-the-results* nil)
 
-;;(setq *realp* t)
-(setq *realp* nil)
+(setq *realp* t)
+(setq *wait-contact-state* t)
+
+;;(setq *realp* nil)
 ;; :standing
 ;; :plane
 ;; :climing-up
@@ -33,6 +36,34 @@
               :lleg
             :rleg))
     coords))
+
+(setq *contact-state* jsk_footstep_controller::GroundContactState::*CONTACT_UNSTABLE*)
+(setq *contact-error* 0)
+(defun contact-state-callback (msg)
+  (setq *contact-state* (send msg :contact_state))
+  (setq *contact-error* (send msg :error_pitch_angle))
+  )
+
+(defun contact-state->str (state)
+  (cond
+   ((eq state jsk_footstep_controller::GroundContactState::*CONTACT_UNSTABLE*)
+    "unstable")
+   ((eq state jsk_footstep_controller::GroundContactState::*CONTACT_BOTH_GROUND*)
+    "ground")
+   ((eq state jsk_footstep_controller::GroundContactState::*CONTACT_AIR*)
+    "air")
+   ((eq state jsk_footstep_controller::GroundContactState::*CONTACT_LLEG_GROUND*)
+    "lleg")
+   ((eq state jsk_footstep_controller::GroundContactState::*CONTACT_RLEG_GROUND*)
+    "rleg")))
+
+(defun wait-for-double-stance-phase ()
+  (setq *contact-state* nil)
+  (while (not (eq *contact-state* jsk_footstep_controller::GroundContactState::*CONTACT_BOTH_GROUND*))
+    (ros::ros-info "contact state is ~A" (contact-state->str *contact-state*))
+    (publish-breakpoint-text "Waiting for contact state to be stable")
+    (ros::spin-once)
+    (ros::sleep)))
 
 (defun publish-breakpoint-text (text)
   (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
@@ -227,7 +258,9 @@
                    (when *realp*
                      (send *ri* :set-foot-steps (list first-step second-step)))
                    ))
-               (publish-breakpoint-text "Breakpoint!")
+               (if *wait-contact-state* (wait-for-double-stance-phase))
+               (publish-breakpoint-text
+                (format nil "Breakpoint!, error: ~A (~A)" *contact-error* (rad2deg *contact-error*)))
                (unix:sleep 1)
                )))
     (progn
@@ -288,6 +321,11 @@
     jsk_footstep_controller::RequireLog
     #'require-log-service-callback)
   (ros::advertise "breakpoint_text" jsk_rviz_plugins::OverlayText)
+  (ros::subscribe "/footcoords/contact_state" 
+                  jsk_footstep_controller::GroundContactState
+                  #'contact-state-callback)
+  (unix:sleep 1)
+  (publish-breakpoint-text " ")
   (let ((s (instance ros::simple-action-server :init
                      "footstep_controller"
                      jsk_footstep_msgs::ExecFootstepsAction
