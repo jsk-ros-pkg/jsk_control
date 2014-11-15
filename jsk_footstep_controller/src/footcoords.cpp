@@ -54,6 +54,7 @@ namespace jsk_footstep_controller
     diagnostic_updater_->add("Support Leg Status", this, 
                              &Footcoords::updateLegDiagnostics);
     // read parameter
+    pnh.param("alpha", alpha_, 0.5);
     pnh.param("output_frame_id", output_frame_id_,
               std::string("odom_on_ground"));
     pnh.param("parent_frame_id", parent_frame_id_, std::string("odom"));
@@ -98,12 +99,25 @@ namespace jsk_footstep_controller
     }
   }
 
+  double Footcoords::applyLowPassFilter(double current_val, double prev_val) const
+  {
+    return prev_val + alpha_ * (current_val - prev_val);
+  }
+
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                           const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
   {
     bool success_to_update = false;
-    if (lfoot->wrench.force.z < force_thr_ &&
-        rfoot->wrench.force.z < force_thr_) {
+    // lowpass filter
+    double lfoot_force = applyLowPassFilter(lfoot->wrench.force.z, prev_lforce_);
+    double rfoot_force = applyLowPassFilter(rfoot->wrench.force.z, prev_rforce_);
+    // ROS_INFO("%f -> %f", lfoot->wrench.force.z, lfoot_force);
+    // ROS_INFO("%f -> %f", rfoot->wrench.force.z, rfoot_force);
+    // update prev value
+    prev_lforce_ = lfoot_force;
+    prev_rforce_ = rfoot_force;
+    if (lfoot_force < force_thr_ &&
+        rfoot_force < force_thr_) {
       before_on_the_air_ = true;
       support_status_ = AIR;
       publishState("air");
@@ -111,22 +125,22 @@ namespace jsk_footstep_controller
       // do not update odom_on_ground
     }
     else {
-      if (lfoot->wrench.force.z > force_thr_ &&
-          rfoot->wrench.force.z > force_thr_) {
+      if (lfoot_force > force_thr_ &&
+          rfoot_force > force_thr_) {
         // on ground
         support_status_ = BOTH_GROUND;
         publishState("ground");
         success_to_update = computeMidCoords(lfoot->header.stamp);
         updateGroundTF();
       }
-      else if (lfoot->wrench.force.z > force_thr_) {
+      else if (lfoot_force > force_thr_) {
         // only left
         support_status_ = LLEG_GROUND;
         publishState("lfoot");
         success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
         updateGroundTF();
       }
-      else if (rfoot->wrench.force.z > force_thr_) {
+      else if (rfoot_force > force_thr_) {
         // only right
         support_status_ = RLEG_GROUND;
         publishState("rfoot");
