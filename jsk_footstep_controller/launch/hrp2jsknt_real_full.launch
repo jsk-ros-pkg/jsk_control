@@ -5,7 +5,7 @@
         name="footstep_planner"
         clear_params="true"
         respawn="true"
-        output="screen">
+        output="log">
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <remap from="planes" to="/env_server/old/polygons" />
     <rosparam subst_value="true">
@@ -66,6 +66,8 @@
         output="screen">
     <remap from="~input/polygons" to="/env_server/old/polygons"/>
     <remap from="~input/polygon_coefficients" to="/env_server/old/coefficients"/>
+    <!-- <remap from="~input/polygons" to="/hoge_polygon"/> -->
+    <!-- <remap from="~input/polygon_coefficients" to="/hoge_coefficients"/> -->
     <!-- <remap from="~input/polygons" to="/estimated_plane_respected_to_odom/output_polygons" /> -->
     <!-- <remap from="~input/polygon_coefficients" to="/estimated_plane_respected_to_odom/output_coefficients" /> -->
     <remap from="~input/convex_align" to="$(arg POSE_REMAP)_nonsnapped" />
@@ -99,9 +101,10 @@
     <remap from="refined_footstep_result" to="footstep_planner/result" />
   </node>
   <include file="$(find jsk_pcl_ros)/launch/footstep_recognition.launch" />
-  <node pkg="roseus" type="roseus" name="lookaround_ground" if="false"
+  <node pkg="roseus" type="roseus" name="lookaround_ground"
         args="$(find jsk_footstep_controller)/euslisp/lookaround-ground.l">
   </node>
+  <node pkg="jsk_footstep_controller" type="stance_phase.py" name="stance_phase" />
   <node pkg="jsk_footstep_controller" type="footstep-overlay-text.l"
         name="footstep_overlay_text">
   </node>

@@ -1,0 +1,146 @@
+<launch>
+<arg name="POSE_REMAP" default="/footstep_marker/pose" />
+  <arg name="DEV" default="/dev/input/js2" />
+  <node pkg="jsk_footstep_planner"
+        type="footstep-planner-node.l"
+        name="footstep_planner"
+        clear_params="true"
+        output="screen">
+    <rosparam>
+    heuristic: :stepcost-heuristic*
+    use_planes: false
+    use_env_server: false
+    timeout: 10
+    </rosparam>
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+  </node>
+  <node pkg="jsk_footstep_planner"
+        type="footstep-planner-node.l"
+        name="footstep_planner_straight"
+        clear_params="true"
+        output="screen">
+    <rosparam>
+    heuristic: :straight-heuristic
+    use_planes: false
+    use_env_server: false
+    timeout: 10
+    </rosparam>
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+    <remap from="~goal" to="/footstep_planner/goal" />
+  </node>
+  <node pkg="jsk_footstep_planner"
+        type="footstep-planner-node.l"
+        name="footstep_planner_step_cost"
+        clear_params="true"
+        output="screen">
+    <rosparam>
+    heuristic: :stepcost-half-heuristic
+    use_planes: false
+    use_env_server: false
+    x:     [-0.039375,0.0525,0.0525,0.027176,-0.027176,-0.08,0.0,0.0,0.075,0.15,0.0, 0.3,  0.4,  0.1,  0.05, 0.35, 0.2]
+    y:     [0.2475,0.26,0.26,0.206422,0.206422,0.21,0.27,0.19,0.21,0.21,0.21,        0.21, 0.21, 0.21, 0.21, 0.21, 0.21]
+    theta: [0.174533,-0.20944,0.20944,-0.261799,0.261799,0.0,0.0,0.0,0.0,0.0,0.0,    0.0,  0.0,  0.0,  0.0,  0.0,  0.0]
+    timeout: 10
+    </rosparam>
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+    <remap from="~goal" to="/footstep_planner/goal" />
+  </node>
+  <node pkg="jsk_footstep_planner"
+        type="footstep-planner-node.l"
+        name="footstep_planner_step_cost2"
+        clear_params="true"
+        output="screen">
+    <rosparam>
+    heuristic: :stepcost-heuristic
+    use_planes: false
+    use_env_server: false
+    x:     [-0.039375,0.0525,0.0525,0.027176,-0.027176,-0.08,0.0,0.0,0.075,0.15,0.0, 0.3,  0.4,  0.1,  0.05, 0.35, 0.2]
+    y:     [0.2475,0.26,0.26,0.206422,0.206422,0.21,0.27,0.19,0.21,0.21,0.21,        0.21, 0.21, 0.21, 0.21, 0.21, 0.21]
+    theta: [0.174533,-0.20944,0.20944,-0.261799,0.261799,0.0,0.0,0.0,0.0,0.0,0.0,    0.0,  0.0,  0.0,  0.0,  0.0,  0.0]
+    timeout: 10
+    </rosparam>
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+    <remap from="~goal" to="/footstep_planner/goal" />
+  </node>
+  <node pkg="jsk_footstep_planner"
+        type="footstep-planner-node.l"
+        name="footstep_planner_manhattan"
+        clear_params="true"
+        output="screen">
+    <rosparam>
+    heuristic: :manhattan-heuristic
+    use_planes: false
+    use_env_server: false
+    x:     [-0.039375,0.0525,0.0525,0.027176,-0.027176,-0.08,0.0,0.0,0.075,0.15,0.0, 0.3,  0.4,  0.1,  0.05, 0.35, 0.2]
+    y:     [0.2475,0.26,0.26,0.206422,0.206422,0.21,0.27,0.19,0.21,0.21,0.21,        0.21, 0.21, 0.21, 0.21, 0.21, 0.21]
+    theta: [0.174533,-0.20944,0.20944,-0.261799,0.261799,0.0,0.0,0.0,0.0,0.0,0.0,    0.0,  0.0,  0.0,  0.0,  0.0,  0.0]
+    timeout: 10
+    </rosparam>
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+    <remap from="~goal" to="/footstep_planner/goal" />
+  </node>
+  <node pkg="jsk_interactive_marker"
+        type="footstep_marker"
+        name="footstep_marker"
+        clear_params="true"
+        output="log"
+        >
+    <remap from="~planes" to="/planes" />
+    <remap from="~planes_coefficients" to="/coefficients" />
+    <remap from="move_marker" to="$(arg POSE_REMAP)" />
+    <param name="wait_snapit_server" value="false" />
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+    <rosparam>
+      use_plane_snap: false
+      use_footstep_planner: true
+      use_initial_footstep_tf: false
+      frame_id: '/odom'
+      footstep_margin: 0.21
+      foot_size_z: 0.01
+      use_footstep_controller: false
+    </rosparam>
+    <param name="frame_id" value="/odom" />
+  </node>
+  
+  <node pkg="joy" type="joy_node" name="joy_node" output="screen" >
+    <param name="dev" type="string" value="$(arg DEV)" />
+    <param name="deadzone" value="0.2" />
+    <param name="autorepeat_rate" value="40" />
+    <param name="coalesce_interval" value="0.025" />
+  </node>
+
+  <node pkg="jsk_teleop_joy" type="joy.py" name="teleop_manager0" output="screen"
+        clear_params="true">
+    <param name="controller_type" value="auto" />
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+    <rosparam subst_value="true">
+      plugins:
+        'Footstep Planner':
+           class: 'JoyFootstepPlanner'
+           args:
+             pose: $(arg POSE_REMAP)_nonsnapped
+             follow_view: true
+             publish_pose: true
+             execute: '/footstep_marker/execute'
+             resume: '/footstep_marker/resume'
+             frame_id: odom
+      lfoot_frame_id: odom
+      rfoot_frame_id: odom
+    </rosparam>
+  </node>
+  <node pkg="jsk_pcl_ros" type="snapit" name="snapit"
+        output="screen">
+    <remap from="~input/polygons" to="/planes"/>
+    <remap from="~input/polygon_coefficients" to="/coefficients"/>
+    <remap from="~input/convex_align" to="$(arg POSE_REMAP)_nonsnapped" />
+    <remap from="~output/convex_aligned" to="$(arg POSE_REMAP)" />
+  </node>
+  <node pkg="rviz" type="rviz" name="rviz_planner"
+        args="-d $(find jsk_footstep_planner)/rviz/footstep_planner.rviz" />
+  <node pkg="rviz" type="rviz" name="rviz_planner_straight"
+        args="-d $(find jsk_footstep_planner)/rviz/footstep_planner_straight.rviz" />
+  <node pkg="rviz" type="rviz" name="rviz_planner_stepcost"
+        args="-d $(find jsk_footstep_planner)/rviz/footstep_planner_stepcost.rviz" />
+  <node pkg="rviz" type="rviz" name="rviz_planner_stepcost2"
+        args="-d $(find jsk_footstep_planner)/rviz/footstep_planner_stepcost2.rviz" />
+</launch>
