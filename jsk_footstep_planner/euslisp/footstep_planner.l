@@ -659,6 +659,27 @@ building and searching."
           step)
        ;; rotation...
        (* 2 (floor (/ (acos (v. v1 v2)) rotate))))))
+  (:stepcost-half-heuristic (n p)
+    ;; n => next node
+    ;; p => problem
+    ;; In the kuffner thesis, only use estimation of translation step,
+    ;; but in this implementation, I use estimation of rotation step too.
+    ;; this method is implemented by K.Okada.
+    (let* ((goal-coords (send p :goal-state))
+           (step (send p :step-max))
+           (rotate (send p :rotate-max))
+           (current-coords
+            (send (send n :state) :robot-coords))
+           (v1 (normalize-vector (v- (send goal-coords :worldpos)
+                                     (send current-coords :worldpos))))
+           (v2 (matrix-column (send current-coords :worldrot) 0)))
+      (+
+       ;; translation...
+       (/ (distance (send goal-coords :worldpos)
+                    (send current-coords :worldpos))
+          step)
+       ;; rotation...
+       (* 1 (floor (/ (acos (v. v1 v2)) rotate))))))
   (:stepcost-heuristic* (n p)
     ;; this method is implemented by R.Ueda based on :stepcost-heuristic
     ;; written by K.Okada.
@@ -829,3 +850,25 @@ building and searching."
     (cons (send leg-step :leg)
           (send *tf* :transform-pose *global-frame-id* pose-stamped)))
   )
+
+(defun manhattan-distance (a b &key (debug-view nil))
+  (let ((direction (make-line (send a :worldpos)
+                              (v+ (send a :worldpos)
+                                  (send (send a :worldcoords) :x-axis)))))
+    (let ((foot-point (send direction :point
+                            (send direction :foot (send b :worldpos)))))
+      (when debug-view
+        (let ((prev-color (send *pickview* :viewer :viewsurface :color)))
+          (send *pickview* :viewer :viewsurface :color (float-vector 0 1 0))
+          (send *pickview* :viewer :viewsurface :3d-line
+                (send a :worldpos)
+                foot-point)
+          (send *pickview* :viewer :viewsurface :3d-line
+                foot-point
+                (send b :worldpos))
+          (send *pickview* :viewer :viewsurface :color prev-color))
+        (send *pickview* :viewer :flush)
+        )
+      (let ((distance-a (distance (send a :worldpos) foot-point))
+            (distance-b (distance (send b :worldpos) foot-point)))
+        (+ distance-a distance-b)))))
