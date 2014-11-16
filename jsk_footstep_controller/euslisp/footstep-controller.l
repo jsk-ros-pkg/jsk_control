@@ -1,6 +1,7 @@
 #!/usr/bin/env roseus
 
 ;; forostep-controller.l
+(ros::roseus-add-msgs "std_msgs")
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-msgs "jsk_rviz_plugins")
 (ros::roseus-add-srvs "jsk_footstep_controller")
@@ -296,6 +297,8 @@
   (send server :set-preempted)
   (setq *goal-id-bak* *goal-id*)
   (setq *goal-id* nil)
+  ;; cancel broadcast
+  (ros::publish "/footstep_cancel_broadcast" (instance std_msgs::Empty :init))
   )
 
 (defun execute-cb (server goal)
@@ -337,6 +340,7 @@
   (ros::subscribe "/footcoords/contact_state" 
                   jsk_footstep_controller::GroundContactState
                   #'contact-state-callback)
+  (ros::advertise "/footstep_cancel_broadcast" std_msgs::Empty)
   ;; client self-client to cancel itself
   (unix:sleep 1)
   (publish-breakpoint-text " ")
