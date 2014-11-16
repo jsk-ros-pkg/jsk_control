@@ -62,9 +62,14 @@ class JoyFootstepPlanner(JoyPose6D):
                                      PoseStamped,
                                      self.snapCB,
                                      queue_size=1)
+    self.cancel_menu_sub = rospy.Subscriber("/footstep_cancel_broadcast", Empty, 
+                                            self.cancelMenuCB, queue_size=1)
     self.status_lock = threading.Lock()
     self.current_selecting_index = 0
     self.resetGoalPose()
+  def cancelMenuCB(self, msg):
+    with self.status_lock:
+      self.mode = self.CANCELED
   def snapCB(self, msg):
     self.snapped_pose = msg
   def statusCB(self, msg):
