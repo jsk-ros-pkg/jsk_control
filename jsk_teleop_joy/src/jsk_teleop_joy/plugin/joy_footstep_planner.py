@@ -12,11 +12,12 @@ from actionlib_msgs.msg import GoalStatusArray
 from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray, ExecFootstepsAction, ExecFootstepsGoal
 from jsk_rviz_plugins.msg import OverlayMenu, OverlayText
 from std_msgs.msg import UInt8, Empty
+import std_srvs.srv
 import tf
 from tf.transformations import *
 from geometry_msgs.msg import PoseStamped
 import jsk_teleop_joy.tf_ext as tf_ext
-
+from jsk_footstep_planner.srv import ChangeSuccessor
 class JoyFootstepPlanner(JoyPose6D):
   EXECUTING = 1
   PLANNING = 2
@@ -61,9 +62,14 @@ class JoyFootstepPlanner(JoyPose6D):
                                      PoseStamped,
                                      self.snapCB,
                                      queue_size=1)
+    self.cancel_menu_sub = rospy.Subscriber("/footstep_cancel_broadcast", Empty, 
+                                            self.cancelMenuCB, queue_size=1)
     self.status_lock = threading.Lock()
     self.current_selecting_index = 0
     self.resetGoalPose()
+  def cancelMenuCB(self, msg):
+    with self.status_lock:
+      self.mode = self.CANCELED
   def snapCB(self, msg):
     self.snapped_pose = msg
   def statusCB(self, msg):
@@ -90,7 +96,7 @@ Left/Right : +-roll
 Up/Down    : +-pitch
 circle     : Go
 cross      : Reset/Cancel
-triangle   : Initialize pose to the snapped pose
+triangle   : Clear maps and look around ground
 up/down    : Move menu cursors
 """
     overlay_text.width = 500
@@ -146,6 +152,12 @@ up/down    : Move menu cursors
     if close:
       menu.action = OverlayMenu.ACTION_CLOSE
     self.menu_pub.publish(menu)
+  def changePlanningSuccessor(self, successor_type):
+    try:
+      change_successor = rospy.ServiceProxy('/change_successor', ChangeSuccessor)
+      change_successor(successor_type)
+    except rospy.ServiceException, e:
+      rospy.logerror("failed to call service: %s" % (e.message))
   def procCancelMenu(self, index):
     selected_title = self.CANCELED_MENUS[index]
     if selected_title == "Cancel":
@@ -160,6 +172,27 @@ up/down    : Move menu cursors
       self.mode = self.EXECUTING
       self.status_lock.release()
       self.publishMenu(close=True)
+    elif selected_title == "Use smaller footsteps":
+      self.status_lock.acquire()
+      self.mode = self.PLANNING
+      self.changePlanningSuccessor("small")
+      self.status_lock.release()
+      self.publishMenu(close=True)
+    elif (selected_title == "Use larger footsteps" or 
+          selected_title == "Use middle footsteps"):
+      self.status_lock.acquire()
+      self.mode = self.PLANNING
+      self.changePlanningSuccessor("normal")
+      self.status_lock.release()
+      self.publishMenu(close=True)
+  def lookAround(self):
+    try:
+      clear_maps = rospy.ServiceProxy('/env_server/clear_maps', std_srvs.srv.Empty)
+      clear_maps()
+      look_around = rospy.ServiceProxy('/lookaround_ground', std_srvs.srv.Empty)
+      look_around()
+    except Exception, e:
+      rospy.logerr("error when lookaround ground: %s", e.message)
   def joyCB(self, status, history):
     self.publishUsage()
     if self.prev_mode != self.mode:
@@ -175,8 +208,7 @@ up/down    : Move menu cursors
       elif history.new(status, "cross"):
         self.resetGoalPose()
       elif history.new(status, "triangle"):
-        if self.snapped_pose:
-          self.pre_pose = self.snapped_pose
+        self.lookAround()
     elif self.mode == self.CANCELED:
       # show menu
       if history.new(status, "circle"):
