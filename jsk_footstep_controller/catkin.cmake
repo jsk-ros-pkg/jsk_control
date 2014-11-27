@@ -15,7 +15,7 @@ add_message_files(FILES
   GroundContactState.msg)
 
 add_service_files(FILES
-  RequireLog.srv)
+  RequireLog.srv RequireMonitorStatus.srv)
 
 add_action_files(
   DIRECTORY action
