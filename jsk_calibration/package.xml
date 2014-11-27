@@ -8,6 +8,10 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roseus</build_depend>
   <run_depend>roseus</run_depend>
+  <build_depend>pr2_msgs</build_depend>
+  <run_depend>pr2_msgs</run_depend>
+  <build_depend>pr2_controllers_msgs</build_depend>
+  <run_depend>pr2_controllers_msgs</run_depend>
   <export>
   </export>
 </package>
