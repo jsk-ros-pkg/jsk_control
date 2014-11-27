@@ -1,6 +1,7 @@
 #!/usr/bin/env roseus
 
 ;; forostep-controller.l
+(ros::roseus-add-msgs "std_msgs")
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-msgs "jsk_rviz_plugins")
 (ros::roseus-add-srvs "jsk_footstep_controller")
@@ -10,7 +11,8 @@
 
 (setq *realp* t)
 (setq *wait-contact-state* t)
-
+;;(setq *wait-contact-state* nil)
+(setq *check-breakpoint* t)
 ;;(setq *realp* nil)
 ;; :standing
 ;; :plane
@@ -37,11 +39,13 @@
             :rleg))
     coords))
 
+(setq *contact-header* nil)
 (setq *contact-state* jsk_footstep_controller::GroundContactState::*CONTACT_UNSTABLE*)
 (setq *contact-error* 0)
 (defun contact-state-callback (msg)
   (setq *contact-state* (send msg :contact_state))
   (setq *contact-error* (send msg :error_pitch_angle))
+  (setq *contact-header* (send msg :header))
   )
 
 (defun contact-state->str (state)
@@ -246,8 +250,9 @@
                    (send server :set-succeeded result))))
               (t
                (publish-breakpoint-text " ")
-               (let ((first-step (pop *footstep-list*))
-                     (second-step (car *footstep-list*)))
+               (let ((first-step (pop *footstep-list*)))
+                 (setq second-step (car *footstep-list*))
+                       ;;(second-step (car *footstep-list*)))
                  (change-standing-mode first-step second-step)
                  (if (eq *walking-state* :climing-up) ;hack
                      (progn
@@ -258,11 +263,20 @@
                    (when *realp*
                      (send *ri* :set-foot-steps (list first-step second-step)))
                    ))
-               (if *wait-contact-state* (wait-for-double-stance-phase))
-               (publish-breakpoint-text
-                (format nil "Breakpoint!, error: ~A (~A)" *contact-error* (rad2deg *contact-error*)))
-               (unix:sleep 1)
-               )))
+               (when *wait-contact-state* 
+                 ;;(unix:sleep 1)
+                 (wait-for-double-stance-phase))
+               (publish-breakpoint-text "Breakpoint!")
+                ;;(format nil "Breakpoint!, error: ~A (~A)" *contact-error* (rad2deg *contact-error*)))
+               (when *check-breakpoint*
+                 (setq req (instance jsk_footstep_controller::RequireMonitorStatusRequest :init))
+                   (send req :header *contact-header*)
+                   (if(eq (send second-step :name) :rleg)
+                       (send req :threshold (deg2rad 1.5)) ;lleg
+                     (send req :threshold (deg2rad 1.7))) ;rleg
+                   (let ((res (ros::service-call "require_foot_contact_monitor" req)))
+                     (unless (send res :go)
+                       (preempt-cb server nil)))))))
     (progn
       (print (send-all *footstep-list* :name))
       (when *realp*
@@ -283,6 +297,8 @@
   (send server :set-preempted)
   (setq *goal-id-bak* *goal-id*)
   (setq *goal-id* nil)
+  ;; cancel broadcast
+  (ros::publish "/footstep_cancel_broadcast" (instance std_msgs::Empty :init))
   )
 
 (defun execute-cb (server goal)
@@ -324,6 +340,8 @@
   (ros::subscribe "/footcoords/contact_state" 
                   jsk_footstep_controller::GroundContactState
                   #'contact-state-callback)
+  (ros::advertise "/footstep_cancel_broadcast" std_msgs::Empty)
+  ;; client self-client to cancel itself
   (unix:sleep 1)
   (publish-breakpoint-text " ")
   (let ((s (instance ros::simple-action-server :init
