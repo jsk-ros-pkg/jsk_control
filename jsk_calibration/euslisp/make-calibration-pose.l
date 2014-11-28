@@ -65,14 +65,18 @@
                   (push ik-result success-set))
                 ))
             (progn
-              (format t "~A/~A skip test by filtering~%" test-counter test-num)
-              (incf test-counter)))))
+              (format t "~A-~A/~A skip test by filtering~%"
+                      test-counter
+                      (+ test-counter (length distances))
+                      test-num)
+              (incf test-counter (length distances))))))
       (format t "motion result~%")
       (format t " motions:: ~A/~A~%" (length success-set) test-num)
       ;; animation
       (setq motion-anglevectors success-set)
       (send self :animate)))
   (:animate ()
+    (objects (list robot-model))
     (dolist (av motion-anglevectors)
       (send robot-model :angle-vector av)
       (send *irtviewer* :draw-objects)
@@ -112,6 +116,10 @@
                        ;;:stop 500
                        :rotation-axis rotation-axis))
         (if rr (setq ik-successp t))
+        (when rr
+          (send *irtviewer* :draw-objects)
+          (send c :draw-on :flush t :color (float-vector 1 0 0))
+          )
         (when ik-successp
           (setq collision-freep (not (send robot-model :self-collision-check))))
         (cond ((not ik-successp)
@@ -122,11 +130,8 @@
               ((and ik-successp collision-freep)
                (format t "~A/~A success IK and collision free~%"
                        current-test-no all-test-num)))
-        (when rr
-          (send *irtviewer* :draw-objects)
-          (send c :draw-on :flush t :color (float-vector 1 0 0))
-          )
-        rr)))
+        (if (and ik-successp collision-freep)
+            rr))))
   (:set-model-sampling-angle (sample-angles)
     (dolist (sample-angle sample-angles)
       (send (car sample-angle) :joint-angle (cdr sample-angle))))
@@ -183,6 +188,10 @@
     (car motions))
   (:motions ()
     motions)
+  (:generate-motions ()
+    (send-all (mapcar #'(lambda (m) (cdr m)) (send self :motions))
+              :generate-motion)
+    )
   )
 
 (defun range-equivalents (min max step)
@@ -232,18 +241,18 @@
                     :init
                     :limb :larm
                     :robot-model robot
-                    :reset-method :reest-pose
+                    :reset-method :reset-pose
                     :camera-method camera-method
                     :sampling-joint
                     (list
                      (instance sample-joint-information :init
                                :joint (send robot :head :neck-p)
-                               :step-angle 10)
+                               :step-angle 15)
                      (instance sample-joint-information :init
                                :joint (send robot :head :neck-y)
-                               :step-angle 10))
+                               :step-angle 15))
                     :distances
-                    (list 720 680 640 600 560 520)
+                    (range-equivalents 520 720 60)
                     :end-effector-offset
                     (let ((c (make-coords :pos (float-vector (+ 100) (+ 70 65) 0))))
                       (send c :rotate (deg2rad -90) :y)
@@ -259,12 +268,12 @@
                     (list
                      (instance sample-joint-information :init
                                :joint (send robot :head :neck-p)
-                               :step-angle 10)
+                               :step-angle 15)
                      (instance sample-joint-information :init
                                :joint (send robot :head :neck-y)
-                               :step-angle 10))
+                               :step-angle 15))
                     :distances
-                    (list 720 680 640 600 560 520)
+                    (range-equivalents 520 720 60)
                     :end-effector-offset
                     (let ((c (make-coords :pos (float-vector (+ 100) (- (+ 70 65)) 0))))
                       (send c :rotate (deg2rad -90) :y)
@@ -283,18 +292,19 @@
                     (list
                      (instance sample-joint-information :init
                                :joint (send robot :head :neck-p)
-                               :step-angle 10)
+                               :min-angle 20
+                               :step-angle 15)
                      (instance sample-joint-information :init
                                :joint (send robot :head :neck-y)
-                               :step-angle 10)
+                               :step-angle 15)
                      (instance sample-joint-information :init
                                :joint (send robot :torso :waist-y)
-                               :step-angle 10)
+                               :step-angle 15)
                      (instance sample-joint-information :init
                                :joint (send robot :torso :waist-p)
-                               :step-angle 10))
+                               :step-angle 15))
                     :distances
-                    (range-equivalents 1200 1500 40)
+                    (range-equivalents 1200 1500 100)
                     :end-effector-offset
                     (let ((c (make-coords :pos (float-vector (+ 150 70 65) 0 0))))
                       c)))
@@ -312,18 +322,19 @@
                     (list
                      (instance sample-joint-information :init
                                :joint (send robot :head :neck-p)
-                               :step-angle 10)
+                               :min-angle 20
+                               :step-angle 15)
                      (instance sample-joint-information :init
                                :joint (send robot :head :neck-y)
-                               :step-angle 10)
+                               :step-angle 15)
                      (instance sample-joint-information :init
                                :joint (send robot :torso :waist-y)
-                               :step-angle 10)
+                               :step-angle 15)
                      (instance sample-joint-information :init
                                :joint (send robot :torso :waist-p)
-                               :step-angle 10))
+                               :step-angle 15))
                     :distances
-                    (range-equivalents 1200 1500 40)
+                    (range-equivalents 1200 1500 100)
                     :end-effector-offset
                     (let ((c (make-coords :pos (float-vector (+ 150 70 65) 0 0))))
                       c)))
@@ -345,13 +356,18 @@
         (if (<= (elt z 0) 0) (float-vector 1 0 0) (float-vector -1 0 0))
       (if (<= (elt z 2) 0) (float-vector 0 0 1) (float-vector 0 0 -1)))))
 
-
-(setq *calib* (instance hrp2-calibration-config
-                        :init
-                        :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
-                        :model-class 'hrp2jsknt-robot
-                        :camera-method :carmine))
+(defun test ()
+  (setq *calib* (instance hrp2-calibration-config
+                          :init
+                          :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
+                          :model-class 'hrp2jsknt-robot
+                          :camera-method :carmine)))
 
 ;; (load "make-calibration-pose.l")
+;; (test)
+;; (send *calib* :generate-motions)
+;; (send-all (mapcar #'(lambda (m) (cdr m)) (send *calib* :motions)) :generate-motion)
+;; (send-all (mapcar #'(lambda (m) (cdr m)) (send *calib* :motions)) :animate)
 ;; (send (cdr (car (send *calib* :motions))) :generate-motion)
+;; (send (cdr (car (send *calib* :motions))) :animate)
 ;; (send (cdr (cadr (send *calib* :motions))) :generate-motion)
