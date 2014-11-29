@@ -15,8 +15,8 @@ fi
 rm robot_calibrated.xml
 echo "Success"
 
-roslaunch hironx_calibration estimation_config.launch
-rosrun calibration_estimation multi_step_cov_estimator.py /tmp/hironx_calibration/cal_measurements.bag /tmp/hironx_calibration __name:=cal_cov_estimator
+roslaunch hrp2jsknt_calibration estimation_config.launch
+rosrun calibration_estimation multi_step_cov_estimator.py /tmp/hrp2jsknt_calibration/cal_measurements.bag /tmp/hrp2jsknt_calibration __name:=cal_cov_estimator
 
 est_return_val=$?
 
@@ -26,5 +26,5 @@ if [ "$est_return_val" -ne "0" ]; then
 fi
 
 # Make all the temporary files writable
-chmod ag+w /tmp/hironx_calibration/*
+chmod ag+w /tmp/hrp2jsknt_calibration/*
 
