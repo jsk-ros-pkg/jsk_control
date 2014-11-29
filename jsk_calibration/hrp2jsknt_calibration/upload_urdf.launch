@@ -1,0 +1,7 @@
+
+<launch>
+    <arg name="model" default="$(find hironx_moveit_config)/config/HiroNX.urdf" />
+    <!-- send maxwell urdf to param server -->
+    <param name="robot_description" textfile="$(arg model)" />
+</launch>
+

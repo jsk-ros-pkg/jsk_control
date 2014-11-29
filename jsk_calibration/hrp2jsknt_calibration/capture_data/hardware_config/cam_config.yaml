@@ -1,0 +1,24 @@
+
+# ----- Microsoft Kinect -----
+head_camera: ###FIX
+  cb_detector_config:  /camera/rgb/cb_detector_config ## FIXME
+  led_detector_config: /camera/rgb/led_detector
+  settler_config:      /camera/rgb/monocam_settler_config ## FIXME
+
+  configs:
+    small_cb_4x5:
+      settler:
+        tolerance: 2.00
+        ignore_failures: True
+        max_step: 3.0
+        cache_size: 100
+      cb_detector:
+        active: True
+        num_x: 4
+        num_y: 5
+        width_scaling: 0.5
+        height_scaling: 0.5
+        subpixel_window: 4
+        subpixel_zero_zone: 1
+      led_detector:
+        active: False

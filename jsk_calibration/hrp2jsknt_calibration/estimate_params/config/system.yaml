@@ -1,0 +1,42 @@
+
+base_link: CHEST_JOINT0_Link
+
+sensors:
+
+  chains:
+    arm_chain:
+      root: CHEST_JOINT0_Link
+      tip: RARM_JOINT5_Link
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    head_chain:
+      root: CHEST_JOINT0_Link
+      tip: HEAD_JOINT1_Link
+      cov:
+       joint_angles: [0.01, 0.01]
+      gearing: [1.0, 1.0]
+
+  rectified_cams:
+    head_camera:
+      chain_id: head_chain  #TODO: get rid of this
+      frame_id: camera_rgb_optical_frame
+      baseline_shift: 0.0
+#      baseline_rgbd: 0.075 ## comment out if we run all_pipelines.launch with use_kinect
+      f_shift: 0.0
+      cx_shift: 0.0
+      cy_shift: 0.0
+      cov: {u: 0.25, v: 0.25, x: 0.25}
+
+  tilting_lasers: {}
+
+checkerboards:
+  small_cb_4x5:
+    corners_x: 4
+    corners_y: 5
+    spacing_x: 0.0245
+    spacing_y: 0.0245
+
+transforms:
+  arm_chain_cb:   [ .25, 0, 0, pi/2, 0, 0]
+

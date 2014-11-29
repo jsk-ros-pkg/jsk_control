@@ -1,0 +1,23 @@
+
+<launch>
+
+  <node type="capture_exec.py"
+        pkg="calibration_launch"
+        name="calibration_exec"
+        args="$(find hironx_calibration)/capture_data/samples/ $(find hironx_calibration)/capture_data/hardware_config $(find hironx_calibration)/estimate_params/config/system.yaml"
+        output="screen" >
+    <remap from="head_camera/camera_info" to="/camera/rgb/camera_info"/>
+    <remap from="head_camera/image_rect"  to="/camera/rgb/image_rect_throttle"/>
+    <remap from="head_camera/image"       to="/camera/rgb/image_rect_throttle"/>
+    <remap from="head_camera/features"    to="/camera/rgb/features"/>
+  </node>
+
+  <node type="urdf_pub.py" pkg="calibration_launch" name="urdf_pub"/>
+
+  <node type="record" pkg="rosbag" name="robot_measurement_recorder" output="screen"
+        args="-O /tmp/hironx_calibration/cal_measurements robot_measurement robot_description" >
+    <!-- Hack to create the directory -->
+    <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/hironx_calibration" />
+  </node>
+
+</launch>

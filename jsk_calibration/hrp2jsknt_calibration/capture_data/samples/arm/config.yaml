@@ -1,0 +1,5 @@
+
+group: "Arm"
+prompt: "Please put the checkerboard in the hand (open/close the gripper with the joystick's square/circle buttons)."
+finish: "Skipping arm samples"
+repeat: False

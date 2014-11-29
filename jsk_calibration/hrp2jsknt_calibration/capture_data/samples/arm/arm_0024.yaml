@@ -1,0 +1,17 @@
+camera_measurements:
+- {cam_id: head_camera, config: small_cb_4x5}
+joint_commands:
+- controller: arm_controller
+  segments:
+  - duration: 2.0
+    positions: [0.6979222612874925, -0.8109273436991197, -1.2801466464602809, -1.2337600567927707, -0.4446089915607742, 0.08997831866131813]
+- controller: head_controller
+  segments:
+  - duration: 2.0
+    positions: [0.45298452666262984, 0.5299154468736853]
+joint_measurements:
+- {chain_id: arm_chain, config: tight_tol}
+- {chain_id: head_chain, config: tight_tol}
+
+sample_id: arm_0024
+target: {chain_id: arm_chain, target_id: small_cb_4x5}

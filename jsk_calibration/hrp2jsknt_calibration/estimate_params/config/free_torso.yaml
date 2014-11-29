@@ -1,0 +1,25 @@
+
+  transforms:
+    head_joint: [0, 0, 1, 0, 0, 0]
+
+  chains:
+    arm_chain:
+      gearing: [0, 0, 0, 0, 0, 0]
+    head_chain:
+      gearing: [0, 0]
+
+
+  rectified_cams:
+    head_camera:
+      baseline_shift: 0
+      f_shift: 0
+      cx_shift: 0
+      cy_shift: 0
+
+  tilting_lasers: {}
+
+  checkerboards:
+    small_cb_4x5:
+      spacing_x: 0
+      spacing_y: 0
+

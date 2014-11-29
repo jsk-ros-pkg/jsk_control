@@ -1,0 +1,40 @@
+# ----- arm -----
+arm_chain:
+  settler_config:  /arm_chain/settler_config
+
+  configs:
+    tight_tol:
+      settler:
+        joint_names:
+        - RARM_JOINT0
+        - RARM_JOINT1
+        - RARM_JOINT2
+        - RARM_JOINT3
+        - RARM_JOINT4
+        - RARM_JOINT5
+        tolerances:
+        - 0.002
+        - 0.002
+        - 0.002
+        - 0.002
+        - 0.002
+        - 0.002
+        max_step:   1.0
+        cache_size: 1500
+
+# ----- head -----
+head_chain:
+  settler_config:  /head_chain/settler_config
+
+  configs:
+    tight_tol:
+      settler:
+        joint_names:
+        - HEAD_JOINT0
+        - HEAD_JOINT1
+        tolerances:
+        - 0.002
+        - 0.002
+        max_step:   1.0
+        cache_size: 1500
+
