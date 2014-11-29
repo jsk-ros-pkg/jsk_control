@@ -73,6 +73,9 @@
             (return-from :check-motion (list (1- i) i)))))
       :free))
   (:generate-motion ()
+    (send self :generate-primitive-motion)
+    (send self :refine-motion))
+  (:generate-primitive-motion ()
     (let* ((sampling-angle-set (send self :sampling-joint-angle-combinations))
            (success-count 0)
            (test-counter 0)
@@ -253,9 +256,6 @@
   (:generate-motions ()
     (send-all (mapcar #'(lambda (m) (cdr m)) (send self :motions))
               :generate-motion))
-  (:refine-motions ()
-    (send-all (mapcar #'(lambda (m) (cdr m)) (send self :motions))
-              :refine-motion))
   )
 
 (defun range-equivalents (min max step)
@@ -301,6 +301,13 @@
   (:angles ()
     angles)
   )
+
+(defmethod euscollada-robot
+  (:reset-pose-for-leg-calibration ()   ;only for hrp2 robots
+    (send self :reset-manip-pose)
+    (send self :larm :elbow-p :joint-angle 0)
+    (send self :rarm :elbow-p :joint-angle 0)
+    (send self :angle-vector)))
 
 (defclass hrp2-calibration-config
   :super calibration-config
@@ -379,7 +386,7 @@
                       :limb :lleg
                       :collision-links collision-links
                       :robot-model robot
-                      :reset-method :reset-manip-pose
+                      :reset-method :reset-pose-for-leg-calibration
                       :camera-method camera-method
                       :filter-sampling
                       '(lambda (neck-p neck-y waist-y waist-p)
@@ -411,7 +418,7 @@
                       :limb :rleg
                       :collision-links collision-links
                       :robot-model robot
-                      :reset-method :reset-manip-pose
+                      :reset-method :reset-pose-for-leg-calibration
                       :camera-method camera-method
                       :filter-sampling
                       '(lambda (neck-p neck-y waist-y waist-p)
@@ -465,7 +472,8 @@
                           :init
                           :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
                           :model-class 'hrp2jsknt-robot
-                          :camera-method :carmine)))
+                          :camera-method :carmine))
+  (send *calib* :generate-motions))
 
 ;; (load "make-calibration-pose.l")
 ;; (test)
