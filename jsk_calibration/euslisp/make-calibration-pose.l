@@ -3,7 +3,8 @@
 (defclass calibration-motion
   :super propertied-object
   :slots (robot-model sampling-joints distances end-effector-offset limb
-          reset-method motion-anglevectors camera-method filter-sampling))
+          reset-method motion-anglevectors camera-method filter-sampling
+          collision-links board-object))
 
 (defmethod calibration-motion
   (:init (&key ((:robot-model arobot-model) nil)
@@ -13,7 +14,10 @@
                ((:end-effector-offset aend-effector-offset) nil)
                ((:reset-method areset-method) nil)
                ((:filter-sampling afilter-sampling) nil)
+               ((:collision-links acollision-links) nil)
+               ((:board board) nil)
                ((:limb alimb) nil))
+    (setq board-object board)
     (setq filter-sampling afilter-sampling)
     (setq camera-method acamera-method)
     (setq reset-method areset-method)
@@ -22,7 +26,18 @@
     (setq sampling-joints asampling-joint)
     (setq distances adistances)
     (setq end-effector-offset aend-effector-offset)
+    ;; assoc
+    (send board-object :transform
+          (send (send robot-model limb :end-coords :copy-worldcoords)
+                :transform end-effector-offset))
+    (send (send robot-model limb :end-coords :parent) :assoc board-object)
+    (setq collision-links (append acollision-links
+                                  (mapcar #'(lambda (l)
+                                              (cons board-object l))
+                                          (send arobot-model :links))))
     self)
+  (:robot-model ()
+    robot-model)
   (:sampling-joint-angle-combinations ()
     ;; '((joint-a . angle) (joint-a . angle) (joint-a . angle) ...)
     (let ((angles-set
@@ -34,6 +49,29 @@
                    sampling-joints)))
       ;; build combination
       (combinate-angles angles-set)))
+  ;; refine motion by checking collision of interporated motions
+  (:refine-motion ()
+    (objects (list robot-model board-object))
+    (let ((collision-freep nil)
+          (angle-vector-sequence motion-anglevectors))
+      (while (not (eq collision-freep :free))
+        (let ((collision-indices (send self :check-motion angle-vector-sequence)))
+          (if (not (eq collision-indices :free))
+              (setq angle-vector-sequence (remove-indices angle-vector-sequence
+                                                          collision-indices)))
+          (setq collision-freep collision-indices)))))
+  (:check-motion (angle-vectors)
+    (let ((angle-vector-sequence
+           (append (list (send robot-model reset-method))
+                   angle-vectors
+                   (list (send robot-model reset-method)))))
+      (dotimes (i (1- (length angle-vector-sequence)))
+        (let ((start (elt angle-vector-sequence i))
+              (end (elt angle-vector-sequence (1+ i))))
+          (when (send self :check-interpolation-collision start end)
+            (format t "not collision free!~%")
+            (return-from :check-motion (list (1- i) i)))))
+      :free))
   (:generate-motion ()
     (let* ((sampling-angle-set (send self :sampling-joint-angle-combinations))
            (success-count 0)
@@ -43,7 +81,7 @@
            (success-set nil))
       (format t "~A sampling joint~%" (length sampling-joints))
       (format t "~A combinated sampling joint angles~%" test-num)
-      (objects (list robot-model))
+      (objects (list robot-model board-object))
       (dolist (sampling-angle sampling-angle-set)
         (let ((possiblep t))
           (when filter-sampling
@@ -76,7 +114,7 @@
       (setq motion-anglevectors success-set)
       (send self :animate)))
   (:animate ()
-    (objects (list robot-model))
+    (objects (list robot-model board-object))
     (dolist (av motion-anglevectors)
       (send robot-model :angle-vector av)
       (send *irtviewer* :draw-objects)
@@ -118,8 +156,8 @@
         (if rr (setq ik-successp t))
         (when rr
           (send *irtviewer* :draw-objects)
-          (send c :draw-on :flush t :color (float-vector 1 0 0))
-          )
+          (x::window-main-one)
+          (send c :draw-on :flush t :color (float-vector 1 0 0)))
         (when ik-successp
           (setq collision-freep (not (send self :check-collision))))
         (cond ((not ik-successp)
@@ -136,17 +174,29 @@
     (let ((avs (interpolate-motions start end 10)))
       (dolist (av avs)
         (send robot-model :angle-vector av)
-        (if (send self :check-collision)
-            (return-from :check-interpolation-collision t))
+        (send *irtviewer* :draw-objects)
+        (x::window-main-one)
+        (let ((collision (send self :check-collision)))
+          (when collision
+            (print av)
+            (pprint collision)
+            (return-from :check-interpolation-collision t)))
       ))
     nil)
   (:check-collision ()
-    (send robot-model :self-collision-check))
+    (send robot-model :self-collision-check :pairs collision-links))
   (:set-model-sampling-angle (sample-angles)
     (dolist (sample-angle sample-angles)
       (send (car sample-angle) :joint-angle (cdr sample-angle))))
   )
 
+(defun remove-indices (list indices)
+  (let ((ret nil))
+    (dotimes (i (length list))
+      (unless (member i indices)
+        (push (elt list i) ret)))
+    (reverse ret)))
+    
 ;; angles := '(((joint-a . angle0) (joint-a . angle1) (joint-a . angle2))
 ;;             ((joint-b . angle0) (joint-b . angle1) (joint-b . angle2))
 ;;             ((joint-c . angle0) (joint-c . angle1) (joint-c . angle2))
@@ -194,14 +244,18 @@
     (load model-file)
     (setq robot (instance (eval model-class) :init)))
   (:add-motion (name motion)
-    (push (cons name motion) motions)
-    (car motions))
+    (setq motions (append motions
+                          (list (cons name motion))))
+    ;;(push (cons name motion) motions)
+    motion)
   (:motions ()
     motions)
   (:generate-motions ()
     (send-all (mapcar #'(lambda (m) (cdr m)) (send self :motions))
-              :generate-motion)
-    )
+              :generate-motion))
+  (:refine-motions ()
+    (send-all (mapcar #'(lambda (m) (cdr m)) (send self :motions))
+              :refine-motion))
   )
 
 (defun range-equivalents (min max step)
@@ -257,109 +311,133 @@
                ((:model-class amodel-class) nil)
                (camera-method nil))
     (send-super :init :model-file amodel-file :model-class amodel-class)
-    (send self :add-motion :larm
-          (instance calibration-motion
-                    :init
-                    :limb :larm
-                    :robot-model robot
-                    :reset-method :reset-pose
-                    :camera-method camera-method
-                    :sampling-joint
-                    (list
-                     (instance sample-joint-information :init
-                               :joint (send robot :head :neck-p)
-                               :step-angle 15)
-                     (instance sample-joint-information :init
-                               :joint (send robot :head :neck-y)
-                               :step-angle 15))
-                    :distances
-                    (range-equivalents 520 720 60)
-                    :end-effector-offset
-                    (let ((c (make-coords :pos (float-vector (+ 100) (+ 70 65) 0))))
-                      (send c :rotate (deg2rad -90) :y)
-                      c)))
-    (send self :add-motion :rarm
-          (instance calibration-motion
-                    :init
-                    :limb :rarm
-                    :robot-model robot
-                    :reset-method :reset-pose
-                    :camera-method camera-method
-                    :sampling-joint
-                    (list
-                     (instance sample-joint-information :init
-                               :joint (send robot :head :neck-p)
-                               :step-angle 15)
-                     (instance sample-joint-information :init
-                               :joint (send robot :head :neck-y)
-                               :step-angle 15))
-                    :distances
-                    (range-equivalents 520 720 60)
-                    :end-effector-offset
-                    (let ((c (make-coords :pos (float-vector (+ 100) (- (+ 70 65)) 0))))
-                      (send c :rotate (deg2rad -90) :y)
-                      c)))
-    (send self :add-motion :lleg
-          (instance calibration-motion
-                    :init
-                    :limb :lleg
-                    :robot-model robot
-                    :reset-method :reset-manip-pose
-                    :camera-method camera-method
-                    :filter-sampling
-                    '(lambda (neck-p neck-y waist-y waist-p)
-                       (>= (+ neck-y waist-y) 0))
-                    :sampling-joint
-                    (list
-                     (instance sample-joint-information :init
-                               :joint (send robot :head :neck-p)
-                               :min-angle 20
-                               :step-angle 15)
-                     (instance sample-joint-information :init
-                               :joint (send robot :head :neck-y)
-                               :step-angle 15)
-                     (instance sample-joint-information :init
-                               :joint (send robot :torso :waist-y)
-                               :step-angle 15)
-                     (instance sample-joint-information :init
-                               :joint (send robot :torso :waist-p)
-                               :step-angle 15))
-                    :distances
-                    (range-equivalents 1200 1500 100)
-                    :end-effector-offset
-                    (let ((c (make-coords :pos (float-vector (+ 150 70 65) 0 0))))
-                      c)))
-    (send self :add-motion :rleg
-          (instance calibration-motion
-                    :init
-                    :limb :rleg
-                    :robot-model robot
-                    :reset-method :reset-manip-pose
-                    :camera-method camera-method
-                    :filter-sampling
-                    '(lambda (neck-p neck-y waist-y waist-p)
-                       (<= (+ neck-y waist-y) 0))
-                    :sampling-joint
-                    (list
-                     (instance sample-joint-information :init
-                               :joint (send robot :head :neck-p)
-                               :min-angle 20
-                               :step-angle 15)
-                     (instance sample-joint-information :init
-                               :joint (send robot :head :neck-y)
-                               :step-angle 15)
-                     (instance sample-joint-information :init
-                               :joint (send robot :torso :waist-y)
-                               :step-angle 15)
-                     (instance sample-joint-information :init
-                               :joint (send robot :torso :waist-p)
-                               :step-angle 15))
-                    :distances
-                    (range-equivalents 1200 1500 100)
-                    :end-effector-offset
-                    (let ((c (make-coords :pos (float-vector (+ 150 70 65) 0 0))))
-                      c)))
-    self)
+    ;; build good collision links
+    (let ((collision-links (send robot :collision-check-pairs))
+          (ignore-link-pairs '(("LARM_LINK6" . "LARM_LINK4")
+                               ("RARM_LINK6" . "RARM_LINK4"))))
+      (setq collision-links
+            (remove-if #'(lambda (pair)
+                           (let ((a (send (car pair) :name))
+                                 (b (send (cdr pair) :name)))
+                             (or (member (cons a b) ignore-link-pairs
+                                         :test #'equal)
+                                 (member (cons b a) ignore-link-pairs
+                                         :test #'equal))))
+                       collision-links))
+      (send self :add-motion :larm
+            (instance calibration-motion
+                      :init
+                      :limb :larm
+                      :collision-links collision-links
+                      :robot-model robot
+                      :reset-method :reset-pose
+                      :camera-method camera-method
+                      :sampling-joint
+                      (list
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-p)
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-y)
+                                 :step-angle 15))
+                      :distances
+                      (range-equivalents 520 720 60)
+                      :board (make-mmurooka-board)
+                      :end-effector-offset
+                      (let ((c (make-coords :pos (float-vector (+ 100) (+ 70 65 80) 0))))
+                        (send c :rotate (deg2rad -90) :y)
+                        (send c :rotate (deg2rad 90) :z)
+                        c)))
+      (send self :add-motion :rarm
+            (instance calibration-motion
+                      :init
+                      :limb :rarm
+                      :collision-links collision-links
+                      :robot-model robot
+                      :reset-method :reset-pose
+                      :camera-method camera-method
+                      :sampling-joint
+                      (list
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-p)
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-y)
+                                 :step-angle 15))
+                      :distances
+                      (range-equivalents 520 720 60)
+                      :board (make-mmurooka-board)
+                      :end-effector-offset
+                      (let ((c (make-coords
+                                :pos (float-vector (+ 100) (- (+ 70 65 80)) 0))))
+                        (send c :rotate (deg2rad -90) :y)
+                        (send c :rotate (deg2rad 90) :z)
+                        c)))
+      (send self :add-motion :lleg
+            (instance calibration-motion
+                      :init
+                      :limb :lleg
+                      :collision-links collision-links
+                      :robot-model robot
+                      :reset-method :reset-manip-pose
+                      :camera-method camera-method
+                      :filter-sampling
+                      '(lambda (neck-p neck-y waist-y waist-p)
+                         (>= (+ neck-y waist-y) 0))
+                      :sampling-joint
+                      (list
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-p)
+                                 :min-angle 20
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-y)
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :torso :waist-y)
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :torso :waist-p)
+                                 :step-angle 15))
+                      :distances
+                      (range-equivalents 1200 1500 100)
+                      :board (make-mmurooka-board)
+                      :end-effector-offset
+                      (let ((c (make-coords :pos (float-vector (+ 150 70 65) 0 0))))
+                        c)))
+      (send self :add-motion :rleg
+            (instance calibration-motion
+                      :init
+                      :limb :rleg
+                      :collision-links collision-links
+                      :robot-model robot
+                      :reset-method :reset-manip-pose
+                      :camera-method camera-method
+                      :filter-sampling
+                      '(lambda (neck-p neck-y waist-y waist-p)
+                         (<= (+ neck-y waist-y) 0))
+                      :sampling-joint
+                      (list
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-p)
+                                 :min-angle 20
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-y)
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :torso :waist-y)
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :torso :waist-p)
+                                 :step-angle 15))
+                      :distances
+                      (range-equivalents 1200 1500 100)
+                      :board (make-mmurooka-board)
+                      :end-effector-offset
+                      (let ((c (make-coords :pos (float-vector (+ 150 70 65) 0 0))))
+                        c)))
+      self))
   )
 
 (defun make-rotation-mat (z)
@@ -377,6 +455,11 @@
         (if (<= (elt z 0) 0) (float-vector 1 0 0) (float-vector -1 0 0))
       (if (<= (elt z 2) 0) (float-vector 0 0 1) (float-vector 0 0 -1)))))
 
+(defun make-mmurooka-board (&optional (padding 20))
+  (let ((cube (make-cube (+ padding 320) (+ padding 240) 5)))
+    (send cube :translate-vertices (float-vector 0 0 (- (+ 1.0 (/ 5 2.0)))))
+    cube))
+
 (defun test ()
   (setq *calib* (instance hrp2-calibration-config
                           :init
@@ -387,7 +470,9 @@
 ;; (load "make-calibration-pose.l")
 ;; (test)
 ;; (send *calib* :generate-motions)
+;; (send *calib* :refine-motions)
 ;; (send-all (mapcar #'(lambda (m) (cdr m)) (send *calib* :motions)) :animate)
 ;; (send (cdr (car (send *calib* :motions))) :generate-motion)
+;; (send (cdr (car (send *calib* :motions))) :refine-motion)
 ;; (send (cdr (car (send *calib* :motions))) :animate)
 ;; (send (cdr (cadr (send *calib* :motions))) :generate-motion)
