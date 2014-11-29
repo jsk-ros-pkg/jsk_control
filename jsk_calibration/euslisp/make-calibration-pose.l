@@ -121,7 +121,7 @@
           (send c :draw-on :flush t :color (float-vector 1 0 0))
           )
         (when ik-successp
-          (setq collision-freep (not (send robot-model :self-collision-check))))
+          (setq collision-freep (not (send self :check-collision))))
         (cond ((not ik-successp)
                (format t "~A/~A fail IK~%" current-test-no all-test-num))
               ((and ik-successp (not collision-freep))
@@ -132,6 +132,16 @@
                        current-test-no all-test-num)))
         (if (and ik-successp collision-freep)
             rr))))
+  (:check-interpolation-collision (start end)
+    (let ((avs (interpolate-motions start end 10)))
+      (dolist (av avs)
+        (send robot-model :angle-vector av)
+        (if (send self :check-collision)
+            (return-from :check-interpolation-collision t))
+      ))
+    nil)
+  (:check-collision ()
+    (send robot-model :self-collision-check))
   (:set-model-sampling-angle (sample-angles)
     (dolist (sample-angle sample-angles)
       (send (car sample-angle) :joint-angle (cdr sample-angle))))
@@ -202,7 +212,18 @@
     (dotimes (i (1+ count))
       (push (+ min margin (* i step)) ret))
     ret))
-  
+
+(defun mid-float-vector (a b r)
+  (v+ (scale r a) (scale (- 1.0 r) b)))
+
+(defun interpolate-motions (start end num)
+  (let ((ret nil))
+    (dotimes (i num)
+      ;; num := 9
+      ;;  rate -> 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
+      (let ((rate (* (1+ i) (/ 1.0 (1+ num)))))
+        (push (mid-float-vector start end rate) ret)))
+    ret))
 
 (defclass sample-joint-information
   :super propertied-object
@@ -366,7 +387,6 @@
 ;; (load "make-calibration-pose.l")
 ;; (test)
 ;; (send *calib* :generate-motions)
-;; (send-all (mapcar #'(lambda (m) (cdr m)) (send *calib* :motions)) :generate-motion)
 ;; (send-all (mapcar #'(lambda (m) (cdr m)) (send *calib* :motions)) :animate)
 ;; (send (cdr (car (send *calib* :motions))) :generate-motion)
 ;; (send (cdr (car (send *calib* :motions))) :animate)
