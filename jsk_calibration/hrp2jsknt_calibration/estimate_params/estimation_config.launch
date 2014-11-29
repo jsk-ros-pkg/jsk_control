@@ -1,0 +1,35 @@
+
+<launch>
+
+  <group ns="calibration_config" clear_params="true">
+    <rosparam file="$(find hironx_calibration)/estimate_params/config/system.yaml" command="load" />
+
+    <group ns="cal_steps">
+
+      <group ns="hironx - 00 - Estimating Checkerboard Locations">
+        <param name="free_params" textfile="$(find hironx_calibration)/estimate_params/config/free_cb_locations.yaml" />
+        <param name="use_cov" type="bool" value="False" />
+        <rosparam>
+          sensors:
+          - arm_chain
+          - head_camera
+        </rosparam>
+        <param name="output_filename" type="string" value="config_0" />
+      </group>
+
+      <group ns="hironx - 01 - Adding Camera Locations">
+        <param name="free_params" textfile="$(find hironx_calibration)/estimate_params/config/free_cameras.yaml" />
+        <param name="use_cov" type="bool" value="True" />
+        <rosparam>
+          sensors:
+          - arm_chain
+          - head_camera
+        </rosparam>
+        <param name="output_filename" type="string" value="system_calibrated" />
+      </group>
+
+    </group>
+
+  </group>
+
+</launch>

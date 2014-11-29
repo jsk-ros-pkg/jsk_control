@@ -1,0 +1,6 @@
+- name: "Head Camera: Arm"
+  3d: arm_chain
+  cam: head_camera
+  plot_ops:
+    color: g
+    marker: s

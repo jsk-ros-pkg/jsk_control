@@ -1,0 +1,29 @@
+
+<launch>
+  <include file="$(find calibration_launch)/capture_data/chain_settler.launch" ns="arm_chain" />
+  <include file="$(find calibration_launch)/capture_data/chain_settler.launch" ns="head_chain" />
+
+  <arg name="use_kinect" default="false" />
+  <group if="$(arg use_kinect)" >
+    <include file="$(find calibration_launch)/capture_data/kinect_pipeline.launch" ns="/camera/rgb">
+      <arg name="image_topic" value="image_rect_color"/> <!-- openni2.launch publishes image_raw -->
+      <arg name="depth_topic" value="/camera/depth/image"/> <!-- this is floar value -->
+      <arg name="camera_info_topic" value="camera_info"/>
+    </include>
+  </group>
+  <group unless="$(arg use_kinect)" >
+    <include file="$(find calibration_launch)/capture_data/monocam_pipeline.launch" ns="/camera/rgb">
+      <arg name="image_topic" value="image_rect_color"/> <!-- this should be image proc -->
+    </include>
+  </group>
+
+  <node type="interval_intersection_action"
+        pkg="interval_intersection"
+        name="interval_intersection"
+        output="screen">
+    <remap from="head_chain" to="head_chain/settled_interval" />
+    <remap from="arm_chain" to="arm_chain/settled_interval" />
+    <remap from="head_camera" to="/camera/rgb/settled_interval" />
+  </node>
+
+</launch>
