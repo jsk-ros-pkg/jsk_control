@@ -1,3 +1,4 @@
+(load "package://euscollada/src/euscollada-robot.l")
 
 ;; class to store calibration motion for one link
 (defclass calibration-motion
@@ -36,6 +37,39 @@
                                               (cons board-object l))
                                           (send arobot-model :links))))
     self)
+  (:test-with-real-robot (ri &optional (not-use-y-or-n nil))
+    ;; :reset-pose
+    ;; reset-method
+    (objects (list robot-model board-object))
+    (send robot-model reset-method)
+    (send *irtviewer* :draw-objects)
+    (let ((start-pose (send robot-model :angle-vector)))
+      (if (or not-use-y-or-n (y-or-n-p "Go to start pose with 10 sec, OK?"))
+          (progn
+            (send ri :angle-vector start-pose 10000)
+            (send ri :wait-interpolation)
+            )
+        (progn
+          (return-from :test-with-real-robot nil))))
+    (let ((sequence (append (list (send robot-model reset-method))
+                            motion-anglevectors
+                            (list (send robot-model reset-method)))))
+      (dotimes (i (1- (length sequence)))
+        ;; i -> i + 1
+        (let* ((start-pose (elt sequence i))
+               (end-pose (elt sequence (1+ i)))
+               (tm (angle-vector-duration robot-model start-pose end-pose)))
+          (send robot-model :angle-vector end-pose)
+          (send *irtviewer* :draw-objects)
+          (if (or not-use-y-or-n (y-or-n-p (format nil "move to this pose with ~A sec, OK?" tm)))
+              (progn
+                (send ri :angle-vector end-pose (* 1000.0 tm))
+                (send ri :wait-interpolation)
+                )
+            (progn
+              (return-from :test-with-real-robot nil)))
+          ))
+      ))
   (:robot-model ()
     robot-model)
   (:sampling-joint-angle-combinations ()
@@ -59,7 +93,8 @@
           (if (not (eq collision-indices :free))
               (setq angle-vector-sequence (remove-indices angle-vector-sequence
                                                           collision-indices)))
-          (setq collision-freep collision-indices)))))
+          (setq collision-freep collision-indices)))
+      (format t "refined motion is ~A~%" (length motion-anglevectors))))
   (:check-motion (angle-vectors)
     (let ((angle-vector-sequence
            (append (list (send robot-model reset-method))
@@ -253,6 +288,9 @@
     motion)
   (:motions ()
     motions)
+  (:animate ()
+    (send-all (mapcar #'(lambda (m) (cdr m)) (send self :motions))
+              :animate))
   (:generate-motions ()
     (send-all (mapcar #'(lambda (m) (cdr m)) (send self :motions))
               :generate-motion))
@@ -320,8 +358,9 @@
     (send-super :init :model-file amodel-file :model-class amodel-class)
     ;; build good collision links
     (let ((collision-links (send robot :collision-check-pairs))
-          (ignore-link-pairs '(("LARM_LINK6" . "LARM_LINK4")
-                               ("RARM_LINK6" . "RARM_LINK4"))))
+          (ignore-link-pairs nil))
+          ;; (ignore-link-pairs '(("LARM_LINK6" . "LARM_LINK4")
+          ;;                      ("RARM_LINK6" . "RARM_LINK4"))))
       (setq collision-links
             (remove-if #'(lambda (pair)
                            (let ((a (send (car pair) :name))
@@ -410,7 +449,7 @@
                       (range-equivalents 1200 1500 100)
                       :board (make-mmurooka-board)
                       :end-effector-offset
-                      (let ((c (make-coords :pos (float-vector (+ 150 70 65) 0 0))))
+                      (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
                         c)))
       (send self :add-motion :rleg
             (instance calibration-motion
@@ -442,7 +481,7 @@
                       (range-equivalents 1200 1500 100)
                       :board (make-mmurooka-board)
                       :end-effector-offset
-                      (let ((c (make-coords :pos (float-vector (+ 150 70 65) 0 0))))
+                      (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
                         c)))
       self))
   )
@@ -475,12 +514,24 @@
                           :camera-method :carmine))
   (send *calib* :generate-motions))
 
+(defun angle-vector-duration (model start end &optional (scale 5.0) (min-time 0.5))
+  (let ((joint-list (send model :joint-list)))
+    (let ((diff (coerce (v- end start) cons)))
+      (let ((time-list (mapcar #'(lambda (d j)
+                                   (* scale (/ (deg2rad (abs d)) (send j :max-joint-velocity))))
+                               diff joint-list)))
+        (let ((max-time (apply #'max time-list)))
+          (max max-time min-time))))))
+
 ;; (load "make-calibration-pose.l")
 ;; (test)
 ;; (send *calib* :generate-motions)
 ;; (send *calib* :refine-motions)
+;; (send *calib* :animate)
 ;; (send-all (mapcar #'(lambda (m) (cdr m)) (send *calib* :motions)) :animate)
 ;; (send (cdr (car (send *calib* :motions))) :generate-motion)
+;; (setq *hrp2* (send (cdr (car (send *calib* :motions))) :robot-model))
 ;; (send (cdr (car (send *calib* :motions))) :refine-motion)
 ;; (send (cdr (car (send *calib* :motions))) :animate)
 ;; (send (cdr (cadr (send *calib* :motions))) :generate-motion)
+;; (send (cdr (car (send *calib* :motions))) :test-with-real-robot *ri*)
