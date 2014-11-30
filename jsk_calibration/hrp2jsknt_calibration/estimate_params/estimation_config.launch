@@ -1,4 +1,3 @@
-
 <launch>
 
   <group ns="calibration_config" clear_params="true">

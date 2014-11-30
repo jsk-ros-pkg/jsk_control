@@ -5,10 +5,12 @@
   :super propertied-object
   :slots (robot-model sampling-joints distances end-effector-offset limb
           reset-method motion-anglevectors camera-method filter-sampling
-          collision-links board-object))
+          collision-links board-object prompt chain-ids))
 
 (defmethod calibration-motion
   (:init (&key ((:robot-model arobot-model) nil)
+               ((:chain-ids achain-ids) nil)
+               ((:prompt aprompt) nil)
                ((:sampling-joint asampling-joint) nil)
                ((:distances adistances) nil)
                ((:camera-method acamera-method) nil)
@@ -18,6 +20,8 @@
                ((:collision-links acollision-links) nil)
                ((:board board) nil)
                ((:limb alimb) nil))
+    (setq chain-ids achain-ids)
+    (setq prompt aprompt)
     (setq board-object board)
     (setq filter-sampling afilter-sampling)
     (setq camera-method acamera-method)
@@ -70,6 +74,49 @@
               (return-from :test-with-real-robot nil)))
           ))
       ))
+  (:generate-config-yaml (root-directory arm-name)
+    (with-open-file
+     (f (format nil "~A/config.yaml" root-directory) :direction :output)
+     (format f "group: ~A~%" (string arm-name))
+     (format f "prompt: ~A~%" prompt)
+     (format f "finish: ~A~%" "Skipping arm samples")
+     (format f "repat: False~%")
+     ))
+  (:generate-motion-yaml (root-directory arm angle-vector index tm)
+    (let* ((fname (format nil "~A_~0,4d.yaml" (string arm) index))
+           (full-path (format nil "~A/~A" root-directory fname)))
+      (with-open-file
+       (f full-path :direction :output)
+       (format f "camera_measurements:~%")
+       (format f "- {cam_id: head_camera, config: mmurooka_board}~%")
+       (format f "joint_commands:~%")
+       (format f "- controller: fullbody_controller~%")
+       (format f "  segments:~%")
+       (format f "  - duration: ~A~%" tm)
+       (format f "    positions: ~A~%" (python-array-format ;convert to radian
+                                        (mapcar #'deg2rad (coerce angle-vector cons))))
+       (format f "joint_measurements:~%")
+       (dolist (chain-id chain-ids)
+         (format f "- {chain_id: ~A,  config: tight_tol}~%" chain-id))
+       (format f "sample_id: ~A_~0,4d~%" (string arm) index)
+       (format f "target: {chain_id: LARM_chain, target_id: small_cb_4x5}~%") ;tmp
+       ))
+    )
+  (:generate-files (root-directory arm-name)
+    (format t "generating ~A files under ~A" (length motion-anglevectors) root-directory)
+    ;; config.yaml
+    (send self :generate-config-yaml root-directory arm-name)
+    (let ((angle-vector-sequence (append (list (send robot-model reset-method))
+                                         motion-anglevectors
+                                         (list (send robot-model reset-method)))))
+      ;; ${arm-name}_%04d.yaml
+      (dotimes (i (length motion-anglevectors))
+        (let ((av (elt motion-anglevectors i)))
+          (let ((tm (angle-vector-duration
+                     robot-model (elt angle-vector-sequence i)
+                     av)))
+            (send self :generate-motion-yaml root-directory arm-name av i tm)))
+        )))
   (:robot-model ()
     robot-model)
   (:sampling-joint-angle-combinations ()
@@ -234,7 +281,7 @@
       (unless (member i indices)
         (push (elt list i) ret)))
     (reverse ret)))
-    
+
 ;; angles := '(((joint-a . angle0) (joint-a . angle1) (joint-a . angle2))
 ;;             ((joint-b . angle0) (joint-b . angle1) (joint-b . angle2))
 ;;             ((joint-c . angle0) (joint-c . angle1) (joint-c . angle2))
@@ -268,7 +315,7 @@
 ;; class to store set of calibration motion
 (defclass calibration-config
   :super propertied-object
-  :slots (motions model-file model-class robot))
+  :slots (motions model-file model-class robot chain-configs))
 
 (defmethod calibration-config
   (:init (&key ((:model-file amodel-file) nil)
@@ -278,6 +325,133 @@
     (setq motions nil)
     (send self :generate-model)
     self)
+  (:add-chain-configs (configs)
+    (setq chain-configs configs))
+  (:generate-directories (root-directory)
+    (let ((directories (append (list "capture_data"
+                                     "capture_data/hardware_config"
+                                     "capture_data/samples")
+                               (list (format nil "capture_data/samples/~A"
+                                             (string (car (car motions)))))
+                               ;; (mapcar #'(lambda (m i)
+                               ;;             (format nil "capture_data/samples/~0,2d_~A" i (string (car m))))
+                               ;;         motions (range 0 (length motions)))
+                               (list
+                                "estimate_params"
+                                "estimate_params/config"
+                                "view_results"))))
+      (warning-message 1 "creating following directory:~%")
+      (dolist (d directories)
+        (warning-message 1 "  ~A/~A~%" root-directory d))
+      (dolist (d directories)
+        (let ((full-path (format nil "~A/~A" root-directory d)))
+          (unless (probe-file full-path)
+            (warning-message 1 "creating ~A~%" full-path)
+            (unix::mkdir full-path))
+          ))
+      ))
+  (:generate-motion-files (resolved-dir)
+    (let ((motion (car motions)))
+      (send (cdr motion)
+            :generate-files
+            (format nil "~A/capture_data/samples/~A" resolved-dir (string (car motion)))
+            (car motion))
+      )
+    )
+  (:generate-controller-config (root-directory)
+    (let ((full-path (format nil "~A/capture_data/hardware_config/controller_config.yaml" root-directory)))
+      (warning-message 1 "generating ~A~%" full-path)
+      (with-open-file
+       (f full-path :direction :output)
+       (format f "fullbody_controller:~%")
+       (format f "  topic: fullbody_controller/command~%")
+       (format f "  joint_names:~%")
+       (dolist (j (send robot :joint-list))
+         (format f
+                 "    - ~A~%" (send j :name))))))
+  (:generate-chain-config (root-directory)
+    (let ((full-path (format nil "~A/capture_data/hardware_config/chain_config.yaml" root-directory)))
+      (warning-message 1 "generating ~A~%" full-path)
+      (with-open-file
+       (f full-path :direction :output)
+       (dolist (chain-config chain-configs)
+         (let ((chain-name (car chain-config))
+               (chain-links (cdr chain-config)))
+           (format f "~A_chain:~%" chain-name)
+           (format f "  settler_config: /~A_chain/settler_config~%" chain-name)
+           (format f "  configs:~%")
+           (format f "    tight_tol:~%")
+           (format f "      settler:~%")
+           (format f "        joint_names:~%")
+           (dolist (l chain-links)
+             (format f
+                     "          - ~A~%" (send (send l :joint) :name)))
+           (format f "        tolerances:~%")
+           (dotimes (i (length chain-links))
+             (format f
+                     "          - 0.002~%"))
+           (format f "        max_step: 1.0~%")
+           (format f "        cache_size: 1500~%")
+           )
+       ))))
+  (:generate-settler-launch (root-directory)
+    (let ((full-path (format nil "~A/capture_data/settler.launch" root-directory)))
+      (warning-message 1 "generating ~A~%" full-path)
+      (with-open-file
+       (f full-path :direction :output)
+       (format f "<launch>~%")
+       (dolist (chain-config chain-configs)
+         (format f "  <include file=\"$(find calibration_launch)/capture_data/chain_settler.launch\"~%")
+         (format f "           ns=\"~A_chain\" />~%" (car chain-config)))
+       (format f "</launch>~%")
+       )))
+  (:generate-interval-launch (root-directory)
+    (let ((full-path (format nil "~A/capture_data/interval.launch" root-directory)))
+      (warning-message 1 "generating ~A~%" full-path)
+      (with-open-file
+       (f full-path :direction :output)
+       (format f "<launch>~%")
+       (format f "  <node type=\"interval_intersection_action\"~%")
+       (format f "        pkg=\"interval_intersection\"~%")
+       (format f "        name=\"interval_intersection\"~%")
+       (format f "        output=\"screen\">~%")
+       (dolist (chain-config chain-configs)
+         (format f "    <remap from=\"~A_chain\" to=\"~A_chain/settled_interval\" />~%"
+                 (car chain-config) (car chain-config)))
+       (format f "  </node>~%")
+       (format f "</launch>~%")
+      )))
+  (:generate-files (root-directory)
+    ;; directory
+    ;; root
+    ;;  +---capture_data
+    ;;           +---hardware_config
+    ;;           +---samples
+    ;;                  +---arm0
+    ;;                  +---arm1
+    ;;  +---estimate_params
+    ;;           +---config
+    ;;  +---view_results
+    (let ((resolved-dir (ros::resolve-ros-path root-directory)))
+      (send self :generate-directories resolved-dir)
+      (send self :generate-motion-files resolved-dir)
+      (send self :generate-controller-config resolved-dir)
+      (send self :generate-chain-config resolved-dir)
+      (send self :generate-settler-launch resolved-dir)
+      (send self :generate-interval-launch resolved-dir)
+      (let ((not-generated-files '("capture_data/all_pipelines.launch"
+                                   "capture_data/all_viewers.launch"
+                                   "capture_data/capture_data.launch"
+                                   "capture_data/capture_exec.launch"
+                                   "capture_data/hardware_config/cam_config.yaml"
+                                   "capture_data/hardware_config/laser_config.yaml"
+                                   "view_results/scatter_config.yaml"
+                                   "view_results/scatter.sh"
+                                   )))
+        (warning-message 3 "following files are not generated, please check by yourself~%")
+        (dolist (f not-generated-files)
+          (warning-message 3 "  ~A~%" f))
+        )))
   (:generate-model ()
     (load model-file)
     (setq robot (instance (eval model-class) :init)))
@@ -304,6 +478,13 @@
     (dotimes (i (1+ count))
       (push (+ min margin (* i step)) ret))
     ret))
+
+(defun range (start end)
+  (let ((ret nil))
+    (dotimes (i (- end start))
+      (push (+ i start) ret)
+      )
+    (reverse ret)))
 
 (defun mid-float-vector (a b r)
   (v+ (scale r a) (scale (- 1.0 r) b)))
@@ -356,6 +537,14 @@
                ((:model-class amodel-class) nil)
                (camera-method nil))
     (send-super :init :model-file amodel-file :model-class amodel-class)
+    (send self :add-chain-configs
+          (list (cons "LARM" (send robot :larm))
+                (cons "RARM" (send robot :rarm))
+                (cons "LLEG" (send robot :lleg))
+                (cons "RLEG" (send robot :rleg))
+                (cons "head" (send robot :head))
+                (cons "torso"
+                      (send robot :torso))))
     ;; build good collision links
     (let ((collision-links (send robot :collision-check-pairs))
           (ignore-link-pairs nil))
@@ -374,6 +563,8 @@
             (instance calibration-motion
                       :init
                       :limb :larm
+                      :chain-ids '("LARM_chain" "head_chain")
+                      :prompt "Please put the checkerboard in the left hand"
                       :collision-links collision-links
                       :robot-model robot
                       :reset-method :reset-pose
@@ -394,97 +585,114 @@
                         (send c :rotate (deg2rad -90) :y)
                         (send c :rotate (deg2rad 90) :z)
                         c)))
-      (send self :add-motion :rarm
-            (instance calibration-motion
-                      :init
-                      :limb :rarm
-                      :collision-links collision-links
-                      :robot-model robot
-                      :reset-method :reset-pose
-                      :camera-method camera-method
-                      :sampling-joint
-                      (list
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-p)
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-y)
-                                 :step-angle 15))
-                      :distances
-                      (range-equivalents 520 720 60)
-                      :board (make-mmurooka-board)
-                      :end-effector-offset
-                      (let ((c (make-coords
-                                :pos (float-vector (+ 100) (- (+ 70 65 80)) 0))))
-                        (send c :rotate (deg2rad -90) :y)
-                        (send c :rotate (deg2rad 90) :z)
-                        c)))
-      (send self :add-motion :lleg
-            (instance calibration-motion
-                      :init
-                      :limb :lleg
-                      :collision-links collision-links
-                      :robot-model robot
-                      :reset-method :reset-pose-for-leg-calibration
-                      :camera-method camera-method
-                      :filter-sampling
-                      '(lambda (neck-p neck-y waist-y waist-p)
-                         (>= (+ neck-y waist-y) 0))
-                      :sampling-joint
-                      (list
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-p)
-                                 :min-angle 20
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-y)
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :torso :waist-y)
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :torso :waist-p)
-                                 :step-angle 15))
-                      :distances
-                      (range-equivalents 1200 1500 100)
-                      :board (make-mmurooka-board)
-                      :end-effector-offset
-                      (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
-                        c)))
-      (send self :add-motion :rleg
-            (instance calibration-motion
-                      :init
-                      :limb :rleg
-                      :collision-links collision-links
-                      :robot-model robot
-                      :reset-method :reset-pose-for-leg-calibration
-                      :camera-method camera-method
-                      :filter-sampling
-                      '(lambda (neck-p neck-y waist-y waist-p)
-                         (<= (+ neck-y waist-y) 0))
-                      :sampling-joint
-                      (list
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-p)
-                                 :min-angle 20
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-y)
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :torso :waist-y)
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :torso :waist-p)
-                                 :step-angle 15))
-                      :distances
-                      (range-equivalents 1200 1500 100)
-                      :board (make-mmurooka-board)
-                      :end-effector-offset
-                      (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
-                        c)))
+      ;; (send self :add-motion :rarm
+      ;;       (instance calibration-motion
+      ;;                 :init
+      ;;                 :prompt "Please put the checkerboard in the right hand"
+      ;;                 :chain-ids '("RARM_chain" "head_chain")
+      ;;                 :limb :rarm
+      ;;                 :collision-links collision-links
+      ;;                 :robot-model robot
+      ;;                 :reset-method :reset-pose
+      ;;                 :camera-method camera-method
+      ;;                 :sampling-joint
+      ;;                 (list
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :head :neck-p)
+      ;;                            :step-angle 15)
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :head :neck-y)
+      ;;                            :step-angle 15))
+      ;;                 :distances
+      ;;                 (range-equivalents 520 720 60)
+      ;;                 :board (make-mmurooka-board)
+      ;;                 :end-effector-offset
+      ;;                 (let ((c (make-coords
+      ;;                           :pos (float-vector (+ 100) (- (+ 70 65 80)) 0))))
+      ;;                   (send c :rotate (deg2rad -90) :y)
+      ;;                   (send c :rotate (deg2rad 90) :z)
+      ;;                   c)))
+      ;; (send self :add-motion :lleg
+      ;;       (instance calibration-motion
+      ;;                 :init
+      ;;                 :prompt "Please put the checkerboard in the left leg"
+      ;;                 :chain-ids '("LLEG_chain" "torso_chain" "head_chain")
+      ;;                 :limb :lleg
+      ;;                 :collision-links collision-links
+      ;;                 :robot-model robot
+      ;;                 :reset-method :reset-pose-for-leg-calibration
+      ;;                 :camera-method camera-method
+      ;;                 :filter-sampling
+      ;;                 '(lambda (neck-p neck-y waist-y waist-p)
+      ;;                    (>= (+ neck-y waist-y) 0))
+      ;;                 :sampling-joint
+      ;;                 (list
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :head :neck-p)
+      ;;                            :min-angle 20
+      ;;                            :step-angle 15)
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :head :neck-y)
+      ;;                            :step-angle 15)
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :torso :waist-y)
+      ;;                            :step-angle 15)
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :torso :waist-p)
+      ;;                            :step-angle 15))
+      ;;                 :distances
+      ;;                 (range-equivalents 1200 1500 100)
+      ;;                 :board (make-mmurooka-board)
+      ;;                 :end-effector-offset
+      ;;                 (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
+      ;;                   c)))
+      ;; (send self :add-motion :rleg
+      ;;       (instance calibration-motion
+      ;;                 :init
+      ;;                 :prompt "Please put the checkerboard in the right leg"
+      ;;                 :chain-ids '("RLEG_chain" "torso_chain" "head_chain")
+      ;;                 :limb :rleg
+      ;;                 :collision-links collision-links
+      ;;                 :robot-model robot
+      ;;                 :reset-method :reset-pose-for-leg-calibration
+      ;;                 :camera-method camera-method
+      ;;                 :filter-sampling
+      ;;                 '(lambda (neck-p neck-y waist-y waist-p)
+      ;;                    (<= (+ neck-y waist-y) 0))
+      ;;                 :sampling-joint
+      ;;                 (list
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :head :neck-p)
+      ;;                            :min-angle 20
+      ;;                            :step-angle 15)
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :head :neck-y)
+      ;;                            :step-angle 15)
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :torso :waist-y)
+      ;;                            :step-angle 15)
+      ;;                  (instance sample-joint-information :init
+      ;;                            :joint (send robot :torso :waist-p)
+      ;;                            :step-angle 15))
+      ;;                 :distances
+      ;;                 (range-equivalents 1200 1500 100)
+      ;;                 :board (make-mmurooka-board)
+      ;;                 :end-effector-offset
+      ;;                 (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
+      ;;                   c)))
       self))
   )
+
+(defun python-array-format (av)
+  (let ((ss (make-string-output-stream)))
+    (format ss "[")
+    (dotimes (i (length av))
+      (format ss "~A" (elt av i))
+      (unless (= i (1- (length av)))
+        (format ss ", "))
+      )
+    (format ss "]")
+    (get-output-stream-string ss)))
 
 (defun make-rotation-mat (z)
   (let* ((z-axis (normalize-vector z))
@@ -512,7 +720,8 @@
                           :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
                           :model-class 'hrp2jsknt-robot
                           :camera-method :carmine))
-  (send *calib* :generate-motions))
+  (send *calib* :generate-motions)
+  )
 
 (defun angle-vector-duration (model start end &optional (scale 5.0) (min-time 0.5))
   (let ((joint-list (send model :joint-list)))
@@ -525,6 +734,7 @@
 
 ;; (load "make-calibration-pose.l")
 ;; (test)
+;; (send *calib* :generate-files "package://jsk_calibration/hrp2jsknt_calibration")
 ;; (send *calib* :generate-motions)
 ;; (send *calib* :refine-motions)
 ;; (send *calib* :animate)

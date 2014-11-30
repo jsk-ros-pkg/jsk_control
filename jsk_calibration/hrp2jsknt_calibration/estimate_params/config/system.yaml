@@ -4,13 +4,13 @@ base_link: BODY
 sensors:
 
   chains:
-    larm_chain:
+    LARM_chain:
       root: CHEST_LINK1
       tip: LARM_LINK6
       cov:
        joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
       gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-    rarm_chain:
+    RARM_chain:
       root: CHEST_LINK1
       tip: RARM_LINK6
       cov:
@@ -28,22 +28,23 @@ sensors:
       cov:
        joint_angles: [0.01, 0.01]
       gearing: [1.0, 1.0]
-    lleg_chain:
+    LLEG_chain:
       root: BODY
-      tip: LLEG_LINK5 # LLEG_LINK6?
+      tip: LLEG_LINK6 # LLEG_LINK5?
       cov:
-       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
-      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-    rleg_chain:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    RLEG_chain:
       root: BODY
-      tip: RLEG_LINK5 # RLEG_LINK6?
+      tip: RLEG_LINK6 # RLEG_LINK5?
       cov:
-       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
-      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
   rectified_cams:
     head_camera:
       chain_id: head_chain  #TODO: get rid of this
-      frame_id: camera_rgb_optical_frame
+#      frame_id: camera_rgb_optical_frame
+      frame_id: HEAD_LINK1
       baseline_shift: 0.0
 #      baseline_rgbd: 0.075 ## comment out if we run all_pipelines.launch with use_kinect
       f_shift: 0.0
@@ -54,11 +55,11 @@ sensors:
   tilting_lasers: {}
 
 checkerboards:
-  mmurooka_board_6x5:
+  mmurooka_board:
     corners_x: 5
     corners_y: 6
     spacing_x: 0.03
     spacing_y: 0.03
 
 transforms:
-  arm_chain_cb:   [ .25, 0, 0, pi/2, 0, 0]
+  LARM_chain_cb:   [ .25, 0, 0, pi/2, 0, 0]

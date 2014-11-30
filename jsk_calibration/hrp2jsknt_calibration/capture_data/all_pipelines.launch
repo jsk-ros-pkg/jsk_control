@@ -1,11 +1,5 @@
-
 <launch>
-  <include file="$(find calibration_launch)/capture_data/chain_settler.launch" ns="larm_chain" />
-  <!-- <include file="$(find calibration_launch)/capture_data/chain_settler.launch" ns="rarm_chain" /> -->
-  <!-- <include file="$(find calibration_launch)/capture_data/chain_settler.launch" ns="lleg_chain" /> -->
-  <!-- <include file="$(find calibration_launch)/capture_data/chain_settler.launch" ns="rleg_chain" /> -->
-  <!-- <include file="$(find calibration_launch)/capture_data/chain_settler.launch" ns="torso_chain" /> -->
-  <include file="$(find calibration_launch)/capture_data/chain_settler.launch" ns="head_chain" />
+  <include file="$(find jsk_calibration)/hrp2jsknt_calibration/capture_data/settler.launch" />
 
   <arg name="use_kinect" default="false" />
   <group if="$(arg use_kinect)" >
@@ -20,14 +14,5 @@
       <arg name="image_topic" value="image_rect_color"/> <!-- this should be image proc -->
     </include>
   </group>
-
-  <node type="interval_intersection_action"
-        pkg="interval_intersection"
-        name="interval_intersection"
-        output="screen">
-    <remap from="head_chain" to="head_chain/settled_interval" />
-    <remap from="arm_chain" to="larm_chain/settled_interval" />
-    <remap from="head_camera" to="/camera/rgb/settled_interval" />
-  </node>
-
+  <include file="$(find jsk_calibration)/hrp2jsknt_calibration/capture_data/interval.launch" />
 </launch>
