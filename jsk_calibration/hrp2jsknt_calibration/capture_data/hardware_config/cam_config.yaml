@@ -1,12 +1,12 @@
 
 # ----- Microsoft Kinect -----
 head_camera: ###FIX
-  cb_detector_config:  /camera/rgb/cb_detector_config ## FIXME
-  led_detector_config: /camera/rgb/led_detector
-  settler_config:      /camera/rgb/monocam_settler_config ## FIXME
+  cb_detector_config:  /camera_remote/rgb/cb_detector_config ## FIXME
+  led_detector_config: /camera_remote/rgb/led_detector
+  settler_config:      /camera_remote/rgb/monocam_settler_config ## FIXME
 
   configs:
-    small_cb_4x5:
+    mmurooka_board:
       settler:
         tolerance: 2.00
         ignore_failures: True
@@ -14,10 +14,10 @@ head_camera: ###FIX
         cache_size: 100
       cb_detector:
         active: True
-        num_x: 4
-        num_y: 5
-        width_scaling: 0.5
-        height_scaling: 0.5
+        num_x: 5
+        num_y: 6
+        width_scaling: 0.3
+        height_scaling: 0.3
         subpixel_window: 4
         subpixel_zero_zone: 1
       led_detector:
