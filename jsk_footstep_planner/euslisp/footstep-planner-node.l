@@ -4,6 +4,8 @@
 (ros::roseus-add-msgs "jsk_pcl_ros")
 (ros::roseus-add-srvs "jsk_pcl_ros")
 (ros::roseus-add-srvs "std_srvs")
+(ros::roseus-add-srvs "jsk_footstep_planner")
+(ros::roseus-add-msgs "jsk_rviz_plugins")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner.l" (ros::rospack-find "jsk_footstep_planner")))
 (load "footstep_planner")
@@ -44,9 +46,11 @@
 
 (defun plan-execute-cb (server goal)
   (setq *evaled-node-num* 0)
-  (let ((req (instance std_srvs::EmptyRequest :init)))
-    (ros::service-call "primitive_lock" req)
-    )  
+  (when *use-env-server*
+    (let ((req (instance std_srvs::EmptyRequest :init)))
+      (ros::service-call "primitive_lock" req)
+      )  
+    )
   (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
          (start-time (ros::time-now))
          (prblm (instance footstep-planner-graph :init
@@ -99,8 +103,11 @@
     (send prblm :goal-footstep goal-foot-coords)
     ;;(send prblm :setup-goal initial-foot-coords)
     (let ((asolver (instance a*-footstep-graph-search-solver
-                             :init 1.0 :stepcost-heuristic* prblm
+                             ;;:init 1.0 :stepcost-heuristic* prblm
                              ;;:init 1.0 :stepcost-heuristic prblm
+                             ;;:init 1.0 :straight-heuristic prblm
+                             ;;:init 1.0 :manhattan-heuristic prblm
+                             :init 1.0 *heuristic* prblm
                              :render-leg-object *leg*)))
       (let ((solver-nodes (send asolver :solve prblm :verbose nil)))
         (let ((result (send server :result)))
@@ -144,30 +151,120 @@
                                                                          (send f :leg (car s))
                                                                          f)))
                                                                  final-steps))))))
+                ;; set the size of footsteps
+                (send-all (send footsteps :footsteps)
+                          :dimensions (instance geometry_msgs::Vector3 :init
+                                                :x (* 0.001 *leg-size-x*)
+                                                :y (* 0.001 *leg-size-y*)
+                                                :z (* 0.001 *leg-size-z*)))
                 (send result :result footsteps)
                 ;; publish the result for visualization
-                (let ((str
+                (let* ((now (ros::time-now))
+                       (str
                        (format nil "took ~A sec to plan~%~A node are evaled~%"
-                               (send (ros::time- (ros::time-now) start-time) :to-sec)
+                               (send (ros::time- now start-time) :to-sec)
                                *evaled-node-num*)))
-                  (ros::ros-warn str))
-                (ros::publish "/footstep" footsteps)
+                  (ros::ros-warn str)
+                  (let ((msg (instance std_msgs::Float32 :init)))
+                    (send msg :data (send (ros::time- now start-time) :to-sec))
+                    (ros::publish (format nil "~A/footstep_time" (ros::get-name)) msg))
+                  (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
+                    (send msg :text (format nil "Planning took ~A sec" 
+                                            (send (ros::time- now start-time) :to-sec)))
+                    (ros::publish (format nil "~A/footstep_time_text" (ros::get-name)) msg))
+                  (let ((msg (instance std_msgs::Float32 :init)))
+                    (send msg :data *evaled-node-num*)
+                    (ros::publish (format nil "~A/footstep_count" (ros::get-name)) msg)))
+                (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
+                    (send msg :text (format nil "~A nodes are expanded" 
+                                            *evaled-node-num*))
+                    (ros::publish (format nil "~A/footstep_count_text" (ros::get-name)) msg))
+                (ros::publish (format nil "~A/footstep" (ros::get-name)) footsteps)
                 (send server :set-succeeded result))
               (send server :set-aborted result))
           ))
       )
     )
-  (let ((req (instance std_srvs::EmptyRequest :init)))
-    (ros::service-call "primitive_unlock" req)
-    )
+  (when *use-env-server*
+    (let ((req (instance std_srvs::EmptyRequest :init)))
+      (ros::service-call "primitive_unlock" req)
+      ))
   )
+
+(setq *successors-count* 0)
+(setq *previous-successor-published-stamp* nil)
+;; for debugging
+(defun publish-successors ()
+  (if (and *previous-successor-published-stamp*
+           (< (send (ros::time- (ros::time-now) *previous-successor-published-stamp*) :to-sec) 1.0))
+      (return-from publish-successors nil))
+  (let ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*)))
+    (let ((right-footsteps (send param :right-footsteps)))
+      (if (>= *successors-count* (length right-footsteps))
+          (setq *successors-count* 0))
+      (when (not (= (length right-footsteps) 0))
+        (let ((the-footstep (cdr (elt right-footsteps *successors-count*))))
+          ;; always publish 2 footsteps
+          ;; the one is at origin
+          (let ((initial-footstep
+                 (instance jsk_footstep_msgs::Footstep :init))
+                (second-footstep
+                 (instance jsk_footstep_msgs::Footstep :init)))
+            ;; setup initial
+            (send initial-footstep :leg jsk_footstep_msgs::Footstep::*LEFT*)
+            (send initial-footstep :pose (ros::coords->tf-pose (make-coords)))
+            (send second-footstep :leg jsk_footstep_msgs::Footstep::*RIGHT*)
+            (send second-footstep :pose (ros::coords->tf-pose the-footstep))
+            (let ((footsteps (instance jsk_footstep_msgs::FootstepArray :init)))
+              (send footsteps :footsteps (list initial-footstep second-footstep))
+              (send-all (send footsteps :footsteps) :dimensions
+                        (instance geometry_msgs::Vector3 :init
+                                  :x (* 0.001 *leg-size-x*)
+                                  :y (* 0.001 *leg-size-y*)
+                                  :z (* 0.001 *leg-size-z*)))
+              (send footsteps :header :stamp (ros::time-now))
+              (send footsteps :header :frame_id "successors_origin")
+              (ros::publish (format nil "~A/footstep_successors" (ros::get-name)) footsteps))
+            (let ((text (instance jsk_rviz_plugins::OverlayText :init)))
+              (let ((texts (list "Footstep parameter"
+                                 (format nil "Num: ~A/~A" *successors-count* (length right-footsteps))
+                                 (format nil "x: ~A" (* 0.001 (elt (send the-footstep :worldpos) 0)))
+                                 (format nil "y: ~A" (* 0.001 (elt (send the-footstep :worldpos) 1)))
+                                 (format nil "z: ~A" (* 0.001 (elt (send the-footstep :worldpos) 2)))
+                                 (format nil "theta: ~A (~A deg)"
+                                         (elt (car (send the-footstep :rpy-angle)) 2)
+                                         (rad2deg (elt (car (send the-footstep :rpy-angle)) 0))))))
+                (send text :text (reduce
+                                  #'(lambda (x y) (format nil "~A~%~A" x y)) texts))
+                (send text :left 0) (send text :top 0)
+                (send text :width 500) (send text :height 500)
+                (send text :text_size 36)
+                (ros::publish (format nil "~A/footstep_successors_text" (ros::get-name)) text))))))))
+  (setq *previous-successor-published-stamp* (ros::time-now))
+  (incf *successors-count*))
+
+(defun change-successor-cb (req)
+  (let ((m (send req :response)))
+    (cond ((string= (send req :type) "small")
+           (ros::ros-info "change to small footstep")
+           (setq *footstep-xs* *small-footstep-xs*)
+           (setq *footstep-ys* *small-footstep-ys*)
+           (setq *footstep-thetas* *small-footstep-thetas*))
+          ((string= (send req :type) "normal")
+           (ros::ros-info "change to normal footstep")
+           (setq *footstep-xs* *normal-footstep-xs*)
+           (setq *footstep-ys* *normal-footstep-ys*)
+           (setq *footstep-thetas* *normal-footstep-thetas*))
+          )
+    m))
 
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
   ;; read parameters
   
   ;; hrp2 footstep size is default
-  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
+  ;;(let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
+  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.227)))
         (leg-size-z (* 1000.0 (ros::get-param "~leg_height" 0.001)))
         (leg-size-y (* 1000.0 (ros::get-param "~leg_width" 0.135))))
     (setq *leg-size-x* leg-size-x)
@@ -176,11 +273,18 @@
     (setq *leg* (make-cube leg-size-x leg-size-y leg-size-z))
     (setq *global-frame-id* (ros::get-param "~global_frame_id" "/odom"))
     (setq *tf* (instance ros::transform-listener :init)))
-  (setq *footstep-xs* (ros::get-param "~x"))
-  (setq *footstep-ys* (ros::get-param "~y"))
-  (setq *footstep-thetas* (ros::get-param "~theta"))
+  (setq *normal-footstep-xs* (ros::get-param "~x" nil))
+  (setq *normal-footstep-ys* (ros::get-param "~y" nil))
+  (setq *normal-footstep-thetas* (ros::get-param "~theta" nil))
+  (setq *small-footstep-xs* (ros::get-param "~small_x" nil))
+  (setq *small-footstep-ys* (ros::get-param "~small_y" nil))
+  (setq *small-footstep-thetas* (ros::get-param "~small_theta" nil))
+  (setq *footstep-xs* *normal-footstep-xs*)
+  (setq *footstep-ys* *normal-footstep-ys*)
+  (setq *footstep-thetas* *normal-footstep-thetas*)
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
+  (setq *heuristic* (read-from-string (ros::get-param "~heuristic" ":stepcost-heuristic*")))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
   (when *use-env-server*
@@ -194,14 +298,31 @@
   (setq *tf* (instance ros::transform-listener :init))
   (when *use-planes*
     (ros::subscribe "planes" jsk_pcl_ros::PolygonArray #'planes-cb))
-  (ros::advertise "/footstep" jsk_footstep_msgs::FootstepArray)
+  ;; (ros::advertise "/footstep" jsk_footstep_msgs::FootstepArray)
+  ;; (ros::advertise "/footstep_time" std_msgs::Float32)
+  ;; (ros::advertise "/footstep_count" std_msgs::Float32)
+  ;; (ros::advertise "/footstep_time_text" jsk_rviz_plugins::OverlayText)
+  ;; (ros::advertise "/footstep_count_text" jsk_rviz_plugins::OverlayText)
+  ;; (ros::advertise "/footstep_successors" jsk_footstep_msgs::FootstepArray)
+  ;; (ros::advertise "/footstep_successors_text" jsk_rviz_plugins::OverlayText)
+  (ros::advertise (format nil "~A/footstep" (ros::get-name)) jsk_footstep_msgs::FootstepArray)
+  (ros::advertise (format nil "~A/footstep_time" (ros::get-name)) std_msgs::Float32)
+  (ros::advertise (format nil "~A/footstep_count" (ros::get-name)) std_msgs::Float32)
+  (ros::advertise (format nil "~A/footstep_time_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
+  (ros::advertise (format nil "~A/footstep_count_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
+  (ros::advertise (format nil "~A/footstep_successors" (ros::get-name)) jsk_footstep_msgs::FootstepArray)
+  (ros::advertise (format nil "~A/footstep_successors_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
+  (ros::advertise-service "/change_successor"
+    jsk_footstep_planner::ChangeSuccessor
+    #'change-successor-cb)
   (let ((s (instance ros::simple-action-server :init
-                     "footstep_planner" jsk_footstep_msgs::PlanFootstepsAction
+                     (ros::get-name) jsk_footstep_msgs::PlanFootstepsAction
                      :execute-cb 'plan-execute-cb)))
     (while (ros::ok)
       (send s :worker)
       (ros::spin-once)
       (if *debug* (x::window-main-one))
+      (publish-successors)
       (ros::sleep))
     ))
 

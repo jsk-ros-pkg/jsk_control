@@ -1,5 +1,5 @@
 <launch>
-  <arg name="INTERRUPTIBLE" default="false" />
+  <arg name="INTERRUPTIBLE" default="true" />
   <node pkg="jsk_footstep_planner"
         type="footstep-planner-node.l"
         name="footstep_planner"
@@ -9,32 +9,35 @@
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <remap from="planes" to="/env_server/old/polygons" />
     <rosparam subst_value="true">
-    use_planes: false
-    use_env_server: false
-    timeout: 0.5
+    use_planes: true
+    use_env_server: true
+    timeout: 1.0
     </rosparam>
     <remap from="primitive_lock" to="/env_server/primitive_lock" />
     <remap from="primitive_unlock" to="/env_server/primitive_unlock" />
     <remap from="env_lock" to="/env_server/lock" />
     <remap from="polygon_on_env" to="/env_server/polygon_on_environment" />
+    <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" />
   </node>
   <!-- controller -->
   <node pkg="jsk_footstep_controller"
         type="footstep-controller.l"
         name="footstep_controller"
+        respawn="true"
         clear_params="true"
         output="screen">
     <rosparam subst_value="true">
       interruptible_mode: $(arg INTERRUPTIBLE)
-      interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
-      interface_class: "hrp2jsknt-interface"
+      interface_file: "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l"
+      interface_class: "hrp2jsknts-interface"
     </rosparam>
   </node>
   <!-- visualization for rviz -->
 
   <arg name="POSE_REMAP" default="/footstep_marker/pose" />
-  <arg name="DEV" default="/dev/input/ps3joy" />
-  <node pkg="joy" type="joy_node" name="ps3_joy0" output="screen" >
+  <!-- <arg name="DEV" default="/dev/input/ps3joy" /> -->
+  <arg name="DEV" default="/dev/input/js2" />
+  <node pkg="joy" type="joy_node" name="joy_node" output="screen" >
     <param name="dev" type="string" value="$(arg DEV)" />
     <param name="deadzone" value="0.2" />
     <param name="autorepeat_rate" value="40" />
@@ -42,7 +45,6 @@
   </node>
 
   <node pkg="jsk_teleop_joy" type="joy.py" name="teleop_manager0" output="screen"
-        if="false"
         clear_params="true">
     <param name="controller_type" value="auto" />
     <rosparam subst_value="true">
@@ -50,14 +52,26 @@
         'Footstep Planner':
            class: 'JoyFootstepPlanner'
            args:
-             pose: $(arg POSE_REMAP)
+             pose: $(arg POSE_REMAP)_nonsnapped
              follow_view: true
              publish_pose: true
              execute: '/footstep_marker/execute'
              resume: '/footstep_marker/resume'
              frame_id: odom
+
     </rosparam>
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
+  </node>
+  <node pkg="jsk_pcl_ros" type="snapit" name="snapit"
+        output="screen">
+    <remap from="~input/polygons" to="/env_server/old/polygons"/>
+    <remap from="~input/polygon_coefficients" to="/env_server/old/coefficients"/>
+    <!-- <remap from="~input/polygons" to="/hoge_polygon"/> -->
+    <!-- <remap from="~input/polygon_coefficients" to="/hoge_coefficients"/> -->
+    <!-- <remap from="~input/polygons" to="/estimated_plane_respected_to_odom/output_polygons" /> -->
+    <!-- <remap from="~input/polygon_coefficients" to="/estimated_plane_respected_to_odom/output_coefficients" /> -->
+    <remap from="~input/convex_align" to="$(arg POSE_REMAP)_nonsnapped" />
+    <remap from="~output/convex_aligned" to="$(arg POSE_REMAP)" />
   </node>
   <node pkg="jsk_interactive_marker"
         type="footstep_marker"
@@ -71,7 +85,7 @@
     <param name="wait_snapit_server" value="false" />
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/hrp2jsknt_sim.yaml" />
     <rosparam>
-      use_plane_snap: true
+      use_plane_snap: false
       use_footstep_planner: true
       use_initial_footstep_tf: true
       initial_reference_frame: '/ground'
@@ -81,5 +95,17 @@
     </rosparam>
     <param name="frame_id" value="/odom" />
   </node>
+  <node pkg="jsk_footstep_controller" type="footstep-refinement.l"
+        name="footstep_refinement">
+    <remap from="planner_result" to="footstep_planner/result_non_refined"/>
+    <remap from="refined_footstep_result" to="footstep_planner/result" />
+  </node>
   <include file="$(find jsk_pcl_ros)/launch/footstep_recognition.launch" />
+  <node pkg="roseus" type="roseus" name="lookaround_ground"
+        args="$(find jsk_footstep_controller)/euslisp/lookaround-ground.l">
+  </node>
+  <node pkg="jsk_footstep_controller" type="stance_phase.py" name="stance_phase" />
+  <node pkg="jsk_footstep_controller" type="footstep-overlay-text.l"
+        name="footstep_overlay_text">
+  </node>
 </launch>

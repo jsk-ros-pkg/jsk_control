@@ -199,8 +199,8 @@
     ))
   (:sample-robot-test
    (&rest args)
-   (require "irteus/demo/sample-robot-model.l")
-   (defvar *sample-robot* (instance sample-robot :init))
+   (require :samplerobot "package://hrpsys_ros_bridge_tutorials/models/samplerobot.l")
+   (defvar *sample-robot* (instance samplerobot-robot :init))
    (send *sample-robot* :fix-leg-to-coords (make-coords))
    (ros::roseus "fullbody_ik_client_test")
    (objects (list *sample-robot*))
