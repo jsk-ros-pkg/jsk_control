@@ -1,0 +1,16 @@
+<launch>
+  <arg name="IK_OPTIONS" default="" />
+
+  <node pkg="roseus" type="roseus" name="samplerobot_ik_server" output="screen"
+	args="$(find jsk_ik_server)/euslisp/ik-server-impl/sample-robot-ik-server.l">
+    <param name="robot" value="samplerobot"/>
+    <remap to="/samplerobot_ik_server/solve" from="/solve_ik" />
+    <param name="additional_ik_options" value="$(arg IK_OPTIONS)" />
+  </node>
+
+  <node pkg="roseus" type="roseus" name="samplerobot_ik_client" output="screen"
+	args="$(find jsk_ik_server)/test/fullbody-ik-client-test.l">
+    <env name="IK_CLIENT_TEST" value="sample-robot"/>
+    <remap to="/samplerobot_ik_server/solve" from="/solve_ik" />
+  </node>
+</launch>

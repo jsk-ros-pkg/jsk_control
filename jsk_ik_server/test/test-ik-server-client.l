@@ -5,7 +5,7 @@
 
 
 (require "package://jsk_ik_server/test/fullbody-ik-client-test.l")
-(require "irteus/demo/sample-robot-model.l")
+(require :samplerobot "package://hrpsys_ros_bridge_tutorials/models/samplerobot.l")
 
 (defmethod fullbody-ik-client
   (:solvable-ik-server-call
@@ -26,7 +26,7 @@
       :move-target move-target
       :target-coords target-coords
       :root-link-virtual-joint-weight #F(1 1 1 1 1 1)
-      ;;:fix-limbs '(:rleg :lleg)
+      :fix-limbs '(:rleg :lleg)
       ;;:centroid-thre 100
       :stop 50
       :use-toes '(nil nil)
@@ -50,7 +50,7 @@
 
 (deftest test-soft
   (let* ((ik-client-test (instance fullbody-ik-client :init))
-	 (robot (instance sample-robot :init))
+	 (robot (instance samplerobot-robot :init))
 	 ret
 	 )
     (send robot :fix-leg-to-coords (make-coords))
