@@ -80,7 +80,7 @@
      (format f "group: ~A~%" (string arm-name))
      (format f "prompt: ~A~%" prompt)
      (format f "finish: ~A~%" "Skipping arm samples")
-     (format f "repat: False~%")
+     (format f "repeat: False~%")
      ))
   (:generate-motion-yaml (root-directory arm angle-vector index tm)
     (let* ((fname (format nil "~A_~0,4d.yaml" (string arm) index))
@@ -88,7 +88,8 @@
       (with-open-file
        (f full-path :direction :output)
        (format f "camera_measurements:~%")
-       (format f "- {cam_id: head_camera, config: mmurooka_board}~%")
+       (format f "- {cam_id: head_camera, config: ~A}~%"
+               (string-downcase (string (get board-object :name))))
        (format f "joint_commands:~%")
        (format f "- controller: fullbody_controller~%")
        (format f "  segments:~%")
@@ -99,9 +100,9 @@
        (dolist (chain-id chain-ids)
          (format f "- {chain_id: ~A,  config: tight_tol}~%" chain-id))
        (format f "sample_id: ~A_~0,4d~%" (string arm) index)
-       (format f "target: {chain_id: LARM_chain, target_id: small_cb_4x5}~%") ;tmp
-       ))
-    )
+       (format f "target: {chain_id: ~A_chain, target_id: ~A}~%"
+               (string arm) (string-downcase (string (get board-object :name))))
+       )))
   (:generate-files (root-directory arm-name)
     (format t "generating ~A files under ~A" (length motion-anglevectors) root-directory)
     ;; config.yaml
@@ -315,7 +316,8 @@
 ;; class to store set of calibration motion
 (defclass calibration-config
   :super propertied-object
-  :slots (motions model-file model-class robot chain-configs))
+  :slots (motions model-file model-class robot chain-configs
+          camera-configs board-object))
 
 (defmethod calibration-config
   (:init (&key ((:model-file amodel-file) nil)
@@ -325,8 +327,13 @@
     (setq motions nil)
     (send self :generate-model)
     self)
+  (:add-board-object (bo)
+    (setq board-object bo))
   (:add-chain-configs (configs)
     (setq chain-configs configs))
+  (:head-camera-config (camera-topic)
+    (push (cons "head_camera" camera-topic)
+          camera-configs))
   (:generate-directories (root-directory)
     (let ((directories (append (list "capture_data"
                                      "capture_data/hardware_config"
@@ -416,11 +423,46 @@
        (format f "        name=\"interval_intersection\"~%")
        (format f "        output=\"screen\">~%")
        (dolist (chain-config chain-configs)
-         (format f "    <remap from=\"~A_chain\" to=\"~A_chain/settled_interval\" />~%"
+         (format f 
+                 "    <remap from=\"~A_chain\" to=\"~A_chain/settled_interval\" />~%"
                  (car chain-config) (car chain-config)))
+       (dolist (camera-config camera-configs)
+         (format f 
+                 "    <remap from=\"~A\" to=\"~A/settled_interval\" />~%"
+                 (car camera-config) (cdr camera-config)))
        (format f "  </node>~%")
        (format f "</launch>~%")
       )))
+  (:generate-cam-config (root-directory)
+    (let ((full-path (format nil "~A/capture_data/hardware_config/cam_config.yaml" root-directory)))
+      (warning-message 1 "generating ~A~%" full-path)
+      (with-open-file
+       (f full-path :direction :output)
+       (dolist (camera-config camera-configs)
+         (let ((camera-name (car camera-config))
+               (camera-topic (cdr camera-config)))
+           (format f "~A:~%" camera-name)
+           (format f "  cb_detector_config: ~A/cb_detector_config~%" camera-topic)
+           (format f "  led_detector_config: ~A/led_detector~%" camera-topic)
+           (format f "  settler_config: ~A/monocam_settler_config~%" camera-topic)
+           (format f "  configs:~%")
+           (format f "    ~A:~%" (string-downcase (string (get board-object :name))))
+           (format f "      settler:~%")
+           (format f "        tolerance: 2.00~%")
+           (format f "        ignore_failures: True~%")
+           (format f "        max_step: 3.0 ~%")
+           (format f "        cache_size: 100~%")
+           (format f "      cb_detector:~%")
+           (format f "        active: True~%")
+           (format f "        num_x: ~A~%" (get board-object :num_x))
+           (format f "        num_y: ~A~%" (get board-object :num_y))
+           (format f "        width_scaling: 1~%")
+           (format f "        height_scaling: 1~%")
+           (format f "        subpixel_window: 4~%")
+           (format f "        subpixel_zero_zone: 1~%")
+           (format f "      led_detector:~%")
+           (format f "        active: False~%")
+           )))))
   (:generate-files (root-directory)
     ;; directory
     ;; root
@@ -439,11 +481,11 @@
       (send self :generate-chain-config resolved-dir)
       (send self :generate-settler-launch resolved-dir)
       (send self :generate-interval-launch resolved-dir)
+      (send self :generate-cam-config resolved-dir)
       (let ((not-generated-files '("capture_data/all_pipelines.launch"
                                    "capture_data/all_viewers.launch"
                                    "capture_data/capture_data.launch"
                                    "capture_data/capture_exec.launch"
-                                   "capture_data/hardware_config/cam_config.yaml"
                                    "capture_data/hardware_config/laser_config.yaml"
                                    "view_results/scatter_config.yaml"
                                    "view_results/scatter.sh"
@@ -509,9 +551,9 @@
                (step-angle 5))
     (setq j ajoint)
     (if (null min-angle)
-        (setq min-angle (send ajoint :min-angle)))
+        (setq min-angle (- (send ajoint :min-angle) (deg2rad 1))))
     (if (null max-angle)
-        (setq max-angle (send ajoint :max-angle)))
+        (setq max-angle (- (send ajoint :max-angle) (deg2rad 1))))
     ;; compute angles
     (setq angles (range-equivalents min-angle max-angle step-angle))
     self)
@@ -537,6 +579,8 @@
                ((:model-class amodel-class) nil)
                (camera-method nil))
     (send-super :init :model-file amodel-file :model-class amodel-class)
+    (send self :head-camera-config "/camera_remote/rgb")
+    (send self :add-board-object (make-mmurooka-board))
     (send self :add-chain-configs
           (list (cons "LARM" (send robot :larm))
                 (cons "RARM" (send robot :rarm))
@@ -578,7 +622,7 @@
                                  :joint (send robot :head :neck-y)
                                  :step-angle 15))
                       :distances
-                      (range-equivalents 520 720 60)
+                      (range-equivalents 520 640 60)
                       :board (make-mmurooka-board)
                       :end-effector-offset
                       (let ((c (make-coords :pos (float-vector (+ 100) (+ 70 65 80) 0))))
@@ -700,6 +744,7 @@
          (y-axis (normalize-vector (v* z-axis tmp)))
          (x-axis (normalize-vector (v* y-axis z-axis))))
     (transpose (matrix x-axis y-axis z-axis))))
+
 (defun next-best-direction (z)
   (if (< (abs (elt z 1)) (abs (elt z 0)))
       (if (< (abs (elt z 1)) (abs (elt z 2)))
@@ -712,16 +757,11 @@
 (defun make-mmurooka-board (&optional (padding 20))
   (let ((cube (make-cube (+ padding 320) (+ padding 240) 5)))
     (send cube :translate-vertices (float-vector 0 0 (- (+ 1.0 (/ 5 2.0)))))
+    ;; add property to the board
+    (setf (get cube :name) :mmurooka_board)
+    (setf (get cube :num_x) 5)
+    (setf (get cube :num_y) 6)
     cube))
-
-(defun test ()
-  (setq *calib* (instance hrp2-calibration-config
-                          :init
-                          :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
-                          :model-class 'hrp2jsknt-robot
-                          :camera-method :carmine))
-  (send *calib* :generate-motions)
-  )
 
 (defun angle-vector-duration (model start end &optional (scale 5.0) (min-time 0.5))
   (let ((joint-list (send model :joint-list)))
@@ -731,6 +771,16 @@
                                diff joint-list)))
         (let ((max-time (apply #'max time-list)))
           (max max-time min-time))))))
+
+(defun test ()
+  (setq *calib* (instance hrp2-calibration-config
+                          :init
+                          :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"
+                          :model-class 'hrp2jsknt-robot
+                          :camera-method :carmine))
+  (send *calib* :generate-motions)
+  (send *calib* :generate-files "package://jsk_calibration/hrp2jsknt_calibration")
+  )
 
 ;; (load "make-calibration-pose.l")
 ;; (test)

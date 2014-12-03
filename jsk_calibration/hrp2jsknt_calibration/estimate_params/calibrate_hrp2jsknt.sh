@@ -15,7 +15,8 @@ fi
 rm robot_calibrated.xml
 echo "Success"
 
-roslaunch hrp2jsknt_calibration estimation_config.launch
+# hrp2jsknt_calibration
+roslaunch jsk_calibration estimation_config.launch
 rosrun calibration_estimation multi_step_cov_estimator.py /tmp/hrp2jsknt_calibration/cal_measurements.bag /tmp/hrp2jsknt_calibration __name:=cal_cov_estimator
 
 est_return_val=$?

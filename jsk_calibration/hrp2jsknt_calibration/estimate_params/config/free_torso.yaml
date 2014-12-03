@@ -19,7 +19,7 @@
   tilting_lasers: {}
 
   checkerboards:
-    small_cb_4x5:
+   small_cb_4x5:
       spacing_x: 0
       spacing_y: 0
 
