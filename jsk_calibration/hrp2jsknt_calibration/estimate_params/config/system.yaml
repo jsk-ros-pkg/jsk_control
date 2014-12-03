@@ -1,5 +1,5 @@
 
-base_link: BODY
+base_link: CHEST_LINK1
 
 sensors:
 
@@ -43,8 +43,8 @@ sensors:
   rectified_cams:
     head_camera:
       chain_id: head_chain  #TODO: get rid of this
-#      frame_id: camera_rgb_optical_frame
-      frame_id: HEAD_LINK1
+      frame_id: camera_rgb_optical_frame
+#      frame_id: HEAD_LINK1
       baseline_shift: 0.0
 #      baseline_rgbd: 0.075 ## comment out if we run all_pipelines.launch with use_kinect
       f_shift: 0.0
@@ -62,4 +62,9 @@ checkerboards:
     spacing_y: 0.03
 
 transforms:
-  LARM_chain_cb:   [ .25, 0, 0, pi/2, 0, 0]
+  LARM_chain_cb:   [-0.002956968077825933, 0.16898467170866147, -0.20050853695600393, -0.044062, 0.019201, -0.019454]
+default_floating_initial_pose: [0.6, 0, 0, -1.2092, 1.2092, -1.2092]
+
+# xyz: [-0.002956968077825933, 0.16898467170866147, -0.20050853695600393]
+# rpy: (-0.04425102767135782, 0.01876497698337332, -0.019873022766080706)
+
