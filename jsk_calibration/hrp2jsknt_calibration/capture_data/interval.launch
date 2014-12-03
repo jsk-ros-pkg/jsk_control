@@ -1,0 +1,14 @@
+<launch>
+  <node type="interval_intersection_action"
+        pkg="interval_intersection"
+        name="interval_intersection"
+        output="screen">
+    <remap from="LARM_chain" to="LARM_chain/settled_interval" />
+    <remap from="RARM_chain" to="RARM_chain/settled_interval" />
+    <remap from="LLEG_chain" to="LLEG_chain/settled_interval" />
+    <remap from="RLEG_chain" to="RLEG_chain/settled_interval" />
+    <remap from="head_chain" to="head_chain/settled_interval" />
+    <remap from="torso_chain" to="torso_chain/settled_interval" />
+    <remap from="head_camera" to="/camera_remote/rgb/settled_interval" />
+  </node>
+</launch>
