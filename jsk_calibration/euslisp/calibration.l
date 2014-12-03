@@ -5,6 +5,7 @@
   :super propertied-object
   :slots (robot-model sampling-joints distances end-effector-offset limb
           reset-method motion-anglevectors camera-method filter-sampling
+          filter-sampling-coords
           collision-links board-object prompt chain-ids))
 
 (defmethod calibration-motion
@@ -17,6 +18,7 @@
                ((:end-effector-offset aend-effector-offset) nil)
                ((:reset-method areset-method) nil)
                ((:filter-sampling afilter-sampling) nil)
+               ((:filter-sampling-coords afilter-sampling-coords) nil)
                ((:collision-links acollision-links) nil)
                ((:board board) nil)
                ((:limb alimb) nil))
@@ -24,6 +26,7 @@
     (setq prompt aprompt)
     (setq board-object board)
     (setq filter-sampling afilter-sampling)
+    (setq filter-sampling-coords afilter-sampling-coords)
     (setq camera-method acamera-method)
     (setq reset-method areset-method)
     (setq limb alimb)
@@ -239,7 +242,13 @@
                        :warnp nil
                        ;;:stop 500
                        :rotation-axis rotation-axis))
-        (if rr (setq ik-successp t))
+        (if rr
+            (if (not filter-sampling-coords)
+                (setq ik-successp t)
+              (setq ik-successp
+                    (funcall filter-sampling-coords
+                             (send (send board-object :copy-worldcoords)
+                                   :copy-worldcoords)))))
         (when rr
           (send *irtviewer* :draw-objects)
           (x::window-main-one)

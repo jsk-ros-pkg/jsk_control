@@ -50,6 +50,9 @@
                       :robot-model robot
                       :reset-method :reset-pose
                       :camera-method camera-method
+                      :filter-sampling-coords
+                      '(lambda (c)
+                         (> (elt (send c :worldpos) 1) 0))
                       :sampling-joint
                       (list
                        (instance sample-joint-information :init
@@ -57,6 +60,7 @@
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
+                                 :min-angle 0
                                  :step-angle 15))
                       :distances
                       (range-equivalents 520 640 60)
