@@ -107,7 +107,7 @@
                (string arm) (string-downcase (string (get board-object :name))))
        )))
   (:generate-files (root-directory arm-name)
-    (format t "generating ~A files under ~A" (length motion-anglevectors) root-directory)
+    (format t "generating ~A files under ~A~%" (length motion-anglevectors) root-directory)
     ;; config.yaml
     (send self :generate-config-yaml root-directory arm-name)
     (let ((angle-vector-sequence (append (list (send robot-model reset-method))
@@ -119,8 +119,10 @@
           (let ((tm (angle-vector-duration
                      robot-model (elt angle-vector-sequence i)
                      av)))
-            (send self :generate-motion-yaml root-directory arm-name av i tm)))
-        )))
+            (if (= i 0)                 ;first time, use 10 sec
+                (send self :generate-motion-yaml root-directory arm-name av i 10)
+              (send self :generate-motion-yaml root-directory arm-name av i tm)))
+          ))))
   (:robot-model ()
     robot-model)
   (:sampling-joint-angle-combinations ()
@@ -347,11 +349,11 @@
     (let ((directories (append (list "capture_data"
                                      "capture_data/hardware_config"
                                      "capture_data/samples")
-                               (list (format nil "capture_data/samples/~A"
-                                             (string (car (car motions)))))
-                               ;; (mapcar #'(lambda (m i)
-                               ;;             (format nil "capture_data/samples/~0,2d_~A" i (string (car m))))
-                               ;;         motions (range 0 (length motions)))
+                               ;; (list (format nil "capture_data/samples/~A"
+                               ;;               (string (car (car motions)))))
+                               (mapcar #'(lambda (m i)
+                                           (format nil "capture_data/samples/~0,2d_~A" i (string (car m))))
+                                       motions (range 0 (length motions)))
                                (list
                                 "estimate_params"
                                 "estimate_params/config"
@@ -367,13 +369,12 @@
           ))
       ))
   (:generate-motion-files (resolved-dir)
-    (let ((motion (car motions)))
-      (send (cdr motion)
-            :generate-files
-            (format nil "~A/capture_data/samples/~A" resolved-dir (string (car motion)))
-            (car motion))
-      )
-    )
+    (dotimes (i (length motions))
+      (let ((motion (elt motions i)))
+        (send (cdr motion)
+              :generate-files
+              (format nil "~A/capture_data/samples/~0,2d_~A" resolved-dir i (string (car motion)))
+              (car motion)))))
   (:generate-controller-config (root-directory)
     (let ((full-path (format nil "~A/capture_data/hardware_config/controller_config.yaml" root-directory)))
       (warning-message 1 "generating ~A~%" full-path)
