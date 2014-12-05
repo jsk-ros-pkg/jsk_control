@@ -4,6 +4,7 @@
 (defclass calibration-motion
   :super propertied-object
   :slots (robot-model sampling-joints distances end-effector-offset limb
+          angles
           reset-method motion-anglevectors camera-method filter-sampling
           filter-sampling-coords
           collision-links board-object prompt chain-ids))
@@ -20,9 +21,11 @@
                ((:filter-sampling afilter-sampling) nil)
                ((:filter-sampling-coords afilter-sampling-coords) nil)
                ((:collision-links acollision-links) nil)
+               ((:angles aangles) '(0))
                ((:board board) nil)
                ((:limb alimb) nil))
     (setq chain-ids achain-ids)
+    (setq angles aangles)
     (setq prompt aprompt)
     (setq board-object board)
     (setq filter-sampling afilter-sampling)
@@ -168,6 +171,7 @@
            (success-count 0)
            (test-counter 0)
            (test-num (* (length distances)
+                        (length angles)
                         (length sampling-angle-set)))
            (success-set nil))
       (format t "~A sampling joint~%" (length sampling-joints))
@@ -181,24 +185,25 @@
                          (mapcar #'cdr sampling-angle))))
           (if possiblep
             (dolist (distance distances)
-              (send robot-model reset-method)
-              (send self :set-model-sampling-angle sampling-angle)
-              ;;(send *irtviewer* :draw-objects)
-              (let ((ik-result (send self :solve-ik distance
-                                     :all-test-num test-num
-                                     :success-count success-count
-                                     :current-test-no test-counter)))
-                (incf test-counter)
-                (when ik-result
-                  (incf success-count)
-                  (push ik-result success-set))
-                ))
+              (dolist (angle angles)
+                (send robot-model reset-method)
+                (send self :set-model-sampling-angle sampling-angle)
+                ;;(send *irtviewer* :draw-objects)
+                (let ((ik-result (send self :solve-ik distance angle
+                                       :all-test-num test-num
+                                       :success-count success-count
+                                       :current-test-no test-counter)))
+                  (incf test-counter)
+                  (when ik-result
+                    (incf success-count)
+                    (push ik-result success-set))
+                  )))
             (progn
               (format t "~A-~A/~A skip test by filtering~%"
                       test-counter
-                      (+ test-counter (length distances))
+                      (+ test-counter (* (length distances) (length angles)))
                       test-num)
-              (incf test-counter (length distances))))))
+              (incf test-counter (* (length distances) (length angles)))))))
       (format t "motion result~%")
       (format t " motions:: ~A/~A~%" (length success-set) test-num)
       ;; animation
@@ -210,7 +215,18 @@
       (send robot-model :angle-vector av)
       (send *irtviewer* :draw-objects)
       ))
-  (:solve-ik (l &key (rotation-axis :z)
+  (:avoid-min-max ()
+    (let ((links (send robot-model limb)))
+      (dolist (l links)
+        (let ((j (send (send l :joint) :joint-angle))
+              (min (send (send l :joint) :min-angle))
+              (max (send (send l :joint) :max-angle)))
+          (cond ((< j (- min 1.0))
+                 (send (send l :joint) :joint-angle (- j 1)))
+                ((> j (- max 1.0))
+                 (send (send l :joint) :joint-angle (- j 1))))
+          ))))
+  (:solve-ik (l ang &key (rotation-axis t)
                 (all-test-num) (success-count) (current-test-no))
     ;; setup move-target
     (let ((move-target
@@ -228,6 +244,8 @@
                            :worldpos) pos)))
              (m (make-rotation-mat n))
              (c (make-coords :pos pos :rot m)) rr)
+        (send c :rotate ang :z)
+        (send c :worldpos)
         ;;(if angle (send* c :rotate angle))
         (if rotation-axis
             (send robot-model limb :inverse-kinematics c
@@ -244,6 +262,8 @@
                        :warnp nil
                        ;;:stop 500
                        :rotation-axis rotation-axis))
+        ;; filter min-max
+        (if rr (send self :avoid-min-max))
         (if rr
             (if (not filter-sampling-coords)
                 (setq ik-successp t)
@@ -586,7 +606,8 @@
 
 (defun make-rotation-mat (z)
   (let* ((z-axis (normalize-vector z))
-         (tmp (next-best-direction z-axis))
+         ;;(tmp (next-best-direction z-axis))
+         (tmp (float-vector 0 -1 0))
          (y-axis (normalize-vector (v* z-axis tmp)))
          (x-axis (normalize-vector (v* y-axis z-axis))))
     (transpose (matrix x-axis y-axis z-axis))))
@@ -618,3 +639,42 @@
         (let ((max-time (apply #'max time-list)))
           (max max-time min-time))))))
 
+(defun remove-element-from-list (original element)
+  (remove element original))
+
+(defun compute-distance (a b)
+  (abs (- a b)))
+
+(defun compute-nearest-neighbor-element (element selected-list)
+  ;; linear search
+  (let ((nearest-index 0)
+        (nearest-value (compute-distance element (elt selected-list 0))))
+    (dotimes (i (length selected-list))
+      (let ((diff-value (compute-distance element (elt selected-list i))))
+        (when (> nearest-value diff-value)
+          (setq nearest-index i)
+          (setq nearest-value diff-value))))
+    nearest-index))
+
+(defun probability-map-for-sampling (original-set selected-set)
+  (let ((probability-map (make-list (length original-set))))
+    (dotimes (i (length original-set))
+      (let ((element original-set))
+        (if (member element selected-set)
+            (setf (elt probability-map i) 0.0)
+          (progn
+            ;; compute nearest neighbor for each dimension
+            
+            )
+          )))))
+
+(defun random-sampling-with-variant (xs N)
+  (let ((sampled-elements nil)
+        (remaind-elements xs))
+    (let ((seed-element (elt xs (random (length xs)))))
+      (push seed-element sampled-elements)
+      (setq remaind-elements (remove-element-from-list xs seed-element))
+      (while (< (length sampled-elements) N)
+        (let ((probability-map (probability-map-for-sampling xs sampled-elements)))
+          ))
+      )))
