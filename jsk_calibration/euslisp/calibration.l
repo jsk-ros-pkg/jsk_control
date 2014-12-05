@@ -4,7 +4,7 @@
 (defclass calibration-motion
   :super propertied-object
   :slots (robot-model sampling-joints distances end-effector-offset limb
-          angles
+          angles x-angles y-angles
           reset-method motion-anglevectors camera-method filter-sampling
           filter-sampling-coords
           collision-links board-object prompt chain-ids))
@@ -22,10 +22,14 @@
                ((:filter-sampling-coords afilter-sampling-coords) nil)
                ((:collision-links acollision-links) nil)
                ((:angles aangles) '(0))
+               ((:x-angles ax-angles) '(0))
+               ((:y-angles ay-angles) '(0))
                ((:board board) nil)
                ((:limb alimb) nil))
     (setq chain-ids achain-ids)
     (setq angles aangles)
+    (setq x-angles ax-angles)
+    (setq y-angles ay-angles)
     (setq prompt aprompt)
     (setq board-object board)
     (setq filter-sampling afilter-sampling)
@@ -140,16 +144,34 @@
       ;; build combination
       (combinate-angles angles-set)))
   ;; refine motion by checking collision of interporated motions
+  (:choose-motions (N)
+    (let ((coords-list
+           (mapcar #'(lambda (av)
+                       (send robot-model :angle-vector av)
+                       (let* ((c (send robot-model limb
+                                       :end-coords :copy-worldcoords))
+                              (pos (send c :worldpos))
+                              (rpy (car (send c :rpy-angle))))
+                         (float-vector (elt pos 0) (elt pos 1) (elt pos 2)
+                                       (elt rpy 0) (elt rpy 1) (elt rpy 2))))
+                   motion-anglevectors)))
+      (let ((indices (random-sampling-with-variant
+                      coords-list N :return-type :element)))
+        (elt-indices motion-anglevectors indices))))
   (:refine-motion ()
     (objects (list robot-model board-object))
     (let ((collision-freep nil)
-          (angle-vector-sequence motion-anglevectors))
+          (angle-vector-sequence
+           (if (> (length motion-anglevectors) 50)
+               (send self :choose-motions 50)
+             motion-anglevectors)))
       (while (not (eq collision-freep :free))
         (let ((collision-indices (send self :check-motion angle-vector-sequence)))
           (if (not (eq collision-indices :free))
               (setq angle-vector-sequence (remove-indices angle-vector-sequence
                                                           collision-indices)))
           (setq collision-freep collision-indices)))
+      (setq motion-anglevectors angle-vector-sequence)
       (format t "refined motion is ~A~%" (length motion-anglevectors))))
   (:check-motion (angle-vectors)
     (let ((angle-vector-sequence
@@ -172,6 +194,8 @@
            (test-counter 0)
            (test-num (* (length distances)
                         (length angles)
+                        (length x-angles)
+                        (length y-angles)
                         (length sampling-angle-set)))
            (success-set nil))
       (format t "~A sampling joint~%" (length sampling-joints))
@@ -186,47 +210,67 @@
           (if possiblep
             (dolist (distance distances)
               (dolist (angle angles)
+                ;; first trial
                 (send robot-model reset-method)
                 (send self :set-model-sampling-angle sampling-angle)
-                ;;(send *irtviewer* :draw-objects)
-                (let ((ik-result (send self :solve-ik distance angle
-                                       :all-test-num test-num
-                                       :success-count success-count
-                                       :current-test-no test-counter)))
-                  (incf test-counter)
-                  (when ik-result
-                    (incf success-count)
-                    (push ik-result success-set))
+                (if (send self :solve-ik distance
+                            angle (car x-angles) (car y-angles)
+                            :all-test-num test-num
+                            :success-count success-count
+                            :current-test-no test-counter)
+                  (dolist (x-angle x-angles)
+                    (dolist (y-angle y-angles)
+                      (send robot-model reset-method)
+                      (send self :set-model-sampling-angle sampling-angle)
+                      ;;(send *irtviewer* :draw-objects)
+                      (let ((ik-result (send self :solve-ik distance
+                                             angle x-angle y-angle
+                                             :all-test-num test-num
+                                             :success-count success-count
+                                             :current-test-no test-counter)))
+                        (incf test-counter)
+                        (when ik-result
+                          (incf success-count)
+                          (push ik-result success-set))
+                        )))
+                  (incf test-counter (* (length x-angles) (length y-angles)))
                   )))
             (progn
               (format t "~A-~A/~A skip test by filtering~%"
                       test-counter
-                      (+ test-counter (* (length distances) (length angles)))
+                      (+ test-counter (* (length distances) (length angles)
+                                         (length x-angles) (length y-angles)))
                       test-num)
-              (incf test-counter (* (length distances) (length angles)))))))
+              (incf test-counter (* (length distances) (length angles)
+                                    (length x-angles) (length y-angles)))))))
       (format t "motion result~%")
       (format t " motions:: ~A/~A~%" (length success-set) test-num)
       ;; animation
       (setq motion-anglevectors success-set)
-      (send self :animate)))
-  (:animate ()
+      (send self :animate 1)))
+  (:animate (&optional (N 10))
     (objects (list robot-model board-object))
-    (dolist (av motion-anglevectors)
-      (send robot-model :angle-vector av)
-      (send *irtviewer* :draw-objects)
-      ))
+    (dotimes (i (1- (length motion-anglevectors)))
+      (let ((from (elt motion-anglevectors i))
+            (to (elt motion-anglevectors (1+ i))))
+        (let ((avs (interpolate-motions from to N)))
+          (dolist (av avs)
+            (send robot-model :angle-vector av)
+            (send *irtviewer* :draw-objects)
+            ))))
+    )
   (:avoid-min-max ()
     (let ((links (send robot-model limb)))
       (dolist (l links)
         (let ((j (send (send l :joint) :joint-angle))
               (min (send (send l :joint) :min-angle))
               (max (send (send l :joint) :max-angle)))
-          (cond ((< j (- min 1.0))
-                 (send (send l :joint) :joint-angle (- j 1)))
+          (cond ((< j (+ min 1.0))
+                 (send (send l :joint) :joint-angle (+ j 1)))
                 ((> j (- max 1.0))
                  (send (send l :joint) :joint-angle (- j 1))))
           ))))
-  (:solve-ik (l ang &key (rotation-axis t)
+  (:solve-ik (l ang x-ang y-ang &key (rotation-axis t)
                 (all-test-num) (success-count) (current-test-no))
     ;; setup move-target
     (let ((move-target
@@ -245,6 +289,8 @@
              (m (make-rotation-mat n))
              (c (make-coords :pos pos :rot m)) rr)
         (send c :rotate ang :z)
+        (send c :rotate x-ang :x)
+        (send c :rotate y-ang :y)
         (send c :worldpos)
         ;;(if angle (send* c :rotate angle))
         (if rotation-axis
@@ -656,25 +702,93 @@
           (setq nearest-value diff-value))))
     nearest-index))
 
+(defun compute-probability (v nearest-value &optional (scale 1))
+  ;; 1 - exp(-x)
+  (let ((x (abs (- v nearest-value))))
+    (- 1.0 (exp (* scale (- x))))))
+
+(defun compute-probability-element (element selected-set)
+  (let ((element-values (coerce element cons)))
+    (let ((probabilities
+           (mapcar #'(lambda (v i)
+                       (let ((nearest (compute-nearest-neighbor-element
+                                       v (mapcar #'(lambda (e) (elt e (floor i)))
+                                                 selected-set))))
+                         (let ((nearest-value (elt selected-set nearest)))
+                           (if (member i '(0 1 2))
+                               (compute-probability v (elt nearest-value (floor i)) 0.001)
+                             (compute-probability v (elt nearest-value (floor i)) 1)))))
+                   element-values
+                   (reverse (range-equivalents 0 (length element-values) 1)))))
+      (reduce #'* probabilities))))
+
+;; (probability-map-for-sampling '(#f(0) #f(1) #f(2) #f(3) #f(4)) '(#f(2)))
 (defun probability-map-for-sampling (original-set selected-set)
   (let ((probability-map (make-list (length original-set))))
     (dotimes (i (length original-set))
-      (let ((element original-set))
+      (let ((element (elt original-set i)))
         (if (member element selected-set)
             (setf (elt probability-map i) 0.0)
           (progn
-            ;; compute nearest neighbor for each dimension
-            
+            (setf (elt probability-map i)
+                  (compute-probability-element element selected-set))
             )
-          )))))
+          )))
+    (normalize-probability-map probability-map)))
+;; (probability-map-for-sampling '(#f(0) #f(1) #f(2) #f(3) #f(4)) '(#f(2)))
 
-(defun random-sampling-with-variant (xs N)
+(defun normalize-probability-map (ps)
+  ;; \sum{ps} = 1
+  (let ((sum (reduce #'+ ps)))
+    (mapcar #'(lambda (x) (/ x sum)) ps)))
+
+;; (probability-map-for-sampling '(#f(0) #f(1) #f(2) #f(3) #f(4)) '(#f(2)))
+(defun choose-index-from-probability-map (xs probability-map)
+  (let ((random-value (random 1.0)))
+    (let ((positioned-probability-map
+           (mapcar #'(lambda (x i)
+                       (+ x (reduce #'+ (subseq probability-map 0 (floor i)))))
+                   probability-map
+                   (reverse (range-equivalents 0 (length probability-map) 1)))))
+      (dotimes (i (length positioned-probability-map))
+        (let ((right-value (elt positioned-probability-map i)))
+          (if (>= right-value random-value)
+              (return-from choose-index-from-probability-map i)))))))
+
+;; 
+;; (sort-element-as-original '(1 3 0) '(0 1 2 3 4 5 6))
+;;   => '(0 1 3)
+(defun sort-element-as-original (selected original)
+  (let ((position-list (mapcar #'(lambda (x) (position x original)) selected)))
+    (let ((concatenated-list (mapcar #'(lambda (x i)
+                                         (cons x i))
+                                     selected position-list)))
+      (mapcar #'car (sort concatenated-list #'< #'(lambda (x) (cdr x)))))))
+
+(defun elt-indices (v indices)
+  (let ((ret nil))
+    (dolist (i indices)
+      (push (elt v i) ret))
+    (reverse ret)))
+
+;; xs is a list of 6 float-vector
+;; (x, y, z, roll, pitch, yaw)
+(defun random-sampling-with-variant (xs N &key (return-type :value))
   (let ((sampled-elements nil)
-        (remaind-elements xs))
+        (rest-elements xs))
     (let ((seed-element (elt xs (random (length xs)))))
       (push seed-element sampled-elements)
-      (setq remaind-elements (remove-element-from-list xs seed-element))
+      (setq rest-elements (remove-element-from-list xs seed-element))
       (while (< (length sampled-elements) N)
         (let ((probability-map (probability-map-for-sampling xs sampled-elements)))
-          ))
-      )))
+          (let ((index (choose-index-from-probability-map xs probability-map)))
+            (let ((selected-element (elt xs index)))
+              (push selected-element sampled-elements)
+              (setq rest-elements (remove-element-from-list rest-elements selected-element))
+              ))))
+      (cond ((eq return-type :element)
+             (sort (mapcar #'(lambda (x) (position x xs)) sampled-elements) #'<))
+            (t
+             (sort-element-as-original sampled-elements xs))))))
+;; (load "calibration.l")
+;; (random-sampling-with-variant (mapcar #'float-vector (range-equivalents 0 10 0.1)) 10 :return-type :element)
