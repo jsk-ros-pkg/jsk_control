@@ -64,6 +64,12 @@
                                  :step-angle 15))
                       :distances
                       (range-equivalents 520 640 60)
+                      :angles 
+                      (range-equivalents (deg2rad -30) (deg2rad 120) (deg2rad 30))
+                      :x-angles
+                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      :y-angles
+                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
                       :board (make-mmurooka-board)
                       :end-effector-offset
                       (let ((c (make-coords :pos (float-vector (+ 100) (+ 70 65 80) 0))))
@@ -76,6 +82,13 @@
                       :prompt "Please put the checkerboard in the right hand"
                       :chain-ids '("RARM_chain" "head_chain")
                       :limb :rarm
+                      :angles           ;-90
+                      ;;(list (deg2rad -30))
+                      (range-equivalents (deg2rad -100) (deg2rad 0) (deg2rad 30))
+                      :x-angles
+                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      :y-angles
+                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
                       :collision-links collision-links
                       :robot-model robot
                       :reset-method :reset-pose
@@ -140,6 +153,12 @@
       ;;                 :prompt "Please put the checkerboard in the right leg"
       ;;                 :chain-ids '("RLEG_chain" "torso_chain" "head_chain")
       ;;                 :limb :rleg
+      ;;                 :angles
+      ;;                 (range-equivalents (deg2rad 30) (deg2rad 150) (deg2rad 30))
+      ;;                 :x-angles
+      ;;                 (list (deg2rad 0) (deg2rad -10) (deg2rad 10))
+      ;;                 :y-angles
+      ;;                 (list (deg2rad 0) (deg2rad 10) (deg2rad 10))
       ;;                 :collision-links collision-links
       ;;                 :robot-model robot
       ;;                 :reset-method :reset-pose-for-leg-calibration
