@@ -11,7 +11,9 @@
         <rosparam>
           sensors:
           - LARM_chain
-#          - RARM_chain
+          - RARM_chain
+          - LLEG_chain
+          - RLEG_chain
           - head_camera
         </rosparam>
         <param name="output_filename" type="string" value="config_0" />
@@ -22,8 +24,10 @@
         <param name="use_cov" type="bool" value="True" />
         <rosparam>
           sensors:
-#          - LARM_chain
-#          - RARM_chain
+          - LARM_chain
+          - RARM_chain
+          - LLEG_chain
+          - RLEG_chain
           - head_camera
         </rosparam>
         <param name="output_filename" type="string" value="system_calibrated" />
@@ -35,6 +39,8 @@
           sensors:
           - LARM_chain
           - RARM_chain
+          - LLEG_chain
+          - RLEG_chain
           - head_chain
           - head_camera
         </rosparam>
