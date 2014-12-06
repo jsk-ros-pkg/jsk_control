@@ -2,6 +2,8 @@
   transforms:
     LARM_chain_cb: [1, 1, 1, 1, 1, 1]
     RARM_chain_cb: [1, 1, 1, 1, 1, 1]
+    LLEG_chain_cb: [1, 1, 1, 1, 1, 1]
+    RLEG_chain_cb: [1, 1, 1, 1, 1, 1]
     CARMINE_joint: [1, 1, 1, 1, 1, 1]
 
   chains:
@@ -9,7 +11,13 @@
       gearing: [0, 0, 0, 0, 0, 0]
     RARM_chain:
       gearing: [0, 0, 0, 0, 0, 0]
+    LLEG_chain:
+      gearing: [0, 0, 0, 0, 0, 0]
+    RLEG_chain:
+      gearing: [0, 0, 0, 0, 0, 0]
     head_chain:
+      gearing: [0, 0]
+    torso_chain:
       gearing: [0, 0]
 
   rectified_cams:

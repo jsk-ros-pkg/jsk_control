@@ -1,0 +1,4 @@
+group: LARM
+prompt: Please put the checkerboard in the left hand
+finish: Skipping arm samples
+repeat: False
