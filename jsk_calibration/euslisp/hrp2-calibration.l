@@ -143,9 +143,13 @@
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :torso :waist-y)
+                                 :min-angle -35
+                                 :max-angle 35
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :torso :waist-p)
+                                 :max-angle 30
+                                 :min-angle 0
                                  :step-angle 15))
                       :distances
                       (range-equivalents 1200 1500 100)
@@ -183,9 +187,13 @@
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :torso :waist-y)
+                                 :min-angle -35
+                                 :max-angle 35
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :torso :waist-p)
+                                 :max-angle 30
+                                 :min-angle 0
                                  :step-angle 15))
                       :distances
                       (range-equivalents 1200 1500 100)
@@ -202,7 +210,7 @@
                           :model-class 'hrp2jsknt-robot
                           :camera-method :carmine))
   (send *calib* :generate-motions)
-  ;;(send *calib* :generate-files "package://jsk_calibration/hrp2jsknt_calibration")
+  (send *calib* :generate-files "package://jsk_calibration/hrp2jsknt_calibration")
   )
 
 ;; (load "hrp2-calibration.l")

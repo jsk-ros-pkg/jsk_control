@@ -692,7 +692,7 @@
     (setf (get cube :num_y) 6)
     cube))
 
-(defun angle-vector-duration (model start end &optional (scale 5.0) (min-time 0.5))
+(defun angle-vector-duration (model start end &optional (scale 10.0) (min-time 1.0))
   (let ((joint-list (send model :joint-list)))
     (let ((diff (coerce (v- end start) cons)))
       (let ((time-list (mapcar #'(lambda (d j)
