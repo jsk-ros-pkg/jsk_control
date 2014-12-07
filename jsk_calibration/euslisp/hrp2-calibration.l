@@ -40,79 +40,79 @@
                                  (member (cons b a) ignore-link-pairs
                                          :test #'equal))))
                        collision-links))
-      ;; (send self :add-motion :larm
-      ;;       (instance calibration-motion
-      ;;                 :init
-      ;;                 :prompt "Please put the checkerboard in the left hand"
-      ;;                 :chain-ids '("LARM_chain" "head_chain")
-      ;;                 :limb :larm
-      ;;                 :collision-links collision-links
-      ;;                 :robot-model robot
-      ;;                 :reset-method :reset-pose
-      ;;                 :camera-method camera-method
-      ;;                 :filter-sampling-coords
-      ;;                 '(lambda (c)
-      ;;                    (> (elt (send c :worldpos) 1) 0))
-      ;;                 :sampling-joint
-      ;;                 (list
-      ;;                  (instance sample-joint-information :init
-      ;;                            :joint (send robot :head :neck-p)
-      ;;                            :step-angle 15)
-      ;;                  (instance sample-joint-information :init
-      ;;                            :joint (send robot :head :neck-y)
-      ;;                            :min-angle 0
-      ;;                            :step-angle 15))
-      ;;                 :distances
-      ;;                 (range-equivalents 520 640 60)
-      ;;                 :angles 
-      ;;                 (range-equivalents (deg2rad -30) (deg2rad 120) (deg2rad 30))
-      ;;                 :x-angles
-      ;;                 (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
-      ;;                 :y-angles
-      ;;                 (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
-      ;;                 :board (make-mmurooka-board)
-      ;;                 :end-effector-offset
-      ;;                 (let ((c (make-coords :pos (float-vector (+ 100) (+ 70 65 80) 0))))
-      ;;                   (send c :rotate (deg2rad -90) :y)
-      ;;                   (send c :rotate (deg2rad 90) :z)
-      ;;                   c)))
-      ;; (send self :add-motion :rarm
-      ;;       (instance calibration-motion
-      ;;                 :init
-      ;;                 :prompt "Please put the checkerboard in the right hand"
-      ;;                 :chain-ids '("RARM_chain" "head_chain")
-      ;;                 :limb :rarm
-      ;;                 :angles           ;-90
-      ;;                 ;;(list (deg2rad -30))
-      ;;                 (range-equivalents (deg2rad -100) (deg2rad 0) (deg2rad 30))
-      ;;                 :x-angles
-      ;;                 (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
-      ;;                 :y-angles
-      ;;                 (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
-      ;;                 :collision-links collision-links
-      ;;                 :robot-model robot
-      ;;                 :reset-method :reset-pose
-      ;;                 :camera-method camera-method
-      ;;                 :filter-sampling-coords
-      ;;                 '(lambda (c)
-      ;;                    (< (elt (send c :worldpos) 1) 0))
-      ;;                 :sampling-joint
-      ;;                 (list
-      ;;                  (instance sample-joint-information :init
-      ;;                            :joint (send robot :head :neck-p)
-      ;;                            :step-angle 15)
-      ;;                  (instance sample-joint-information :init
-      ;;                            :joint (send robot :head :neck-y)
-      ;;                            :step-angle 15))
-      ;;                 :distances
-      ;;                 (range-equivalents 520 720 60)
-      ;;                 :board (make-mmurooka-board)
-      ;;                 :end-effector-offset
-      ;;                 (let ((c (make-coords
-      ;;                           :pos (float-vector (+ 100) (- (+ 70 65 80)) 0))))
-      ;;                   (send c :rotate (deg2rad -90) :y)
-      ;;                   (send c :rotate (deg2rad 90) :z)
-      ;;                   c)))
+      (send self :add-motion :larm
+            (instance calibration-motion
+                      :init
+                      :prompt "Please put the checkerboard in the left hand"
+                      :chain-ids '("LARM_chain" "head_chain")
+                      :limb :larm
+                      :collision-links collision-links
+                      :robot-model robot
+                      :reset-method :reset-pose
+                      :camera-method camera-method
+                      :filter-sampling-coords
+                      '(lambda (c)
+                         (> (elt (send c :worldpos) 1) 0))
+                      :sampling-joint
+                      (list
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-p)
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-y)
+                                 :min-angle 0
+                                 :step-angle 15))
+                      :distances
+                      (range-equivalents 520 640 60)
+                      :angles 
+                      (range-equivalents (deg2rad -30) (deg2rad 120) (deg2rad 30))
+                      :x-angles
+                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      :y-angles
+                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      :board (make-mmurooka-board)
+                      :end-effector-offset
+                      (let ((c (make-coords :pos (float-vector (+ 100) (+ 70 65 80) 0))))
+                        (send c :rotate (deg2rad -90) :y)
+                        (send c :rotate (deg2rad 90) :z)
+                        c)))
+      (send self :add-motion :rarm
+            (instance calibration-motion
+                      :init
+                      :prompt "Please put the checkerboard in the right hand"
+                      :chain-ids '("RARM_chain" "head_chain")
+                      :limb :rarm
+                      :angles           ;-90
+                      ;;(list (deg2rad -30))
+                      (range-equivalents (deg2rad -100) (deg2rad 0) (deg2rad 30))
+                      :x-angles
+                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      :y-angles
+                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      :collision-links collision-links
+                      :robot-model robot
+                      :reset-method :reset-pose
+                      :camera-method camera-method
+                      :filter-sampling-coords
+                      '(lambda (c)
+                         (< (elt (send c :worldpos) 1) 0))
+                      :sampling-joint
+                      (list
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-p)
+                                 :step-angle 15)
+                       (instance sample-joint-information :init
+                                 :joint (send robot :head :neck-y)
+                                 :step-angle 15))
+                      :distances
+                      (range-equivalents 520 720 60)
+                      :board (make-mmurooka-board)
+                      :end-effector-offset
+                      (let ((c (make-coords
+                                :pos (float-vector (+ 100) (- (+ 70 65 80)) 0))))
+                        (send c :rotate (deg2rad -90) :y)
+                        (send c :rotate (deg2rad 90) :z)
+                        c)))
       (send self :add-motion :lleg
             (instance calibration-motion
                       :init
@@ -152,7 +152,7 @@
                                  :min-angle 0
                                  :step-angle 15))
                       :distances
-                      (range-equivalents 1000 1500 100)
+                      (range-equivalents 1000 1300 100)
                       :board (make-mmurooka-board)
                       :end-effector-offset
                       (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
@@ -196,7 +196,7 @@
                                  :min-angle 0
                                  :step-angle 15))
                       :distances
-                      (range-equivalents 1000 1500 100)
+                      (range-equivalents 1000 1300 100)
                       :board (make-mmurooka-board)
                       :end-effector-offset
                       (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))

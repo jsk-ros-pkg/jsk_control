@@ -145,24 +145,35 @@
       (combinate-angles angles-set)))
   ;; refine motion by checking collision of interporated motions
   (:choose-motions (N)
+    (format t "choose ~A motions out of ~A motions~%"
+            N (length motion-anglevectors))
     (let ((indices (random-sampling-with-variant
                     motion-anglevectors N :return-type :element)))
       (elt-indices motion-anglevectors indices)))
   (:refine-motion ()
-    (objects (list robot-model board-object))
-    (let ((collision-freep nil)
-          (angle-vector-sequence
-           (if (> (length motion-anglevectors) 50)
-               (send self :choose-motions 50)
-             motion-anglevectors)))
-      (while (not (eq collision-freep :free))
-        (let ((collision-indices (send self :check-motion angle-vector-sequence)))
-          (if (not (eq collision-indices :free))
-              (setq angle-vector-sequence (remove-indices angle-vector-sequence
-                                                          collision-indices)))
-          (setq collision-freep collision-indices)))
-      (setq motion-anglevectors angle-vector-sequence)
-      (format t "refined motion is ~A~%" (length motion-anglevectors))))
+    (let ((candidate-N 50)
+          (max-N 30))
+      
+      (let ((collision-freep nil)
+            (angle-vector-sequence
+             (if (> (length motion-anglevectors) candidate-N)
+               (send self :choose-motions candidate-N)
+               motion-anglevectors)))
+        (while (> (length angle-vector-sequence) max-N)
+          (setq collision-freep nil)
+          (objects (list robot-model board-object))
+          (while (not (eq collision-freep :free))
+            (let ((collision-indices (send self :check-motion angle-vector-sequence)))
+              (if (not (eq collision-indices :free))
+                  (setq angle-vector-sequence (remove-indices angle-vector-sequence
+                                                              collision-indices)))
+              (setq collision-freep collision-indices)))
+          (when (> (length angle-vector-sequence) max-N)
+            (format t "motion length is ~A, try to reduce them to ~A~%"
+                    (length angle-vector-sequence) max-N)
+            (setq angle-vector-sequence (remove-nearest-one angle-vector-sequence))))
+        (setq motion-anglevectors angle-vector-sequence)
+        (format t "refined motion is ~A~%" (length motion-anglevectors)))))
   (:check-motion (angle-vectors)
     (let ((angle-vector-sequence
            (append (list (send robot-model reset-method))
@@ -804,5 +815,36 @@
              (sort (mapcar #'(lambda (x) (position x xs)) sampled-elements) #'<))
             (t
              (sort-element-as-original sampled-elements xs))))))
+
+(defun remove-nearest-one (avs)
+  ;; compute distance matrix
+  (let ((distance-map (mapcar #'(lambda (x) (make-list (length avs))) avs)))
+    (dotimes (i (length avs))
+      (dotimes (j (length avs))
+        (if (= i j)
+            (progn
+              (setf (elt (elt distance-map i) j) nil)
+              (setf (elt (elt distance-map j) i) nil))
+          (progn
+            (let ((d (distance (elt avs i) (elt avs j))))
+              (setf (elt (elt distance-map i) j) d)
+              (setf (elt (elt distance-map j) i) d))
+            ))))
+    ;; find smallest d, not nil
+    (let ((smallest-i nil)
+          (smallest-j nil)
+          (smallest 1000000.0))         ;large enough
+      (dotimes (i (length avs))
+        (dotimes (j (length avs))
+          (let ((v (elt (elt distance-map i) j)))
+            (when (and v (< v smallest))
+              (setq smallest v)
+              (setq smallest-i i)
+              (setq smallest-i j)))))
+      ;; remove smallest-i or smallest-j
+      (if (= (1+ smallest-i) (length avs))
+          (butlast avs)
+        (append (subseq avs 0 smallest-i) (subseq avs (1+ smallest-i) (length avs)))))))
+
 ;; (load "calibration.l")
 ;; (random-sampling-with-variant (mapcar #'float-vector (range-equivalents 0 10 0.1)) 10 :return-type :element)
