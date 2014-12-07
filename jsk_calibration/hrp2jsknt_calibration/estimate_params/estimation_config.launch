@@ -11,6 +11,9 @@
         <rosparam>
           sensors:
           - LARM_chain
+          - RARM_chain
+          - LLEG_chain
+          - RLEG_chain
           - head_camera
         </rosparam>
         <param name="output_filename" type="string" value="config_0" />
@@ -22,6 +25,23 @@
         <rosparam>
           sensors:
           - LARM_chain
+          - RARM_chain
+          - LLEG_chain
+          - RLEG_chain
+          - head_camera
+        </rosparam>
+        <param name="output_filename" type="string" value="system_calibrated" />
+      </group>
+      <group ns="hrp2jsknt - 02 - Joint Offset">
+        <param name="free_params" textfile="$(find jsk_calibration)/hrp2jsknt_calibration/estimate_params/config/free_arms.yaml" />
+        <param name="use_cov" type="bool" value="True" />
+        <rosparam>
+          sensors:
+          - LARM_chain
+          - RARM_chain
+          - LLEG_chain
+          - RLEG_chain
+          - head_chain
           - head_camera
         </rosparam>
         <param name="output_filename" type="string" value="system_calibrated" />

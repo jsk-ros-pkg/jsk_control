@@ -1,0 +1,13 @@
+camera_measurements:
+- {cam_id: head_camera, config: mmurooka_board}
+joint_commands:
+- controller: fullbody_controller
+  segments:
+  - duration: 1.02009
+    positions: [0.0, 0.0, -0.453786, 0.872665, -0.418879, 0.0, 0.0, 0.281121, 0.115941, -0.659413, 0.477593, -0.022951, 0.28814, 0.0, -0.261799, 0.523599, 0.523294, 0.697979, 0.872665, -0.523599, -0.174533, 0.0, -0.436332, -0.087266, -0.349066, 1.0472, 0.872665, 0.523599, 0.174533, 0.0, 0.436332, 0.087266, -0.349066, -1.0472]
+joint_measurements:
+- {chain_id: LLEG_chain,  config: tight_tol}
+- {chain_id: torso_chain,  config: tight_tol}
+- {chain_id: head_chain,  config: tight_tol}
+sample_id: LLEG_0030
+target: {chain_id: LLEG_chain, target_id: mmurooka_board}
