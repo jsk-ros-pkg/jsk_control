@@ -145,19 +145,9 @@
       (combinate-angles angles-set)))
   ;; refine motion by checking collision of interporated motions
   (:choose-motions (N)
-    (let ((coords-list
-           (mapcar #'(lambda (av)
-                       (send robot-model :angle-vector av)
-                       (let* ((c (send robot-model limb
-                                       :end-coords :copy-worldcoords))
-                              (pos (send c :worldpos))
-                              (rpy (car (send c :rpy-angle))))
-                         (float-vector (elt pos 0) (elt pos 1) (elt pos 2)
-                                       (elt rpy 0) (elt rpy 1) (elt rpy 2))))
-                   motion-anglevectors)))
-      (let ((indices (random-sampling-with-variant
-                      coords-list N :return-type :element)))
-        (elt-indices motion-anglevectors indices))))
+    (let ((indices (random-sampling-with-variant
+                    motion-anglevectors N :return-type :element)))
+      (elt-indices motion-anglevectors indices)))
   (:refine-motion ()
     (objects (list robot-model board-object))
     (let ((collision-freep nil)
@@ -721,7 +711,10 @@
 (defun compute-probability (v nearest-value &optional (scale 1))
   ;; 1 - exp(-x)
   (let ((x (abs (- v nearest-value))))
-    (- 1.0 (exp (* scale (- x))))))
+    (let ((v (- 1.0 (exp (* scale (- x))))))
+      (if (< v 0.1)
+          0.1
+        v))))
 
 (defun compute-probability-element (element selected-set)
   (let ((element-values (coerce element cons)))
@@ -731,9 +724,7 @@
                                        v (mapcar #'(lambda (e) (elt e (floor i)))
                                                  selected-set))))
                          (let ((nearest-value (elt selected-set nearest)))
-                           (if (member i '(0 1 2))
-                               (compute-probability v (elt nearest-value (floor i)) 0.001)
-                             (compute-probability v (elt nearest-value (floor i)) 1)))))
+                           (compute-probability v (deg2rad (elt nearest-value (floor i)))))))
                    element-values
                    (reverse (range-equivalents 0 (length element-values) 1)))))
       (reduce #'* probabilities))))
