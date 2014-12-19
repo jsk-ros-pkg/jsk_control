@@ -33,6 +33,7 @@
         (inequality-dim (if inequality-matrix (array-dimension inequality-matrix 0) 0))
         (print-level :pl-none)
         (debug)
+        (status (float-vector 0))
         )
   (if (and inequality-matrix (= (length inequality-min-vector) 0))
       (setq inequality-min-vector (fill (instantiate float-vector inequality-dim) (- inf-var))))
@@ -55,8 +56,7 @@
           (inequality-max-vector
            (concatenate float-vector equality-vector inequality-max-vector))
           (inequality-min-vector
-           (concatenate float-vector equality-vector inequality-min-vector))
-          (status (float-vector 0)))
+           (concatenate float-vector equality-vector inequality-min-vector)))
       (when (and (= (length inequality-min-vector) 0) (= (length inequality-max-vector) 0))
         (setq inequality-matrix (make-matrix 1 (array-dimension eval-weight-matrix 0)))
         (setq inequality-min-vector (fill (instantiate float-vector 1) (- inf-var)))
