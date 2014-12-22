@@ -27,7 +27,7 @@
     )
   )
 
-(defun make-coords-list ; by args sent to go-pos
+(defun make-coords-list-for-inverse-reachablity ; by args sent to go-pos
   (&key (max-x 0.5) (min-x -0.5) (dx 0.2) (max-y 0.5) (min-y -0.5) (dy 0.2) (max-d 30) (min-d -30) (dd 15))
   (let ((output-coords-list nil))
     (dotimes (ix (+ 1 (round (/ (- max-x min-x) dx))))
