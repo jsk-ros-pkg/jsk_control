@@ -2,7 +2,7 @@
   (robot base-coords-list
 	 &rest args ;;same with the command sent for inverse-kinematics
 	 )
-  (let* ((ik-command-index (position :inverse-kinematics args))
+  (let* ((ik-command-index (or (position :inverse-kinematics args) (position :fullbody-inverse-kinematics args)))
 	 (target-coords (elt args (+ ik-command-index 1)))
 	 (initial-angle-vector (send robot :angle-vector))
 	 (target-coords-transformed nil)
@@ -26,3 +26,22 @@
     result-coords-list
     )
   )
+
+(defun make-coords-list ; by args sent to go-pos
+  (&key (max-x 0.5) (min-x -0.5) (dx 0.2) (max-y 0.5) (min-y -0.5) (dy 0.2) (max-d 30) (min-d -30) (dd 15))
+  (let ((output-coords-list nil))
+    (dotimes (ix (+ 1 (round (/ (- max-x min-x) dx))))
+      (let ((x-index (+ min-x (* ix dx))))
+	(dotimes (iy (+ 1 (round (/ (- max-y min-y) dy))))
+	  (let ((y-index (+ min-y (* iy dy))))
+	    (dotimes (id (+ 1 (round (/ (- max-d min-d) dd))))
+	      (let ((d-index (+ min-d (* id dd))))
+		(setq output-coords-list (append output-coords-list (list 
+								     (make-coords :pos (float-vector (* x-index 1000) (* y-index 1000) 0)
+										  :rpy (float-vector (deg2rad d-index) 0 0)))))
+		))
+	    ))
+	))
+    output-coords-list
+    ))
+
