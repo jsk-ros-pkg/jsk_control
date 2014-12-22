@@ -1,13 +1,13 @@
 Index: CMakeLists.txt
 ===================================================================
---- CMakeLists.txt	(リビジョン 35)
+--- CMakeLists.txt	(リビジョン 85)
 +++ CMakeLists.txt	(作業コピー)
-@@ -65,7 +65,7 @@
- # compile qpOASES libraries
+@@ -101,7 +101,7 @@
  FILE(GLOB SRC src/*.cpp)
  
+ # library
 -ADD_LIBRARY(qpOASES STATIC ${SRC})
 +ADD_LIBRARY(qpOASES SHARED ${SRC})
- 
- 
- # compile qpOASES examples
+ INSTALL(TARGETS qpOASES
+   LIBRARY DESTINATION lib
+   ARCHIVE DESTINATION lib
