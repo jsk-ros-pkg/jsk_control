@@ -161,6 +161,7 @@
     (initial-av (copy-seq (send robot :angle-vector)))
     (initial-coords (copy-object (send robot :worldcoords)))
     (debug-view nil) ;;:no-message)
+    (warnp nil)
     (collision-pair)
     (collision-avoidance-link-pair collision-pair)
     (avoid-collision-distance 10)
@@ -213,7 +214,7 @@
 	       :dump-command nil
 	       :debug-view debug-view
 	       ;;:debug-view :no-message
-	       :warnp nil)
+	       :warnp warnp)
 	      args)))
      ;;
      (when collision-avoidance-link-pair
