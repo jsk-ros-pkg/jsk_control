@@ -6,6 +6,7 @@
         output="screen"
         >
     <param name="dev" value="$(arg DEV)" />
+    <!-- <param name="device_name" value="TPPS/2 IBM TrackPoint" /> -->
     <remap from="joy" to="/trackpoint/joy" />
   </node>
 
