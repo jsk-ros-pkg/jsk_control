@@ -1,5 +1,4 @@
 <launch>
-  <arg name="DEV" default="/dev/input/mouse0" />
   <arg name="JOINT_STATES" default="/joint_states" />
   <arg name="JOINT_TRAJECTORY_ACTION" default="/head_traj_controller/follow_joint_trajectory" />
   <arg name="PITCH_JOINT" default="head_pan_joint" />
@@ -7,7 +6,6 @@
 
   <include file="$(find joy_mouse)/launch/kensington_trackball.launch">
     <arg name="AUTOREPEAT_RATE" value="30.0" />
-    <arg name="DEV" value="$(arg DEV)" />
   </include>
   <node pkg="jsk_teleop_joy"
         type="head_control_by_trackball.py"
