@@ -4,6 +4,8 @@ import rospy
 import struct
 import select
 import os
+import pyudev
+
 try:
     from sensor_msgs.msg import Joy
 except:
@@ -11,6 +13,20 @@ except:
     from sensor_msgs.msg import Joy
 
     #def main(device_name, rate, frame_id):
+
+def lookupDeviceFileByNameAttribute(name, prefix="mouse"):
+    """
+    lookup device by name attribute. You can check name by
+    udevadmin info -a -n /dev/input/mouse0
+    """
+    context = pyudev.Context()
+    for device in context.list_devices(subsystem="input"):
+        for a in device.attributes:
+            if a == "name" and device.attributes[a] == name:
+                for child in device.children:
+                    if child.sys_name.startswith(prefix):
+                        return os.path.join("/dev", "input", child.sys_name)
+    
 def main(device_name, autorepeat_rate, frame_id):
     rospy.loginfo("reading %s" % (device_name))
     joy_pub = rospy.Publisher('joy', Joy)
