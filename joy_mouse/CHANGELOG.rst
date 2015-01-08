@@ -2,6 +2,15 @@
 Changelog for package joy_mouse
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [joy_mouse] Use name of kensington mouse and remove dev file
+  specification.
+  [jsk_teleop_joy] Remove DEV argument
+* [joy_mouse] Add name API to lookup device by name like
+  "TPPS/2 IBM TrackPoint"
+* Contributors: Ryohei Ueda
+
 0.1.4 (2014-10-21)
 ------------------
 

@@ -2,6 +2,19 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [joy_mouse] Use name of kensington mouse and remove dev file
+  specification.
+  [jsk_teleop_joy] Remove DEV argument
+* add script to publish pose stamped with spacenav
+* Fix poping-up cancel window by broadcasting canceled information
+* add api to change successor
+* Add text publishing when checking breakpoint
+* Publish usage of footstep planner joy
+* disable/enable head control with trackball buttons, move head joint continuously.
+* Contributors: Masaki Murooka, Ryohei Ueda, Yusuke Furuta
+
 0.1.4 (2014-10-21)
 ------------------
 * Merge pull request #112 from mmurooka/overwrite-write-command-in-midi-player

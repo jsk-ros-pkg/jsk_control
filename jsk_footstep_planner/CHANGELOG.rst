@@ -2,6 +2,28 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* renamed make_sumple function
+* added make-coords-list function
+* added inverse_reachablity_with_given_coords
+* Update drcmodel for current planner
+* Add sample to compare heuristic functions
+* add api to change successor
+* Merge remote-tracking branch 'origin/master' into add-breakpoint-text
+  Conflicts:
+  jsk_footstep_controller/euslisp/footstep-controller.l
+  jsk_footstep_controller/launch/hrp2jsknt_real_full.launch
+* Add text publishing when checking breakpoint
+* Do not allow step over 250mm stride
+* Supress x-transition after z-transition. All the threshold is hard-coded
+* Update footstep parameter for climing up stairs:
+  larger footstep and smaller footprint
+* Add dimensions of footsteps to the result of footstep planner
+* Visualize footstep successors
+* roseus only needs runtime
+* Contributors: Kei Okada, Ryohei Ueda, Yu Ohara
+
 0.1.4 (2014-10-21)
 ------------------
 
