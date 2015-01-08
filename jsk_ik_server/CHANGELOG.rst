@@ -2,6 +2,15 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* pass warnp as argument in :fullbody-ik-main
+* remove sample robot test
+* Merge branch 'master' into update-samplerobot-in-ik-server
+* use unix:usleep because hrpsys stops clock
+* use hrpsys sample robot for ik server
+* Contributors: HRP2, leus, tarukosu
+
 0.1.4 (2014-10-21)
 ------------------
 * support hrp2jsknts in ik-server

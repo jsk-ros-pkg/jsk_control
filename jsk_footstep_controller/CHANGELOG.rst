@@ -2,6 +2,48 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Update drcmodel for current planner
+* Fix poping-up cancel window by broadcasting canceled information
+* Change threshold according to the footsteps respectively
+* Wait until contact state is stable during interrubtible-walking
+* Check contact state is stable or not in footcoords.cpp
+* Apply low-pass filter to force sensor values
+* Add script to compute stats about contact_states
+* Add text publisher about single/double stance phase
+* Merge remote-tracking branch 'origin/master' into add-breakpoint-text
+  Conflicts:
+  jsk_footstep_controller/euslisp/footstep-controller.l
+  jsk_footstep_controller/launch/hrp2jsknt_real_full.launch
+* Add text publishing when checking breakpoint
+* Update forth threshold to 25N to regard the leg is on floor
+* Add z-error to contact_state of footcoords
+* check tf2::ExtrapolationException in footcoords
+* Change walking orbit and the height of the root link according to the plans
+* Use snapit to snap the goal of footstep to the planes
+* Change the color of footsteps if there is no planning result
+* Update footstep parameter for climing up stairs:
+  larger footstep and smaller footprint
+* Publish usage of footstep planner joy
+* Publish conctact state and angular error between two legs as topic
+* Publish support leg information to diagnostic
+* During single support phace, ground should on the end effector coordinates
+* Add documentation about footcoords
+* Publish /odom_on_ground and /ground tf frame from footcoords
+* Fix indent of footcoords
+* Display footstep parameter on rviz
+* Move down 50 mm during walking and use more larger step for walking
+* Fix calculation of roll difference
+* Separate roll and pitch angles to calculate angular difference between
+  footstep to be refined
+* Fix refinment of footstep by using relative transformation to the
+  previous footstep
+* Refine result of footstep planning by filtering goal of actionlib interface
+  of footstep planner.
+* Reset to reset-manip-pose after look around the ground
+* Contributors: Ryohei Ueda
+
 0.1.4 (2014-10-21)
 ------------------
 * Refine footsteps to snapped to plane
