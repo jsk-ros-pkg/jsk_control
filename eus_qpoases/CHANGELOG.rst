@@ -2,8 +2,8 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.5 (2015-01-08)
+------------------
 * Get qpOASES status from argument
 * Update patch for qpoases shared object (https://github.com/jsk-ros-pkg/jsk_control/issues/180)
 * Contributors: Shunichi Nozawa

@@ -2,8 +2,8 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.5 (2015-01-08)
+------------------
 * Add utility script to test a lot of calibration parameters
 * Reduce sampling poses to 30
 * Sampling pose with configuration space and update sampling space of

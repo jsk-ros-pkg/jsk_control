@@ -2,8 +2,8 @@
 Changelog for package joy_mouse
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.5 (2015-01-08)
+------------------
 * [joy_mouse] Use name of kensington mouse and remove dev file
   specification.
   [jsk_teleop_joy] Remove DEV argument

@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.5 (2015-01-08)
+------------------
 * Update drcmodel for current planner
 * Fix poping-up cancel window by broadcasting canceled information
 * Change threshold according to the footsteps respectively

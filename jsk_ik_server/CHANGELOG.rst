@@ -2,8 +2,8 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.5 (2015-01-08)
+------------------
 * pass warnp as argument in :fullbody-ik-main
 * remove sample robot test
 * Merge branch 'master' into update-samplerobot-in-ik-server
