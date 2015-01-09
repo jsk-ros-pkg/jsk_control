@@ -1,0 +1,12 @@
+- name: "Head Camera: LARM"
+  3d: LARM_chain
+  cam: head_camera
+  plot_ops:
+    color: g
+    marker: s
+- name: "Head Camera: RARM"
+  3d: RARM_chain
+  cam: head_camera
+  plot_ops:
+    color: b
+    marker: s
