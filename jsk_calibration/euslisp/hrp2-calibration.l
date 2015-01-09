@@ -217,13 +217,13 @@
     (send self :head-camera-config cam-conf)
     (send self :add-board-object (make-mmurooka-board))
     (send self :add-chain-configs
-          (list (cons "LARM" (butlast (send robot :larm)))
-                (cons "RARM" (butlast (send robot :rarm)))
-                (cons "LLEG" (send robot :lleg))
-                (cons "RLEG" (send robot :rleg))
-                (cons "head" (send robot :head))
-                (cons "torso"
-                      (send robot :torso))))
+          (list (cons "LARM"  (send robot :larm))
+                (cons "RARM"  (send robot :rarm))
+                ;;(cons "LLEG"  (send robot :lleg))
+                ;;(cons "RLEG"  (send robot :rleg))
+                (cons "head"  (send robot :head))
+                ;;(cons "torso" (send robot :torso))
+                ))
     ;; build good collision links
     (let ((collision-links (send robot :collision-check-pairs))
           (ignore-link-pairs nil))
