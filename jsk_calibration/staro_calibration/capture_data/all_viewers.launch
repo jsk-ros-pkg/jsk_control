@@ -1,0 +1,16 @@
+
+<launch>
+
+  <!-- Hack to create the directory -->
+  <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/staro_calibration" />
+  <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/staro_calibration/cb_fail" />
+
+  <param name="/multisense/left/annotated_viewer/filename_format" type="string"
+         value="/tmp/staro_calibration/cb_fail/cb_monocam_%04i.jpg" />
+
+  <include file="$(find calibration_launch)/capture_data/annotated_viewer.launch"
+           ns="/multisense/left" >
+    <arg name="image_topic" value="image_rect_annotated" />
+  </include>
+
+</launch>

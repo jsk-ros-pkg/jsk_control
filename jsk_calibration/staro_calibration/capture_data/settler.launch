@@ -1,0 +1,8 @@
+<launch>
+  <include file="$(find calibration_launch)/capture_data/chain_settler.launch"
+           ns="LARM_chain" />
+  <include file="$(find calibration_launch)/capture_data/chain_settler.launch"
+           ns="RARM_chain" />
+  <include file="$(find calibration_launch)/capture_data/chain_settler.launch"
+           ns="head_chain" />
+</launch>

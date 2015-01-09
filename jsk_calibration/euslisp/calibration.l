@@ -7,7 +7,8 @@
           angles x-angles y-angles
           reset-method motion-anglevectors camera-method filter-sampling
           filter-sampling-coords
-          collision-links board-object prompt chain-ids))
+          collision-links board-object prompt chain-ids
+          robust-motion))
 
 (defmethod calibration-motion
   (:init (&key ((:robot-model arobot-model) nil)
@@ -25,7 +26,8 @@
                ((:x-angles ax-angles) '(0))
                ((:y-angles ay-angles) '(0))
                ((:board board) nil)
-               ((:limb alimb) nil))
+               ((:limb alimb) nil)
+               ((:robust-motion rob-motion) t))
     (setq chain-ids achain-ids)
     (setq angles aangles)
     (setq x-angles ax-angles)
@@ -41,6 +43,7 @@
     (setq sampling-joints asampling-joint)
     (setq distances adistances)
     (setq end-effector-offset aend-effector-offset)
+    (setq robust-motion rob-motion)
     ;; assoc
     (send board-object :transform
           (send (send robot-model limb :end-coords :copy-worldcoords)
@@ -49,7 +52,9 @@
     (setq collision-links (append acollision-links
                                   (mapcar #'(lambda (l)
                                               (cons board-object l))
-                                          (send arobot-model :links))))
+                                          (remove (send robot-model limb :end-coords :parent)
+                                                  (send arobot-model :links))
+                                          )))
     self)
   (:test-with-real-robot (ri &optional (not-use-y-or-n nil))
     ;; :reset-pose
@@ -348,23 +353,28 @@
       ))
     nil)
   (:check-collision ()
-    (and (send robot-model :self-collision-check :pairs collision-links)
-         (let ((links (send robot-model limb)))
-           ;; check collision with small difference to the joints
-           (let* ((joints (send-all links :joint))
-                  (initial-joint-anlges (send-all joints :joint-angle)))
-             (let ((test-samples (make-3bit-vector-combinations (length joints))))
-               (format t ">> checking robust collision-free pose~%")
-               (dolist (sample test-samples)
-                 ;; move
-                 (mapcar #'(lambda (j a d) (send j :joint-angle (+ a d)))
-                         joints initial-joint-anlges sample)
-                 (let ((result (send robot-model :self-collision-check :pairs collision-links)))
-                   (when result
-                     ;; reset to the original
-                     (mapcar #'(lambda (j a) (send j :joint-angle a))
-                             joints initial-joint-anlges)
-                     (return-from :check-collision result)))))))))
+    (let ((result (send robot-model :self-collision-check :pairs collision-links)))
+      (pprint (list 'result result))
+      (if result (return-from :check-collision result))
+      (unless robust-motion
+        (return-from :check-collision result)))
+    (let ((links (send robot-model limb)))
+      ;; check collision with small difference to the joints
+      (let* ((joints (send-all links :joint))
+             (initial-joint-anlges (send-all joints :joint-angle)))
+        (let ((test-samples (make-3bit-vector-combinations (length joints))))
+          (format t ">> checking robust collision-free pose~%")
+          (dolist (sample test-samples)
+            ;; move
+            (mapcar #'(lambda (j a d) (send j :joint-angle (+ a d)))
+                    joints initial-joint-anlges sample)
+            (let ((result (send robot-model :self-collision-check :pairs collision-links)))
+              (when result
+                ;; reset to the original
+                (mapcar #'(lambda (j a) (send j :joint-angle a))
+                        joints initial-joint-anlges)
+                (return-from :check-collision result)))))))
+    nil)
   (:set-model-sampling-angle (sample-angles)
     (dolist (sample-angle sample-angles)
       (send (car sample-angle) :joint-angle (cdr sample-angle))))
@@ -791,9 +801,9 @@
 
 ;; (make-3bit-vector-combinations 1) => '((-1) (0) (1))
 ;; (make-3bit-vector-combinations 2) => '((-1 -1) (-1 0) (-1 1) (0 -1) (0 0) (0 1) (1 0) (1 0) (1 1))
-(defun make-3bit-vector-combinations (num)
+(defun make-3bit-vector-combinations (num &optional (diff-angle 1.0))
   ;; use combinate-angles
-  (combinate-angles (mapcar #'(lambda (i) (list -1 0 1)) (make-list num))))
+  (combinate-angles (mapcar #'(lambda (i) (list (- diff-angle) 0 diff-angle)) (make-list num))))
 
 
 ;; xs is a list of 6 float-vector
