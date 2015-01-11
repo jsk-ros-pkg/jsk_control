@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="jsk_footprint" name="reconfigure_costmap_footprint" type="costmap_footorint_reconfigure" output="screen">
+    <param name="~consider_robotarms" type="bool" value="true"/>
+    <param name="~consider_cloud" type="bool" value="false"/>
+    <param name="~box_offset" value="0.1"/>
+    <!-- for PR2 Example -->
+    <param name="~tf_names" value="/r_gripper_r_finger_link,/l_gripper_l_finger_link,/l_elbow_flex_link,/r_elbow_flex_link"/>
+  </node>
+</launch>
