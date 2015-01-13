@@ -107,7 +107,7 @@
        (send move-target :transform end-effector-offset)
        (let ((trans (send (send root :copy-worldcoords) :transformation
                           (send move-target :worldcoords))))
-         (let ((pos (send trans :worldpos))
+         (let ((pos (scale 0.001 (send trans :worldpos)))
                (ypr (car (send trans :rpy-angle))))
            (format strm "- [~f, ~f, ~f, ~f, ~f, ~f]~%"
                    (elt pos 0) (elt pos 1) (elt pos 2)
@@ -368,8 +368,7 @@
     nil)
   (:check-collision ()
     (let ((result (send robot-model :self-collision-check :pairs collision-links)))
-      (pprint (list 'result result))
-      (if result (return-from :check-collision result))
+      (unless result (return-from :check-collision result))
       (unless robust-motion
         (return-from :check-collision result)))
     (let ((links (send robot-model limb)))
@@ -612,6 +611,7 @@
                                    "capture_data/capture_data.launch"
                                    "capture_data/capture_exec.launch"
                                    "capture_data/hardware_config/laser_config.yaml"
+                                   "capture_data/samples/initial_poses.yaml"
                                    "view_results/scatter_config.yaml"
                                    "view_results/scatter.sh"
                                    )))
