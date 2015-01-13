@@ -5,7 +5,7 @@
         name="calibration_exec"
         args="$(find jsk_calibration)/staro_calibration/capture_data/samples/ $(find jsk_calibration)/staro_calibration/capture_data/hardware_config $(find jsk_calibration)/staro_calibration/estimate_params/config/system.yaml"
         output="screen" >
-    <remap from="head_camera/camera_info" to="/multisense/left/camera_info"/>
+    <remap from="head_camera/camera_info" to="/multisense/left/image_rect/camera_info"/>
     <remap from="head_camera/image_rect"  to="/multisense/left/image_rect_throttle"/>
     <remap from="head_camera/image"       to="/multisense/left/image_rect_throttle"/>
     <remap from="head_camera/features"    to="/multisense/left/features"/>
