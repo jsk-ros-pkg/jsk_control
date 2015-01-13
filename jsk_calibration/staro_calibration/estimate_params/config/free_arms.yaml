@@ -14,13 +14,13 @@
     # RARM_JOINT4:     [ 0, 0, 0, 0.0, 0.0, 1.0 ]
     # RARM_JOINT5:     [ 0, 0, 0, 1.0, 0.0, 0.0 ]
     # RARM_JOINT6:     [ 0, 0, 0, 0.0, 1.0, 0.0 ]
-    HEAD_JOINT0:     [ 0, 0, 0, 0.0, 0.0, 1.0 ]
-    HEAD_JOINT1:     [ 0, 0, 0, 0.0, 1.0, 0.0 ]
+    # HEAD_JOINT0:     [ 0, 0, 0, 0.0, 0.0, 1.0 ]
+    # HEAD_JOINT1:     [ 0, 0, 0, 0.0, 1.0, 0.0 ]
     LARM_chain_cb:   [0, 0, 0, 0, 0, 0]
     RARM_chain_cb:   [0, 0, 0, 0, 0, 0]
     LLEG_chain_cb:   [0, 0, 0, 0, 0, 0]
     RLEG_chain_cb:   [0, 0, 0, 0, 0, 0]
-    multisense/left_camera_optical_frame: [0, 0, 0, 0, 0, 0]
+    multisense/left_camera_optical_frame_joint: [0, 0, 0, 0, 0, 0]
 
   chains:
     LARM_chain:
