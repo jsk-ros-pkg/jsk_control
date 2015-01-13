@@ -16,7 +16,7 @@ rm robot_calibrated.xml
 echo "Success"
 
 # staro_calibration
-roslaunch jsk_calibration estimation_config.launch
+roslaunch jsk_calibration staro_estimation_config.launch
 rosrun calibration_estimation multi_step_cov_estimator.py /tmp/staro_calibration/cal_measurements.bag /tmp/staro_calibration __name:=cal_cov_estimator
 
 est_return_val=$?
