@@ -4,13 +4,13 @@
     RARM_chain_cb: [1, 1, 1, 1, 1, 1]
     LLEG_chain_cb: [1, 1, 1, 1, 1, 1]
     RLEG_chain_cb: [1, 1, 1, 1, 1, 1]
-    CARMINE_joint: [1, 1, 1, 1, 1, 1]
+    multisense/left_camera_optical_frame: [1, 1, 1, 1, 1, 1]
 
   chains:
     LARM_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
+      gearing: [0, 0, 0, 0, 0, 0, 0, 0]
     RARM_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
+      gearing: [0, 0, 0, 0, 0, 0, 0, 0]
     LLEG_chain:
       gearing: [0, 0, 0, 0, 0, 0]
     RLEG_chain:
@@ -30,7 +30,7 @@
   tilting_lasers: {}
 
   checkerboards:
-   mmurooka_board:
+    mmurooka_board:
       spacing_x: 0
       spacing_y: 0
 

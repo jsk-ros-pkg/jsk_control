@@ -20,13 +20,13 @@
     RARM_chain_cb:   [0, 0, 0, 0, 0, 0]
     LLEG_chain_cb:   [0, 0, 0, 0, 0, 0]
     RLEG_chain_cb:   [0, 0, 0, 0, 0, 0]
-    CARMINE_joint:   [0, 0, 0, 0, 0, 0]
+    multisense/left_camera_optical_frame: [0, 0, 0, 0, 0, 0]
 
   chains:
     LARM_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
+      gearing: [0, 0, 0, 0, 0, 0, 0, 0]
     RARM_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
+      gearing: [0, 0, 0, 0, 0, 0, 0, 0]
     LLEG_chain:
       gearing: [0, 0, 0, 0, 0, 0]
     RLEG_chain:
