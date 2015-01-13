@@ -8,12 +8,13 @@
           reset-method motion-anglevectors camera-method filter-sampling
           filter-sampling-coords
           collision-links board-object prompt chain-ids
-          robust-motion))
+          robust-motion root-link))
 
 (defmethod calibration-motion
   (:init (&key ((:robot-model arobot-model) nil)
                ((:chain-ids achain-ids) nil)
                ((:prompt aprompt) nil)
+               ((:root-link aroot-link) "BODY")
                ((:sampling-joint asampling-joint) nil)
                ((:distances adistances) nil)
                ((:camera-method acamera-method) nil)
@@ -28,6 +29,7 @@
                ((:board board) nil)
                ((:limb alimb) nil)
                ((:robust-motion rob-motion) t))
+    (setq root-link aroot-link)
     (setq chain-ids achain-ids)
     (setq angles aangles)
     (setq x-angles ax-angles)
@@ -97,6 +99,16 @@
      (format f "finish: ~A~%" "Skipping arm samples")
      (format f "repeat: False~%")
      ))
+  (:write-initial-poses (strm)
+    (send robot-model :angle-vector angle-vector)
+    (let ((root (send robot-model :link root-link)))
+      (let ((trans (send (send root :copy-worldcoords) :transformation
+                         (send move-target :worldcoords))))
+        (let ((pos (send trans :worldpos))
+              (ypr (car (send trans :rpy-angle))))
+          (format f "- [~f, ~f, ~f, ~f, ~f, ~f]~%"
+                  (elt pos 0) (elt pos 1) (elt pos 2)
+                  (elt ypr 2) (elt ypr 1) (elt ypr 0))))))
   (:generate-motion-yaml (root-directory arm angle-vector index tm)
     (let* ((fname (format nil "~A_~0,4d.yaml" (string arm) index))
            (full-path (format nil "~A/~A" root-directory fname)))
@@ -158,7 +170,6 @@
   (:refine-motion ()
     (let ((candidate-N 50)
           (max-N 30))
-      
       (let ((collision-freep nil)
             (angle-vector-sequence
              (if (> (length motion-anglevectors) candidate-N)
@@ -566,6 +577,13 @@
            (format f "      led_detector:~%")
            (format f "        active: False~%")
            )))))
+  (:generate-initial-poses (root-dir)
+    (let ((full-path (format nil "~A/capture_data/samples/initial_poses.yaml" root-directory)))
+      (with-open-file (f full-path :direction :output)
+        (dolist (motion motions)
+          (send motion :write-initial-poses f)
+          )
+        )))
   (:generate-files (root-directory)
     ;; directory
     ;; root
@@ -585,6 +603,7 @@
       (send self :generate-settler-launch resolved-dir)
       (send self :generate-interval-launch resolved-dir)
       (send self :generate-cam-config resolved-dir)
+      (send self :generate-initial-poses resolved-dir)
       (let ((not-generated-files '("capture_data/all_pipelines.launch"
                                    "capture_data/all_viewers.launch"
                                    "capture_data/capture_data.launch"
