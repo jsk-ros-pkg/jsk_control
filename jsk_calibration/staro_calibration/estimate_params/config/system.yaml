@@ -7,12 +7,14 @@ sensors:
     LARM_chain:
       root: CHEST_LINK1
       tip: LARM_LINK7
+      #tip: larm_end_coords
       cov:
        joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
       gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     RARM_chain:
       root: CHEST_LINK1
       tip: RARM_LINK7
+      #tip: rarm_end_coords
       cov:
        joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
       gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
@@ -62,9 +64,9 @@ checkerboards:
     spacing_y: 0.03
 
 transforms:
-  LARM_chain_cb:   [-0.1, 0, 0, 0, 0, 0]
+  LARM_chain_cb:   [0, 0, 0, 0, 0, 0]
   RARM_chain_cb:   [0, 0, 0, 0, 0, 0]
-default_floating_initial_pose: [0.3, 0, 0.2, -1.2092, 1.2092, -1.2092]
+default_floating_initial_pose: [0, 0, 0, -1.2092, 1.2092, -1.2092]
 #default_floating_initial_pose: [0, 0, 0, 0, 0, 0]
 
 # xyz: [-0.002956968077825933, 0.16898467170866147, -0.20050853695600393]
