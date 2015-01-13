@@ -7,9 +7,9 @@
 
   chains:
     LARM_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
+      gearing: [0, 0, 0, 0, 0, 0, 0, 0]
     RARM_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
+      gearing: [0, 0, 0, 0, 0, 0, 0, 0]
     LLEG_chain:
       gearing: [0, 0, 0, 0, 0, 0]
     RLEG_chain:
