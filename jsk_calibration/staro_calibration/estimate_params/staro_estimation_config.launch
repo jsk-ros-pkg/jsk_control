@@ -12,8 +12,6 @@
           sensors:
           - LARM_chain
           - RARM_chain
-          - LLEG_chain
-          - RLEG_chain
           - head_camera
         </rosparam>
         <param name="output_filename" type="string" value="config_0" />
@@ -26,12 +24,11 @@
           sensors:
           - LARM_chain
           - RARM_chain
-          - LLEG_chain
-          - RLEG_chain
           - head_camera
         </rosparam>
         <param name="output_filename" type="string" value="system_calibrated" />
       </group>
+
       <group ns="staro - 02 - Joint Offset">
         <param name="free_params" textfile="$(find jsk_calibration)/staro_calibration/estimate_params/config/free_arms.yaml" />
         <param name="use_cov" type="bool" value="True" />
@@ -39,9 +36,6 @@
           sensors:
           - LARM_chain
           - RARM_chain
-          - LLEG_chain
-          - RLEG_chain
-          - head_chain
           - head_camera
         </rosparam>
         <param name="output_filename" type="string" value="system_calibrated" />
