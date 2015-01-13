@@ -6,14 +6,12 @@ sensors:
   chains:
     LARM_chain:
       root: CHEST_LINK1
-      #tip: LARM_LINK7
       tip: larm_end_coords
       cov:
        joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
       gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     RARM_chain:
       root: CHEST_LINK1
-      #tip: RARM_LINK7
       tip: rarm_end_coords
       cov:
        joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
