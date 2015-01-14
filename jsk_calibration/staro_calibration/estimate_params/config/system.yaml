@@ -6,15 +6,13 @@ sensors:
   chains:
     LARM_chain:
       root: CHEST_LINK1
-      tip: LARM_LINK7
-      #tip: larm_end_coords
+      tip: larm_end_coords
       cov:
        joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
       gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     RARM_chain:
       root: CHEST_LINK1
-      tip: RARM_LINK7
-      #tip: rarm_end_coords
+      tip: rarm_end_coords
       cov:
        joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
       gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
@@ -66,9 +64,10 @@ checkerboards:
 transforms:
   LARM_chain_cb:   [0, 0, 0, 0, 0, 0]
   RARM_chain_cb:   [0, 0, 0, 0, 0, 0]
+
 default_floating_initial_pose: [0, 0, 0, -1.2092, 1.2092, -1.2092]
 #default_floating_initial_pose: [0, 0, 0, 0, 0, 0]
-
 # xyz: [-0.002956968077825933, 0.16898467170866147, -0.20050853695600393]
 # rpy: (-0.04425102767135782, 0.01876497698337332, -0.019873022766080706)
 
+#initial_poses: "/path/to/initial_poses.yaml"
