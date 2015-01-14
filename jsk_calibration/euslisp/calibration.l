@@ -28,7 +28,7 @@
                ((:y-angles ay-angles) '(0))
                ((:board board) nil)
                ((:limb alimb) nil)
-               ((:robust-motion rob-motion) t))
+               ((:robust-motion rob-motion) nil))
     (setq root-link aroot-link)
     (setq chain-ids achain-ids)
     (setq angles aangles)
@@ -368,7 +368,7 @@
     nil)
   (:check-collision ()
     (let ((result (send robot-model :self-collision-check :pairs collision-links)))
-      (unless result (return-from :check-collision result))
+      (if result (return-from :check-collision result))
       (unless robust-motion
         (return-from :check-collision result)))
     (let ((links (send robot-model limb)))
