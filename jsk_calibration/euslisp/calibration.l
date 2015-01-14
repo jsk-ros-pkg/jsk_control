@@ -109,7 +109,7 @@
                           (send move-target :worldcoords))))
          (let ((pos (scale 0.001 (send trans :worldpos)))
                (ypr (car (send trans :rpy-angle))))
-           (format strm "- [~f, ~f, ~f, ~f, ~f, ~f]~%"
+           (format strm "- [~6,6f, ~6,6f, ~6,6f, ~6,6f, ~6,6f, ~6,6f]~%"
                    (elt pos 0) (elt pos 1) (elt pos 2)
                    (elt ypr 2) (elt ypr 1) (elt ypr 0)))))))
   (:generate-motion-yaml (root-directory arm angle-vector index tm)

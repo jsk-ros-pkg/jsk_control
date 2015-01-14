@@ -214,6 +214,10 @@
                ((:head-camera-config cam-conf) "/camera_remote/rgb")
                (camera-method nil))
     (send-super :init :model-file amodel-file :model-class amodel-class)
+    ;;
+    (send (send robot :body_lk) :make-pqpmodel :fat 0.06)
+    (send (send robot :chest_link1_lk) :make-pqpmodel :fat 0.15)
+    ;;
     (send self :head-camera-config cam-conf)
     (send self :add-board-object (make-mmurooka-board))
     (send self :add-chain-configs
@@ -227,8 +231,6 @@
     ;; build good collision links
     (let ((collision-links (send robot :collision-check-pairs))
           (ignore-link-pairs nil))
-          ;; (ignore-link-pairs '(("LARM_LINK6" . "LARM_LINK4")
-          ;;                      ("RARM_LINK6" . "RARM_LINK4"))))
       (setq collision-links
             (remove-if #'(lambda (pair)
                            (let ((a (send (car pair) :name))
@@ -255,15 +257,14 @@
                       (list
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-p)
-                                 :step-angle 12)
+                                 :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
-                                 :min-angle 0
-                                 :step-angle 12))
+                                 :step-angle 6))
                       :distances
                       (range-equivalents 480 720 60)
                       :angles
-                      (range-equivalents (deg2rad -30) (deg2rad 120) (deg2rad 30))
+                      (range-equivalents (deg2rad 0) (deg2rad 120) (deg2rad 30))
                       :x-angles
                       (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
                       :y-angles
@@ -291,14 +292,14 @@
                       (list
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-p)
-                                 :step-angle 12)
+                                 :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
-                                 :step-angle 12))
+                                 :step-angle 6))
                       :distances
                       (range-equivalents 480 720 60)
                       :angles
-                      (range-equivalents (deg2rad -210) (deg2rad -60) (deg2rad 30))
+                      (range-equivalents (deg2rad 60) (deg2rad 180) (deg2rad 30))
                       :x-angles
                       (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
                       :y-angles
