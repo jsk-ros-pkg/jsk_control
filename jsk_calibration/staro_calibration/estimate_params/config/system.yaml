@@ -56,14 +56,14 @@ sensors:
 
 checkerboards:
   mmurooka_board:
-    corners_x: 5
-    corners_y: 6
+    corners_x: 6
+    corners_y: 5
     spacing_x: 0.03
     spacing_y: 0.03
 
 transforms:
-  LARM_chain_cb:   [0, 0, 0, 0, 0, 0]
-  RARM_chain_cb:   [0, 0, 0, 0, 0, 0]
+  LARM_chain_cb:   [0.2, 0, 0.07, 0, 0, 0]
+  RARM_chain_cb:   [0.2, 0, 0.07, 0, 0, 0]
 
 default_floating_initial_pose: [0, 0, 0, -1.2092, 1.2092, -1.2092]
 #default_floating_initial_pose: [0, 0, 0, 0, 0, 0]
