@@ -361,8 +361,6 @@
         (x::window-main-one)
         (let ((collision (send self :check-collision)))
           (when collision
-            (print av)
-            (pprint collision)
             (return-from :check-interpolation-collision t)))
       ))
     nil)
@@ -721,8 +719,8 @@
     (send cube :translate-vertices (float-vector 0 0 (- (+ 1.0 (/ 5 2.0)))))
     ;; add property to the board
     (setf (get cube :name) :mmurooka_board)
-    (setf (get cube :num_x) 5)
-    (setf (get cube :num_y) 6)
+    (setf (get cube :num_x) 6)
+    (setf (get cube :num_y) 5)
     cube))
 
 (defun angle-vector-duration (model start end &optional (scale 10.0) (min-time 1.0))

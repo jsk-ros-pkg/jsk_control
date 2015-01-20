@@ -215,8 +215,8 @@
                (camera-method nil))
     (send-super :init :model-file amodel-file :model-class amodel-class)
     ;;
-    (send (send robot :body_lk) :make-pqpmodel :fat 0.06)
-    (send (send robot :chest_link1_lk) :make-pqpmodel :fat 0.15)
+    (send (send robot :body_lk) :make-pqpmodel :fat 40.0)
+    (send (send robot :chest_link1_lk) :make-pqpmodel :fat 10.0)
     ;;
     (send self :head-camera-config cam-conf)
     (send self :add-board-object (make-mmurooka-board))
@@ -230,7 +230,8 @@
                 ))
     ;; build good collision links
     (let ((collision-links (send robot :collision-check-pairs))
-          (ignore-link-pairs nil))
+          (ignore-link-pairs
+           '(("BODY" . "CHEST_LINK1"))))
       (setq collision-links
             (remove-if #'(lambda (pair)
                            (let ((a (send (car pair) :name))
@@ -260,15 +261,15 @@
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
-                                 :step-angle 6))
+                                 :step-angle 8))
                       :distances
                       (range-equivalents 480 720 60)
                       :angles
                       (range-equivalents (deg2rad 0) (deg2rad 120) (deg2rad 30))
                       :x-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -25) (deg2rad 25) (deg2rad 25))
                       :y-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -25) (deg2rad 25) (deg2rad 25))
                       :board (make-mmurooka-board)
                       :end-effector-offset ;; should be changed
                       (make-coords :pos (float-vector 195 0 70)
@@ -295,15 +296,15 @@
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
-                                 :step-angle 6))
+                                 :step-angle 8))
                       :distances
                       (range-equivalents 480 720 60)
                       :angles
                       (range-equivalents (deg2rad 60) (deg2rad 180) (deg2rad 30))
                       :x-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -25) (deg2rad 25) (deg2rad 25))
                       :y-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -25) (deg2rad 25) (deg2rad 25))
 
                       :board (make-mmurooka-board)
                       :end-effector-offset ;; should be changed

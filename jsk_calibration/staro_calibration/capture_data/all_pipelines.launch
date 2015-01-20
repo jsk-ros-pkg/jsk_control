@@ -13,6 +13,7 @@
     <include file="$(find calibration_launch)/capture_data/monocam_pipeline.launch"
              ns="/multisense/left">
       <arg name="image_topic" value="image_rect"/> <!-- this should be image proc -->
+      <arg name="frequency" value="5" />
     </include>
   </group>
   <include file="$(find jsk_calibration)/staro_calibration/capture_data/interval.launch" />

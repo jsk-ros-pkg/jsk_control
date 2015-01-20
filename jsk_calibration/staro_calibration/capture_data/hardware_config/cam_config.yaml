@@ -11,8 +11,8 @@ head_camera:
         cache_size: 100
       cb_detector:
         active: True
-        num_x: 5
-        num_y: 6
+        num_x: 6
+        num_y: 5
         width_scaling: 1
         height_scaling: 1
         subpixel_window: 4
