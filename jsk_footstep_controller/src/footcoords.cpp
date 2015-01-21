@@ -149,6 +149,10 @@ namespace jsk_footstep_controller
     if (allValueLargerThan(lforce_list_, force_thr_) &&
         allValueLargerThan(rforce_list_, force_thr_)) {
       // on ground
+      if (support_status_ != BOTH_GROUND) {
+        // save transformation from midcoords to odom_on_ground
+        locked_midcoords_to_odom_on_ground_ = midcoords_.inverse() * ground_transform_;
+      }
       support_status_ = BOTH_GROUND;
       publishState("ground");
       success_to_update = computeMidCoords(lfoot->header.stamp);
@@ -160,7 +164,7 @@ namespace jsk_footstep_controller
       support_status_ = AIR;
       publishState("air");
       success_to_update = computeMidCoords(lfoot->header.stamp);
-      // do not update odom_on_ground
+      updateGroundTF();
     }
     else if (allValueLargerThan(lforce_list_, force_thr_)) {
       // only left
@@ -363,22 +367,28 @@ namespace jsk_footstep_controller
     // we need odom -> odom_on_ground
     // 1. in order to get translation,
     //    project odom point to
-    Eigen::Affine3d odom_to_midcoords;
-    tf::transformTFToEigen(midcoords_, odom_to_midcoords);
-    Eigen::Affine3d midcoords_to_odom = odom_to_midcoords.inverse();
-    Eigen::Affine3d midcoords_to_odom_on_ground = midcoords_to_odom;
-    midcoords_to_odom_on_ground.translation().z() = 0.0;
-    Eigen::Vector3d zaxis;
-    zaxis[0] = midcoords_to_odom_on_ground(0, 2);
-    zaxis[1] = midcoords_to_odom_on_ground(1, 2);
-    zaxis[2] = midcoords_to_odom_on_ground(2, 2);
-    Eigen::Quaterniond rot;
-    rot.setFromTwoVectors(zaxis, Eigen::Vector3d(0, 0, 1));
-    midcoords_to_odom_on_ground.rotate(rot);
-    Eigen::Affine3d odom_to_odom_on_ground
-      = odom_to_midcoords * midcoords_to_odom_on_ground;
-    tf::transformEigenToTF(odom_to_odom_on_ground,
-                           ground_transform_);
+    if (support_status_ == BOTH_GROUND) {
+      // use locked_midcoords_to_odom_on_ground_ during dual stance phase
+      ground_transform_ = midcoords_ * locked_midcoords_to_odom_on_ground_;
+    }
+    else {
+      Eigen::Affine3d odom_to_midcoords;
+      tf::transformTFToEigen(midcoords_, odom_to_midcoords);
+      Eigen::Affine3d midcoords_to_odom = odom_to_midcoords.inverse();
+      Eigen::Affine3d midcoords_to_odom_on_ground = midcoords_to_odom;
+      midcoords_to_odom_on_ground.translation().z() = 0.0;
+      Eigen::Vector3d zaxis;
+      zaxis[0] = midcoords_to_odom_on_ground(0, 2);
+      zaxis[1] = midcoords_to_odom_on_ground(1, 2);
+      zaxis[2] = midcoords_to_odom_on_ground(2, 2);
+      Eigen::Quaterniond rot;
+      rot.setFromTwoVectors(zaxis, Eigen::Vector3d(0, 0, 1));
+      midcoords_to_odom_on_ground.rotate(rot);
+      Eigen::Affine3d odom_to_odom_on_ground
+        = odom_to_midcoords * midcoords_to_odom_on_ground;
+      tf::transformEigenToTF(odom_to_odom_on_ground,
+                             ground_transform_);
+    }
   }
 
   void Footcoords::publishTF(const ros::Time& stamp)

@@ -138,6 +138,7 @@ namespace jsk_footstep_controller
     std::string rfoot_frame_id_;
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
+    tf::Transform locked_midcoords_to_odom_on_ground_;
     boost::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
     
     double prev_lforce_;
