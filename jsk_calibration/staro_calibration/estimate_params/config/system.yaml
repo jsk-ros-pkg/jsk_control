@@ -44,7 +44,6 @@ sensors:
     head_camera:
       chain_id: head_chain  #TODO: get rid of this
       frame_id: multisense/left_camera_optical_frame
-#      frame_id: HEAD_LINK1
       baseline_shift: 0.0
 #      baseline_rgbd: 0.075 ## comment out if we run all_pipelines.launch with use_kinect
       f_shift: 0.0
@@ -62,12 +61,14 @@ checkerboards:
     spacing_y: 0.03
 
 transforms:
-  LARM_chain_cb:   [0.2, 0, 0.07, 0, 0, 0]
-  RARM_chain_cb:   [0.2, 0, 0.07, 0, 0, 0]
+  LARM_chain_cb:   [0.16, 0, 0.1, 0, 0, 0]
+  RARM_chain_cb:   [0.16, 0, 0.1, 0, 0, 0]
 
-default_floating_initial_pose: [0, 0, 0, -1.2092, 1.2092, -1.2092]
+#default_floating_initial_pose: [0, 0, 0, -1.2092, 1.2092, -1.2092]
 #default_floating_initial_pose: [0, 0, 0, 0, 0, 0]
 # xyz: [-0.002956968077825933, 0.16898467170866147, -0.20050853695600393]
 # rpy: (-0.04425102767135782, 0.01876497698337332, -0.019873022766080706)
 
-#initial_poses: "/path/to/initial_poses.yaml"
+initial_poses: "/tmp/staro_calibration/initial_poses.yaml"
+# initial_poses: "$(find jsk_calibration)/staro_calibration/capture_data/samples/initial_poses.yaml"
+# initial_poses: "/tmp/staro_calibration/cb_calib_0_poses.yaml"

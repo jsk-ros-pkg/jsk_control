@@ -2,8 +2,6 @@
   transforms:
     LARM_chain_cb: [1, 1, 1, 1, 1, 1]
     RARM_chain_cb: [1, 1, 1, 1, 1, 1]
-    LLEG_chain_cb: [1, 1, 1, 1, 1, 1]
-    RLEG_chain_cb: [1, 1, 1, 1, 1, 1]
     multisense/left_camera_optical_frame_joint: [1, 1, 1, 1, 1, 1]
 
   chains:
@@ -33,4 +31,3 @@
     mmurooka_board:
       spacing_x: 0
       spacing_y: 0
-

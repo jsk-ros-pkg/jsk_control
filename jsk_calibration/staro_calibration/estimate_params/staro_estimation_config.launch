@@ -14,7 +14,7 @@
           - RARM_chain
           - head_camera
         </rosparam>
-        <param name="output_filename" type="string" value="config_0" />
+        <param name="output_filename" type="string" value="cb_calib_0" />
       </group>
 
       <group ns="staro - 01 - Adding Camera Locations">
@@ -26,7 +26,7 @@
           - RARM_chain
           - head_camera
         </rosparam>
-        <param name="output_filename" type="string" value="system_calibrated" />
+        <param name="output_filename" type="string" value="cam_calib_1" />
       </group>
 
       <group ns="staro - 02 - Joint Offset">
@@ -36,9 +36,10 @@
           sensors:
           - LARM_chain
           - RARM_chain
+          - head_chain
           - head_camera
         </rosparam>
-        <param name="output_filename" type="string" value="system_calibrated" />
+        <param name="output_filename" type="string" value="jt_calib_2" />
       </group>
 
     </group>
