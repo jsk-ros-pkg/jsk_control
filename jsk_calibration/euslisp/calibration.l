@@ -108,8 +108,14 @@
        (let ((trans (send (send root :copy-worldcoords) :transformation
                           (send move-target :worldcoords))))
          (let ((pos (scale 0.001 (send trans :worldpos)))
-               (ypr (car (send trans :rpy-angle))))
-           (format strm "- [~6,6f, ~6,6f, ~6,6f, ~6,6f, ~6,6f, ~6,6f]~%"
+               (ypr (send trans :rpy-angle)))
+           ;; select least rpy angle
+           (let ((a (mapcar #'(lambda (x) (if (> x pi) (- x 2pi) (if (< x -pi) (+ x 2pi) x))) (car ypr)))
+                 (b (mapcar #'(lambda (x) (if (> x pi) (- x 2pi) (if (< x -pi) (+ x 2pi) x))) (cadr ypr))))
+             (if (> (apply #'max (mapcar #'(lambda (x) (abs x)) a))
+                    (apply #'max (mapcar #'(lambda (x) (abs x)) b)))
+                 (setq ypr b) (setq ypr a)))
+           (format strm "- [~8,8f, ~8,8f, ~8,8f, ~8,8f, ~8,8f, ~8,8f]~%"
                    (elt pos 0) (elt pos 1) (elt pos 2)
                    (elt ypr 2) (elt ypr 1) (elt ypr 0)))))))
   (:generate-motion-yaml (root-directory arm angle-vector index tm)
