@@ -169,6 +169,10 @@ namespace jsk_footstep_controller
       ROS_ERROR("transform error: %s", e.what());
       return false;
     }
+    catch (tf2::LookupException &e) {
+      ROS_ERROR("transform error: %s", e.what());
+      return false;
+    }
   }
   
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
@@ -296,6 +300,11 @@ namespace jsk_footstep_controller
     {
       ROS_ERROR("transform error: %s", e.what());
     }
+    catch (tf2::LookupException &e)
+    {
+      ROS_ERROR("transform error: %s", e.what());
+    }
+
   }
 
   bool Footcoords::computeMidCoordsFromSingleLeg(const ros::Time& stamp,
@@ -334,6 +343,12 @@ namespace jsk_footstep_controller
       {
         ROS_ERROR("transform error: %s", e.what());
       }
+      catch (tf2::LookupException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
+      }
+
+
     }
   }
   
@@ -376,6 +391,11 @@ namespace jsk_footstep_controller
       {
         ROS_ERROR("transform error: %s", e.what());
       }
+      catch (tf2::LookupException &e)
+      {
+        ROS_ERROR("transform error: %s", e.what());
+      }
+
     }
   }
   
