@@ -36,3 +36,9 @@ both of `lfsensor` and `rfsensor` provides enough force (the threshold is `~forc
 * `~force_threshold` (Double, default: `10.0`)
 
    Force threshold to judge which leg is on the ground
+
+* `~lfoot_sensor_frame` (String, default: `lleg_end_coords`)
+* `~rfoot_sensor_frame` (String, default: `lleg_end_coords`)
+
+   Transform force sensor rotation respected to these frame ids when evaluating force value.
+   You need to choose reasonable frame_ids which gives positive z-force value when robot stands.
