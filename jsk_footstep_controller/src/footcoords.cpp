@@ -66,6 +66,10 @@ namespace jsk_footstep_controller
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
               std::string("rleg_end_coords"));
+    pnh.param("lfoot_sensor_frame", lfoot_sensor_frame_, std::string("lleg_end_coords"));
+    pnh.param("rfoot_sensor_frame", rfoot_sensor_frame_, std::string("rleg_end_coords"));
+    // pnh.param("lfoot_sensor_frame", lfoot_sensor_frame_, std::string("lfsensor"));
+    // pnh.param("rfoot_sensor_frame", rfoot_sensor_frame_, std::string("rfsensor"));
     pnh.param("force_threshold", force_thr_, 100.0);
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
     pub_contact_state_ = pnh.advertise<jsk_footstep_controller::GroundContactState>("contact_state", 1);
@@ -129,15 +133,60 @@ namespace jsk_footstep_controller
     return true;
   }
 
+  bool Footcoords::resolveForceTf(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
+                                  const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
+                                  tf::Vector3& lfoot_force,
+                                  tf::Vector3& rfoot_force)
+  {
+    try {
+      tf::StampedTransform lfoot_transform, rfoot_transform;
+      tf_listener_->lookupTransform(
+        lfoot->header.frame_id, lfoot_sensor_frame_, lfoot->header.stamp, lfoot_transform);
+      tf_listener_->lookupTransform(
+        rfoot->header.frame_id, rfoot_sensor_frame_, rfoot->header.stamp, rfoot_transform);
+      // cancel translation
+      lfoot_transform.setOrigin(tf::Vector3(0, 0, 0));
+      rfoot_transform.setOrigin(tf::Vector3(0, 0, 0));
+      
+      tf::Vector3 lfoot_local, rfoot_local;
+      tf::vector3MsgToTF(lfoot->wrench.force, lfoot_local);
+      tf::vector3MsgToTF(rfoot->wrench.force, rfoot_local);
+      lfoot_force = lfoot_transform * lfoot_local;
+      rfoot_force = rfoot_transform * rfoot_local;
+      // lfoot_force = lfoot_rotation * lfoot_local;
+      // rfoot_force = rfoot_rotation * rfoot_local;
+      return true;
+    }
+    catch (tf2::ConnectivityException &e) {
+      ROS_ERROR("transform error: %s", e.what());
+      return false;
+    }
+    catch (tf2::InvalidArgumentException &e) {
+      ROS_ERROR("transform error: %s", e.what());
+      return false;
+    }
+    catch (tf2::ExtrapolationException &e) {
+      ROS_ERROR("transform error: %s", e.what());
+      return false;
+    }
+  }
+  
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                           const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
   {
     bool success_to_update = false;
     // lowpass filter
-    double lfoot_force = applyLowPassFilter(lfoot->wrench.force.z, prev_lforce_);
-    double rfoot_force = applyLowPassFilter(rfoot->wrench.force.z, prev_rforce_);
+    tf::Vector3 lfoot_force_vector, rfoot_force_vector;
+    if (!resolveForceTf(lfoot, rfoot, lfoot_force_vector, rfoot_force_vector)) {
+      ROS_ERROR("failed to resolve tf of force sensor");
+      return;
+    }
+    // resolve tf
+    double lfoot_force = applyLowPassFilter(lfoot_force_vector[2], prev_lforce_);
+    double rfoot_force = applyLowPassFilter(rfoot_force_vector[2], prev_rforce_);
     lforce_list_.push_back(ValueStamped::Ptr(new ValueStamped(lfoot->header, lfoot_force)));
     rforce_list_.push_back(ValueStamped::Ptr(new ValueStamped(rfoot->header, rfoot_force)));
+
     // ROS_INFO("lforce_list: %lu", lforce_list_.size());
     // ROS_INFO("rforce_list: %lu", rforce_list_.size());
     // ROS_INFO("%f -> %f", lfoot->wrench.force.z, lfoot_force);

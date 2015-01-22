@@ -119,6 +119,9 @@ namespace jsk_footstep_controller
                                     double threshold);
     virtual bool allValueSmallerThan(TimeStampedVector<ValueStamped::Ptr>& values,
                                      double threshold);
+    virtual bool resolveForceTf(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
+                                const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
+                                tf::Vector3& lfoot_force, tf::Vector3& rfoot_force);
     // ros variables
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
@@ -136,6 +139,8 @@ namespace jsk_footstep_controller
     bool before_on_the_air_;
     std::string lfoot_frame_id_;
     std::string rfoot_frame_id_;
+    std::string lfoot_sensor_frame_;
+    std::string rfoot_sensor_frame_;
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
     boost::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_;
