@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
 (ros::roseus-add-msgs "jsk_footstep_msgs")
-(ros::roseus-add-msgs "jsk_pcl_ros")
+(ros::roseus-add-msgs "jsk_recognition_msgs")
 (ros::roseus-add-srvs "jsk_pcl_ros")
 (ros::roseus-add-srvs "std_srvs")
 (ros::roseus-add-srvs "jsk_footstep_planner")
@@ -297,7 +297,7 @@
     )
   (setq *tf* (instance ros::transform-listener :init))
   (when *use-planes*
-    (ros::subscribe "planes" jsk_pcl_ros::PolygonArray #'planes-cb))
+    (ros::subscribe "planes" jsk_recognition_msgs::PolygonArray #'planes-cb))
   ;; (ros::advertise "/footstep" jsk_footstep_msgs::FootstepArray)
   ;; (ros::advertise "/footstep_time" std_msgs::Float32)
   ;; (ros::advertise "/footstep_count" std_msgs::Float32)
