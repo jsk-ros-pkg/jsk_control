@@ -563,15 +563,15 @@
     (objects *bodies*))
 
 (ros::roseus "task2_planes")
-(ros::roseus-add-msgs "jsk_pcl_ros")
+(ros::roseus-add-msgs "jsk_recognition_msgs")
 (ros::roseus-add-msgs "pcl_msgs")
-(ros::advertise "planes" jsk_pcl_ros::PolygonArray 1)
-(ros::advertise "coefficients" jsk_pcl_ros::ModelCoefficientsArray 1)
+(ros::advertise "planes" jsk_recognition_msgs::PolygonArray 1)
+(ros::advertise "coefficients" jsk_recognition_msgs::ModelCoefficientsArray 1)
 (ros::rate 10)
 
 (while (ros::ok)
   (let ((now (ros::time-now)))
-    (let ((arr (instance jsk_pcl_ros::PolygonArray :init)))
+    (let ((arr (instance jsk_recognition_msgs::PolygonArray :init)))
       (send arr :header :frame_id "/odom")
       (send arr :header :stamp now)
 
@@ -593,7 +593,7 @@
       (if *debug-view* (x::window-main-one))
       (ros::sleep)
       )
-    (let ((arr (instance jsk_pcl_ros::ModelCoefficientsArray :init)))
+    (let ((arr (instance jsk_recognition_msgs::ModelCoefficientsArray :init)))
       (send arr :header :frame_id "/odom")
       (send arr :header :stamp now)
       (send arr :coefficients (mapcar #'(lambda (f)
