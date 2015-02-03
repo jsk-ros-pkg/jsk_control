@@ -12,6 +12,7 @@
   <build_depend>euslisp</build_depend>
   <build_depend>cmake_modules</build_depend>
   <build_depend>eigen</build_depend>
+  <build_depend>roscpp</build_depend>
   <run_depend>euslisp</run_depend>
   <run_depend>eigen</run_depend>
 </package>
