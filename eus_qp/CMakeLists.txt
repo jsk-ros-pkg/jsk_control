@@ -2,7 +2,7 @@ project(eus_qp)
 
 cmake_minimum_required(VERSION 2.4.6)
 
-find_package(catkin COMPONENTS cmake_modules)
+find_package(catkin COMPONENTS cmake_modules roscpp)
 find_package(Eigen REQUIRED)
 
 include_directories(${Eigen_INCLUDE_DIRS})
