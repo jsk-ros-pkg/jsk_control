@@ -51,3 +51,15 @@ $ (generate-hrp2jsknt-calibration)
 8. Check self-collision for interpolated poses
 9. Remove colliding poses
 10. Get collision-free and different poses
+
+
+# Utility scripts
+* `joint_states_appender.py`
+
+ros calibration software is not designed to handle multiple joint states.
+
+On the other hand, several robot has multiple joint states, it is that several nodes
+publishes `/joint_states`.
+
+In order to resolve this mismatch, `joint_states_appender` subscribes `/joint_states`
+and append multiple joint states and publish it into `/joint_states_appended`.
