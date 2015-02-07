@@ -22,11 +22,7 @@
     (send self :add-chain-configs
           (list (cons "LARM" (butlast (send robot :larm)))
                 (cons "RARM" (butlast (send robot :rarm)))
-                (cons "LLEG" (send robot :lleg))
-                (cons "RLEG" (send robot :rleg))
-                (cons "head" (send robot :head))
-                (cons "torso"
-                      (send robot :torso))))
+                (cons "head" (send robot :head))))
     ;; build good collision links
     (let ((collision-links (send robot :collision-check-pairs))
           (ignore-link-pairs nil))
@@ -68,9 +64,9 @@
                       :angles
                       (range-equivalents (deg2rad -30) (deg2rad 120) (deg2rad 30))
                       :x-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -20) (deg2rad 0) (deg2rad 20))
                       :y-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -20) (deg2rad 0) (deg2rad 20))
                       :board (make-mmurooka-board)
                       :end-effector-offset
                       (let ((c (make-coords :pos (float-vector (+ 100) (+ 70 65 80) 0))))
@@ -87,9 +83,9 @@
                       ;;(list (deg2rad -30))
                       (range-equivalents (deg2rad -100) (deg2rad 0) (deg2rad 30))
                       :x-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -20) (deg2rad 0) (deg2rad 20))
                       :y-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -20) (deg2rad 0) (deg2rad 20))
                       :collision-links collision-links
                       :robot-model robot
                       :reset-method :reset-pose
@@ -113,94 +109,6 @@
                                 :pos (float-vector (+ 100) (- (+ 70 65 80)) 0))))
                         (send c :rotate (deg2rad -90) :y)
                         (send c :rotate (deg2rad 90) :z)
-                        c)))
-      (send self :add-motion :lleg
-            (instance calibration-motion
-                      :init
-                      :prompt "Please put the checkerboard in the left leg"
-                      :chain-ids '("LLEG_chain" "torso_chain" "head_chain")
-                      :limb :lleg
-                      :collision-links collision-links
-                      :robot-model robot
-                      :reset-method :reset-pose-for-leg-calibration
-                      :camera-method camera-method
-                      :angles ;;(list (deg2rad 90))
-                      (range-equivalents (deg2rad 30) (deg2rad 150) (deg2rad 30))
-                      :x-angles
-                      (list 0 (deg2rad -10) (deg2rad 10))
-                      :y-angles
-                      (list 0 (deg2rad -10) (deg2rad 10))
-                      :filter-sampling
-                      '(lambda (neck-p neck-y waist-y waist-p)
-                         (>= (+ neck-y waist-y) 0))
-                      :sampling-joint
-                      (list
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-p)
-                                 :min-angle 20
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-y)
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :torso :waist-y)
-                                 :min-angle -35
-                                 :max-angle 35
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :torso :waist-p)
-                                 :max-angle 30
-                                 :min-angle 0
-                                 :step-angle 15))
-                      :distances
-                      (range-equivalents 1000 1300 100)
-                      :board (make-mmurooka-board)
-                      :end-effector-offset
-                      (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
-                        c)))
-      (send self :add-motion :rleg
-            (instance calibration-motion
-                      :init
-                      :prompt "Please put the checkerboard in the right leg"
-                      :chain-ids '("RLEG_chain" "torso_chain" "head_chain")
-                      :limb :rleg
-                      :angles
-                      (range-equivalents (deg2rad 30) (deg2rad 150) (deg2rad 30))
-                      :x-angles
-                      (list (deg2rad 0) (deg2rad -10) (deg2rad 10))
-                      :y-angles
-                      (list (deg2rad 0) (deg2rad 10) (deg2rad 10))
-                      :collision-links collision-links
-                      :robot-model robot
-                      :reset-method :reset-pose-for-leg-calibration
-                      :camera-method camera-method
-                      :filter-sampling
-                      '(lambda (neck-p neck-y waist-y waist-p)
-                         (<= (+ neck-y waist-y) 0))
-                      :sampling-joint
-                      (list
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-p)
-                                 :min-angle 20
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :head :neck-y)
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :torso :waist-y)
-                                 :min-angle -35
-                                 :max-angle 35
-                                 :step-angle 15)
-                       (instance sample-joint-information :init
-                                 :joint (send robot :torso :waist-p)
-                                 :max-angle 30
-                                 :min-angle 0
-                                 :step-angle 15))
-                      :distances
-                      (range-equivalents 1000 1300 100)
-                      :board (make-mmurooka-board)
-                      :end-effector-offset
-                      (let ((c (make-coords :pos (float-vector (+ 120 70 65) 0 0))))
                         c)))
       self))
   )
@@ -525,6 +433,18 @@
   (send *calib* :generate-motions)
   (send *calib* :generate-files "package://jsk_calibration/hrp2jsknt_calibration")
   )
+
+(defun generate-hrp2jsknts-files ()
+  (setq *calib* (instance hrp2-calibration-config
+                          :init
+                          :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l"
+                          :model-class 'hrp2jsknts-robot
+                          :head-camera-config "/left"
+                          :camera-method :carmine))
+  (send *calib* :generate-motions)
+  (send *calib* :generate-files "package://jsk_calibration/hrp2jsknts_calibration")
+  )
+
 (defun generate-staro-files ()
   (setq *calib* (instance staro-calibration-config
                           :init
