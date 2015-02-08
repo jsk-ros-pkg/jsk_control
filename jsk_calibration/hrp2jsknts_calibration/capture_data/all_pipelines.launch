@@ -1,0 +1,8 @@
+<launch>
+  <include file="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/settler.launch" />
+
+  <include file="$(find calibration_launch)/capture_data/monocam_pipeline.launch" ns="/multisense/left">
+    <arg name="image_topic" value="image_rect_color"/> <!-- this should be image proc -->
+  </include>
+  <include file="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/interval.launch" />
+</launch>

@@ -1,0 +1,59 @@
+LARM_chain:
+  settler_config: /LARM_chain/settler_config
+  configs:
+    tight_tol:
+      settler:
+        joint_names:
+          - LARM_JOINT0
+          - LARM_JOINT1
+          - LARM_JOINT2
+          - LARM_JOINT3
+          - LARM_JOINT4
+          - LARM_JOINT5
+          - LARM_JOINT6
+        tolerances:
+          - 0.002
+          - 0.002
+          - 0.002
+          - 0.002
+          - 0.002
+          - 0.002
+          - 0.002
+        max_step: 1.0
+        cache_size: 1500
+RARM_chain:
+  settler_config: /RARM_chain/settler_config
+  configs:
+    tight_tol:
+      settler:
+        joint_names:
+          - RARM_JOINT0
+          - RARM_JOINT1
+          - RARM_JOINT2
+          - RARM_JOINT3
+          - RARM_JOINT4
+          - RARM_JOINT5
+          - RARM_JOINT6
+        tolerances:
+          - 0.002
+          - 0.002
+          - 0.002
+          - 0.002
+          - 0.002
+          - 0.002
+          - 0.002
+        max_step: 1.0
+        cache_size: 1500
+head_chain:
+  settler_config: /head_chain/settler_config
+  configs:
+    tight_tol:
+      settler:
+        joint_names:
+          - HEAD_JOINT0
+          - HEAD_JOINT1
+        tolerances:
+          - 0.002
+          - 0.002
+        max_step: 1.0
+        cache_size: 1500
