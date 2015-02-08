@@ -6,6 +6,9 @@ This is a utility package for hand/eye calibration using
 This package generates sampling poses automaticaly using
 [euslisp](https://github.com/euslisp/jskeus) robot models.
 
+## Each robot documentation
+* [HRP2JSKNTS](hrp2jsknts_calibration/README.md)
+
 ## Calibrate robot
 calibration process has two steps.
 

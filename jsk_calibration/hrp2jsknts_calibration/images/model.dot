@@ -1,0 +1,61 @@
+digraph G{
+        export_collada [shape=box, label="openhrp3/export-collada"];
+        export_collada_lhand [shape=box, label="openhrp3/export-collada"];
+        export_collada_rhand [shape=box, label="openhrp3/export-collada"];
+        collada2eus [shape=box, label="euscollada/collada2eus"];
+        collada_to_urdf [shape=box, label="collada_urdf/collada_to_urdf"];
+        collada_to_urdf_lhand [shape=box, label="collada_urdf/collada_to_urdf"];
+        collada_to_urdf_rhand [shape=box, label="collada_urdf/collada_to_urdf"];
+        remove_sensor_from_urdf [shape=box, label="euscollada/remove_snesor_from_urdf.py"];
+        add_sensor_to_collada [shape=box, label="euscollada/add_sensor_to_collada.py"]
+        xacro [shape=box, label="xacro/xacro.py"];
+        calib [shape=box, label="jsk_calibration/hrp2jsknts_calibration"];
+        urdf_patch [shape=box, label="euscollada/urdf_patch.py"];
+
+        // input files
+        HRP2JSKNTSmain_wrl [label="HRP2JSKNTSmain.wrl (Non-public)", color=red];
+        hrp2jsknts_yaml [label="hrp2jsknts.yaml", color=red];
+        HRP3HAND_Rmain_wrl [label="HRP3HAND_Rmain.wrl", color=red];
+        HRP3HAND_Lmain_wrl [label="HRP3HAND_Lmain.wrl", color=red];
+        multisense_urdf [label="multisenseS7.urdf", color=red];
+
+        // output files
+        hrp2jsknts_l [label="hrp2jsknts.l", color=green]
+        HRP2JSKNTS_WH_SENSORS_CALIBRATED_urdf [label="HRP2JSKNTS_WH_SENSORS_CALIBRATED.urdf (robot_description)", color=green]
+        HRP2JSKNTS_mesh [label="HRP2JSKNTS_mesh", color=green];
+
+        HRP2JSKNTSmain_wrl -> export_collada;
+        export_collada -> "HRP2JSKNTS.dae";
+        "hrp2jsknts_yaml" -> collada2eus;
+        "HRP2JSKNTS.dae" -> collada2eus;
+        collada2eus -> hrp2jsknts_l;
+
+        collada_to_urdf -> "HRP2JSKNTS.urdf";
+        collada_to_urdf -> HRP2JSKNTS_mesh;
+        "HRP2JSKNTS.dae" -> collada_to_urdf;
+        "HRP2JSKNTS.urdf" ->  remove_sensor_from_urdf;
+        remove_sensor_from_urdf -> "HRP2JSKNTS_body.urdf";
+
+        // hand
+        HRP3HAND_Rmain_wrl -> export_collada_rhand;
+        export_collada_rhand -> "HRP3HAND_R.dae";
+        HRP3HAND_Lmain_wrl -> export_collada_lhand;
+        export_collada_lhand -> "HRP3HAND_L.dae";
+        "HRP3HAND_R.dae" -> collada_to_urdf_rhand;
+        collada_to_urdf_rhand -> "HRP3HAND_R.urdf";
+        "HRP3HAND_L.dae" -> collada_to_urdf_lhand;
+        collada_to_urdf_lhand -> "HRP3HAND_L.urdf";
+        "HRP2JSKNTS_body.urdf" -> xacro;
+        "HRP3HAND_L.urdf" -> xacro;
+        "HRP3HAND_R.urdf" -> xacro;
+        multisense_urdf -> xacro;
+        xacro -> "HRP2JSKNTS_WH.urdf";
+        add_sensor_to_collada -> "HRP2JSKNTS_WH_SENSORS.urdf";
+        "HRP2JSKNTS_WH.urdf" -> add_sensor_to_collada;
+        hrp2jsknts_yaml -> add_sensor_to_collada;
+        "HRP2JSKNTS_WH_SENSORS.urdf" -> calib;
+        calib -> "hrp2017_multisense_calib_YYYYMMDD.yaml";
+        urdf_patch -> HRP2JSKNTS_WH_SENSORS_CALIBRATED_urdf;
+        "hrp2017_multisense_calib_YYYYMMDD.yaml" -> urdf_patch;
+        "HRP2JSKNTS_WH_SENSORS.urdf" -> urdf_patch;
+}
