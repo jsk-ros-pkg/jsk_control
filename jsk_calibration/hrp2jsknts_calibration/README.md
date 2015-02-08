@@ -3,19 +3,21 @@
 ## How to hand/eye calibrate
 ### 1. Setup
 0. Compile `hrpsys_ros_bridge_tutorials` with HRP2JSKNTS model (The model is not public).
-```
+
+  ```
 $ catkin build hrpsys_ros_bridge_tutorials
 ```
 1. Before calibrate hand/eye, Please confirm that your intrinsic parameter is calibrated.
 2. Kill `/hrp3hand_empty_joint_publisher`, because calibration
 program cannot handle multiple `/joint_states` Publisher.
 
-```
+  ```
 $ rosnode kill /hrp3hand_empty_joint_publisher
 ```
 ### 2. Capture data
 1. run `capture_data.launch`
-```
+
+  ```
 $ roscd jsk_calibration/hrp2jsknts_calibration/capture_data
 $ roslaunch capture_data.launch
 ```
@@ -31,38 +33,36 @@ you run `capture_data.launch`
 1. If you have some samples failed to capture data, please remove line from initial_poses.yaml
 2. start roscore
 
-```
+  ```
 $ rossetlocal
 $ roscore
 ```
-
 3. run `calibrate_hrp2jsknts.sh`.
 
-```
+  ```
 $ rosssetlocal
 $ ./calibrate_hrp2jsknts.sh
 ```
-
 4. After a while (1 hour), you will get calibrated urdf file. The name of urdf file is
 `robot_calibrated_YYYY_MM_DD_HH_SS.xml`.
 Uncalibrated urdf file is `robot_uncalibrated_YYYY_MM_DD_HH_SS.xml`.
 
 ### 4. Check estimated parameter
 1. kill `/hrpsys_state_publisher`
-```
+
+  ```
 $ rosnode kill /hrpsys_state_publishe
 ```
-
 2. update `/robot_description`
-```
+
+  ```
 $ rosparam set robot_description -t robot_calibrated_YYYY_MM_DD_HH_SS.xml
 ```
-
 3. run `robot_state_publisher`
-```
+
+  ```
 $ rosrun robot_state_publisher robot_state_publisher
 ```
-
 4. Check result in your rviz. If you do not satisfy with the result, Please go back to
 section 3 or section 2.
 
@@ -73,23 +73,24 @@ We manage **diff between original urdf and calibrated urdf**.
 And also the diff file is managed under private repository.
 
 1. Compute diff using `urdf_patch.py`
-```
+
+  ```
 $ roscd jsk_hrp2_ros_bridge/calib_data
 $ rosrun euscollada urdf_patch.py diff `rospack find hrpsys_ros_bridge_tutorials`/models/HRP2JSKNTS_WH_SENSORS.urdf YOUR_CALIBDATED_FILE hrp2017_multisense_calib_YYYYMMDD.yaml
 ```
-
 2. Update `hrp2017.launch` file to use the patch.
-```xml
+
+  ```xml
   <arg name="CALIB_FILE" default="hrp2017_multisense_calib_YYYYMMDD.yaml" />
 ```
-
 3. Commit patch
-```
+
+  ```
 $ svn add calib_data/hrp2017_multisense_calib_YYYYMMDD.yaml launch/hrp2017.launch
 $ SVN_SSH="ssh -l USERNAME" svn commit -m "update HRP2 calibration file" calib_data/hrp2017_multisense_calib_YYYYMMDD.yaml launch/hrp2017.launch
 ```
 
-### Appendix
+## Appendix
 Pipeline of model conversion.
 
-[model](images/model.png)
+![model](images/model.png)
