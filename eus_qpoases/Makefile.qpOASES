@@ -1,6 +1,6 @@
 all: installed
 
-SVN_CMDLINE = svn --trust-server-cert --non-interactive 
+SVN_CMDLINE = svn --trust-server-cert --non-interactive
 SVN_DIR = build/qpOASES-source
 PATCH_DIR = $(CURDIR)
 # qpOASES's Makefile version utilizes .so library, therfore we use it.
@@ -12,9 +12,8 @@ MK_DIR       = $(shell rospack find mk)
 include $(MK_DIR)/svn_checkout.mk
 
 installed: $(SVN_DIR)
-	(mkdir -p build/qpOASES; cd build/qpOASES; cmake $(CURDIR)/$(SVN_DIR); make)
+	(mkdir -p build/qpOASES; cd build/qpOASES; CC="${CC}" CXX="${CXX}" cmake $(CURDIR)/$(SVN_DIR); make)
 	touch installed
 
 clean:
 	-cd $(SVN_DIR) && make clean
-
