@@ -139,6 +139,10 @@ namespace jsk_footstep_controller
                                   tf::Vector3& rfoot_force)
   {
     try {
+      if (!waitForEndEffectorTrasnformation(lfoot->header.stamp)) {
+        ROS_ERROR("failed to lookup transformation for sensor value");
+        return false;
+      }
       tf::StampedTransform lfoot_transform, rfoot_transform;
       tf_listener_->lookupTransform(
         lfoot->header.frame_id, lfoot_sensor_frame_, lfoot->header.stamp, lfoot_transform);
@@ -147,7 +151,7 @@ namespace jsk_footstep_controller
       // cancel translation
       lfoot_transform.setOrigin(tf::Vector3(0, 0, 0));
       rfoot_transform.setOrigin(tf::Vector3(0, 0, 0));
-      
+
       tf::Vector3 lfoot_local, rfoot_local;
       tf::vector3MsgToTF(lfoot->wrench.force, lfoot_local);
       tf::vector3MsgToTF(rfoot->wrench.force, rfoot_local);
@@ -315,7 +319,7 @@ namespace jsk_footstep_controller
       return false;
     }
     else {
-      try 
+      try
       {
         tf::StampedTransform foot_transform; // parent -> foot
         if (use_left_leg) {     // left on the ground
@@ -398,7 +402,29 @@ namespace jsk_footstep_controller
 
     }
   }
-  
+
+  bool Footcoords::waitForSensorFrameTransformation(const ros::Time& stamp,
+                                                   const std::string& lsensor_frame,
+                                                   const std::string& rsensor_frame)
+  {
+    // lfsensor -> lleg_end_coords
+    if (!tf_listener_->waitForTransform(
+          lsensor_frame, lfoot_sensor_frame_, stamp, ros::Duration(1.0))) {
+      ROS_ERROR("failed to lookup transform between %s and %s",
+                lsensor_frame.c_str(),
+                lfoot_sensor_frame_.c_str());
+      return false;
+    }
+    if (!tf_listener_->waitForTransform(
+          rsensor_frame, rfoot_sensor_frame_, stamp, ros::Duration(1.0))) {
+      ROS_ERROR("failed to lookup transform between %s and %s",
+                rsensor_frame.c_str(),
+                rfoot_sensor_frame_.c_str());
+      return false;
+    }
+    return true;
+  }
+
   bool Footcoords::waitForEndEffectorTrasnformation(const ros::Time& stamp)
   {
     // odom -> lfoot
@@ -425,10 +451,9 @@ namespace jsk_footstep_controller
                 rfoot_frame_id_.c_str());
       return false;
     }
-
     return true;
   }
-  
+
   bool Footcoords::updateGroundTF()
   {
     // project `/odom` on the plane of midcoords_
