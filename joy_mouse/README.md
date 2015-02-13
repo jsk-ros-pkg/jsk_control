@@ -10,4 +10,4 @@ with following content:
 SUBSYSTEM=="input", MODE="666"
 ```
 
-And reboot your computer or re-plug your mouse.
+And restart udev by `sudo /etc/init.d/udev restart`, reboot your computer or re-plug your mouse.
