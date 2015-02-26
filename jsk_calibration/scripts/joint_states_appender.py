@@ -50,18 +50,33 @@ def callback(msg):
         # force to use list instead of tuple.
         prev_joint_states.name = list(prev_joint_states.name)
         prev_joint_states.position = list(prev_joint_states.position)
+        prev_joint_states.velocity = list(prev_joint_states.velocity)
+        prev_joint_states.effort = list(prev_joint_states.effort)
     else:
-        for name, pos in zip(msg.name, msg.position):
+        if len(msg.velocity) > 0:
+            velocity = msg.velocity
+        else:
+            velocity = [0] * len(msg.name)
+        if len(msg.effort) > 0:
+            effort = msg.effort
+        else:
+            effort = [0] * len(msg.name)
+
+        for name, pos, vel, ef in zip(msg.name, msg.position, velocity, effort):
             if name in prev_joint_states.name:
                 # if name is already listed in prev_joint_states,
                 # update value
                 index = prev_joint_states.name.index(name)
                 prev_joint_states.position[index] = pos
+                prev_joint_states.velocity[index] = vel
+                prev_joint_states.effort[index] = ef
             else:
                 # if name is not yet listed in prev_joint_states,
                 # append name and position to prev_joint_states
                 prev_joint_states.name.append(name)
                 prev_joint_states.position.append(pos)
+                prev_joint_states.effort.append(ef)
+                prev_joint_states.velocity.append(vel)
         if prev_joint_states.header.stamp < msg.header.stamp:
             prev_joint_states.header.stamp = msg.header.stamp
         pub.publish(prev_joint_states)
