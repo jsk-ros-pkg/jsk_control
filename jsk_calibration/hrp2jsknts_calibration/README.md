@@ -8,12 +8,7 @@
 $ catkin build hrpsys_ros_bridge_tutorials
 ```
 1. Before calibrate hand/eye, Please confirm that your intrinsic parameter is calibrated.
-2. Kill `/hrp3hand_empty_joint_publisher`, because calibration
-program cannot handle multiple `/joint_states` Publisher.
 
-  ```
-$ rosnode kill /hrp3hand_empty_joint_publisher
-```
 ### 2. Capture data
 1. run `capture_data.launch`
 
@@ -86,8 +81,10 @@ $ rosrun euscollada urdf_patch.py diff `rospack find hrpsys_ros_bridge_tutorials
 3. Commit patch
 
   ```
-$ svn add calib_data/hrp2017_multisense_calib_YYYYMMDD.yaml launch/hrp2017.launch
-$ SVN_SSH="ssh -l USERNAME" svn commit -m "update HRP2 calibration file" calib_data/hrp2017_multisense_calib_YYYYMMDD.yaml launch/hrp2017.launch
+$ git checkout -b update-calib
+$ git add calib_data/hrp2017_multisense_calib_YYYYMMDD.yaml launch/hrp2017.launch
+$ git commit -m "update HRP2 calibration file" calib_data/hrp2017_multisense_calib_YYYYMMDD.yaml launch/hrp2017.launch
+$ git push YOUR_REMOTE update-calib
 ```
 
 ## Appendix
