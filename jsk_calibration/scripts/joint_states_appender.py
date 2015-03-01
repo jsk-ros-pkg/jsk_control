@@ -50,6 +50,14 @@ def callback(msg):
         # force to use list instead of tuple.
         prev_joint_states.name = list(prev_joint_states.name)
         prev_joint_states.position = list(prev_joint_states.position)
+        if len(prev_joint_states.velocity) > 0:
+            prev_joint_states.velocity = list(prev_joint_states.velocity)
+        else:
+            prev_joint_states.velocity = [0] * len(prev_joint_states.name)
+        if len(prev_joint_states.effort) > 0:
+            prev_joint_states.effort = list(prev_joint_states.effort)
+        else:
+            prev_joint_states.effort = [0] * len(prev_joint_states.name)
     else:
         for name, pos in zip(msg.name, msg.position):
             if name in prev_joint_states.name:
