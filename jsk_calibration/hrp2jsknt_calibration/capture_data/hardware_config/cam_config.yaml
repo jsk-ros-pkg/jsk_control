@@ -1,7 +1,7 @@
 head_camera:
-  cb_detector_config: /camera_remote/rgb/cb_detector_config
-  led_detector_config: /camera_remote/rgb/led_detector
-  settler_config: /camera_remote/rgb/monocam_settler_config
+  cb_detector_config: /multisense/left/cb_detector_config
+  led_detector_config: /multisense/left/led_detector
+  settler_config: /multisense/left/monocam_settler_config
   configs:
     mmurooka_board:
       settler:
@@ -11,8 +11,8 @@ head_camera:
         cache_size: 100
       cb_detector:
         active: True
-        num_x: 5
-        num_y: 6
+        num_x: 6
+        num_y: 5
         width_scaling: 1
         height_scaling: 1
         subpixel_window: 4

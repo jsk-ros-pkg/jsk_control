@@ -2,14 +2,13 @@
   transforms:
     LARM_chain_cb: [1, 1, 1, 1, 1, 1]
     RARM_chain_cb: [1, 1, 1, 1, 1, 1]
-    LLEG_chain_cb: [1, 1, 1, 1, 1, 1]
-    RLEG_chain_cb: [1, 1, 1, 1, 1, 1]
+    hrp2_to_multisense: [0, 0, 0, 0, 0, 0]
 
   chains:
     LARM_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
+      gearing: [0, 0, 0, 0, 0, 0, 0, 0]
     RARM_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
+      gearing: [0, 0, 0, 0, 0, 0, 0, 0]
     LLEG_chain:
       gearing: [0, 0, 0, 0, 0, 0]
     RLEG_chain:
@@ -31,6 +30,5 @@
 
   checkerboards:
     mmurooka_board:
-      spacing_x: 0.0
-      spacing_y: 0.0
-
+      spacing_x: 0
+      spacing_y: 0

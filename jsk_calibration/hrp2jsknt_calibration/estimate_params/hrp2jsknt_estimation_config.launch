@@ -12,11 +12,9 @@
           sensors:
           - LARM_chain
           - RARM_chain
-          - LLEG_chain
-          - RLEG_chain
           - head_camera
         </rosparam>
-        <param name="output_filename" type="string" value="config_0" />
+        <param name="output_filename" type="string" value="cb_calib_0" />
       </group>
 
       <group ns="hrp2jsknt - 01 - Adding Camera Locations">
@@ -26,12 +24,11 @@
           sensors:
           - LARM_chain
           - RARM_chain
-          - LLEG_chain
-          - RLEG_chain
           - head_camera
         </rosparam>
-        <param name="output_filename" type="string" value="system_calibrated" />
+        <param name="output_filename" type="string" value="cam_calib_1" />
       </group>
+
       <group ns="hrp2jsknt - 02 - Joint Offset">
         <param name="free_params" textfile="$(find jsk_calibration)/hrp2jsknt_calibration/estimate_params/config/free_arms.yaml" />
         <param name="use_cov" type="bool" value="True" />
@@ -39,12 +36,10 @@
           sensors:
           - LARM_chain
           - RARM_chain
-          - LLEG_chain
-          - RLEG_chain
           - head_chain
           - head_camera
         </rosparam>
-        <param name="output_filename" type="string" value="system_calibrated" />
+        <param name="output_filename" type="string" value="jt_calib_2" />
       </group>
 
     </group>
