@@ -1,6 +1,7 @@
 ;; Extend robot interface 
 
 (ros::roseus-add-msgs "jsk_footstep_msgs")
+(ros::roseus-add-srvs "jsk_pcl_ros")
 
 (ros::advertise "/robot_footstep" jsk_footstep_msgs::FootstepArray)
 
@@ -9,7 +10,6 @@
     (error "Please override :foot-size this method to use"))
   (:foot-offset-transform ()
     (make-coords :pos (float-vector 20 0 -2)))
-    ;;(error "Please override :foot-offset-transform this method to use"))
   (:footstep-to-rosmsg (foot-coords)
     (let ((frame-id (if (eq (send (car foot-coords) :name) :lleg) "lleg_end_coords" "rleg_end_coords"))
           (now (ros::time-now)))
@@ -40,6 +40,20 @@
     (let ((msg (send self :footstep-to-rosmsg foot-coords)))
       (ros::publish "/robot_footstep" msg)
       msg))
+  (:snap-footsteps (foot-coords &key
+                                (service "/locomotion/snapit/align_footstep"))
+    (let ((req (instance jsk_pcl_ros::SnapFootstepRequest :init)))
+      (send req :input (send self :footstep-to-rosmsg foot-coords))
+      (let ((res (ros::service-call service req t)))
+        (if res
+            (mapcar #'(lambda (footstep)
+                        (let ((coords (ros::tf-pose->coords footstep)))
+                          (if (= (send footstep :leg) jsk_footstep_msgs::Footstep::*LEFT*)
+                              (send coords :name :lleg)
+                            (send coords :name :rleg))
+                          coords))
+                    (send res :output)))
+        )))
   )
 
 
