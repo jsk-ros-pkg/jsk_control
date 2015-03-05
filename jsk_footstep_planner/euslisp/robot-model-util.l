@@ -13,13 +13,16 @@
   (:footstep-to-rosmsg (foot-coords)
     (let ((frame-id (if (eq (send (car foot-coords) :name) :lleg) "lleg_end_coords" "rleg_end_coords"))
           (now (ros::time-now)))
-      (let ((footsteps (mapcar #'(lambda (fc)
+      (let ((initial-coords (send (car foot-coords) :copy-worldcoords)))
+        (let ((footsteps (mapcar #'(lambda (fc)
                                    (let ((footstep (instance jsk_footstep_msgs::Footstep :init)))
                                      (if (eq (send fc :name) :lleg)
                                          (send footstep :leg jsk_footstep_msgs::Footstep::*LEFT*)
                                        (send footstep :leg jsk_footstep_msgs::Footstep::*RIGHT*))
                                      (send footstep :pose (ros::coords->tf-pose 
-                                                            (send (send fc :copy-worldcoords) :transform
+                                                            (send (send initial-coords
+                                                                        :transformation (send fc :copy-worldcoords) )
+                                                                  :transform
                                                                   (send self :foot-offset-transform))))
                                      (multiple-value-bind
                                       (foot-x foot-y foot-z) (send self :foot-size)
@@ -32,7 +35,7 @@
           (send footstep-array :header :frame_id frame-id)
           (send footstep-array :header :stamp now)
           (send footstep-array :footsteps footsteps)
-          footstep-array))))
+          footstep-array)))))
   (:publish-footstep (foot-coords)
     (let ((msg (send self :footstep-to-rosmsg foot-coords)))
       (ros::publish "/robot_footstep" msg)
@@ -65,10 +68,10 @@
 (load "package://jsk_footstep_planner/euslisp/robot-model-util.l")
 (send *robot* :publish-footstep
       (list (make-coords :name :lleg)
-            (make-coords :name :rleg :pos #f(0 -210 0))
-            (make-coords :name :lleg :pos #f(100 0 0))
-            (make-coords :name :rleg :pos #f(200 -210 0))
-            (make-coords :name :lleg :pos #f(200 0 0))))
+            (make-coords :name :rleg :pos #f(100 -210 0))
+            (make-coords :name :lleg :pos #f(200 0 0))
+            (make-coords :name :rleg :pos #f(300 -210 0))
+            (make-coords :name :lleg :pos #f(300 0 0))))
 (send *robot* :publish-footstep
       (list (make-coords :name :lleg)
             (make-coords :name :rleg :pos #f(0 -210 0))))
