@@ -1,0 +1,17 @@
+<launch>
+  <arg name="INPUT_POINTCLOUD" />
+  <!-- Footprint of hrp2jsk -->
+  <!-- Publish as PolygonArray for footstep planning -->
+  
+  <node pkg="nodelet" type="nodelet" name="footprint_polygon_publisher"
+        args="standalone jsk_pcl/StaticPolygonArrayPublisher">
+    <remap from="~input" to="$(arg INPUT_POINTCLOUD)" />
+    <rosparam>
+      use_message: true
+      frame_ids: [RLEG_LINK5, LLEG_LINK5]
+      # Be careful, the order is reversed
+      polygon_array: [[[0.14, 0.057564, -0.10611], [-0.1, 0.057564, -0.10611], [-0.1, -0.077564, -0.10611], [0.14, -0.077564, -0.10611]],
+                      [[0.14, 0.077564, -0.10611],[-0.1, 0.077564, -0.10611],[-0.1, -0.057564, -0.10611], [0.14, -0.057564, -0.10611]]]
+    </rosparam>
+  </node>
+</launch>
