@@ -50,7 +50,7 @@
   (:vertices ()
     (let ((ret nil))
       (maphash #'(lambda (key val)
-                   (setf ret (cons (float-vector (elt val 0) (elt val 1) 0) ret)))
+                   (setf ret (cons (send plane-coords :transform-vector (float-vector (elt val 0) (elt val 1) 0)) ret)))
                cell-hash)
       ret))
   (:collision-check-objects ()
