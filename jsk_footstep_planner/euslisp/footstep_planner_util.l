@@ -80,3 +80,67 @@ sample:
         (if non-null-candidates non-null-candidates ;car is not good
           nil)))))
 
+(defun face-on-a-face (f support-face)
+  (dolist (v (send f :vertices))
+    (if (eq (send support-face :insidep v) :outside)
+        (return-from face-on-a-face nil)
+      ))
+  ;;(if *debug* (send support-face :draw-on :flush t))
+  t)
+
+(defun face-on-faces (f support-faces)
+  (if *use-env-server*
+      (progn
+        (let ((req (instance jsk_pcl_ros::PolygonOnEnvironmentRequest :init)))
+          ;;(send req :environment_id *env-id*)
+          (send req :environment_id 0)
+          ;; build polygon samped
+          (send req :polygon :header *goal-header*)
+          (send req :polygon :polygon :points
+                (mapcar #'(lambda (v)
+                            (instance geometry_msgs::Point32 :init
+                                      :x (* 0.001 (elt v 0))
+                                      :y (* 0.001 (elt v 1))
+                                      :z (* 0.001 (elt v 2))))
+                        (send f :vertices)))
+          (let ((res (ros::service-call "polygon_on_env" req t)))
+            (send res :result))))
+    (progn
+      (dolist (v (send f :vertices))
+        (let ((on-face-p nil))
+          (dolist (support-face support-faces)
+            (when (and (eps= (send support-face :distance v) 0.0)
+                       (not (eq (send support-face :insidep v) :outside)))
+              ;; the v is ok
+              (setq on-face-p t)
+              (return-from nil nil)
+              )
+            )
+          (unless on-face-p
+            (return-from face-on-faces nil))
+          )
+        )
+      t)))
+
+;; for debug
+(defun make-arrow-for-direction (direction)
+  (let ((arrow (instance arrow-object :init))
+        (direction* (normalize-vector direction)))
+    (let ((x-axis (send arrow :x-axis)))
+      (let ((a (v* x-axis direction*)))
+        (if (eps= (norm a) 0.0)
+            arrow
+          (let* ((a* (normalize-vector a))
+                 (theta (asin (norm a))))
+            (send arrow :rotate theta a* :world)
+            arrow))))))
+    
+#|
+(setq a (float-vector 1 0 0))
+(setq b (float-vector 0 0 1))
+(setq axis (v* a b))
+(setq axis* (normalize-vector axis))
+(setq coords (make-coords))
+(send coords :rotate (asin (norm axis)) axis* :world)
+(send coords :x-axis)
+|#
