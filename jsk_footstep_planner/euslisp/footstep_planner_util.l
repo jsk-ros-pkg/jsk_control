@@ -1,4 +1,7 @@
 ;; utility function for footstep planning
+(ros::roseus-add-msgs "jsk_footstep_msgs")
+(ros::roseus-add-msgs "jsk_recognition_msgs")
+(ros::roseus-add-srvs "jsk_pcl_ros")
 
 (defun project-coords-on-to-plane (coords planes z-axis)
   "z-axis is dummy parameter.
@@ -121,6 +124,12 @@ sample:
           )
         )
       t)))
+
+(defun lookup-transform-with-duration (tf-listener from to stamp duration)
+  (if (send tf-listener :wait-for-transform from to stamp duration)
+      (send tf-listener :lookup-transform from to stamp)
+    (progn (ros::roserror "Failed to lookup transform ~A to ~A" from to)
+           nil)))
 
 ;; for debug
 (defun make-arrow-for-direction (direction)
