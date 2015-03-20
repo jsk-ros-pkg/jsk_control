@@ -135,6 +135,8 @@ footstep-parameter"))
     ;;       (warn "[INFO] use collision robot model for collision check~%")
     ;;     (warn "[INFO] use simple leg model for collision check~%")))
     self)
+  (:timeout () timeout)
+  (:grids () grids)
   (:report ()
     (send successablep-timer :report)
     (send successors-timer :report)
@@ -341,6 +343,7 @@ footstep-parameter"))
                       (setf (cdr c)
                             (instance step-node :init
                                       :worldcoords cdr-c
+                                      :leg-face leg-face
                                       :robot-coords robot-coords
                                       :prev-coords current-step-coords
                                       :angle-vector nil
@@ -379,24 +382,28 @@ footstep-parameter"))
          (let ((ret nil))
            (dolist (c next-coords-candidate)
              (let ((cdr-c (cdr c)))
-               (let ((robot-coords nil
-                                   ;; (send footstep-param :calc-robot-coords
-                                   ;;       cdr-c current-step-coords)
-                                   ))
-                 ;; (when robot
-                 ;;   (send robot :worldpos))
-                 (if (send self :successablep :debug verbose
-                           :next-leg next-leg ;:lleg, :rleg and so on
-                           :next-leg-coords cdr-c
-                           :robot-coords robot-coords
-                           :next-leg-face (instance face :init
-                                                    :vertices
-                                                    (send footstep-param :foot-vertices
-                                                          next-leg cdr-c)))
+               (let ((robot-coords
+                      (send footstep-param :calc-robot-coords
+                            cdr-c current-step-coords)
+                      ))
+                 (when robot
+                   (send robot :worldpos))
+                 (if (or t (send self :successablep :debug verbose
+                                 :next-leg next-leg ;:lleg, :rleg and so on
+                                 :next-leg-coords cdr-c
+                                 :robot-coords robot-coords
+                                 :next-leg-face (instance face :init
+                                                          :vertices
+                                                          (send footstep-param :foot-vertices
+                                                                next-leg cdr-c))))
                      (progn
                        (setf (cdr c)
                              (instance step-node :init
                                        :worldcoords cdr-c
+                                       :leg-face (instance face :init
+                                                           :vertices
+                                                           (send footstep-param :foot-vertices
+                                                                 next-leg cdr-c))
                                        :robot-coords robot-coords
                                        :prev-coords current-step-coords
                                        :angle-vector nil
@@ -469,7 +476,7 @@ check between leg-object and obstacles."
 
 (defclass step-node
   :super node
-  :slots (worldcoords l/r robot-coords prev-coords angle-vector step-name))
+  :slots (worldcoords l/r robot-coords prev-coords angle-vector step-name leg-face))
 
 (defmethod step-node
   (:init (&key ((:worldcoords wc) nil)
@@ -477,17 +484,20 @@ check between leg-object and obstacles."
                ((:prev-coords pc) nil)
                ((:angle-vector av) nil)
                ((:l/r lr) nil)
+               ((:leg-face lg) nil)
                ((:step-name sn) nil))
     (setq worldcoords wc)
     (setq step-name sn)
+    (setq leg-face lg)
     (setq prev-coords pc)
     (setq robot-coords rc)
     (setq angle-vector av)
     (setq l/r lr)
     self)
   ;; accessor
-  ;;(:robot-coords () robot-coords)
-  (:robot-coords () worldcoords)
+  (:robot-coords () robot-coords)
+  (:leg-face () leg-face)
+  ;;(:robot-coords () worldcoords)
   (:prev-coords () prev-coords)
   (:worldcoords () worldcoords)
   (:angle-vector (&optional (arg nil))
@@ -504,7 +514,7 @@ check between leg-object and obstacles."
           50.0)
        (< (norm (send (send a :worldcoords) :difference-rotation
                       (send b :worldcoords)))
-          #.(deg2rad 10.0))))
+          #.(deg2rad 5.0))))
 
 ;; it has A* in the name of class, but
 ;; this algorithm is not "A*" in exact meaning.
@@ -533,18 +543,51 @@ check between leg-object and obstacles."
     "I want to replace 'find' in this method by dynamic kd-tree
 building and searching."
     (find (send n :state) close-list :test #'step-node=))
-  (:pop-from-open-list (&key (debug nil))
-    (let ((target-node (send-super :pop-from-open-list :debug nil)))
-      (when debug                                  ;debug view
-        (send *pickview* :draw-objects :flush nil) ;clear
-        ;; draw step
-        (send render-leg-object 
-              :newcoords (send (send target-node :state) :worldcoords))
-        (send render-leg-object  :worldpos)
-        (send render-leg-object  :draw-on :flush nil)
-        (send *pickview* :viewer :viewsurface :flush)
-        (x::window-main-one))
-      target-node))
+  (:null-open-list? ()
+    (if (ros::time< (send target-problem :timeout) (ros::time-now))
+        (return-from :null-open-list? t))
+    (let ((foundp nil))
+      (while (not foundp)
+        (if (send-super :null-open-list?)
+            (return-from :null-open-list? t)
+          (let ((candidate-node (send-super :pop-from-open-list :debug nil)))
+            (cond ((null candidate-node)
+                   (return-from :null-open-list? nil))
+                  ((null (send (send candidate-node :state) :leg-face)) ;start state
+                   (send self :add-to-open-list candidate-node)
+                   (setq foundp t))
+                  ((is-face-possible-to-put-on-grid
+                    (send (send candidate-node :state) :leg-face)
+                    (send target-problem :grids))
+                   (send self :add-to-open-list candidate-node)
+                   (setq foundp t))
+                  (t
+                   nil))
+            )))
+      (not foundp)))
+  ;; (:pop-from-open-list (&key (debug nil))
+  ;;   (let ((next (send-super :pop-from-open-list :debug nil)))
+  ;;     (if (send (send next :state) :leg-face)
+  ;;         (send (send (send next :state) :leg-face) :draw-on :flush t))
+  ;;     next))
+  ;; (:pop-from-open-list (&key (debug nil))
+  ;;   (let ((target-node nil))
+  ;;     (while (null target-node)
+  ;;       (if (send self :null-open-list?)
+  ;;           (return-from :pop-from-open-list nil)
+  ;;         (let ((candidate-node (send-super :pop-from-open-list :debug nil)))
+  ;;           (cond ((null candidate-node)
+  ;;                  (return-from :pop-from-open-list nil))
+  ;;                 ((null (send (send candidate-node :state) :leg-face)) ;start state
+  ;;                  (setq target-node candidate-node))
+  ;;                 ((is-face-possible-to-put-on-grid
+  ;;                   (send (send candidate-node :state) :leg-face)
+  ;;                   (send target-problem :grids))
+  ;;                  (setq target-node candidate-node))
+  ;;                 (t
+  ;;                  nil))
+  ;;           )))
+  ;;     target-node))
   (:hn (n p)
     ;; [J.Kuffner et. al.,
     ;;  Footstep Planning Among Obstacles for Biped Robots,

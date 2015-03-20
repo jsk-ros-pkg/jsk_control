@@ -141,7 +141,7 @@ which is inside of occupied cell"
                   (quaternion-from-two-vectors
                    (send coords :rotate-vector (float-vector 0 0 1))
                    (send plane-coords :rotate-vector (float-vector 0 0 1))))))
-        (let ((ret (make-coords :pos point :rot rot)))
+        (let ((ret (make-coords :pos point :rot (m* (send coords :rot) rot))))
           (setf (get ret :projected-grid) self)
           ret))))
   (:placablep (point n)
@@ -257,6 +257,8 @@ which is inside of occupied cell"
 (defun is-face-possible-to-put-on-grid (leg-face grids)
   ;;(send leg-face :draw-on :flush t)
   ;;(send-all (send leg-face :vertices) :draw-on :color (float-vector 1 0 0))
+  (if (null grids)
+      t
   (let ((points (sampling-face-points leg-face))
         (prev-grid nil))
     ;;(send-all points :draw-on :flush t)
@@ -268,10 +270,12 @@ which is inside of occupied cell"
                 (setq all-foundp nil)
                 (return-from nil nil))))
         (if all-foundp
-            (return-from is-face-possible-to-put-on-grid t))))))
+            (return-from is-face-possible-to-put-on-grid t)))))))
 
 (defun append-footstep-candidates-by-grids (next-coords-candidate grids)
   ;; next-coords-candidate =  ((transformation . next-leg-pose) ...)
+  (if (null grids)
+      next-coords-candidate
   (let ((new-candidates nil))
     (dolist (grid grids)
       (dolist (candidate next-coords-candidate)
@@ -283,7 +287,7 @@ which is inside of occupied cell"
                                     (cons (car candidate)
                                           (send grid :project-coords (cdr candidate)))
                                     new-candidates))))))
-    (append next-coords-candidate new-candidates)))
+    new-candidates)))
 
 #|
 (load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")

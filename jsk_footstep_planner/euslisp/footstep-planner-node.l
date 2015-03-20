@@ -6,13 +6,15 @@
 (ros::roseus-add-srvs "std_srvs")
 (ros::roseus-add-srvs "jsk_footstep_planner")
 (ros::roseus-add-msgs "jsk_rviz_plugins")
+(load "~/ros/hydro_parent/src/jskeus/irteus/irtgraph.l")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner.l" (ros::rospack-find "jsk_footstep_planner")))
-(load "footstep_planner")
+(load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
 ;;(load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/simple_occupancy_grid.l" (ros::rospack-find "jsk_footstep_planner")))
-(load "simple_occupancy_grid")
+;;(load "simple_occupancy_grid.l")
+(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
 ;;(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
 
 
@@ -90,32 +92,34 @@
           (return-from plan-execute-cb nil))))
 
     ;; Visualize initial footsteps
-    (when *use-gui*
-      (let ((first-step (make-footprint (car (car initial-foot-coords))))
-            (second-step (make-footprint (car (cadr initial-foot-coords)))))
-        (send first-step :move-to (cdr (car initial-foot-coords)) :world)
-        (send second-step :move-to (cdr (cadr initial-foot-coords)) :world)
-        (setq *initial-footsteps* (list first-step second-step))
+    (let ((first-step (make-footprint (car (car initial-foot-coords))))
+          (second-step (make-footprint (car (cadr initial-foot-coords)))))
+      (send first-step :move-to (cdr (car initial-foot-coords)) :world)
+      (send second-step :move-to (cdr (cadr initial-foot-coords)) :world)
+      (setq *initial-footsteps* (list first-step second-step))
+      (when *use-gui*
         (send *irtviewer* :objects (append *initial-footsteps* *grids*))
         (send *irtviewer* :draw-objects)))
 
     ;; Visualize goal footsteps
-    (when *use-gui*
-      (let ((first-step (make-footprint (car (car goal-foot-coords))))
-            (second-step (make-footprint (car (cadr goal-foot-coords)))))
-        (send first-step :move-to (cdr (car goal-foot-coords)) :world)
-        (send second-step :move-to (cdr (cadr goal-foot-coords)) :world)
-        (setq *goal-footsteps* (list first-step second-step))
+    (let ((first-step (make-footprint (car (car goal-foot-coords))))
+          (second-step (make-footprint (car (cadr goal-foot-coords)))))
+      (send first-step :move-to (cdr (car goal-foot-coords)) :world)
+      (send second-step :move-to (cdr (cadr goal-foot-coords)) :world)
+      (setq *goal-footsteps* (list first-step second-step))
+      (when *use-gui*
         (send *irtviewer* :objects (append *initial-footsteps* *goal-footsteps* *grids*))
         (send *irtviewer* :draw-objects)))
 
     ;; Check goal footstep is possible or not first
-    (when (or (not (is-foot-possible-to-put (car *goal-footsteps*) *grids*))
-              (not (is-foot-possible-to-put (cadr *goal-footsteps*) *grids*)))
-      (ros::ros-warn "Goal footstep is outside of grids")
-      (let ((result (send server :result)))
-        (send server :set-aborted result))
-      (return-from plan-execute-cb nil))
+    (when *use-env-server*
+      (send-all *goal-footsteps* :worldpos)
+      (when (or (not (is-foot-possible-to-put (car *goal-footsteps*) *grids*))
+                (not (is-foot-possible-to-put (cadr *goal-footsteps*) *grids*)))
+        (ros::ros-warn "Goal footstep is outside of grids")
+        (let ((result (send server :result)))
+          (send server :set-aborted result))
+        (return-from plan-execute-cb nil)))
     (ros::ros-info "OK")
     ;; Force to fail for debug
     ;; (let ((result (send server :result)))
@@ -340,7 +344,8 @@
   
   ;; hrp2 footstep size is default
   ;;(let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
-  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.227)))
+  ;;(let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.227)))
+  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.207)))
         (leg-size-z (* 1000.0 (ros::get-param "~leg_height" 0.001)))
         (leg-size-y (* 1000.0 (ros::get-param "~leg_width" 0.135))))
     (setq *leg-size-x* leg-size-x)
