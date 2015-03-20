@@ -67,12 +67,15 @@ footstep-parameter"))
           rotate-max
           wd wp
           z-axis
-          footstep-param planes
+          footstep-param planes grids
           goal-footstep
           goal-coords
           goal-leg-index
           near-side-goal
-          collision-robot-model timeout))
+          collision-robot-model timeout
+          successablep-timer
+          successors-timer append-footstep-candidates-by-grids-timer
+          is-face-possible-to-put-on-grid-timer))
 
 (defmethod footstep-planner-graph
   (:init (&rest args
@@ -82,6 +85,7 @@ footstep-parameter"))
                ((:timeout tm) nil)
                ((:wd d) 1.0)
                ((:planes ps) nil)
+               ((:grids gs) nil)
                ((:z-axis z) nil)
                ((:wp p) 0.0)
                ((:robot r) nil)
@@ -94,10 +98,15 @@ footstep-parameter"))
                ((:rthr rth) (deg2rad 10))
                ((:collision-robot-model crm) nil)
                &allow-other-keys)
+    (setq successablep-timer (instance counter-timer :init ":successablep"))
+    (setq successors-timer (instance counter-timer :init ":successors"))
+    (setq append-footstep-candidates-by-grids-timer (instance counter-timer :init "append-footstep-candidates-by-grids"))
+    (setq is-face-possible-to-put-on-grid-timer (instance counter-timer :init "is-face-possible-to-put-on-grid"))
     (setq footstep-param param)
     (setq target-scene sc)
     (setq timeout tm)
     (setq planes ps)
+    (setq grids gs)
     (setq z-axis z)
     (if target-scene
         (setq obstacles
@@ -126,6 +135,12 @@ footstep-parameter"))
     ;;       (warn "[INFO] use collision robot model for collision check~%")
     ;;     (warn "[INFO] use simple leg model for collision check~%")))
     self)
+  (:report ()
+    (send successablep-timer :report)
+    (send successors-timer :report)
+    (send append-footstep-candidates-by-grids-timer :report)
+    (send is-face-possible-to-put-on-grid-timer :report)
+    )
   (:goal-footstep (&optional arg)
     (if arg (setq goal-footstep arg))
     goal-footstep)
@@ -201,33 +216,41 @@ footstep-parameter"))
             next-leg
             robot-coords)))
   (:successablep (&rest args
-                  &key
-                  (debug nil)
-                  (next-leg-coords nil)
-                  (robot-coords nil)
-                  (next-leg-face nil)
-                  &allow-other-keys)
+                        &key
+                        (debug nil)
+                        (next-leg-coords nil)
+                        (robot-coords nil)
+                        (next-leg-face nil)
+                        &allow-other-keys)
     "this method is called after robot model is moved."
-    (incf *evaled-node-num*)
-    (and
-     (cond (collision-robot-model
-            (not (send self :collision-with-obstacles-collision-robot-model-p
-                       (send (send robot-coords :copy-worldcoords)
-                             :transform (send footstep-param :foot->robot))
-                       :debug debug)))
-           (robot
-            (not (send self :collision-with-obstacles-p robot :debug debug)))
-           (t
-            (not (send self :collision-with-obstacles-no-robot-mode-p
-                       next-leg-coords :debug debug))))
-     ;; plane check
-     (if (and next-leg-face planes)
-         (face-on-faces next-leg-face planes)
-       t)))
-  (:successors (state &key (verbose nil))
+    (bench-timer
+     successablep-timer
+     (incf *evaled-node-num*)
+     (and
+      ;; (cond (collision-robot-model
+      ;;        (not (send self :collision-with-obstacles-collision-robot-model-p
+      ;;                   (send (send robot-coords :copy-worldcoords)
+      ;;                         :transform (send footstep-param :foot->robot))
+      ;;                   :debug debug)))
+      ;;       (robot
+      ;;        (not (send self :collision-with-obstacles-p robot :debug debug)))
+      ;;       (t
+      ;;        (not (send self :collision-with-obstacles-no-robot-mode-p
+      ;;                   next-leg-coords :debug debug))))
+      t
+      ;; plane check
+      (cond ((and next-leg-face planes)
+             (face-on-faces next-leg-face planes))
+            ((and next-leg-face grids)
+             (bench-timer
+              is-face-possible-to-put-on-grid-timer
+              (is-face-possible-to-put-on-grid next-leg-face grids)))
+            (t
+             t)))))
+  (:successors-old (state &key (verbose nil))
     (when timeout                            ;check the timeout
       (when (< (- (send timeout :to-sec) (send (ros::time-now) :to-sec)) 0)
-        (return-from :successors nil)))
+        (return-from :successors-old nil)))
     (let* ((current-leg (send state :l/r))
            (current-step-coords (send state :worldcoords))
            (next-leg (send footstep-param :next-leg current-leg)))
@@ -256,10 +279,19 @@ footstep-parameter"))
                           (setq new-candidate (append new-candidate (list c)))
                         (setq new-candidate (list c))
                         ))))
-                (setq next-coords-candidate new-candidate))))
+              (setq next-coords-candidate new-candidate))))
+        ;; mapping to the grids if needed
+        ;;(when (and grids z-axis)
+        (ros::ros-info "~A candidates" (length next-coords-candidate))
+        (when (and grids)
+          (setq next-coords-candidate
+                (append-footstep-candidates-by-grids
+                 next-coords-candidate grids)))
         ;; check x transition
+        (when nil
         (dolist (c next-coords-candidate)
           (let ((trans (send current-step-coords :transformation (cdr c))))
+            ;; TODO: fix it
             (when (> (elt (send trans :worldpos) 0) 250)
               ;; force to use 250
               (send trans :locate (float-vector
@@ -269,7 +301,7 @@ footstep-parameter"))
                     :world)
               (send (cdr c) :newcoords (send (send current-step-coords :copy-worldcoords) :transform trans))
               (send (cdr c) :worldpos)
-              )))
+              ))))
         ;; check z transition
         (when (send state :prev-coords)
           (let* ((prev-step-coords (send (send state :prev-coords) :copy-worldcoords))
@@ -295,9 +327,6 @@ footstep-parameter"))
               (let ((robot-coords
                      (send footstep-param :calc-robot-coords
                            cdr-c current-step-coords)))
-                ;; (send self :move-robot-model
-                ;;       cdr-c
-                ;;       current-step-coords next-leg robot-coords)
                 (when robot
                   (send robot :worldpos))
                 (if (send self :successablep :debug verbose
@@ -318,8 +347,68 @@ footstep-parameter"))
                                       ;;(send robot :angle-vector)
                                       :step-name (car c)
                                       :l/r next-leg))
-                      (push c ret))))))
+                      (push c ret))
+                  (progn
+                    (ros::ros-info "Not successable")
+                    )
+                  ))))
           ret))))
+  (:successors (state &key (verbose nil))
+    (bench-timer
+     successors-timer
+     (when timeout                            ;check the timeout
+       (when (< (- (send timeout :to-sec) (send (ros::time-now) :to-sec)) 0)
+         (ros::ros-warn "Planning take ~A secs, Timeout"
+           (- (send timeout :to-sec) (send (ros::time-now) :to-sec)))
+         (return-from :successors nil)))
+     (let* ((current-leg (send state :l/r))
+            (current-step-coords (send state :worldcoords))
+            (next-leg (send footstep-param :next-leg current-leg)))
+       (let ((next-coords-candidate (send footstep-param :next-step-coords
+                                          (send state :worldcoords)
+                                          next-leg
+                                          (send state :step-name))))
+         ;; mapping to the grids if needed
+         (when (and grids)
+           (setq next-coords-candidate
+                 (bench-timer
+                  append-footstep-candidates-by-grids-timer
+                  (append-footstep-candidates-by-grids next-coords-candidate grids))))
+         (ros::ros-info "~A candidates" (length next-coords-candidate))
+         ;; remove steps collide with obstacles
+         (let ((ret nil))
+           (dolist (c next-coords-candidate)
+             (let ((cdr-c (cdr c)))
+               (let ((robot-coords nil
+                                   ;; (send footstep-param :calc-robot-coords
+                                   ;;       cdr-c current-step-coords)
+                                   ))
+                 ;; (when robot
+                 ;;   (send robot :worldpos))
+                 (if (send self :successablep :debug verbose
+                           :next-leg next-leg ;:lleg, :rleg and so on
+                           :next-leg-coords cdr-c
+                           :robot-coords robot-coords
+                           :next-leg-face (instance face :init
+                                                    :vertices
+                                                    (send footstep-param :foot-vertices
+                                                          next-leg cdr-c)))
+                     (progn
+                       (setf (cdr c)
+                             (instance step-node :init
+                                       :worldcoords cdr-c
+                                       :robot-coords robot-coords
+                                       :prev-coords current-step-coords
+                                       :angle-vector nil
+                                       ;;(send robot :angle-vector)
+                                       :step-name (car c)
+                                       :l/r next-leg))
+                       (push c ret))
+                   (progn
+                     ;;(ros::ros-info "Not successable")
+                     )
+                   ))))
+           ret)))))
   (:collision-with-obstacles-collision-robot-model-p (coords &key (debug nil))
     (send collision-robot-model :newcoords coords)
     (send collision-robot-model :worldpos)
@@ -397,7 +486,8 @@ check between leg-object and obstacles."
     (setq l/r lr)
     self)
   ;; accessor
-  (:robot-coords () robot-coords)
+  ;;(:robot-coords () robot-coords)
+  (:robot-coords () worldcoords)
   (:prev-coords () prev-coords)
   (:worldcoords () worldcoords)
   (:angle-vector (&optional (arg nil))
@@ -690,8 +780,8 @@ building and searching."
              ((:right :rleg) right-footsteps)
              (t (error "unkown leg ~A" l/r)))))
       (mapcar #'(lambda (trans)
-                  (cons (car trans)
-                        (send (send support-leg-coords :copy-worldcoords)
+                  (cons (car trans)     ;transform
+                        (send (send support-leg-coords :copy-worldcoords) ;new pose
                               :transform (cdr trans))))
               transformations)))
   (:move-robot-model (&rest args) nil)

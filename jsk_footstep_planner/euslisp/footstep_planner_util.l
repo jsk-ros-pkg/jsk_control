@@ -153,3 +153,42 @@ sample:
 (send coords :rotate (asin (norm axis)) axis* :world)
 (send coords :x-axis)
 |#
+
+;; TimerClass
+(defclass counter-timer
+  :super propertied-object
+  :slots (name count start-time duration))
+
+(defmethod counter-timer
+  (:init (aname)
+    (setq name aname)
+    (send self :reset-timer)
+    self)
+  (:count () count)
+  (:proc-start ()
+    (setq start-time (ros::time-now)))
+  (:proc-end ()
+    (incf count)
+    (setq duration (+ duration
+                      (send (ros::time- (ros::time-now) start-time) :to-sec)))
+    )
+  (:reset-timer ()
+    (setq count 0)
+    (setq duration 0))
+  (:report ()
+    (if (= count 0)
+        (ros::ros-info "~A is not called" name)
+      (ros::ros-info "~A takes ~A secs (~A sec per trial, ~A trials)"
+        name duration (/ duration count) count)))
+  )
+
+(defmacro bench-timer (timer &rest prog)
+  `(progn
+     (send ,timer :proc-start)
+     (prog1 (progn ,@prog)
+       (send ,timer :proc-end)
+       )))
+
+(defmacro bench-timer2 (timer &rest prog)
+  `(progn
+     ,@prog))

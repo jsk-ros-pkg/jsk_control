@@ -9,13 +9,14 @@
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner.l" (ros::rospack-find "jsk_footstep_planner")))
 (load "footstep_planner")
-;;(load "package://jsk_footstep_planner/euslisp/footstep-planner.l")
+;;(load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
+(comp:compile-file-if-src-newer
+  (format nil "~A/euslisp/simple_occupancy_grid.l" (ros::rospack-find "jsk_footstep_planner")))
+(load "simple_occupancy_grid")
+;;(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
 
 
-;; for debug
-(setq *debug* nil)
-(if *debug* (make-irtviewer))
-
+(setq *grids* nil)
 (defun planes-cb (msg)
   (let ((polygons (send msg :polygons)))
     (let ((faces (mapcar #'(lambda (polygon)
@@ -46,11 +47,7 @@
 
 (defun plan-execute-cb (server goal)
   (setq *evaled-node-num* 0)
-  (when *use-env-server*
-    (let ((req (instance std_srvs::EmptyRequest :init)))
-      (ros::service-call "primitive_lock" req)
-      )  
-    )
+  (send-all *grids* :prepare-for-planning)
   (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
          (start-time (ros::time-now))
          (prblm (instance footstep-planner-graph :init
@@ -68,6 +65,7 @@
                           :wg 1.0
                           :timeout (ros::time+ start-time (ros::time *timeout*))
                           :planes *planes*
+                          :grids *grids*
                           :z-axis (float-vector 0 0 1)
                           :collisoin-robot-model nil))
          (goal-foot-coords (mapcar #'footstep->consed-coords
@@ -75,19 +73,53 @@
          (initial-foot-coords (mapcar #'footstep->consed-coords
                                       (send goal :goal :initial_footstep :footsteps)))
          (goal-coords (apply #'(lambda (x y) (midcoords 0.5 (cdr x) (cdr y))) goal-foot-coords))
-         ;; 一個目がllegだったら、llegからスタートする
+         ;; If the first step of goal footstep is lleg, planning starts with lleg
          (start-leg (if (= (send (elt (send goal :goal :initial_footstep :footsteps) 0) :leg)
                            jsk_footstep_msgs::Footstep::*LEFT*)
                         :rleg :lleg))
          (support-leg (if (eq start-leg :lleg) :rleg :lleg)))
     ;; cheep hack
     (setq *goal-header* (send goal :goal :initial_footstep :header))
-    
-    ;; (if *use-env-server*
-    ;;     (let ((req (instance jsk_pcl_ros::EnvironmentLockRequest :init)))
-    ;;       (let ((res (ros::service-call "env_lock" req t)))
-    ;;         (setq *env-id* (send res :environment_id)))))
-    
+
+    ;; First of all, check *grid-maps* is available
+    (when *use-env-server*
+      (unless *grids*
+        (ros::ros-warn "Not yet *grids* is available")
+        (let ((result (send server :result)))
+          (send server :set-aborted result)
+          (return-from plan-execute-cb nil))))
+
+    ;; Visualize initial footsteps
+    (when *use-gui*
+      (let ((first-step (make-footprint (car (car initial-foot-coords))))
+            (second-step (make-footprint (car (cadr initial-foot-coords)))))
+        (send first-step :move-to (cdr (car initial-foot-coords)) :world)
+        (send second-step :move-to (cdr (cadr initial-foot-coords)) :world)
+        (setq *initial-footsteps* (list first-step second-step))
+        (send *irtviewer* :objects (append *initial-footsteps* *grids*))
+        (send *irtviewer* :draw-objects)))
+
+    ;; Visualize goal footsteps
+    (when *use-gui*
+      (let ((first-step (make-footprint (car (car goal-foot-coords))))
+            (second-step (make-footprint (car (cadr goal-foot-coords)))))
+        (send first-step :move-to (cdr (car goal-foot-coords)) :world)
+        (send second-step :move-to (cdr (cadr goal-foot-coords)) :world)
+        (setq *goal-footsteps* (list first-step second-step))
+        (send *irtviewer* :objects (append *initial-footsteps* *goal-footsteps* *grids*))
+        (send *irtviewer* :draw-objects)))
+
+    ;; Check goal footstep is possible or not first
+    (when (or (not (is-foot-possible-to-put (car *goal-footsteps*) *grids*))
+              (not (is-foot-possible-to-put (cadr *goal-footsteps*) *grids*)))
+      (ros::ros-warn "Goal footstep is outside of grids")
+      (let ((result (send server :result)))
+        (send server :set-aborted result))
+      (return-from plan-execute-cb nil))
+    (ros::ros-info "OK")
+    ;; Force to fail for debug
+    ;; (let ((result (send server :result)))
+    ;;   (send server :set-aborted result))
     ;; creating initial step node from goal msg
     (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
       (send prblm :start-state
@@ -110,6 +142,7 @@
                              :init 1.0 *heuristic* prblm
                              :render-leg-object *leg*)))
       (let ((solver-nodes (send asolver :solve prblm :verbose nil)))
+        (send prblm :report)
         (let ((result (send server :result)))
           (if solver-nodes              ;successfully solved!
               (let ((footsteps (instance jsk_footstep_msgs::FootstepArray :init)))
@@ -161,9 +194,9 @@
                 ;; publish the result for visualization
                 (let* ((now (ros::time-now))
                        (str
-                       (format nil "took ~A sec to plan~%~A node are evaled~%"
-                               (send (ros::time- now start-time) :to-sec)
-                               *evaled-node-num*)))
+                        (format nil "took ~A sec to plan~%~A node are evaled~%"
+                                (send (ros::time- now start-time) :to-sec)
+                                *evaled-node-num*)))
                   (ros::ros-warn str)
                   (let ((msg (instance std_msgs::Float32 :init)))
                     (send msg :data (send (ros::time- now start-time) :to-sec))
@@ -176,19 +209,16 @@
                     (send msg :data *evaled-node-num*)
                     (ros::publish (format nil "~A/footstep_count" (ros::get-name)) msg)))
                 (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
-                    (send msg :text (format nil "~A nodes are expanded" 
-                                            *evaled-node-num*))
-                    (ros::publish (format nil "~A/footstep_count_text" (ros::get-name)) msg))
+                  (send msg :text (format nil "~A nodes are expanded" 
+                                          *evaled-node-num*))
+                  (ros::publish (format nil "~A/footstep_count_text" (ros::get-name)) msg))
                 (ros::publish (format nil "~A/footstep" (ros::get-name)) footsteps)
                 (send server :set-succeeded result))
-              (send server :set-aborted result))
+            (send server :set-aborted result))
           ))
       )
     )
-  (when *use-env-server*
-    (let ((req (instance std_srvs::EmptyRequest :init)))
-      (ros::service-call "primitive_unlock" req)
-      ))
+  (send-all *grids* :report)
   )
 
 (setq *successors-count* 0)
@@ -258,6 +288,52 @@
           )
     m))
 
+(defun grid-map-callback (msg)
+  ;; first check the message is updated or not
+  (when (= (length *grids*) (length (send msg :grids)))
+    (let ((all-foundp t))
+      (dotimes (i (length (send msg :grids)))
+        (let* ((target-grid (elt (send msg :grids) i))
+               (target-grid-cell-num
+                (length (send target-grid :cells)))
+               (foundp nil))
+          (dolist (grid *grids*)
+            (when (= target-grid-cell-num (send grid :cell-num))
+              ;; target-grid is ok
+              (setq foundp t)
+              (return-from nil nil)))     ;break dolist
+          (unless foundp
+            (setq all-foundp nil)
+            (return-from nil nil))))
+      (when all-foundp
+        (ros::ros-debug "Skip updating grid model")
+        (return-from grid-map-callback))))
+  (ros::ros-info "Updating grid model")
+  (setq *grids* (remove-if #'null
+                           (mapcar #'(lambda (g)
+                                       (let ((trans (lookup-transform-with-duration
+                                                     *tf*
+                                                     "map"
+                                                     (send g :header :frame_id)
+                                                     (send g :header :stamp)
+                                                     1.0)))
+                                         (if trans
+                                             (instance occupancy-grid :init g trans))))
+                                   (send msg :grids))))
+  (dotimes (i (length *grids*))
+    (setf (get (elt *grids* i) :face-color) (color-category20 i)))
+  (when *use-gui*
+    (send *irtviewer* :objects *grids*)
+    (send *irtviewer* :draw-objects))
+  )
+
+(defun make-footprint (leg)
+  (let ((c (make-cube *leg-size-x* *leg-size-y* *leg-size-z*)))
+    (if (= leg jsk_footstep_msgs::Footstep::*LEFT*)
+        (setf (get c :face-color) :green)
+      (setf (get c :face-color) :red))
+    c))
+
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
   ;; read parameters
@@ -271,7 +347,7 @@
     (setq *leg-size-y* leg-size-y)
     (setq *leg-size-z* leg-size-z)
     (setq *leg* (make-cube leg-size-x leg-size-y leg-size-z))
-    (setq *global-frame-id* (ros::get-param "~global_frame_id" "/odom"))
+    (setq *global-frame-id* (ros::get-param "~global_frame_id" "map"))
     (setq *tf* (instance ros::transform-listener :init)))
   (setq *normal-footstep-xs* (ros::get-param "~x" nil))
   (setq *normal-footstep-ys* (ros::get-param "~y" nil))
@@ -284,20 +360,19 @@
   (setq *footstep-thetas* *normal-footstep-thetas*)
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
-  (setq *heuristic* (read-from-string (ros::get-param "~heuristic" ":stepcost-heuristic*")))
+  (setq *heuristic* (read-from-string
+                     (ros::get-param "~heuristic" ":stepcost-heuristic*")))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
+  (setq *use-gui* (ros::get-param "~use_gui" t))
+  (if *use-gui*
+      (make-irtviewer))
   (when *use-env-server*
-    (ros::ros-info "waiting for the env server")
-    (ros::wait-for-service "env_lock")
-    (ros::wait-for-service "polygon_on_env")
-    (ros::wait-for-service "primitive_lock")
-    (ros::wait-for-service "primitive_unlock")
-    (ros::ros-info "found the server")
-    )
+    (ros::subscribe "grid_maps" jsk_recognition_msgs::SimpleOccupancyGridArray #'grid-map-callback))
   (setq *tf* (instance ros::transform-listener :init))
   (when *use-planes*
     (ros::subscribe "planes" jsk_recognition_msgs::PolygonArray #'planes-cb))
+  
   ;; (ros::advertise "/footstep" jsk_footstep_msgs::FootstepArray)
   ;; (ros::advertise "/footstep_time" std_msgs::Float32)
   ;; (ros::advertise "/footstep_count" std_msgs::Float32)
@@ -323,6 +398,8 @@
       (ros::spin-once)
       (if *debug* (x::window-main-one))
       (publish-successors)
+      (if *use-gui*
+          (x::window-main-one))
       (ros::sleep))
     ))
 
