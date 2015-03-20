@@ -43,7 +43,8 @@
     (setq on-plane-p-timer (instance counter-timer :init ":on-plane-p"))
     (setq index-pair-timer (instance counter-timer :init ":index-pair"))
     (setq placablep-timer (instance counter-timer :init ":placablep"))
-    (setq inverse-transform-vector-timer (instance counter-timer :init ":inverse-transform-vector"))
+    (setq inverse-transform-vector-timer
+          (instance counter-timer :init ":inverse-transform-vector"))
     (setq frame-id (send msg :header :frame_id))
     (setq resolution (* 1000 (send msg :resolution)))
     (setq coefficients (send msg :coefficients))
@@ -63,7 +64,7 @@
       (let ((cell-x (* 1000 (send cell-point :x)))
             (cell-y (* 1000 (send cell-point :y))))
         (let ((index-key (send self :index-pair (float-vector cell-x cell-y 0) :local t)))
-          (setf (gethash index-key cell-hash) (float-vector cell-x cell-y)))))
+          (setf (gethash index-key cell-hash) t))))
     self)
   (:prepare-for-planning ()
     "This method is called bedfore each planning"
@@ -167,13 +168,10 @@ which is inside of occupied cell"
      (unless local
        ;; convert to local coordinates
        (setq pos (send plane-coords :inverse-transform-vector pos)))
-     ;; (cons (round (/ (elt pos 0) resolution))
-     ;;       (round (/ (elt pos 1) resolution)))
      (cons (round (/ (elt pos 0) resolution))
            (round (/ (elt pos 1) resolution)))
      ))
   (:occupiedp (index-pair)
-    ;;(ros::ros-info "Checking index ~A" index-pair)
     (bench-timer2
      occupiedp-timer
      (gethash index-pair cell-hash)))
@@ -195,84 +193,77 @@ which is inside of occupied cell"
               (setq max-grid grid))))))
     max-grid))
 
-(defun sampling-foot-points (leg-cube &optional (num 10))
+
+(defun range (num)
+  (let ((ret nil))
+    (dotimes (i num)
+      (push i ret))
+    (nreverse ret)))
+
+(setq *face-sampling-num* 2)
+(setq *sampling-points-cache* (mapcar #'(lambda (i)
+                                          (float-vector 0 0 0))
+                                      (range (* (1+ *face-sampling-num*)
+                                                (1+ *face-sampling-num*)))))
+
+(defun sampling-foot-points (leg-cube &optional (num *face-sampling-num*))
   (send leg-cube :worldpos)             ;need?
   (let ((bottom-face (find-if #'(lambda (f)
                                   (eq (cadr (send f :face-id)) :bottom))
                               (send leg-cube :faces))))
     (sampling-face-points bottom-face num)))
 
-(defun sampling-face-points (bottom-face &optional (num 2))
+
+(defun sampling-face-points (bottom-face
+                             &optional
+                             (num *face-sampling-num*)
+                             (ret (mapcar #'(lambda (i)
+                                              (float-vector 0 0 0))
+                                          (range (* (1+ num) (1+ num))))))
   (let ((vertices (cdr (send bottom-face :vertices))))
     (let* ((ex (v- (elt vertices 1) (elt vertices 0)))
            (ey (v- (elt vertices 3) (elt vertices 0)))
            (x-length (norm ex))
            (y-length (norm ey)))
       (let ((ux (normalize-vector ex))
-            (uy (normalize-vector ey))
-            (sampled-points nil))
+            (uy (normalize-vector ey)))
         (dotimes (ix (1+ num))
           (dotimes (iy (1+ num))
             (let ((c (v+ (scale (* (/ x-length num) ix) ux)
                          (v+ (scale (* (/ y-length num) iy) uy)
                              (elt vertices 0)))))
-              (setq sampled-points (cons c sampled-points)))))
-        sampled-points))))
+              (setf (elt ret (+ iy (* ix (1+ num)))) c))))
+        ret))))
 
-(defun is-foot-possible-to-put (leg-cube grids)
-  (let ((points (sampling-foot-points leg-cube)))
-    (dotimes (i (length points))
-      (let ((foundp nil))
-        (dolist (g grids)                 ;Should cache previous result
-          (when (send g :occupiedp (send g :index-pair (elt points i) :local nil)) ;Z is not checkes
-            (setq foundp t)
-            (return-from nil nil)))       ;break
-        (unless foundp
-          (return-from is-foot-possible-to-put nil)
-          )))
-    t))
+(defun cube-placable-p (leg-cube grids)
+  (let ((bottom-face (find-if #'(lambda (f)
+                                  (eq (cadr (send f :face-id)) :bottom))
+                              (send leg-cube :faces))))
+    (face-placable-p bottom-face grids)))
 
-(defun is-face-possible-to-put-on-grid-old (leg-face grids)
-  ;;(send leg-face :draw-on :flush t)
-  ;;(send-all (send leg-face :vertices) :draw-on :color (float-vector 1 0 0))
-  (let ((points (sampling-face-points leg-face))
-        (prev-grid nil))
-    ;;(send-all points :draw-on :flush t)
-    (dotimes (i (length points))
-      (let ((foundp nil))               ; set foundp t if any grid can support point (elt points i)
-        (if prev-grid                   ;Use cache first
-            ;; lookup from prev-grid first
-            (if (send prev-grid :placablep (elt points i) (send leg-face :normal))
-                (setq foundp t)))
-        (unless foundp
-          (dolist (g grids)                 ;Should cache previous result
-            (if (send g :placablep (elt points i) (send leg-face :normal))
-                (progn
-                  (setq foundp t)
-                  (setq prev-grid g)         ;cache hitted grid
-                  (return-from nil nil))))) ; break dolist
-        (unless foundp
-          (return-from is-face-possible-to-put-on-grid-old nil)
-          )))
-    t))
+(defun face-placable-p (leg-face grids-or-grid)
+  (if (atom grids-or-grid)
+      (%face-placable-p leg-face grids-or-grid)
+    (%face-placable-p/list leg-face grids-or-grid)))
 
-(defun is-face-possible-to-put-on-grid (leg-face grids)
-  ;;(send leg-face :draw-on :flush t)
-  ;;(send-all (send leg-face :vertices) :draw-on :color (float-vector 1 0 0))
+(defun %face-placable-p/list (leg-face grids)
   (if (null grids)
       t
-  (let ((points (sampling-face-points leg-face))
-        (prev-grid nil))
-    ;;(send-all points :draw-on :flush t)
     (dolist (g grids)                 ;Should cache previous result
-      (let ((all-foundp t))
-        (dotimes (i (length points))
-          (if (not (send g :placablep (elt points i) (send leg-face :normal)))
-              (progn
-                (setq all-foundp nil)
-                (return-from nil nil))))
-        (if all-foundp
-            (return-from is-face-possible-to-put-on-grid t)))))))
+      (if (%face-placable-p leg-face g)
+          (return-from %face-placable-p t)))))
+
+(defun %face-placable-p (leg-face grid)
+  (if (null grid)
+      t
+    (let ((points (sampling-face-points
+                   leg-face
+                   *face-sampling-num* *sampling-points-cache*))
+          (all-foundp t))
+      (dotimes (i (length points))
+        (unless (send g :placablep (elt points i) (send leg-face :normal))
+          (return-from %face-placable-p nil)))
+      t)))
 
 (defun append-footstep-candidates-by-grids (next-coords-candidate grids)
   ;; next-coords-candidate =  ((transformation . next-leg-pose) ...)
@@ -284,11 +275,16 @@ which is inside of occupied cell"
         (let ((projected-coords (send grid :project-coords (cdr candidate))))
           ;; Check center only first
           (if (send grid :occupiedp
-                    (send grid :index-pair (send projected-coords :worldpos) :local nil))
-              (setq new-candidates (cons
-                                    (cons (car candidate)
-                                          (send grid :project-coords (cdr candidate)))
-                                    new-candidates))))))
+                    (send grid
+                          :index-pair (send projected-coords :worldpos)
+                          :local nil))
+              (progn
+                ;; memoize projecting grid
+                (setf (get projected-coords :projecting-grid) grid)
+                (setq new-candidates (cons
+                                      (cons (car candidate)
+                                            projected-coords)
+                                      new-candidates)))))))
     new-candidates)))
 
 #|

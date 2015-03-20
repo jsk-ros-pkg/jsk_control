@@ -246,7 +246,7 @@ footstep-parameter"))
             ((and next-leg-face grids)
              (bench-timer
               is-face-possible-to-put-on-grid-timer
-              (is-face-possible-to-put-on-grid next-leg-face grids)))
+              (face-placable-p next-leg-face grids)))
             (t
              t)))))
   (:successors-old (state &key (verbose nil))
@@ -384,37 +384,23 @@ footstep-parameter"))
              (let ((cdr-c (cdr c)))
                (let ((robot-coords
                       (send footstep-param :calc-robot-coords
-                            cdr-c current-step-coords)
-                      ))
-                 (when robot
-                   (send robot :worldpos))
-                 (if (or t (send self :successablep :debug verbose
-                                 :next-leg next-leg ;:lleg, :rleg and so on
-                                 :next-leg-coords cdr-c
+                            cdr-c current-step-coords)))
+                 (when robot (send robot :worldpos))
+                 (setf (cdr c)
+                       (instance step-node :init
+                                 :projecting-grid (get cdr-c :projecting-grid)
+                                 :worldcoords cdr-c
+                                 :leg-face (instance face :init
+                                                     :vertices
+                                                     (send footstep-param :foot-vertices
+                                                           next-leg cdr-c))
                                  :robot-coords robot-coords
-                                 :next-leg-face (instance face :init
-                                                          :vertices
-                                                          (send footstep-param :foot-vertices
-                                                                next-leg cdr-c))))
-                     (progn
-                       (setf (cdr c)
-                             (instance step-node :init
-                                       :worldcoords cdr-c
-                                       :leg-face (instance face :init
-                                                           :vertices
-                                                           (send footstep-param :foot-vertices
-                                                                 next-leg cdr-c))
-                                       :robot-coords robot-coords
-                                       :prev-coords current-step-coords
-                                       :angle-vector nil
-                                       ;;(send robot :angle-vector)
-                                       :step-name (car c)
-                                       :l/r next-leg))
-                       (push c ret))
-                   (progn
-                     ;;(ros::ros-info "Not successable")
-                     )
-                   ))))
+                                 :prev-coords current-step-coords
+                                 :angle-vector nil
+                                 ;;(send robot :angle-vector)
+                                 :step-name (car c)
+                                 :l/r next-leg))
+                 (push c ret))))
            ret)))))
   (:collision-with-obstacles-collision-robot-model-p (coords &key (debug nil))
     (send collision-robot-model :newcoords coords)
@@ -476,16 +462,19 @@ check between leg-object and obstacles."
 
 (defclass step-node
   :super node
-  :slots (worldcoords l/r robot-coords prev-coords angle-vector step-name leg-face))
+  :slots (worldcoords l/r robot-coords prev-coords angle-vector step-name
+                      leg-face projecting-grid))
 
 (defmethod step-node
   (:init (&key ((:worldcoords wc) nil)
                ((:robot-coords rc) nil)
                ((:prev-coords pc) nil)
                ((:angle-vector av) nil)
+               ((:projecting-grid pg) nil)
                ((:l/r lr) nil)
                ((:leg-face lg) nil)
                ((:step-name sn) nil))
+    (setq projecting-grid pg)
     (setq worldcoords wc)
     (setq step-name sn)
     (setq leg-face lg)
@@ -495,6 +484,7 @@ check between leg-object and obstacles."
     (setq l/r lr)
     self)
   ;; accessor
+  (:projecting-grid () projecting-grid)
   (:robot-coords () robot-coords)
   (:leg-face () leg-face)
   ;;(:robot-coords () worldcoords)
@@ -556,38 +546,15 @@ building and searching."
                   ((null (send (send candidate-node :state) :leg-face)) ;start state
                    (send self :add-to-open-list candidate-node)
                    (setq foundp t))
-                  ((is-face-possible-to-put-on-grid
+                  ((face-placable-p
                     (send (send candidate-node :state) :leg-face)
-                    (send target-problem :grids))
+                    (send (send candidate-node :state) :projecting-grid))
                    (send self :add-to-open-list candidate-node)
                    (setq foundp t))
                   (t
                    nil))
             )))
       (not foundp)))
-  ;; (:pop-from-open-list (&key (debug nil))
-  ;;   (let ((next (send-super :pop-from-open-list :debug nil)))
-  ;;     (if (send (send next :state) :leg-face)
-  ;;         (send (send (send next :state) :leg-face) :draw-on :flush t))
-  ;;     next))
-  ;; (:pop-from-open-list (&key (debug nil))
-  ;;   (let ((target-node nil))
-  ;;     (while (null target-node)
-  ;;       (if (send self :null-open-list?)
-  ;;           (return-from :pop-from-open-list nil)
-  ;;         (let ((candidate-node (send-super :pop-from-open-list :debug nil)))
-  ;;           (cond ((null candidate-node)
-  ;;                  (return-from :pop-from-open-list nil))
-  ;;                 ((null (send (send candidate-node :state) :leg-face)) ;start state
-  ;;                  (setq target-node candidate-node))
-  ;;                 ((is-face-possible-to-put-on-grid
-  ;;                   (send (send candidate-node :state) :leg-face)
-  ;;                   (send target-problem :grids))
-  ;;                  (setq target-node candidate-node))
-  ;;                 (t
-  ;;                  nil))
-  ;;           )))
-  ;;     target-node))
   (:hn (n p)
     ;; [J.Kuffner et. al.,
     ;;  Footstep Planning Among Obstacles for Biped Robots,

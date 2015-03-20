@@ -113,14 +113,14 @@
 
     ;; Check goal footstep is possible or not first
     (when *use-env-server*
-      (send-all *goal-footsteps* :worldpos)
-      (when (or (not (is-foot-possible-to-put (car *goal-footsteps*) *grids*))
-                (not (is-foot-possible-to-put (cadr *goal-footsteps*) *grids*)))
+      (send-all *goal-footsteps* :worldpos) ;Force to update vertices
+      (when (or (not (cube-placable-p (car *goal-footsteps*) *grids*))
+                (not (cube-placable-p (cadr *goal-footsteps*) *grids*)))
         (ros::ros-warn "Goal footstep is outside of grids")
         (let ((result (send server :result)))
           (send server :set-aborted result))
         (return-from plan-execute-cb nil)))
-    (ros::ros-info "OK")
+    (ros::ros-info "Running Planning")
     ;; Force to fail for debug
     ;; (let ((result (send server :result)))
     ;;   (send server :set-aborted result))
