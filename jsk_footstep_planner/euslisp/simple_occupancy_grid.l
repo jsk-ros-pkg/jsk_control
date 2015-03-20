@@ -230,7 +230,7 @@ which is inside of occupied cell"
           )))
     t))
 
-(defun is-face-possible-to-put-on-grid (leg-face grids)
+(defun is-face-possible-to-put-on-grid-old (leg-face grids)
   ;;(send leg-face :draw-on :flush t)
   ;;(send-all (send leg-face :vertices) :draw-on :color (float-vector 1 0 0))
   (let ((points (sampling-face-points leg-face))
@@ -250,9 +250,25 @@ which is inside of occupied cell"
                   (setq prev-grid g)         ;cache hitted grid
                   (return-from nil nil))))) ; break dolist
         (unless foundp
-          (return-from is-face-possible-to-put-on-grid nil)
+          (return-from is-face-possible-to-put-on-grid-old nil)
           )))
     t))
+
+(defun is-face-possible-to-put-on-grid (leg-face grids)
+  ;;(send leg-face :draw-on :flush t)
+  ;;(send-all (send leg-face :vertices) :draw-on :color (float-vector 1 0 0))
+  (let ((points (sampling-face-points leg-face))
+        (prev-grid nil))
+    ;;(send-all points :draw-on :flush t)
+    (dolist (g grids)                 ;Should cache previous result
+      (let ((all-foundp t))
+        (dotimes (i (length points))
+          (if (not (send g :placablep (elt points i) (send leg-face :normal)))
+              (progn
+                (setq all-foundp nil)
+                (return-from nil nil))))
+        (if all-foundp
+            (return-from is-face-possible-to-put-on-grid t))))))
 
 (defun append-footstep-candidates-by-grids (next-coords-candidate grids)
   ;; next-coords-candidate =  ((transformation . next-leg-pose) ...)
