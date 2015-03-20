@@ -23,12 +23,27 @@
 
 (defclass occupancy-grid
   :super propertied-object
-  :slots (resolution coefficients plane-coords frame-id cell-hash plane-obj))
+  :slots (resolution
+          coefficients plane-coords frame-id cell-hash plane-obj
+          cell-num
+          local-point-cache point-tmp point-tmp2 rot-tmp
+          occupiedp-timer on-plane-p-timer index-pair-timer
+          placablep-timer inverse-transform-vector-timer
+          ))
 
 (defmethod occupancy-grid
   (:init (msg global-trans)
     "Instantiating from ros message"
     ;; lookup transformation
+    (setq local-point-cache (float-vector 0 0 0))
+    (setq point-tmp (float-vector 0 0 0))
+    (setq point-tmp2 (float-vector 0 0 0))
+    (setq rot-tmp (make-matrix 3 3))
+    (setq occupiedp-timer (instance counter-timer :init ":occupiedp"))
+    (setq on-plane-p-timer (instance counter-timer :init ":on-plane-p"))
+    (setq index-pair-timer (instance counter-timer :init ":index-pair"))
+    (setq placablep-timer (instance counter-timer :init ":placablep"))
+    (setq inverse-transform-vector-timer (instance counter-timer :init ":inverse-transform-vector"))
     (setq frame-id (send msg :header :frame_id))
     (setq resolution (* 1000 (send msg :resolution)))
     (setq coefficients (send msg :coefficients))
@@ -40,16 +55,37 @@
                               (send plane-coords :worldpos)))
     ;; hash table
     (setq cell-hash (make-hash-table :test #'equal :size 10000))
-    (ros::ros-info "~A points" (length (send msg :cells)))
+    (setq cell-num (length (send msg :cells)))
     (dolist (cell-point (send msg :cells))
       ;; cell-point is geometry_msgs::Point
       (let ((cell-x (* 1000 (send cell-point :x)))
             (cell-y (* 1000 (send cell-point :y))))
-        (setf (gethash (send self :index-pair (float-vector cell-x cell-y 0))
-                       cell-hash)
-              (float-vector cell-x cell-y))))
-    
+        (let ((index-key (send self :index-pair (float-vector cell-x cell-y 0) :local t)))
+          (setf (gethash index-key cell-hash) (float-vector cell-x cell-y)))))
     self)
+  (:prepare-for-planning ()
+    "This method is called bedfore each planning"
+    (send occupiedp-timer :reset-timer)
+    (send on-plane-p-timer :reset-timer)
+    (send index-pair-timer :reset-timer)
+    (send placablep-timer :reset-timer)
+    (send inverse-transform-vector-timer :reset-timer))
+  (:report ()
+    (send occupiedp-timer :report)
+    (send on-plane-p-timer :report)
+    (send index-pair-timer :report)
+    (send placablep-timer :report)
+    (send inverse-transform-vector-timer :report)
+    )
+  (:plane () plane-obj)
+  (:on-plane-p (p n)
+    "Check whether p (in global coordinates) is on the plane or not"
+    (bench-timer
+     on-plane-p-timer
+     (and
+      (> (v. (send plane-obj :normal) n) 0.95)
+      (send plane-obj :on-plane-p p 10.0))))  ;1cm error is allowed
+  (:cell-num () cell-num)
   (:worldcoords ()
     plane-coords)
   (:vertices ()
@@ -105,16 +141,43 @@ which is inside of occupied cell"
                   (quaternion-from-two-vectors
                    (send coords :rotate-vector (float-vector 0 0 1))
                    (send plane-coords :rotate-vector (float-vector 0 0 1))))))
-        (make-coords :pos point :rot rot))))
+        (let ((ret (make-coords :pos point :rot rot)))
+          (setf (get ret :projected-grid) self)
+          ret))))
+  (:placablep (point n)
+    (bench-timer2
+     placablep-timer
+     (if (> (v. (send plane-obj :normal) n) 0.95)
+         (progn
+           (transpose (send plane-coords :rot) rot-tmp)
+           (transform rot-tmp point point-tmp)
+           (transform rot-tmp (send plane-coords :worldpos) point-tmp2)
+           (v- point-tmp point-tmp2 local-point-cache)
+           ;; (setq local-point-cache (bench-timer2
+           ;;                          inverse-transform-vector-timer
+           ;;                          (send plane-coords :inverse-transform-vector point)))
+           (if (< (abs (elt local-point-cache 2)) 10.0)
+               (send self :occupiedp
+                     (send self :index-pair local-point-cache :local t)))))))
   (:index-pair (pos &key (local t))
-    (unless local
-      ;; convert to local coordinates
-      (setq pos (send plane-coords :inverse-transform-vector pos)))
-    (list (round (/ (elt pos 0) resolution))
-          (round (/ (elt pos 1) resolution))))
+    (bench-timer2
+     index-pair-timer
+     (unless local
+       ;; convert to local coordinates
+       (setq pos (send plane-coords :inverse-transform-vector pos)))
+     ;; (cons (round (/ (elt pos 0) resolution))
+     ;;       (round (/ (elt pos 1) resolution)))
+     (cons (round (/ (elt pos 0) resolution))
+           (round (/ (elt pos 1) resolution)))
+     ))
   (:occupiedp (index-pair)
-    (gethash index-pair cell-hash))
+    ;;(ros::ros-info "Checking index ~A" index-pair)
+    (bench-timer2
+     occupiedp-timer
+     (gethash index-pair cell-hash)))
   )
+
+;; Utilify functions for grid-maps (array of occupancy-grid)
 
 (defun lookup-highest-corresponding-grid-map (coords grid-maps)
   (let ((max-height -10000)
@@ -129,6 +192,82 @@ which is inside of occupied cell"
               (setq max-height height)
               (setq max-grid grid))))))
     max-grid))
+
+(defun sampling-foot-points (leg-cube &optional (num 10))
+  (send leg-cube :worldpos)             ;need?
+  (let ((bottom-face (find-if #'(lambda (f)
+                                  (eq (cadr (send f :face-id)) :bottom))
+                              (send leg-cube :faces))))
+    (sampling-face-points bottom-face num)))
+
+(defun sampling-face-points (bottom-face &optional (num 2))
+  (let ((vertices (cdr (send bottom-face :vertices))))
+    (let* ((ex (v- (elt vertices 1) (elt vertices 0)))
+           (ey (v- (elt vertices 3) (elt vertices 0)))
+           (x-length (norm ex))
+           (y-length (norm ey)))
+      (let ((ux (normalize-vector ex))
+            (uy (normalize-vector ey))
+            (sampled-points nil))
+        (dotimes (ix (1+ num))
+          (dotimes (iy (1+ num))
+            (let ((c (v+ (scale (* (/ x-length num) ix) ux)
+                         (v+ (scale (* (/ y-length num) iy) uy)
+                             (elt vertices 0)))))
+              (setq sampled-points (cons c sampled-points)))))
+        sampled-points))))
+
+(defun is-foot-possible-to-put (leg-cube grids)
+  (let ((points (sampling-foot-points leg-cube)))
+    (dotimes (i (length points))
+      (let ((foundp nil))
+        (dolist (g grids)                 ;Should cache previous result
+          (when (send g :occupiedp (send g :index-pair (elt points i) :local nil)) ;Z is not checkes
+            (setq foundp t)
+            (return-from nil nil)))       ;break
+        (unless foundp
+          (return-from is-foot-possible-to-put nil)
+          )))
+    t))
+
+(defun is-face-possible-to-put-on-grid (leg-face grids)
+  ;;(send leg-face :draw-on :flush t)
+  ;;(send-all (send leg-face :vertices) :draw-on :color (float-vector 1 0 0))
+  (let ((points (sampling-face-points leg-face))
+        (prev-grid nil))
+    ;;(send-all points :draw-on :flush t)
+    (dotimes (i (length points))
+      (let ((foundp nil))               ; set foundp t if any grid can support point (elt points i)
+        (if prev-grid                   ;Use cache first
+            ;; lookup from prev-grid first
+            (if (send prev-grid :placablep (elt points i) (send leg-face :normal))
+                (setq foundp t)))
+        (unless foundp
+          (dolist (g grids)                 ;Should cache previous result
+            (if (send g :placablep (elt points i) (send leg-face :normal))
+                (progn
+                  (setq foundp t)
+                  (setq prev-grid g)         ;cache hitted grid
+                  (return-from nil nil))))) ; break dolist
+        (unless foundp
+          (return-from is-face-possible-to-put-on-grid nil)
+          )))
+    t))
+
+(defun append-footstep-candidates-by-grids (next-coords-candidate grids)
+  ;; next-coords-candidate =  ((transformation . next-leg-pose) ...)
+  (let ((new-candidates nil))
+    (dolist (grid grids)
+      (dolist (candidate next-coords-candidate)
+        (let ((projected-coords (send grid :project-coords (cdr candidate))))
+          ;; Check center only first
+          (if (send grid :occupiedp
+                    (send grid :index-pair (send projected-coords :worldpos) :local nil))
+              (setq new-candidates (cons
+                                    (cons (car candidate)
+                                          (send grid :project-coords (cdr candidate)))
+                                    new-candidates))))))
+    (append next-coords-candidate new-candidates)))
 
 #|
 (load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
