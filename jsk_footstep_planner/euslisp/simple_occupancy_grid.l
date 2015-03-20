@@ -54,8 +54,10 @@
                               (send plane-coords :rotate-vector (float-vector 0 0 1))
                               (send plane-coords :worldpos)))
     ;; hash table
-    (setq cell-hash (make-hash-table :test #'equal :size 10000))
     (setq cell-num (length (send msg :cells)))
+    (setq cell-hash (make-hash-table :test #'equal
+                                     :size cell-num
+                                     :rehash-size 1.1))
     (dolist (cell-point (send msg :cells))
       ;; cell-point is geometry_msgs::Point
       (let ((cell-x (* 1000 (send cell-point :x)))
