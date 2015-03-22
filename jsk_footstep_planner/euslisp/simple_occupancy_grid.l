@@ -66,6 +66,12 @@
         (let ((index-key (send self :index-pair (float-vector cell-x cell-y 0) :local t)))
           (setf (gethash index-key cell-hash) t))))
     self)
+  (:local-point (index-pair)
+    (float-vector (* resolution (car index-pair))
+                  (* resolution (cdr index-pair))
+                  0))
+  (:global-point (index-pair)
+    (send plane-coords :transform-vector (send self :local-point index-pair)))
   (:prepare-for-planning ()
     "This method is called bedfore each planning"
     (send occupiedp-timer :reset-timer)
@@ -94,7 +100,7 @@
   (:vertices ()
     (let ((ret nil))
       (maphash #'(lambda (key val)
-                   (setf ret (cons (send plane-coords :transform-vector (float-vector (elt val 0) (elt val 1) 0)) ret)))
+                   (setf ret (cons (send self :global-point key) ret)))
                cell-hash)
       ret))
   (:collision-check-objects ()
@@ -105,7 +111,7 @@
     (let ((col (gl::find-color (get self :face-color)))
           (w (/ resolution 2.0)))
       (maphash #'(lambda (key val)
-                   (let* ((center (float-vector (elt val 0) (elt val 1) 0))
+                   (let* ((center (send self :local-point key))
                           (v1 (v+ center
                                   (float-vector w w 0)))
                           (v2 (v+ center
@@ -150,18 +156,23 @@ which is inside of occupied cell"
   (:placablep (point n)
     (bench-timer2
      placablep-timer
-     (if (> (v. (send plane-obj :normal) n) 0.95)
+     (let ((dot (abs (v. (send plane-obj :normal) n))))
+       (if (or (> dot 1.0) (< (rad2deg (acos dot)) 5))
+           (progn
+             ;; (transpose (send plane-coords :rot) rot-tmp)
+             ;; (transform rot-tmp point point-tmp)
+             ;; (transform rot-tmp (send plane-coords :worldpos) point-tmp2)
+             ;; (v- point-tmp point-tmp2 local-point-cache)
+             (setq local-point-cache (bench-timer2
+                                      inverse-transform-vector-timer
+                                      (send plane-coords :inverse-transform-vector point)))
+             (if (< (abs (elt local-point-cache 2)) 10.0)
+                 (send self :occupiedp
+                       (send self :index-pair local-point-cache :local t))))
          (progn
-           (transpose (send plane-coords :rot) rot-tmp)
-           (transform rot-tmp point point-tmp)
-           (transform rot-tmp (send plane-coords :worldpos) point-tmp2)
-           (v- point-tmp point-tmp2 local-point-cache)
-           ;; (setq local-point-cache (bench-timer2
-           ;;                          inverse-transform-vector-timer
-           ;;                          (send plane-coords :inverse-transform-vector point)))
-           (if (< (abs (elt local-point-cache 2)) 10.0)
-               (send self :occupiedp
-                     (send self :index-pair local-point-cache :local t)))))))
+           ;;(ros::ros-info "theta is ~A" (rad2deg (acos dot)))
+           nil)
+         ))))
   (:index-pair (pos &key (local t))
     (bench-timer2
      index-pair-timer
@@ -243,26 +254,28 @@ which is inside of occupied cell"
 
 (defun face-placable-p (leg-face grids-or-grid)
   (if (atom grids-or-grid)
-      (%face-placable-p leg-face grids-or-grid)
-    (%face-placable-p/list leg-face grids-or-grid)))
+      (_face-placable-p leg-face grids-or-grid)
+    (_face-placable-p/list leg-face grids-or-grid)))
 
-(defun %face-placable-p/list (leg-face grids)
+(defun _face-placable-p/list (leg-face grids)
   (if (null grids)
       t
     (dolist (g grids)                 ;Should cache previous result
-      (if (%face-placable-p leg-face g)
-          (return-from %face-placable-p t)))))
+      (if (_face-placable-p leg-face g)
+          (return-from _face-placable-p/list t)))))
 
-(defun %face-placable-p (leg-face grid)
+(defun _face-placable-p (leg-face grid)
   (if (null grid)
       t
     (let ((points (sampling-face-points
                    leg-face
                    *face-sampling-num* *sampling-points-cache*))
           (all-foundp t))
+      ;;(send-all points :draw-on :flush t)
       (dotimes (i (length points))
-        (unless (send g :placablep (elt points i) (send leg-face :normal))
-          (return-from %face-placable-p nil)))
+        (unless (send grid :placablep (elt points i) (send leg-face :normal))
+          ;;(ros::ros-info "~A is not placable" (elt points i))
+          (return-from _face-placable-p nil)))
       t)))
 
 (defun append-footstep-candidates-by-grids (next-coords-candidate grids)
