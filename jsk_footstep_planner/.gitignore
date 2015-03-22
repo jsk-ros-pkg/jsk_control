@@ -1,2 +1,2 @@
-euslisp/footstep_planner.c
-euslisp/footstep_planner.h
+euslisp/*.c
+euslisp/*.h
