@@ -157,7 +157,7 @@ sample:
 ;; TimerClass
 (defclass counter-timer
   :super propertied-object
-  :slots (name count start-time duration))
+  :slots (name count timer duration))
 
 (defmethod counter-timer
   (:init (aname)
@@ -166,15 +166,15 @@ sample:
     self)
   (:count () count)
   (:proc-start ()
-    (setq start-time (ros::time-now)))
+    (send timer :start))
   (:proc-end ()
     (incf count)
-    (setq duration (+ duration
-                      (send (ros::time- (ros::time-now) start-time) :to-sec)))
-    )
+    (setq duration (+ duration (send timer :stop))))
   (:reset-timer ()
     (setq count 0)
-    (setq duration 0))
+    (setq duration 0)
+    (setq timer (instance mtimer :init))
+    )
   (:report ()
     (if (= count 0)
         (ros::ros-info "~A is not called" name)
@@ -192,3 +192,12 @@ sample:
 (defmacro bench-timer2 (timer &rest prog)
   `(progn
      ,@prog))
+
+
+#|
+(setq tmp-timer (instance counter-timer :init "tmp"))
+(dotimes (i 10000)
+  (bench-timer
+   tmp-timer
+   (length (make-list 10000))))
+|#
