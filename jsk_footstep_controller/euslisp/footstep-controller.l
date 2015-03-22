@@ -113,8 +113,8 @@
   ;; 3. convert the footstep respected to hrpsys-mid-coords
   (if (not *interruptible-mode*)
       (when *realp*
-        (walking-pose *hrp2jsknts* :root-link-height-offset -50)
-        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (walking-pose *robot* :root-link-height-offset -50)
+        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)))
   (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
          (progn
@@ -209,8 +209,8 @@
      ((or (and (eq *walking-state* :plane) (eq next :standing))
           (and (eq *walking-state* :climing-up2) (eq next :standing)))
       (when *realp*
-        (walking-pose *hrp2jsknts* :root-link-height-offset 0)
-        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (walking-pose *robot* :root-link-height-offset 0)
+        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)
         (send *ri* :set-gait-generator-param :default-orbit-type :cycloid))
       (ros::ros-warn "move down 0 mm and change mode to cycloid"))
@@ -218,8 +218,8 @@
      ((or (and (eq *walking-state* :standing) (eq next :plane))
           (and (eq *walking-state* :climing-up2) (eq next :plane)))
       (when *realp*
-        (walking-pose *hrp2jsknts* :root-link-height-offset -50)
-        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (walking-pose *robot* :root-link-height-offset -50)
+        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)
         (send *ri* :set-gait-generator-param :default-orbit-type :cycloid))
       (ros::ros-warn "move down -50 mm and change mode to cycloid"))
@@ -228,8 +228,8 @@
           (and (eq *walking-state* :plane) (eq next :climing-up)))
       
       (when *realp*
-        (walking-pose *hrp2jsknts* :root-link-height-offset -90)
-        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (walking-pose *robot* :root-link-height-offset -90)
+        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)
         (send *ri* :set-gait-generator-param :default-orbit-type :stair))
       (ros::ros-warn "move down -90 mm and change mode to stair"))
@@ -283,8 +283,8 @@
         (send *ri* :set-foot-steps *footstep-list*))
       (setq *footstep-list* nil)
       (when *realp*
-        (walking-pose *hrp2jsknts* :root-link-height-offset 0)
-        (send *ri* :angle-vector (send *hrp2jsknts* :angle-vector) 5000)
+        (walking-pose *robot* :root-link-height-offset 0)
+        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation))
       (send server :set-succeeded (send server :result))
       )
@@ -320,17 +320,13 @@
   ;; *ri*
   (let ((interface-file
          (ros::get-param "~interface_file"
-           "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"))
-        (interface-class
-         (ros::get-param "~interface_class" "hrp2jsknt-interface")))
+           "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")))
     (setq *interruptible-mode* (ros::get-param "~interruptible_mode" nil))
     (if *interruptible-mode*
         (ros::ros-info "footstep controller running in interruptible mode"))
     (load interface-file)
-    (setq *ri* (instance (eval (read-from-string interface-class)) :init
-                         :controller-timeout nil))
-    ;; 
-    (hrp2jsknts-init))
+    (init-robot-from-name (ros::get-param "~robot_name" (unix::getenv "ROBOT")))
+    )
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
   (ros::advertise-service "require_log"
