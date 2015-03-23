@@ -13,9 +13,9 @@
           :draw-on :flush t)"
   (let ((candidates (mapcar #'(lambda (p)
                                 (let ((rot (quaternion2matrix
-                                            (quaternion-from-two-vectors
-                                             (float-vector 0 0 1)
-                                             (send p :normal)))))
+                                            (geo::quaternion-from-two-vectors
+                                              (float-vector 0 0 1)
+                                              (send p :normal)))))
                                   (make-coords
                                    :rot (m* (send coords :rot) rot)
                                    :pos (send p :project (send coords :worldpos)))))
