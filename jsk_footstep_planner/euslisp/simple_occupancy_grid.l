@@ -2,25 +2,25 @@
 (load "package://jsk_footstep_planner/euslisp/footstep_planner_util.l")
 (ros::roseus-add-msgs "jsk_recognition_msgs")
 
-(defun quaternion-from-two-vectors (a b)
-  (let* ((v0 (normalize-vector a))
-         (v1 (normalize-vector b))
-         (c (v. v1 v0)))
-    (if (eps= c -1.0)
-        (float-vector -1 0 0 0)
-      (let* ((axis (v* v0 v1))
-             (s (sqrt (* 2 (+ 1 c))))
-             (invs (/ 1.0 s)))
-        (let ((vec (scale invs axis))
-              (w (* 0.5 s)))
-          (normalize-vector (float-vector w (elt vec 0) (elt vec 1) (elt vec 2))))))))
+;; (defun quaternion-from-two-vectors (a b)
+;;   (let* ((v0 (normalize-vector a))
+;;          (v1 (normalize-vector b))
+;;          (c (v. v1 v0)))
+;;     (if (eps= c -1.0)
+;;         (float-vector -1 0 0 0)
+;;       (let* ((axis (v* v0 v1))
+;;              (s (sqrt (* 2 (+ 1 c))))
+;;              (invs (/ 1.0 s)))
+;;         (let ((vec (scale invs axis))
+;;               (w (* 0.5 s)))
+;;           (normalize-vector (float-vector w (elt vec 0) (elt vec 1) (elt vec 2))))))))
 
 (defun coefficients->plane-coords (coefficients)
   (let ((z-axis (normalize-vector (float-vector (elt coefficients 0)
                                                 (elt coefficients 1)
                                                 (elt coefficients 2))))
         (unitz (float-vector 0 0 1)))
-    (let ((c (make-coords :rot (quaternion2matrix (quaternion-from-two-vectors unitz z-axis)))))
+    (let ((c (make-coords :rot (quaternion2matrix (geo::quaternion-from-two-vectors unitz z-axis)))))
       (send c :translate (float-vector 0 0 (- (* 1000.0 (elt coefficients 3))))))))
 
 (defclass occupancy-grid
@@ -190,7 +190,7 @@ which is inside of occupied cell"
     (let ((point (send plane-obj :project (send coords :worldpos))))
       ;; rotation
       (let ((rot (quaternion2matrix
-                  (quaternion-from-two-vectors
+                  (geo::quaternion-from-two-vectors
                    (send coords :rotate-vector (float-vector 0 0 1))
                    (send plane-coords :rotate-vector (float-vector 0 0 1))))))
         (let ((ret (make-coords :pos point :rot (m* (send coords :rot) rot))))
