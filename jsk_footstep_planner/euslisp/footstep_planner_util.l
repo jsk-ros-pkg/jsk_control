@@ -6,41 +6,29 @@
 (defun project-coords-on-to-plane (coords planes z-axis)
   "z-axis is dummy parameter.
 
-sample:
-(send-all (project-coords-on-to-plane
+   sample:
+   (send-all (project-coords-on-to-plane
            (make-coords) (send (make-cube 100 100 100) :faces)
            (float-vector 0 0 1))
           :draw-on :flush t)"
-  (let ((point (send coords :worldpos)))
-    (let ((candidates (mapcar #'(lambda (pln)
-                                  (let ((projected-point (send pln :project point)))
-                                    ;; (ros::ros-info "projection result: ~A"
-                                    ;;                (send pln :insidep projected-point))
-                                    (if (not (eq (send pln :insidep projected-point) :outside))
-                                        ;;t
-                                        (let* ((n (send pln :normal))
-                                               (nf (matrix-column
-                                                    (send (send coords :copy-worldcoords) :worldrot) 2)))
-                                          (if (< (v. nf n) 0)
-                                              (setq n (scale -1.0 n)))
-                                          (let ((ret (send coords :copy-worldcoords)))
-                                            (send ret :locate projected-point :world)
-                                            (if (eps= (norm (v* n nf)) 0)
-                                                ret
-                                              (let* ((b (v* nf n))
-                                                     (b* (normalize-vector b))
-                                                     (theta (asin (norm b))))
-                                                ;;(send ret :rotate theta b* :world)
-                                                (send ret :rotate theta b* :local)
-                                                ret))))
-                                      nil)))
-                              planes)))
-      (let ((non-null-candidates (remove-if #'null candidates)))
-        ;; (ros::ros-info "project coordinates to ~A planes" (length non-null-candidates))
-        ;; (ros::ros-info "  ~A planes" (length planes))
-        ;; (ros::ros-info "  ~A failed to project" (- (length candidates) (length non-null-candidates)))
-        (if non-null-candidates non-null-candidates ;car is not good
-          nil)))))
+  (let ((candidates (mapcar #'(lambda (p)
+                                (let ((rot (quaternion2matrix
+                                            (quaternion-from-two-vectors
+                                             (float-vector 0 0 1)
+                                             (send p :normal)))))
+                                  (make-coords
+                                   :rot (m* (send coords :rot) rot)
+                                   :pos (send p :project (send coords :worldpos)))))
+                            planes)))
+    (mapcar #'car (remove-if #'(lambda (arg)
+                                 (let ((c (car arg))
+                                       (p (cdr arg)))
+                                   (eq (send p :insidep
+                                             (send p :project
+                                                   (send c :worldpos)))
+                                       :outside)))
+                             (mapcar #'cons candidates planes)))))
+                       
 
 (defun project-coords-on-to-plane2 (coords planes z-axis)
   (let ((point (send coords :worldpos)))
