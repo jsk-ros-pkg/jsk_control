@@ -278,6 +278,7 @@
   (incf *successors-count*))
 
 (defun change-successor-cb (req)
+  ;; It's deprecated!!
   (let ((m (send req :response)))
     (cond ((string= (send req :type) "small")
            (ros::ros-info "change to small footstep")
@@ -338,31 +339,32 @@
       (setf (get c :face-color) :red))
     c))
 
+(defun decompose-footstep-parameter (param)
+  (let ((foot-size (cdr (assoc :foot-size param))))
+    (setq *leg-size-x* (cdr (assoc :x foot-size)))
+    (setq *leg-size-y* (cdr (assoc :y foot-size)))
+    (setq *leg-size-z* (cdr (assoc :z foot-size))))
+  (setq *footstep-successors*
+        (mapcar #'(lambda (successor-param)
+                    (let ((x (cdr (assoc :x successor-param)))
+                          (y (cdr (assoc :y successor-param)))
+                          (theta (cdr (assoc :theta successor-param))))
+                      (make-coords :pos (float-vector x y 0)
+                                   :rpy (float-vector (deg2rad theta) 0 0))))
+                (cdr (assoc :successors param))))
+  )
+
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
   ;; read parameters
-  
+  (let ((param-file (ros::get-param "~parameter_file"
+                      "package://jsk_footstep_planner/config/hrp2jsk_param.l")))
+    (load param-file)
+    (decompose-footstep-parameter *footstep-parameters*))
   ;; hrp2 footstep size is default
-  ;;(let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.247)))
-  ;;(let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.227)))
-  (let ((leg-size-x (* 1000.0 (ros::get-param "~leg_depth" 0.207)))
-        (leg-size-z (* 1000.0 (ros::get-param "~leg_height" 0.001)))
-        (leg-size-y (* 1000.0 (ros::get-param "~leg_width" 0.135))))
-    (setq *leg-size-x* leg-size-x)
-    (setq *leg-size-y* leg-size-y)
-    (setq *leg-size-z* leg-size-z)
-    (setq *leg* (make-cube leg-size-x leg-size-y leg-size-z))
-    (setq *global-frame-id* (ros::get-param "~global_frame_id" "map"))
-    (setq *tf* (instance ros::transform-listener :init)))
-  (setq *normal-footstep-xs* (ros::get-param "~x" nil))
-  (setq *normal-footstep-ys* (ros::get-param "~y" nil))
-  (setq *normal-footstep-thetas* (ros::get-param "~theta" nil))
-  (setq *small-footstep-xs* (ros::get-param "~small_x" nil))
-  (setq *small-footstep-ys* (ros::get-param "~small_y" nil))
-  (setq *small-footstep-thetas* (ros::get-param "~small_theta" nil))
-  (setq *footstep-xs* *normal-footstep-xs*)
-  (setq *footstep-ys* *normal-footstep-ys*)
-  (setq *footstep-thetas* *normal-footstep-thetas*)
+  (setq *leg* (make-cube *leg-size-x* *leg-size-y* *leg-size-z*))
+  (setq *global-frame-id* (ros::get-param "~global_frame_id" "map"))
+  (setq *tf* (instance ros::transform-listener :init))
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
   (setq *heuristic* (read-from-string
@@ -392,9 +394,9 @@
   (ros::advertise (format nil "~A/footstep_count_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
   (ros::advertise (format nil "~A/footstep_successors" (ros::get-name)) jsk_footstep_msgs::FootstepArray)
   (ros::advertise (format nil "~A/footstep_successors_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
-  (ros::advertise-service "/change_successor"
-    jsk_footstep_planner::ChangeSuccessor
-    #'change-successor-cb)
+  ;; (ros::advertise-service "/change_successor"
+  ;;   jsk_footstep_planner::ChangeSuccessor
+  ;;   #'change-successor-cb)
   (let ((s (instance ros::simple-action-server :init
                      (ros::get-name) jsk_footstep_msgs::PlanFootstepsAction
                      :execute-cb 'plan-execute-cb)))
@@ -407,6 +409,7 @@
           (x::window-main-one))
       (ros::sleep))
     ))
+
 
 (main)
 
