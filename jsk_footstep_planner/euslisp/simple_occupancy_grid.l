@@ -1,26 +1,30 @@
 ;; Utility to deal with jsk_recognition_msgs::SimpleOccupancyGrid(Array)
-(load "package://jsk_footstep_planner/euslisp/footstep_planner_util.l")
-(ros::roseus-add-msgs "jsk_recognition_msgs")
 
-;; (defun quaternion-from-two-vectors (a b)
-;;   (let* ((v0 (normalize-vector a))
-;;          (v1 (normalize-vector b))
-;;          (c (v. v1 v0)))
-;;     (if (eps= c -1.0)
-;;         (float-vector -1 0 0 0)
-;;       (let* ((axis (v* v0 v1))
-;;              (s (sqrt (* 2 (+ 1 c))))
-;;              (invs (/ 1.0 s)))
-;;         (let ((vec (scale invs axis))
-;;               (w (* 0.5 s)))
-;;           (normalize-vector (float-vector w (elt vec 0) (elt vec 1) (elt vec 2))))))))
+(ros::roseus-add-msgs "jsk_recognition_msgs")
+(comp:compile-file-if-src-newer
+  (format nil "~A/euslisp/footstep_planner_util.l"
+          (ros::rospack-find "jsk_footstep_planner")))
+(load "footstep_planner_util.so")
+;;(load "package://jsk_footstep_planner/euslisp/footstep_planner_util.l")
+(defun quaternion-from-two-vectors (a b)
+  (let* ((v0 (normalize-vector a))
+         (v1 (normalize-vector b))
+         (c (v. v1 v0)))
+    (if (eps= c -1.0)
+        (float-vector -1 0 0 0)
+      (let* ((axis (v* v0 v1))
+             (s (sqrt (* 2 (+ 1 c))))
+             (invs (/ 1.0 s)))
+        (let ((vec (scale invs axis))
+              (w (* 0.5 s)))
+          (normalize-vector (float-vector w (elt vec 0) (elt vec 1) (elt vec 2))))))))
 
 (defun coefficients->plane-coords (coefficients)
   (let ((z-axis (normalize-vector (float-vector (elt coefficients 0)
                                                 (elt coefficients 1)
                                                 (elt coefficients 2))))
         (unitz (float-vector 0 0 1)))
-    (let ((c (make-coords :rot (quaternion2matrix (geo::quaternion-from-two-vectors unitz z-axis)))))
+    (let ((c (make-coords :rot (quaternion2matrix (quaternion-from-two-vectors unitz z-axis)))))
       (send c :translate (float-vector 0 0 (- (* 1000.0 (elt coefficients 3))))))))
 
 (defclass occupancy-grid
@@ -190,15 +194,16 @@ which is inside of occupied cell"
     (let ((point (send plane-obj :project (send coords :worldpos))))
       ;; rotation
       (let ((rot (quaternion2matrix
-                  (geo::quaternion-from-two-vectors
+                  (quaternion-from-two-vectors
                    (send coords :rotate-vector (float-vector 0 0 1))
                    (send plane-coords :rotate-vector (float-vector 0 0 1))))))
-        (let ((ret (make-coords :pos point :rot (m* (send coords :rot) rot))))
+        (let ((ret (make-coords :pos point :rot (m* rot (send coords :worldrot)))))
           (setf (get ret :projected-grid) self)
           ret))))
   (:placablep (point n)
     (bench-timer2
      placablep-timer
+     ;;(ros::ros-info "plane-obj: ~A n: ~A~%" (send plane-obj :normal) n)
      (let ((dot (abs (v. (send plane-obj :normal) n))))
        (if (or (> dot 1.0) (< (rad2deg (acos dot)) 5))
            (progn
@@ -206,12 +211,21 @@ which is inside of occupied cell"
              ;; (transform rot-tmp point point-tmp)
              ;; (transform rot-tmp (send plane-coords :worldpos) point-tmp2)
              ;; (v- point-tmp point-tmp2 local-point-cache)
-             (setq local-point-cache (bench-timer2
-                                      inverse-transform-vector-timer
-                                      (send plane-coords :inverse-transform-vector point)))
+             (setq local-point-cache
+                   (bench-timer2
+                    inverse-transform-vector-timer
+                    (send plane-coords :inverse-transform-vector point)))
+             
              (if (< (abs (elt local-point-cache 2)) 10.0)
-                 (send self :occupiedp
-                       (send self :index-pair local-point-cache :local t))))
+                 (progn
+                   ;; (ros::ros-info "plane check is OK")
+                   ;;(send point :draw-on :flush nil :size 0.5)
+                   (send self :occupiedp
+                         (send self :index-pair local-point-cache :local t)))
+               (progn
+                 ;;(ros::ros-info "z is ~A" (elt local-point-cache 2))
+                 nil)
+               ))
          (progn
            ;;(ros::ros-info "theta is ~A" (rad2deg (acos dot)))
            nil)
@@ -312,8 +326,8 @@ which is inside of occupied cell"
       t
     (let ((points (sampling-face-points
                    leg-face
-                   *face-sampling-num* *sampling-points-cache*))
-          (all-foundp t))
+                   *face-sampling-num*)))
+      ;;(send-all points :draw-on :flush t :color (float-vector 0 0 1))
       ;;(send-all points :draw-on :flush t)
       (dotimes (i (length points))
         (unless (send grid :placablep (elt points i) (send leg-face :normal))
@@ -329,6 +343,8 @@ which is inside of occupied cell"
     (dolist (grid grids)
       (dolist (candidate next-coords-candidate)
         (let ((projected-coords (send grid :project-coords (cdr candidate))))
+          ;; (ros::ros-info "diff: ~A" (rad2deg (acos (v. (send projected-coords :rotate-vector (float-vector 0 0 1))
+          ;;                                              (send (send grid :plane) :normal)))))
           ;; Check center only first
           (if (send grid :occupiedp
                     (send grid
@@ -336,6 +352,7 @@ which is inside of occupied cell"
                           :local nil))
               (progn
                 ;; memoize projecting grid
+                
                 (setf (get projected-coords :projecting-grid) grid)
                 (setq new-candidates (cons
                                       (cons (car candidate)

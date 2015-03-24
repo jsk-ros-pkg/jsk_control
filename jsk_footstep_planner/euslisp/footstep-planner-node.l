@@ -9,12 +9,13 @@
 (load "~/ros/hydro_parent/src/jskeus/irteus/irtgraph.l")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner.l" (ros::rospack-find "jsk_footstep_planner")))
-(load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
+;; (load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
+(load "footstep_planner.so")
 ;;(load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/simple_occupancy_grid.l" (ros::rospack-find "jsk_footstep_planner")))
-;;(load "simple_occupancy_grid.l")
-(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
+(load "simple_occupancy_grid.so")
+;;(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
 ;;(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
 
 

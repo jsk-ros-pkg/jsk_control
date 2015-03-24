@@ -17,7 +17,7 @@
                                               (float-vector 0 0 1)
                                               (send p :normal)))))
                                   (make-coords
-                                   :rot (m* (send coords :rot) rot)
+                                   :rot (m* rot (send coords :rot))
                                    :pos (send p :project (send coords :worldpos)))))
                             planes)))
     (mapcar #'car (remove-if #'(lambda (arg)
@@ -164,10 +164,9 @@
     (setq timer (instance mtimer :init))
     )
   (:report ()
-    (if (= count 0)
-        (ros::ros-info "~A is not called" name)
-      (ros::ros-info "~A takes ~A secs (~A sec per trial, ~A trials)"
-        name duration (/ duration count) count)))
+    (if (not (= count 0))
+        (ros::ros-info "~A takes ~A secs (~A sec per trial, ~A trials)"
+          name duration (/ duration count) count)))
   )
 
 (defmacro bench-timer (timer &rest prog)
