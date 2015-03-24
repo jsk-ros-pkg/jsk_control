@@ -19,6 +19,7 @@
           (:transform . ((:x . 0.0)  (:y . 270) (:theta . 0.0)))
           (:transform . ((:x . 10)   (:y . 210) (:theta . 0.0)))
           (:transform . ((:x . 27)   (:y . 206) (:theta . -7)))
+          (:transform . ((:x . 27)   (:y . 206) (:theta . 7)))
           (:transform . ((:x . 50)   (:y . 210) (:theta . 0.0)))
           (:transform . ((:x . 52.5) (:y . 260) (:theta . 0.0)))
           (:transform . ((:x . 75)   (:y . 210) (:theta . 0.0)))

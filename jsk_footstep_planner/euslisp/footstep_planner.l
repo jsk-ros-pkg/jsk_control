@@ -3,7 +3,7 @@
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner_util.l"
           (ros::rospack-find "jsk_footstep_planner")))
-(load "footstep_planner_util.l")
+(load "footstep_planner_util.so")
 
 (defclass footstep-parameter
   :super propertied-object
@@ -249,113 +249,6 @@ footstep-parameter"))
               (face-placable-p next-leg-face grids)))
             (t
              t)))))
-  (:successors-old (state &key (verbose nil))
-    (when timeout                            ;check the timeout
-      (when (< (- (send timeout :to-sec) (send (ros::time-now) :to-sec)) 0)
-        (return-from :successors-old nil)))
-    (let* ((current-leg (send state :l/r))
-           (current-step-coords (send state :worldcoords))
-           (next-leg (send footstep-param :next-leg current-leg)))
-      (let ((next-coords-candidate (send footstep-param :next-step-coords
-                                         (send state :worldcoords)
-                                         next-leg
-                                         (send state :step-name))))
-        ;; mapping to the planes if needed
-        (when (and planes z-axis)
-          (let ((candidates-set
-                 (mapcar #'(lambda (c)
-                             (let ((candidate-set2
-                                    (project-coords-on-to-plane
-                                     (cdr c) planes z-axis)))
-                               (if candidate-set2
-                                   (mapcar #'(lambda (s)
-                                               (cons (car c) s))
-                                           candidate-set2)
-                                 nil)))
-                         next-coords-candidate)))
-            (let ((new-candidate nil))
-              (dolist (candidates candidates-set)
-                (dolist (c candidates)
-                  (if (and c (cdr c))
-                      (if new-candidate
-                          (setq new-candidate (append new-candidate (list c)))
-                        (setq new-candidate (list c))
-                        ))))
-              (setq next-coords-candidate new-candidate))))
-        ;; mapping to the grids if needed
-        ;;(when (and grids z-axis)
-        (ros::ros-info "~A candidates" (length next-coords-candidate))
-        (when (and grids)
-          (setq next-coords-candidate
-                (append-footstep-candidates-by-grids
-                 next-coords-candidate grids)))
-        ;; check x transition
-        (when nil
-        (dolist (c next-coords-candidate)
-          (let ((trans (send current-step-coords :transformation (cdr c))))
-            ;; TODO: fix it
-            (when (> (elt (send trans :worldpos) 0) 250)
-              ;; force to use 250
-              (send trans :locate (float-vector
-                                   250
-                                   (elt (send trans :worldpos) 1)
-                                   (elt (send trans :worldpos) 2))
-                    :world)
-              (send (cdr c) :newcoords (send (send current-step-coords :copy-worldcoords) :transform trans))
-              (send (cdr c) :worldpos)
-              ))))
-        ;; check z transition
-        (when (send state :prev-coords)
-          (let* ((prev-step-coords (send (send state :prev-coords) :copy-worldcoords))
-                 (trans (send prev-step-coords :transformation (send current-step-coords :copy-worldcoords))))
-            (when (> (abs (elt (send trans :worldpos) 2)) 50) ;over 5cm change
-              ;; reduce next-coords-candidate
-              (setq next-coords-candidate 
-                    (remove-if #'(lambda (c)
-                                   (let* ((cc (cdr c)) ;cc is coordinate
-                                          (next-trans (send current-step-coords :transformation
-                                                            cc)))
-                                     (if (> (abs (elt (send next-trans :worldpos) 0)) 10) ;over 1cm 
-                                         (progn
-                                           (ros::ros-info "reduce candidate because ~A x transition"
-                                                          (elt (send next-trans :worldpos) 0))
-                                           nil)
-                                       c)))
-                               next-coords-candidate)))))
-        ;; remove steps collide with obstacles
-        (let ((ret nil))
-          (dolist (c next-coords-candidate)
-            (let ((cdr-c (cdr c)))
-              (let ((robot-coords
-                     (send footstep-param :calc-robot-coords
-                           cdr-c current-step-coords)))
-                (when robot
-                  (send robot :worldpos))
-                (if (send self :successablep :debug verbose
-                          :next-leg next-leg ;:lleg, :rleg and so on
-                          :next-leg-coords cdr-c
-                          :robot-coords robot-coords
-                          :next-leg-face (instance face :init
-                                                   :vertices
-                                                   (send footstep-param :foot-vertices
-                                                         next-leg cdr-c)))
-                    (progn
-                      (setf (cdr c)
-                            (instance step-node :init
-                                      :worldcoords cdr-c
-                                      :leg-face leg-face
-                                      :robot-coords robot-coords
-                                      :prev-coords current-step-coords
-                                      :angle-vector nil
-                                      ;;(send robot :angle-vector)
-                                      :step-name (car c)
-                                      :l/r next-leg))
-                      (push c ret))
-                  (progn
-                    (ros::ros-info "Not successable")
-                    )
-                  ))))
-          ret))))
   (:successors (state &key (verbose nil))
     (bench-timer
      successors-timer
@@ -514,7 +407,7 @@ check between leg-object and obstacles."
 (defclass a*-footstep-graph-search-solver
   :super a*-graph-search-solver
   :slots (count target-problem heuristic-method wg arrived-at-position-p
-          render-leg-object))
+          render-leg-object debug-counter))
                 
 
 (defmethod a*-footstep-graph-search-solver
@@ -522,6 +415,7 @@ check between leg-object and obstacles."
             &key ((:render-leg-object rlo) nil) &allow-other-keys)
     (setq wg w)
     (setq heuristic-method m)
+    (setq debug-counter 0)
     (setq render-leg-object rlo)
     (send-super :init plbm)
     self)
@@ -536,7 +430,8 @@ building and searching."
   (:null-open-list? ()
     (if (ros::time< (send target-problem :timeout) (ros::time-now))
         (return-from :null-open-list? t))
-    (let ((foundp nil))
+    (let ((foundp nil)
+          (rejected-counter 0))
       (while (not foundp)
         (if (send-super :null-open-list?)
             (return-from :null-open-list? t)
@@ -550,10 +445,17 @@ building and searching."
                     (send (send candidate-node :state) :leg-face)
                     (send (send candidate-node :state) :projecting-grid))
                    (send self :add-to-open-list candidate-node)
+                   ;;(send (send (send candidate-node :state) :leg-face) :draw-on :flush nil)
                    (setq foundp t))
                   (t
+                   ;;(send (send (send candidate-node :state) :leg-face) :draw-on :flush nil :color (float-vector 0 1 0))
+                   (incf rejected-counter)
                    nil))
             )))
+      (incf debug-counter)
+      ;; (ros::ros-info "~A is rejected" rejected-counter)
+      ;; (when (= (mod debug-counter 10) 0)
+      ;;   (send *irtviewer* :flush))
       (not foundp)))
   (:hn (n p)
     ;; [J.Kuffner et. al.,
@@ -735,6 +637,7 @@ building and searching."
                             (float-vector (- size-x/2) size-y/2 0)
                             (float-vector (- size-x/2) (- size-y/2) 0)
                             (float-vector size-x/2 (- size-y/2) 0))))
+      ;;(send coords :worldpos)
       (mapcar #'(lambda (v)
                   (let ((vv (send coords :transform-vector v)))
                     ;;(format t "~A -> ~A~%" v vv)
@@ -764,6 +667,10 @@ building and searching."
       (dotimes (i (length footsteps))
         (let ((f (elt footsteps i)))
           (send self :gen-step :right i f)))
+      ;; (do-until-key
+      ;;  (x::window-main-one)
+      ;;  (send-all (append *footstep-successors* footsteps) :draw-on :flush t)
+      ;;  (unix::usleep 1000))
       ))
   (:gen-step (l/r name coords)
     (let ((s (cons name coords)))
