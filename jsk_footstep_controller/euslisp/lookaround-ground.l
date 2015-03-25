@@ -1,12 +1,24 @@
 #!/usr/bin/env roseus
 
-(load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l")
+(ros::roseus "lookaround_ground")
+
+(setq *robot-name* (ros::get-param "~robot" (unix::getenv "ROBOT")))
+
 (ros::roseus-add-msgs "jsk_footstep_msgs")
+(ros::roseus-add-srvs "std_srvs")
+(ros::roseus-add-msgs "std_msgs")
 (ros::roseus-add-msgs "jsk_footstep_controller")
 
-(hrp2jsknts-init)
-(setq *robot* *hrp2jsknts*)
-(setq *hrp2* *robot*)
+(cond
+ ((string= "hrp2jsk" (string-downcase *robot-name*))
+  (load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsk-interface.l"))
+ ((string= "hrp2jsknt" (string-downcase *robot-name*))
+  (load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"))
+ ((string= "hrp2jsknts" (string-downcase *robot-name*))
+  (load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l")))
+
+
+(init-robot-from-name *robot-name*)
 
 
 (defun fullbody-lookat
@@ -56,13 +68,11 @@
           :debug-view :no-message
 )))
 
-(ros::roseus "lookaround_ground")
-
 (defun call-empty-service (srv)
   (let ((req (instance std_srvs::EmptyRequest :init)))
     (ros::service-call srv req)))
 
-(defun do-lookaround ()
+(defun do-lookaround-old ()
   (send *hrp2* :reset-manip-pose)
   (fullbody-lookat (float-vector 0 0 0))
   (send *ri* :angle-vector (send *hrp2* :angle-vector) 5000)
@@ -77,6 +87,30 @@
   (send *ri* :wait-interpolation)
   )
 
+(defun do-lookaround ()
+  ;; (send *robot* :reset-pose)
+  ;; (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+  ;; (send *ri* :wait-interpolation)
+  (send *robot* :torso :waist-p :joint-angle 40)
+  (send *robot* :head :neck-y :joint-angle 0)
+  (send *robot* :head :neck-p :joint-angle 40)
+  (send *robot* :legs :move-end-pos (float-vector 0 0 -40))
+  (send *robot* :move-centroid-on-foot :both '(:lleg :rleg))
+  (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+  (send *ri* :wait-interpolation)
+  ;; Call /tilt_laser_listener/clear_cache
+  (call-empty-service "/tilt_laser_listener/clear_cache")
+  ;; Call /locomotion/input/request
+  (call-empty-service "/locomotion/input/request")
+  ;; Wait for next publish
+  (wait-for-snapshot-publish)
+  (read-line)
+  (send *robot* :reset-pose)
+  (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+  (send *ri* :wait-interpolation)
+  )
+
+
 (defun look-around-callback (req)
   (do-lookaround)
   (send req :response))
@@ -87,6 +121,18 @@
     (send server :set-succeeded result))
   )
 
+(defun timestamp-callback (msg)
+  (setq *latest-timestamp* msg))
+
+(defun wait-for-snapshot-publish ()
+  (ros::spin-once)
+  (setq *latest-timestamp* nil)
+  (while (and (null *latest-timestamp*) (ros::ok))
+    (ros::spin-once)
+    (ros::sleep))
+  )
+
+(ros::subscribe "/locomotion/input/output/stamp" std_msgs::Time #'timestamp-callback)
 (setq *action-server* (instance ros::simple-action-server :init
                                 "lookaround_ground" jsk_footstep_controller::LookAroundGroundAction
                                 :execute-cb 'execute-cb)))
