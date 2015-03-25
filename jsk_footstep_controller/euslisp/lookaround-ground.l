@@ -104,7 +104,6 @@
   (call-empty-service "/locomotion/input/request")
   ;; Wait for next publish
   (wait-for-snapshot-publish)
-  (read-line)
   (send *robot* :reset-pose)
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
