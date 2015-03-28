@@ -1,0 +1,74 @@
+
+base_link: BODY
+
+sensors:
+
+  chains:
+    LARM_chain:
+      root: CHEST_LINK1
+      tip: larm_end_coords
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    RARM_chain:
+      root: CHEST_LINK1
+      tip: rarm_end_coords
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    head_chain:
+      root: CHEST_LINK1
+      tip: HEAD_LINK1
+      cov:
+       joint_angles: [0.01, 0.01]
+      gearing: [1.0, 1.0]
+    torso_chain:
+      root: BODY
+      tip: CHEST_LINK1
+      cov:
+       joint_angles: [0.01, 0.01]
+      gearing: [1.0, 1.0]
+    LLEG_chain:
+      root: BODY
+      tip: LLEG_LINK5 # LLEG_LINK5?
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    RLEG_chain:
+      root: BODY
+      tip: RLEG_LINK5 # RLEG_LINK5?
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+  rectified_cams:
+    head_camera:
+      chain_id: head_chain  #TODO: get rid of this
+      frame_id: multisense/left_camera_optical_frame
+      baseline_shift: 0.0
+#      baseline_rgbd: 0.075 ## comment out if we run all_pipelines.launch with use_kinect
+      f_shift: 0.0
+      cx_shift: 0.0
+      cy_shift: 0.0
+      cov: {u: 0.25, v: 0.25, x: 0.25}
+
+  tilting_lasers: {}
+
+checkerboards:
+  mmurooka_board:
+    corners_x: 6
+    corners_y: 5
+    spacing_x: 0.03
+    spacing_y: 0.03
+
+transforms:
+  LARM_chain_cb:   [0.16, 0, 0.1, 0, 0, 0]
+  RARM_chain_cb:   [0.16, 0, 0.1, 0, 0, 0]
+
+#default_floating_initial_pose: [0, 0, 0, -1.2092, 1.2092, -1.2092]
+#default_floating_initial_pose: [0, 0, 0, 0, 0, 0]
+# xyz: [-0.002956968077825933, 0.16898467170866147, -0.20050853695600393]
+# rpy: (-0.04425102767135782, 0.01876497698337332, -0.019873022766080706)
+
+initial_poses: "/tmp/staro_calibration/initial_poses.yaml"
+# initial_poses: "$(find jsk_calibration)/staro_calibration/capture_data/samples/initial_poses.yaml"
+# initial_poses: "/tmp/staro_calibration/cb_calib_0_poses.yaml"

@@ -1,0 +1,20 @@
+<launch>
+  <include file="$(find jsk_calibration)/jaxon_calibration/capture_data/settler.launch" />
+
+  <arg name="use_kinect" default="false" />
+  <group if="$(arg use_kinect)" >
+    <include file="$(find calibration_launch)/capture_data/kinect_pipeline.launch" ns="/camera_remote/rgb">
+      <arg name="image_topic" value="image_rect_color"/> <!-- openni2.launch publishes image_raw -->
+      <arg name="depth_topic" value="/camera/depth/image"/> <!-- this is floar value -->
+      <arg name="camera_info_topic" value="camera_info"/>
+    </include>
+  </group>
+  <group unless="$(arg use_kinect)" >
+    <include file="$(find calibration_launch)/capture_data/monocam_pipeline.launch"
+             ns="/multisense/left">
+      <arg name="image_topic" value="image_rect"/> <!-- this should be image proc -->
+      <arg name="frequency" value="5" />
+    </include>
+  </group>
+  <include file="$(find jsk_calibration)/jaxon_calibration/capture_data/interval.launch" />
+</launch>
