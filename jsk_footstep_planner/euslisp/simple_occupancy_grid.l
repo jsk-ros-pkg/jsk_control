@@ -30,37 +30,67 @@
 (defclass occupancy-grid
   :super propertied-object
   :slots (resolution
-          coefficients plane-coords frame-id cell-hash plane-obj
-          cell-num
+          coefficients plane-coords frame-id
+          plane-obj
+          cell-num cell-bits
+          min-cell-x min-cell-y max-cell-x max-cell-y
+          cell-width cell-height
           local-point-cache point-tmp point-tmp2 rot-tmp
           occupiedp-timer on-plane-p-timer index-pair-timer
           placablep-timer inverse-transform-vector-timer
+          init-timer
           ))
 
 (defmethod occupancy-grid
+  (:info ()
+    (ros::ros-info "grid info:")
+    (ros::ros-info "  minimum: (~A, ~A)" min-cell-x min-cell-y)
+    (ros::ros-info "  maximum: (~A, ~A)" max-cell-x max-cell-y)
+    (ros::ros-info "  size: ~Ax~A=~A (~A, ~A% filled)"
+      cell-width cell-height (* cell-width cell-height) cell-num
+      (round (* 100 (/ cell-num (float (* cell-width cell-height))))))
+    )
   (:init (msg global-trans)
     "Instantiating from ros message"
     (send self :init-common)
-    (setq frame-id (send msg :header :frame_id))
-    (setq resolution (* 1000 (send msg :resolution)))
-    (setq coefficients (send msg :coefficients))
-    (setq plane-coords
-          (send (send global-trans :copy-worldcoords)
-                :transform (coefficients->plane-coords coefficients)))
-    (setq plane-obj (instance plane :init
-                              (send plane-coords :rotate-vector (float-vector 0 0 1))
-                              (send plane-coords :worldpos)))
-    ;; hash table
-    (setq cell-num (length (send msg :cells)))
-    (setq cell-hash (make-hash-table :test #'equal
-                                     :size cell-num
-                                     :rehash-size 1.1))
-    (dolist (cell-point (send msg :cells))
-      ;; cell-point is geometry_msgs::Point
-      (let ((cell-x (* 1000 (send cell-point :x)))
-            (cell-y (* 1000 (send cell-point :y))))
-        (let ((index-key (send self :index-pair (float-vector cell-x cell-y 0) :local t)))
-          (setf (gethash index-key cell-hash) t))))
+    (bench-timer
+     init-timer
+     (setq frame-id (send msg :header :frame_id))
+     (setq resolution (* 1000 (send msg :resolution)))
+     (setq coefficients (send msg :coefficients))
+     (setq plane-coords
+           (send (send global-trans :copy-worldcoords)
+                 :transform (coefficients->plane-coords coefficients)))
+     (setq plane-obj (instance plane :init
+                               (send plane-coords :rotate-vector (float-vector 0 0 1))
+                               (send plane-coords :worldpos)))
+     (setq cell-num (length (send msg :cells)))
+     (setq min-cell-x 10000000
+           min-cell-y 10000000
+           max-cell-x -10000000
+           max-cell-y -10000000)
+     (dolist (cell-point (send msg :cells))
+       (let ((cell-x (* 1000 (send cell-point :x)))
+             (cell-y (* 1000 (send cell-point :y))))
+         (let ((i (round (/ cell-x resolution)))
+               (j (round (/ cell-y resolution))))
+           (setq min-cell-x (min min-cell-x i))
+           (setq min-cell-y (min min-cell-y j))
+           (setq max-cell-x (max max-cell-x i))
+           (setq max-cell-y (max max-cell-y j)))))
+     (setq cell-width (1+ (- max-cell-x min-cell-x)))
+     (setq cell-height (1+ (- max-cell-y min-cell-y)))
+     
+     (setq cell-bits (instantiate integer-vector (* cell-width cell-height)))
+     (dolist (cell-point (send msg :cells))
+       (let ((cell-x (* 1000 (send cell-point :x)))
+             (cell-y (* 1000 (send cell-point :y))))
+         (let ((index-key (send self :index-pair
+                                (float-vector cell-x cell-y 0)
+                                :local t)))
+           (send self :register-cell index-key))))
+     )
+    (send init-timer :report)
     self)
   (:init-common ()
     (setq local-point-cache (float-vector 0 0 0))
@@ -73,6 +103,8 @@
     (setq placablep-timer (instance counter-timer :init ":placablep"))
     (setq inverse-transform-vector-timer
           (instance counter-timer :init ":inverse-transform-vector"))
+    (setq init-timer
+          (instance counter-timer :init ":init"))
     )
   (:init-from-face (f &optional (aresolution 5))
     (send self :init-common)
@@ -90,7 +122,6 @@
                               (send plane-coords :worldpos)))
     ;; fill cells
     (setq cell-num 0)
-    (setq cell-hash (make-hash-table :test #'equal))
     (let ((local-vertices
            (mapcar #'(lambda (v)
                        (send plane-coords :inverse-transform-vector v))
@@ -105,10 +136,9 @@
                 (let ((p (send plane-coords :transform-vector
                                (float-vector cell-x cell-y 0))))
                   (when (not (eq (send f :insidep p) :outside))
-                    (setf (gethash (send self :index-pair (float-vector cell-x cell-y 0)
-                                         :local t)
-                                   cell-hash)
-                          t)
+                    (send self :register-cell
+                          (send self :index-pair (float-vector cell-x cell-y 0)
+                                :local t))
                     (incf cell-num))
                 (setq cell-y (+ cell-y resolution))))
               (setq cell-x (+ cell-x resolution))
@@ -145,46 +175,46 @@
   (:worldcoords ()
     plane-coords)
   (:vertices ()
-    (let ((ret nil))
-      (maphash #'(lambda (key val)
-                   (setf ret (cons (send self :global-point key) ret)))
-               cell-hash)
-      ret))
+    (let ((vs nil))
+      (dotimes (i cell-width)
+        (dotimes (j cell-height)
+          (when (send self :occupiedp* i j)
+            (setq vs (cons (send self :cell-index-to-global-point i j) vs))
+          )))
+      vs))
   (:collision-check-objects ()
     nil)
   (:draw (vwer)
     (gl::glPushAttrib gl::GL_ALL_ATTRIB_BITS)
     (gl::glDisable gl::GL_LIGHTING)
-    (let ((col (gl::find-color (get self :face-color)))
-          (w (/ resolution 2.0)))
-      (maphash #'(lambda (key val)
-                   (let* ((center (send self :local-point key))
-                          (v1 (v+ center
-                                  (float-vector w w 0)))
-                          (v2 (v+ center
-                                  (float-vector (- w) w 0)))
-                          (v3 (v+ center
-                                  (float-vector (- w) (- w) 0)))
-                          (v4 (v+ center
-                                  (float-vector w (- w) 0))))
-                     (let ((gv1 (send plane-coords :transform-vector v1))
-                           (gv2 (send plane-coords :transform-vector v2))
-                           (gv3 (send plane-coords :transform-vector v3))
-                           (gv4 (send plane-coords :transform-vector v4)))
-                       (gl::glBegin gl::GL_LINE_STRIP)
-                       (gl::glColor3fv col)
-                       (gl::glVertex3fv gv1)
-                       (gl::glColor3fv col)
-                       (gl::glVertex3fv gv2)
-                       (gl::glColor3fv col)
-                       (gl::glVertex3fv gv3)
-                       (gl::glColor3fv col)
-                       (gl::glVertex3fv gv4)
-                       (gl::glColor3fv col)
-                       (gl::glVertex3fv gv1)
-                       (gl::glEnd)
-                       )))
-               cell-hash))
+    (let* ((col (gl::find-color (get self :face-color)))
+           (w (/ resolution 2.0))
+           (-w (* -1 w)))
+      (dotimes (i cell-width)
+        (dotimes (j cell-height)
+          (when (send self :occupiedp* i j)
+            (let* ((center (send self :cell-index-to-local-point i j))
+                   (v1 (v+ center (float-vector w w 0)))
+                   (v2 (v+ center (float-vector -w w 0)))
+                   (v3 (v+ center (float-vector -w -w 0)))
+                   (v4 (v+ center (float-vector w -w 0))))
+              (let ((gv1 (send self :local-point-to-global-point v1))
+                    (gv2 (send self :local-point-to-global-point v2))
+                    (gv3 (send self :local-point-to-global-point v3))
+                    (gv4 (send self :local-point-to-global-point v4)))
+                (gl::glBegin gl::GL_LINE_STRIP)
+                (gl::glColor3fv col)
+                (gl::glVertex3fv gv1)
+                (gl::glColor3fv col)
+                (gl::glVertex3fv gv2)
+                (gl::glColor3fv col)
+                (gl::glVertex3fv gv3)
+                (gl::glColor3fv col)
+                (gl::glVertex3fv gv4)
+                (gl::glColor3fv col)
+                (gl::glVertex3fv gv1)
+                (gl::glEnd)
+                ))))))
     (gl::glEnable gl::GL_LIGHTING)
     (gl::glPopAttrib)
     )
@@ -207,15 +237,10 @@ which is inside of occupied cell"
      (let ((dot (abs (v. (send plane-obj :normal) n))))
        (if (or (> dot 1.0) (< (rad2deg (acos dot)) 5))
            (progn
-             ;; (transpose (send plane-coords :rot) rot-tmp)
-             ;; (transform rot-tmp point point-tmp)
-             ;; (transform rot-tmp (send plane-coords :worldpos) point-tmp2)
-             ;; (v- point-tmp point-tmp2 local-point-cache)
              (setq local-point-cache
                    (bench-timer2
                     inverse-transform-vector-timer
                     (send plane-coords :inverse-transform-vector point)))
-             
              (if (< (abs (elt local-point-cache 2)) 10.0)
                  (progn
                    ;; (ros::ros-info "plane check is OK")
@@ -237,12 +262,31 @@ which is inside of occupied cell"
        ;; convert to local coordinates
        (setq pos (send plane-coords :inverse-transform-vector pos)))
      (cons (round (/ (elt pos 0) resolution))
-           (round (/ (elt pos 1) resolution)))
-     ))
+           (round (/ (elt pos 1) resolution)))))
+  (:cell-index (index-pair)
+    "Convert index-pair into cell-local index"
+    ;; Convert to local index coordinates
+    (send self :cell-index*
+          (- (car index-pair) min-cell-x)
+          (- (cdr index-pair) min-cell-y)))
+  (:cell-index-to-local-point (i j)
+    (send self :local-point (cons (+ i min-cell-x)
+                                  (+ j min-cell-y))))
+  (:local-point-to-global-point (lp)
+    (send plane-coords :transform-vector lp))
+  (:cell-index-to-global-point (i j)
+    (send self :local-point-to-global-point
+          (send self :cell-index-to-local-point i j)))
+  (:cell-index* (i j)
+    (+ i (* cell-width j)))
+  (:occupiedp* (i j)
+    (= (elt cell-bits (send self :cell-index* i j)) 1))
   (:occupiedp (index-pair)
-    (bench-timer2
-     occupiedp-timer
-     (gethash index-pair cell-hash)))
+    (= (elt cell-bits (send self :cell-index index-pair)) 1))
+  (:register-cell (index-pair)
+    (setf (elt cell-bits (send self :cell-index index-pair)) 1))
+  (:register-cell* (i j)
+    (setf (elt cell-bits (send self :cell-index* i j)) 1))
   )
 
 ;; Utilify functions for grid-maps (array of occupancy-grid)

@@ -319,7 +319,7 @@
                            (mapcar #'(lambda (g)
                                        (let ((trans (lookup-transform-with-duration
                                                      *tf*
-                                                     "map"
+                                                     *global-frame-id*
                                                      (send g :header :frame_id)
                                                      (send g :header :stamp)
                                                      1.0)))
@@ -331,6 +331,7 @@
   (when *use-gui*
     (send *irtviewer* :objects *grids*)
     (send *irtviewer* :draw-objects))
+  (send-all *grids* :info)
   )
 
 (defun make-footprint (leg)
