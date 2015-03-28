@@ -116,7 +116,7 @@
 (defun lookup-transform-with-duration (tf-listener from to stamp duration)
   (if (send tf-listener :wait-for-transform from to stamp duration)
       (send tf-listener :lookup-transform from to stamp)
-    (progn (ros::roserror "Failed to lookup transform ~A to ~A" from to)
+    (progn (ros::ros-error "Failed to lookup transform ~A to ~A" from to)
            nil)))
 
 ;; for debug

@@ -445,10 +445,10 @@ building and searching."
                     (send (send candidate-node :state) :leg-face)
                     (send (send candidate-node :state) :projecting-grid))
                    (send self :add-to-open-list candidate-node)
-                   ;;(send (send (send candidate-node :state) :leg-face) :draw-on :flush nil)
+                   (send (send (send candidate-node :state) :leg-face) :draw-on :flush nil)
                    (setq foundp t))
                   (t
-                   ;;(send (send (send candidate-node :state) :leg-face) :draw-on :flush nil :color (float-vector 0 1 0))
+                   (send (send (send candidate-node :state) :leg-face) :draw-on :flush nil :color (float-vector 0 1 0))
                    (incf rejected-counter)
                    nil))
             )))
