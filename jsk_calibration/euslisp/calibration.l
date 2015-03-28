@@ -350,13 +350,21 @@
         (when ik-successp
           (setq collision-freep (not (send self :check-collision))))
         (cond ((not ik-successp)
-               (format t "~A/~A fail IK~%" current-test-no all-test-num))
+               (send c :draw-on :flush t :color (float-vector 1 0 0))
+               (send *irtviewer* :draw-objects)
+               (x::window-main-one)
+               (format t "~A/~A ~A ~A ~A ~A fail IK~%"
+                       current-test-no all-test-num
+                       l (rad2deg ang) (rad2deg x-ang) (rad2deg y-ang)))
               ((and ik-successp (not collision-freep))
-               (format t "~A/~A success IK but NOT collision free~%"
-                       current-test-no all-test-num))
+               (format t "~A/~A ~A ~A ~A ~A success IK but NOT collision free~%"
+                       current-test-no all-test-num
+                       l (rad2deg ang) (rad2deg x-ang) (rad2deg y-ang)))
               ((and ik-successp collision-freep)
-               (format t "~A/~A success IK and collision free~%"
-                       current-test-no all-test-num)))
+               (format t "~A/~A ~A ~A ~A ~A success IK and collision free~%"
+                       current-test-no all-test-num
+                       l (rad2deg ang) (rad2deg x-ang) (rad2deg y-ang)))
+              )
         (if (and ik-successp collision-freep)
             rr))))
   (:check-interpolation-collision (start end)
