@@ -81,12 +81,17 @@
      (send *ri* :abc-footstep->eus-footstep (send param :rleg_coords))
      (send *ri* :abc-footstep->eus-footstep (send param :lleg_coords)))))
 
-(defun walking-pose
+(defun walking-pose ;; this should be method
   (robot
-   &key (root-link-height-offset 0) ;; [mm]
-        (root-link-pitch-offset 0) ;; [deg]
+   &key (root-link-height-offset 0)
+        (root-link-pitch-offset 0)
         (fix-coords (make-coords))
-        (default-pose-method :reset-manip-pose))
+        (default-pose-method :reset-pose))
+  "Generate and set walking pose.
+   default-pose-method is initial pose, reset-manip-pose by default.
+   Generated pose is near from default-pose-method pose.
+   root-link-height-offset is root height offset [mm] from default-pose-method.
+   root-link-pitch-offset is root pitch offset [deg] from default-pose-method."
   (send robot default-pose-method)
   (send robot :fix-leg-to-coords fix-coords)
   (let ((lc (mapcar #'(lambda (l)
@@ -105,7 +110,6 @@
     (send robot :angle-vector)
     ))
 
-
 (defun new-goal-cb (server goal)
   ;; coordinate transformation:
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
@@ -113,7 +117,7 @@
   ;; 3. convert the footstep respected to hrpsys-mid-coords
   (if (not *interruptible-mode*)
       (when *realp*
-        (walking-pose *robot* :root-link-height-offset -50)
+        (walking-pose *robot* :root-link-height-offset -70)
         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)))
   (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
@@ -158,31 +162,6 @@
                    (setq *footstep-list* final-footstep)
                    (setq *goal-id* (send goal :goal_id :id))
                    ))))))))
-
-
-(defun walking-pose
-  (robot
-   &key (root-link-height-offset 0) ;; [mm]
-        (root-link-pitch-offset 0) ;; [deg]
-        (fix-coords (make-coords))
-        (default-pose-method :reset-manip-pose))
-  (send robot default-pose-method)
-  (send robot :fix-leg-to-coords fix-coords)
-  (let ((lc (mapcar #'(lambda (l)
-                        (send robot l :end-coords :copy-worldcoords))
-                    '(:rleg :lleg))))
-    (send robot :move-coords
-          (send
-           (send (send (car (send robot :links)) :copy-worldcoords)
-                 :translate (float-vector 0 0 root-link-height-offset))
-           :rotate (deg2rad root-link-pitch-offset) :y)
-          (car (send robot :links)))
-    (mapcar #'(lambda (l c)
-                (send robot l :inverse-kinematics c))
-            '(:rleg :lleg) lc)
-    (send robot :move-centroid-on-foot :both '(:rleg :lleg))
-    (send robot :angle-vector)
-    ))
 
 (defun change-standing-mode (first-step next-step)
   (let ((next nil))
@@ -279,6 +258,7 @@
                        (preempt-cb server nil)))))))
     (progn
       (print (send-all *footstep-list* :name))
+      (print *footstep-list*)
       (when *realp*
         (send *ri* :set-foot-steps *footstep-list*))
       (setq *footstep-list* nil)
@@ -326,6 +306,17 @@
         (ros::ros-info "footstep controller running in interruptible mode"))
     (load interface-file)
     (init-robot-from-name (ros::get-param "~robot_name" (unix::getenv "ROBOT")))
+    ;; Set ABC parameters
+    (send *ri* :set-gait-generator-param
+          :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+          :swing-trajectory-delay-time-offset 0.25
+          :default-orbit-type :stair
+          :default-step-time 1.3
+          :default-double-support-ratio 0.32
+          :default-step-height 0.03)
+    ;;(send *ri* :set-auto-balancer-param :default-zmp-offsets (list (float-vector 5 30 0) (float-vector 5 -30 0)))
+    (send *ri* :set-auto-balancer-param :default-zmp-offsets
+          (list (float-vector 10 30 0) (float-vector 10 -30 0)))
     )
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
