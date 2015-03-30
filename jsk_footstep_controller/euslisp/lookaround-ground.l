@@ -98,12 +98,14 @@
   (send *robot* :move-centroid-on-foot :both '(:lleg :rleg))
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
+  (unix:sleep 5)
   ;; Call /tilt_laser_listener/clear_cache
   (call-empty-service "/tilt_laser_listener/clear_cache")
   ;; Call /locomotion/input/request
   (call-empty-service "/locomotion/input/request")
   ;; Wait for next publish
   (wait-for-snapshot-publish)
+  ;;(read-line)
   (send *robot* :reset-pose)
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
