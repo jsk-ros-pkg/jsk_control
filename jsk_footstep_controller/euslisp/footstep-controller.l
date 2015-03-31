@@ -192,7 +192,9 @@
         (walking-pose *robot* :root-link-height-offset 0)
         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)
-        (send *ri* :set-gait-generator-param :default-orbit-type :cycloid))
+        ;;(send *ri* :set-gait-generator-param :default-orbit-type :cycloid)
+        (set-parameter-for-planar)
+        )
       (ros::ros-warn "move down 0 mm and change mode to cycloid"))
      ;; A
      ((or (and (eq *walking-state* :standing) (eq next :plane))
@@ -201,7 +203,9 @@
         (walking-pose *robot* :root-link-height-offset -50)
         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)
-        (send *ri* :set-gait-generator-param :default-orbit-type :cycloid))
+        ;;(send *ri* :set-gait-generator-param :default-orbit-type :cycloid)
+        (set-parameter-for-planar)
+        )
       (ros::ros-warn "move down -50 mm and change mode to cycloid"))
      ;; B
      ((or (and (eq *walking-state* :standing) (eq next :climing-up))
@@ -211,7 +215,9 @@
         (walking-pose *robot* :root-link-height-offset -90)
         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)
-        (send *ri* :set-gait-generator-param :default-orbit-type :stair))
+        ;;(send *ri* :set-gait-generator-param :default-orbit-type :stair)
+        (set-parameter-for-stair)
+        )
       (ros::ros-warn "move down -90 mm and change mode to stair"))
      (t
       (ros::ros-error "Unknown mode change ~A => ~A" *walking-state* next)))
@@ -309,6 +315,27 @@
       (send res :sexp (format nil "~A" *all-the-results*))
       res)))
 
+(defun set-parameter-for-stair ()
+  (send *ri* :set-gait-generator-param
+        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+        :swing-trajectory-delay-time-offset 0.25
+        :default-orbit-type :stair
+        :default-step-time 1.3
+        :default-double-support-ratio 0.32
+        :default-step-height 0.03)
+  (send *ri* :set-auto-balancer-param :default-zmp-offsets
+        (list (float-vector 10 30 0) (float-vector 10 -30 0))))
+
+(defun set-parameter-for-planar ()
+  (send *ri* :set-gait-generator-param
+        :default-orbit-type :cycloid
+        :default-step-time 1.1
+        :default-double-support-ratio 0.32
+        :default-step-height 0.05)
+  ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
+  (send *ri* :set-auto-balancer-param :default-zmp-offsets
+        (list (float-vector 10 10 0) (float-vector 10 -10 0))))
+
 (defun main()
   (ros::roseus "footstep_controller")
   ;; *ri*
@@ -321,16 +348,6 @@
     (load interface-file)
     (init-robot-from-name (ros::get-param "~robot_name" (unix::getenv "ROBOT")))
     ;; Set ABC parameters
-    ;; (send *ri* :set-gait-generator-param
-    ;;       :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
-    ;;       :swing-trajectory-delay-time-offset 0.25
-    ;;       :default-orbit-type :stair
-    ;;       :default-step-time 1.3
-    ;;       :default-double-support-ratio 0.32
-    ;;       :default-step-height 0.03)
-    ;;(send *ri* :set-auto-balancer-param :default-zmp-offsets (list (float-vector 5 30 0) (float-vector 5 -30 0)))
-    ;; (send *ri* :set-auto-balancer-param :default-zmp-offsets
-    ;;       (list (float-vector 10 30 0) (float-vector 10 -30 0)))
     )
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
