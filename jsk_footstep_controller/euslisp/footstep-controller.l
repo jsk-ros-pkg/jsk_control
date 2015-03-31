@@ -10,9 +10,10 @@
 (defvar *all-the-results* nil)
 
 (setq *realp* t)
-(setq *wait-contact-state* t)
-;;(setq *wait-contact-state* nil)
-(setq *check-breakpoint* t)
+;;(setq *wait-contact-state* t)
+(setq *wait-contact-state* nil)
+(setq *wait-convergence* t)
+(setq *check-breakpoint* nil)
 ;;(setq *realp* nil)
 ;; :standing
 ;; :plane
@@ -245,9 +246,11 @@
                (when *wait-contact-state* 
                  ;;(unix:sleep 1)
                  (wait-for-double-stance-phase))
-               (publish-breakpoint-text "Breakpoint!")
+               (when *wait-convergence*
+                 (wait-for-convergence))
                 ;;(format nil "Breakpoint!, error: ~A (~A)" *contact-error* (rad2deg *contact-error*)))
                (when *check-breakpoint*
+                 (publish-breakpoint-text "Breakpoint!")
                  (setq req (instance jsk_footstep_controller::RequireMonitorStatusRequest :init))
                    (send req :header *contact-header*)
                    (if(eq (send second-step :name) :rleg)
@@ -269,6 +272,17 @@
       (send server :set-succeeded (send server :result))
       )
     ))
+
+(defun wait-for-convergence ()
+  (let ((prev-angles (send *ri* :state :potentio-vector)))
+    (while (ros::ok)
+      (let ((angles (send *ri* :state :potentio-vector)))
+        (print (norm (v- prev-angles angles)))
+        (if (< (norm (v- prev-angles angles)) 0.1)
+            (return-from wait-for-convergence t))
+        (setq prev-angles angles)
+        (ros::sleep)
+        ))))
 
 (defun preempt-cb (server goal)
   (print 'preempt-cb)
@@ -307,16 +321,16 @@
     (load interface-file)
     (init-robot-from-name (ros::get-param "~robot_name" (unix::getenv "ROBOT")))
     ;; Set ABC parameters
-    (send *ri* :set-gait-generator-param
-          :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
-          :swing-trajectory-delay-time-offset 0.25
-          :default-orbit-type :stair
-          :default-step-time 1.3
-          :default-double-support-ratio 0.32
-          :default-step-height 0.03)
+    ;; (send *ri* :set-gait-generator-param
+    ;;       :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+    ;;       :swing-trajectory-delay-time-offset 0.25
+    ;;       :default-orbit-type :stair
+    ;;       :default-step-time 1.3
+    ;;       :default-double-support-ratio 0.32
+    ;;       :default-step-height 0.03)
     ;;(send *ri* :set-auto-balancer-param :default-zmp-offsets (list (float-vector 5 30 0) (float-vector 5 -30 0)))
-    (send *ri* :set-auto-balancer-param :default-zmp-offsets
-          (list (float-vector 10 30 0) (float-vector 10 -30 0)))
+    ;; (send *ri* :set-auto-balancer-param :default-zmp-offsets
+    ;;       (list (float-vector 10 30 0) (float-vector 10 -30 0)))
     )
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
