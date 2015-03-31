@@ -6,15 +6,31 @@
 (ros::roseus-add-srvs "std_srvs")
 (ros::roseus-add-srvs "jsk_footstep_planner")
 (ros::roseus-add-msgs "jsk_rviz_plugins")
-(load "~/ros/hydro_parent/src/jskeus/irteus/irtgraph.l")
+
+(comp:compile-file-if-src-newer
+  (format nil "~A/euslisp/footstep_planner_util.l"
+          (ros::rospack-find "jsk_footstep_planner")))
+(let ((old-module (find "footstep_planner_util" *loaded-modules*
+                        :key #'lisp::load-module-file-name :test #'equal)))
+  (if old-module (sys::unbinload old-module)))
+(load "footstep_planner_util")
+
+;;(load "~/ros/hydro_parent/src/jskeus/irteus/irtgraph.l")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner.l" (ros::rospack-find "jsk_footstep_planner")))
 ;; (load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
-(load "footstep_planner.so")
-;;(load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
+(let ((old-module (find "footstep_planner" *loaded-modules*
+                        :key #'lisp::load-module-file-name :test #'equal)))
+  (if old-module (sys::unbinload old-module)))
+;;(load "~/.ros/footstep_planner.so")
+(load "footstep_planner")
+;; (load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/simple_occupancy_grid.l" (ros::rospack-find "jsk_footstep_planner")))
-(load "simple_occupancy_grid.so")
+(let ((old-module (find "simple_occupancy_grid" *loaded-modules*
+                        :key #'lisp::load-module-file-name :test #'equal)))
+  (if old-module (sys::unbinload old-module)))
+(load "simple_occupancy_grid")
 ;;(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
 ;;(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
 
@@ -49,6 +65,7 @@
               ))))))
 
 (defun plan-execute-cb (server goal)
+  (print goal)
   (setq *evaled-node-num* 0)
   (send-all *grids* :prepare-for-planning)
   (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
@@ -71,9 +88,10 @@
                           :grids *grids*
                           :z-axis (float-vector 0 0 1)
                           :collisoin-robot-model nil))
-         (goal-foot-coords (mapcar #'footstep->consed-coords
+         (goal-foot-coords (mapcar #'(lambda (f)
+                                       (footstep->consed-coords f goal))
                                    (send goal :goal :goal_footstep :footsteps)))
-         (initial-foot-coords (mapcar #'footstep->consed-coords
+         (initial-foot-coords (mapcar #'(lambda (f) (footstep->consed-coords f goal))
                                       (send goal :goal :initial_footstep :footsteps)))
          (goal-coords (apply #'(lambda (x y) (midcoords 0.5 (cdr x) (cdr y))) goal-foot-coords))
          ;; If the first step of goal footstep is lleg, planning starts with lleg
@@ -149,7 +167,7 @@
                              ;;:init 1.0 :manhattan-heuristic prblm
                              :init 1.0 *heuristic* prblm
                              :render-leg-object *leg*)))
-      (let ((solver-nodes (send asolver :solve prblm :verbose nil)))
+      (let ((solver-nodes (send asolver :solve prblm)))
         (send prblm :report)
         (let ((result (send server :result)))
           (if solver-nodes              ;successfully solved!
@@ -389,7 +407,8 @@
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
   (setq *heuristic* (read-from-string
-                     (ros::get-param "~heuristic" ":stepcost-heuristic*")))
+                     (ros::get-param "~heuristic" ":stepcost-heuristic**")))
+                     ;;(ros::get-param "~heuristic" ":stepcost-z-heuristic*")))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
   (setq *use-gui* (ros::get-param "~use_gui" t))
@@ -430,7 +449,6 @@
           (x::window-main-one))
       (ros::sleep))
     ))
-
 
 (main)
 

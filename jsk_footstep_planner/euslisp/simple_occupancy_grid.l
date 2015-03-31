@@ -1,10 +1,13 @@
 ;; Utility to deal with jsk_recognition_msgs::SimpleOccupancyGrid(Array)
 
 (ros::roseus-add-msgs "jsk_recognition_msgs")
-(comp:compile-file-if-src-newer
-  (format nil "~A/euslisp/footstep_planner_util.l"
-          (ros::rospack-find "jsk_footstep_planner")))
-(load "footstep_planner_util.so")
+;; (comp:compile-file-if-src-newer
+;;   (format nil "~A/euslisp/footstep_planner_util.l"
+;;           (ros::rospack-find "jsk_footstep_planner")))
+;; (let ((old-module (find "footstep_planner_util" *loaded-modules*
+;;                         :key #'lisp::load-module-file-name :test #'equal)))
+;;   (if old-module (sys::unbinload old-module)))
+;; (load "footstep_planner_util.so")
 ;;(load "package://jsk_footstep_planner/euslisp/footstep_planner_util.l")
 (defun quaternion-from-two-vectors (a b)
   (let* ((v0 (normalize-vector a))

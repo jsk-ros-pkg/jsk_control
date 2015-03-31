@@ -1,10 +1,6 @@
-(load "models/arrow-object.l")
-(load "models/single-arrow-object.l")
-(comp:compile-file-if-src-newer
-  (format nil "~A/euslisp/footstep_planner_util.l"
-          (ros::rospack-find "jsk_footstep_planner")))
-(load "footstep_planner_util.so")
-
+;; (load "models/arrow-object.l")
+;; (load "models/single-arrow-object.l")
+;;(load "~/ros/hydro_parent/src/jskeus/irteus/irtgraph.l")
 ;; memo
 ;; Footstep is represented in coordinates.
 ;; Several additional information are stored in property-list.
@@ -443,8 +439,13 @@ check between leg-object and obstacles."
           50.0)
        (< (norm (send (send a :worldcoords) :difference-rotation
                       (send b :worldcoords)))
-          #.(deg2rad 5.0))))
+          #.(deg2rad 10.0))))
 
+(defun distance2d (a b)
+  (let ((diff (v- a b)))
+    (sqrt (+ (* (elt diff 0) (elt diff 0))
+             (* (elt diff 1) (elt diff 1))))))
+  
 ;; it has A* in the name of class, but
 ;; this algorithm is not "A*" in exact meaning.
 ;; Because estimation of the number of rotation and translation steps in
@@ -452,6 +453,7 @@ check between leg-object and obstacles."
 ;; However, in the most case, the algorithm behaves as A* algorithm.
 (defclass a*-footstep-graph-search-solver
   :super a*-graph-search-solver
+  ;;:super depth-first-graph-search-solver
   :slots (count target-problem heuristic-method wg arrived-at-position-p
           render-leg-object debug-counter))
                 
@@ -464,6 +466,7 @@ check between leg-object and obstacles."
     (setq debug-counter 0)
     (setq render-leg-object rlo)
     (send-super :init plbm)
+    ;;(send-super :init)
     self)
   ;; override :solve-init and :pop-from-open-list for debug view.
   (:solve-init (prblm)
@@ -473,6 +476,8 @@ check between leg-object and obstacles."
     "I want to replace 'find' in this method by dynamic kd-tree
 building and searching."
     (find (send n :state) close-list :test #'step-node=))
+  ;; (:pop-from-open-list (&key (debug nil))
+  ;;   (send-super :pop-from-open-list :debug t))
   (:null-open-list? ()
     (when (ros::time< (send target-problem :timeout) (ros::time-now))
       (ros::ros-warn "Planning take ~A secs, Timeout"
@@ -483,7 +488,7 @@ building and searching."
       (while (not foundp)
         (if (send-super :null-open-list?)
             (return-from :null-open-list? t)
-          (let ((candidate-node (send-super :pop-from-open-list :debug nil)))
+          (let ((candidate-node (send self :pop-from-open-list)))
             (cond ((null candidate-node)
                    (return-from :null-open-list? nil))
                   ((null (send (send candidate-node :state) :leg-face)) ;start state
@@ -502,9 +507,12 @@ building and searching."
             )))
       (incf debug-counter)
       ;; (ros::ros-info "~A is rejected" rejected-counter)
-      ;; (when (= (mod debug-counter 10) 0)
-      (send *irtviewer* :flush)
+      ;;(when (= (mod debug-counter 100) 0)
+        (send *irtviewer* :flush)
+        (x::window-main-one)
+        ;;)
       (not foundp)))
+  
   (:hn (n p)
     ;; [J.Kuffner et. al.,
     ;;  Footstep Planning Among Obstacles for Biped Robots,
@@ -603,14 +611,63 @@ building and searching."
       (let ((trans-cost (* (/ (distance (send goal-coords :worldpos)
                                         (send current-coords :worldpos))
                               step) 2)))
-        (if (> trans-cost 1)
-            (+ trans-cost
+        (+ trans-cost
                ;; rotation of direction
                (* 2  (/ (acos (v. v1 v2)) rotate))
                ;; rotation of goal
-               (* 2 (/ (acos (v. v1 v3)) rotate)))
-          ;; rotation of goal
-          (* 2 (/ (acos (v. v1 v3)) rotate))))))
+               (* 2 (/ (acos (v. v1 v3)) rotate))))))
+        ;; (if (> trans-cost 1)
+        ;;     (+ trans-cost
+        ;;        ;; rotation of direction
+        ;;        (* 2  (/ (acos (v. v1 v2)) rotate))
+        ;;        ;; rotation of goal
+        ;;        (* 2 (/ (acos (v. v1 v3)) rotate)))
+        ;;   ;; rotation of goal
+        ;;   (* 2 (/ (acos (v. v1 v3)) rotate))))))
+  (:stepcost-heuristic** (n p)
+    (let* ((start-state (send p :start-state))
+           (initial-expected-cost (send self :stepcost-heuristic* (instance solver-node :init start-state) p))
+           (cost (send self :stepcost-heuristic* n p)))
+      (let ((rate (/ cost initial-expected-cost)))
+        (* rate rate cost))))
+  (:stepcost-z-heuristic* (n p)
+    (let* ((start-state (send p :start-state))
+           (initial-expected-cost (send self :stepcost-z-heuristic (instance solver-node :init start-state) p))
+           (cost (send self :stepcost-z-heuristic n p)))
+      (let ((rate (/ cost initial-expected-cost)))
+        (* rate rate cost))))
+  (:stepcost-z-heuristic (n p)
+    (let* ((goal-coords (send p :goal-state))
+           (z-factor 10.0)
+           (step (send p :step-max))
+           (rotate (send p :rotate-max))
+           (current-coords
+            (send (send n :state) :robot-coords))
+           (leg-coords
+            (send (send n :state) :worldcoords))
+           (v1 (normalize-vector (v- (send goal-coords :worldpos)
+                                     (send leg-coords :worldpos))))
+           (v2 (matrix-column (send leg-coords :worldrot) 0))
+           (v3 (matrix-column (send goal-coords :worldrot) 0)))
+      (let* ((2d-trans-cost (* (/ (distance2d (send goal-coords :worldpos)
+                                              (send current-coords :worldpos))
+                                  step) 2))
+             (z-trans-cost (* (* (/ (abs (elt (v- (send goal-coords :worldpos)
+                                                  (send leg-coords :worldpos)) 2))
+                                    100)
+                                 2) z-factor))
+             (trans-cost (+ 2d-trans-cost z-trans-cost)))
+        ;;(format t "z-trans-cost ~A~%" z-trans-cost)
+        (cond
+         ;; ((< trans-cost 1)
+         ;;  (+ trans-cost (* 2 (/ (acos (v. v1 v3)) rotate))))
+         (t
+          (+ trans-cost
+             ;; rotation of direction
+             (* 2  (/ (acos (v. v1 v2)) rotate))
+             ;; rotation of goal
+             (* 2 (/ (acos (v. v1 v3)) rotate))))))))
+  
   ;; for visualize
   (:vertices ()
     (when target-problem
@@ -803,7 +860,7 @@ building and searching."
     (midcoords 0.5 a-leg b-leg))
   )
 
-(defun footstep->consed-coords (leg-step)
+(defun footstep->consed-coords (leg-step goal)
   (let ((pose-stamped
          (instance geometry_msgs::PoseStamped :init)))
     (send pose-stamped :header (send goal :goal :initial_footstep :header))
