@@ -122,20 +122,23 @@
           (send server :set-aborted result))
         (return-from plan-execute-cb nil)))
     (ros::ros-info "Running Planning")
-    ;; Force to fail for debug
-    ;; (let ((result (send server :result)))
-    ;;   (send server :set-aborted result))
     ;; creating initial step node from goal msg
     (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
-      (send prblm :start-state
-            (instance step-node :init
-                      :worldcoords (cadr leg-coords)
-                      :prev-coords (car leg-coords)
-                      :l/r start-leg
-                      :robot-coords (midcoords 0.5
-                                               (car leg-coords)
-                                               (cadr leg-coords))
-                      :angle-vector nil)))
+      ;; Project leg-coords onto grid first
+      (let ((projected-leg-coords (mapcar
+                                   #'(lambda (c)
+                                       (project-coordinates-on-nearest-grid
+                                        c *grids*))
+                                   leg-coords)))
+        (send prblm :start-state
+              (instance step-node :init
+                        :worldcoords (cadr projected-leg-coords)
+                        :prev-coords (car projected-leg-coords)
+                        :l/r start-leg
+                        :robot-coords (midcoords 0.5
+                                                 (car projected-leg-coords)
+                                                 (cadr projected-leg-coords))
+                        :angle-vector nil))))
     (send prblm :goal-state goal-coords) ; goal coords
     (send prblm :goal-footstep goal-foot-coords)
     ;;(send prblm :setup-goal initial-foot-coords)
@@ -354,6 +357,22 @@
                       (make-coords :pos (float-vector x y 0)
                                    :rpy (float-vector (deg2rad theta) 0 0))))
                 (cdr (assoc :successors param))))
+  (setq *footstep-transifion-first-successors*
+        (mapcar #'(lambda (successor-param)
+                    (let ((x (cdr (assoc :x successor-param)))
+                          (y (cdr (assoc :y successor-param)))
+                          (theta (cdr (assoc :theta successor-param))))
+                      (make-coords :pos (float-vector x y 0)
+                                   :rpy (float-vector (deg2rad theta) 0 0))))
+                (cdr (assoc :transition-first-successors param))))
+  (setq *footstep-transifion-second-successors*
+        (mapcar #'(lambda (successor-param)
+                    (let ((x (cdr (assoc :x successor-param)))
+                          (y (cdr (assoc :y successor-param)))
+                          (theta (cdr (assoc :theta successor-param))))
+                      (make-coords :pos (float-vector x y 0)
+                                   :rpy (float-vector (deg2rad theta) 0 0))))
+                (cdr (assoc :transition-second-successors param))))
   )
 
 (defun main ()
