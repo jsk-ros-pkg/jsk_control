@@ -1,13 +1,17 @@
 ;; Parameter file for footstep planning
 
 (setq *footstep-parameters*
-      `((:foot-size . ((:x . 207)
+      `((:foot-size . ((:x . 235)
                        (:z . 1)
                        (:y . 135)))
-        (:default-projection-limit
+        (:default-transition-limit
           ((:z . 210)
-           (:roll . 15)
-           (:pitch . 15)))
+           (:roll . 10)
+           (:pitch . 10)))
+        (:transition-first-successors
+          (:transform (:x . 250) (:y . 210) (:theta . 0)))
+        (:transition-second-successors
+          (:transform (:x . 0) (:y . 210) (:theta . 0)))
         (:successors
           (:transform . ((:x . -80)  (:y . 210) (:theta . 0.0)))
           (:transform . ((:x . -40)  (:y . 248) (:theta . 4.58366)))
@@ -19,44 +23,42 @@
           (:transform . ((:x . 52.5) (:y . 260) (:theta . 0.0)))
           (:transform . ((:x . 75)   (:y . 210) (:theta . 0.0)))
           (:transform . ((:x . 100)  (:y . 210) (:theta . 0.0)))
-          ,@(reduce #'append
-                    (mapcar #'(lambda (x)
-                                (list (cons :transform
-                                            (list (cons :x x)
-                                                  (cons :y 210)
-                                                  (cons :theta 5)))
-                                      (cons :transform
-                                            (list (cons :x x)
-                                                  (cons :y 210)
-                                                  (cons :theta -5)))
-                                      (cons :transform
-                                            (list (cons :x x)
-                                                  (cons :y 210)
-                                                  (cons :theta 0)))))
-                            '(250
-                              ;;240
-                              230
-                              ;;220
-                              210
-                              200
-                              ;; 190
-                              ;; 180
-                              ;; 170
-                              ;; 160
-                              150
-                              ;; 140
-                              ;; 130
-                              ;; 120
-                              ;; 110
-                              100
-                              ;; 90
-                              ;; 80
-                              ;; 70
-                              ;; 60
-                              50
-                              ;; 40
-                              ;; 30
-                              ;; 20
-                              10
-                              0)))
+          (:transform (:x . 230) (:y . 210) (:theta . 5))
+          (:transform (:x . 230) (:y . 210) (:theta . -5))
+          (:transform (:x . 230) (:y . 210) (:theta . 0))
+          (:transform (:x . 210) (:y . 210) (:theta . 5))
+          (:transform (:x . 210) (:y . 210) (:theta . -5))
+          ;; (:transform (:x . 210) (:y . 210) (:theta . 10))
+          ;; (:transform (:x . 210) (:y . 210) (:theta . -10))
+          (:transform (:x . 210) (:y . 210) (:theta . 0))
+          (:transform (:x . 200) (:y . 210) (:theta . 5))
+          (:transform (:x . 200) (:y . 210) (:theta . -5))
+          ;; (:transform (:x . 200) (:y . 210) (:theta . 10))
+          ;; (:transform (:x . 200) (:y . 210) (:theta . -10))
+          (:transform (:x . 200) (:y . 210) (:theta . 0))
+          (:transform (:x . 150) (:y . 210) (:theta . 5))
+          (:transform (:x . 150) (:y . 210) (:theta . -5))
+          ;; (:transform (:x . 150) (:y . 210) (:theta . 10))
+          ;; (:transform (:x . 150) (:y . 210) (:theta . -10))
+          (:transform (:x . 150) (:y . 210) (:theta . 0))
+          (:transform (:x . 100) (:y . 210) (:theta . 5))
+          (:transform (:x . 100) (:y . 210) (:theta . -5))
+          ;; (:transform (:x . 100) (:y . 210) (:theta . 10))
+          ;; (:transform (:x . 100) (:y . 210) (:theta . -10))
+          (:transform (:x . 100) (:y . 210) (:theta . 0))
+          (:transform (:x . 50) (:y . 210) (:theta . 5))
+          (:transform (:x . 50) (:y . 210) (:theta . -5))
+          ;; (:transform (:x . 50) (:y . 210) (:theta . 10))
+          ;; (:transform (:x . 50) (:y . 210) (:theta . -10))
+          (:transform (:x . 50) (:y . 210) (:theta . 0))
+          (:transform (:x . 10) (:y . 210) (:theta . 5))
+          (:transform (:x . 10) (:y . 210) (:theta . -5))
+          ;; (:transform (:x . 10) (:y . 210) (:theta . 10))
+          ;; (:transform (:x . 10) (:y . 210) (:theta . -10))
+          (:transform (:x . 10) (:y . 210) (:theta . 0))
+          (:transform (:x . 0) (:y . 210) (:theta . 5))
+          (:transform (:x . 0) (:y . 210) (:theta . -5))
+          ;; (:transform (:x . 0) (:y . 210) (:theta . 10))
+          ;; (:transform (:x . 0) (:y . 210) (:theta . -10))
+          (:transform (:x . 0) (:y . 210) (:theta . 0))
           )))

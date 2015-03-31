@@ -10,9 +10,10 @@
 (defvar *all-the-results* nil)
 
 (setq *realp* t)
-(setq *wait-contact-state* t)
-;;(setq *wait-contact-state* nil)
-(setq *check-breakpoint* t)
+;;(setq *wait-contact-state* t)
+(setq *wait-contact-state* nil)
+(setq *wait-convergence* t)
+(setq *check-breakpoint* nil)
 ;;(setq *realp* nil)
 ;; :standing
 ;; :plane
@@ -251,9 +252,11 @@
                (when *wait-contact-state* 
                  ;;(unix:sleep 1)
                  (wait-for-double-stance-phase))
-               (publish-breakpoint-text "Breakpoint!")
+               (when *wait-convergence*
+                 (wait-for-convergence))
                 ;;(format nil "Breakpoint!, error: ~A (~A)" *contact-error* (rad2deg *contact-error*)))
                (when *check-breakpoint*
+                 (publish-breakpoint-text "Breakpoint!")
                  (setq req (instance jsk_footstep_controller::RequireMonitorStatusRequest :init))
                    (send req :header *contact-header*)
                    (if(eq (send second-step :name) :rleg)
@@ -275,6 +278,17 @@
       (send server :set-succeeded (send server :result))
       )
     ))
+
+(defun wait-for-convergence ()
+  (let ((prev-angles (send *ri* :state :potentio-vector)))
+    (while (ros::ok)
+      (let ((angles (send *ri* :state :potentio-vector)))
+        (print (norm (v- prev-angles angles)))
+        (if (< (norm (v- prev-angles angles)) 0.1)
+            (return-from wait-for-convergence t))
+        (setq prev-angles angles)
+        (ros::sleep)
+        ))))
 
 (defun preempt-cb (server goal)
   (print 'preempt-cb)

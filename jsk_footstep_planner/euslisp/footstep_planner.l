@@ -5,6 +5,17 @@
           (ros::rospack-find "jsk_footstep_planner")))
 (load "footstep_planner_util.so")
 
+;; memo
+;; Footstep is represented in coordinates.
+;; Several additional information are stored in property-list.
+;;   * :projecting-grid
+;;      Occupancy-Grid instance which is used to project the coordinates
+;;      on planar region
+;; these information too. It means that following should work.
+;;      `(eq (get (get c :previous-coordinates) :projecting-grid)
+;;           (get c :projecting-grid))`
+
+
 (defclass footstep-parameter
   :super propertied-object
   :slots (legs-num))
@@ -249,30 +260,65 @@ footstep-parameter"))
               (face-placable-p next-leg-face grids)))
             (t
              t)))))
+  (:successors-without-grids (state &key (verbose nil))
+    (let* ((current-leg (send state :l/r))
+           (current-step-coords (send state :worldcoords))
+           (next-leg (send footstep-param :next-leg current-leg)))
+      (let ((next-coords-candidate (send footstep-param :next-step-coords
+                                         (send state :worldcoords)
+                                         next-leg
+                                         (send state :step-name))))
+        (ros::ros-info "~A candidates" (length next-coords-candidate))
+        ;; remove steps collide with obstacles
+        next-coords-candidate)))
+  (:successors-with-grids (state &key (verbose nil))
+    (let* ((current-leg (send state :l/r))
+           (current-step-coords (send state :worldcoords))
+           (current-grid (get current-step-coords :projecting-grid))
+           (next-leg (send footstep-param :next-leg current-leg)))
+      ;; check footstep level transition
+      ;;     prev       current     next
+      ;; 1. level0  ->   level1  -> level1
+      ;; 2. level0  ->   level0  -> level1
+      ;; 3. level0  ->   level0  -> level0
+      ;; 4. level0  ->   level1  -> level2 (not supported)
+      ;; First is this the case of 1?
+      (if (not (eq (get (send state :prev-coords) :projecting-grid)
+                   (get current-step-coords :projecting-grid)))
+          ;; case 1
+          (let ((next-coord-candidate
+                 (send footstep-param :transition-second-step-coords
+                       current-step-coords
+                       next-leg
+                       (send state :step-name))))
+            (project-and-remove-on-grids
+             next-coord-candidate (list current-grid)))
+        ;; case 2-4
+        (let ((same-level-candidate       ;case  3
+                (send footstep-param :same-grid-next-steps
+                      current-step-coords
+                      next-leg
+                      (send state :step-name)))
+              (different-level-candidate ;case 2
+               (send footstep-param :transition-first-step-coords
+                       current-step-coords
+                       next-leg
+                       (send state :step-name))))
+          (append
+           (remove-not-on-grids same-level-candidate current-grid)
+           (project-and-remove-on-grids
+            different-level-candidate grids (list current-grid)))))))
   (:successors (state &key (verbose nil))
     (bench-timer
      successors-timer
-     (when timeout                            ;check the timeout
-       (when (< (- (send timeout :to-sec) (send (ros::time-now) :to-sec)) 0)
-         (ros::ros-warn "Planning take ~A secs, Timeout"
-           (- (send timeout :to-sec) (send (ros::time-now) :to-sec)))
-         (return-from :successors nil)))
-     (let* ((current-leg (send state :l/r))
+     (let* ((next-coords-candidate
+             (cond
+              (grids (send self :successors-with-grids state :verbose verbose))
+              (t (send self :successors-without-grids state :verbose verbose))))
             (current-step-coords (send state :worldcoords))
+            (current-leg (send state :l/r))
             (next-leg (send footstep-param :next-leg current-leg)))
-       (let ((next-coords-candidate (send footstep-param :next-step-coords
-                                          (send state :worldcoords)
-                                          next-leg
-                                          (send state :step-name))))
-         ;; mapping to the grids if needed
-         (when (and grids)
-           (setq next-coords-candidate
-                 (bench-timer
-                  append-footstep-candidates-by-grids-timer
-                  (append-footstep-candidates-by-grids next-coords-candidate grids))))
-         (ros::ros-info "~A candidates" (length next-coords-candidate))
-         ;; remove steps collide with obstacles
-         (let ((ret nil))
+       (let ((ret nil))
            (dolist (c next-coords-candidate)
              (let ((cdr-c (cdr c)))
                (let ((robot-coords
@@ -294,7 +340,7 @@ footstep-parameter"))
                                  :step-name (car c)
                                  :l/r next-leg))
                  (push c ret))))
-           ret)))))
+           ret))))
   (:collision-with-obstacles-collision-robot-model-p (coords &key (debug nil))
     (send collision-robot-model :newcoords coords)
     (send collision-robot-model :worldpos)
@@ -428,8 +474,10 @@ check between leg-object and obstacles."
 building and searching."
     (find (send n :state) close-list :test #'step-node=))
   (:null-open-list? ()
-    (if (ros::time< (send target-problem :timeout) (ros::time-now))
-        (return-from :null-open-list? t))
+    (when (ros::time< (send target-problem :timeout) (ros::time-now))
+      (ros::ros-warn "Planning take ~A secs, Timeout"
+        (- (send (send target-problem :timeout) :to-sec) (send (ros::time-now) :to-sec)))
+      (return-from :null-open-list? t))
     (let ((foundp nil)
           (rejected-counter 0))
       (while (not foundp)
@@ -455,7 +503,7 @@ building and searching."
       (incf debug-counter)
       ;; (ros::ros-info "~A is rejected" rejected-counter)
       ;; (when (= (mod debug-counter 10) 0)
-      ;;   (send *irtviewer* :flush))
+      (send *irtviewer* :flush)
       (not foundp)))
   (:hn (n p)
     ;; [J.Kuffner et. al.,
@@ -614,7 +662,14 @@ building and searching."
 
 (defclass ros-footstep-parameter
   :super footstep-parameter
-  :slots (left-footsteps right-footsteps size-x size-y size-z))
+  :slots (left-footsteps
+          right-footsteps
+          left-first-transition-footsteps
+          right-first-transition-footsteps
+          left-second-transition-footsteps
+          right-second-transition-footsteps
+          size-x size-y size-z
+          ))
 (defmethod ros-footstep-parameter
   (:init (x y)
     (setq size-x x)
@@ -646,44 +701,59 @@ building and searching."
   (:gen-footstep (&rest args)
     (send self :gen-left-footstep)
     (send self :gen-right-footstep)
+    (send self :gen-left-first-transition-footstep)
+    (send self :gen-right-first-transition-footstep)
+    (send self :gen-left-second-transition-footstep)
+    (send self :gen-right-second-transition-footstep)
     )
-  (:gen-left-footstep ()
-    (let ((footsteps (mapcar #'(lambda (x) (send x :copy-worldcoords))
-                             *footstep-successors*)))
-      (dotimes (i (length footsteps))
-        (let ((f (elt footsteps i)))
-          (send self :gen-step :left i f)))
-      ))
-  (:gen-right-footstep ()
+  (:_gen-footstep (successors l/r &optional reversed)
     (let ((footsteps (mapcar
                       #'(lambda (x)
-                          (let ((pos (send x :worldpos))
-                                (theta (car (car (send x :rpy-angle)))))
-                            (make-coords :pos (float-vector (elt pos 0)
-                                                            (- (elt pos 1))
-                                                            0)
-                                         :rpy (float-vector (- theta) 0 0))))
-                      *footstep-successors*)))
+                          (if (not reversed)
+                              (send x :copy-worldcoords)
+                            (let ((pos (send x :worldpos))
+                                  (theta (car (car (send x :rpy-angle)))))
+                              (make-coords :pos (float-vector (elt pos 0)
+                                                              (- (elt pos 1))
+                                                              0)
+                                           :rpy (float-vector (- theta) 0 0)))))
+                      successors)))
       (dotimes (i (length footsteps))
         (let ((f (elt footsteps i)))
-          (send self :gen-step :right i f)))
-      ;; (do-until-key
-      ;;  (x::window-main-one)
-      ;;  (send-all (append *footstep-successors* footsteps) :draw-on :flush t)
-      ;;  (unix::usleep 1000))
+          (send self :gen-step l/r i f)))
       ))
+  (:gen-left-footstep ()
+    (send self :_gen-footstep *footstep-successors* :left))
+  (:gen-right-footstep ()
+    (send self :_gen-footstep *footstep-successors* :right t))
+  (:gen-left-first-transition-footstep ()
+    (send self :_gen-footstep *footstep-transifion-first-successors* :left-first-transition))
+  (:gen-right-first-transition-footstep ()
+    (send self :_gen-footstep *footstep-transifion-first-successors* :right-first-transition t))
+  (:gen-left-second-transition-footstep ()
+    (send self :_gen-footstep *footstep-transifion-second-successors* :left-second-transition))
+  (:gen-right-second-transition-footstep ()
+    (send self :_gen-footstep *footstep-transifion-second-successors* :right-second-transition t))
   (:gen-step (l/r name coords)
     (let ((s (cons name coords)))
       (case l/r
         ((:left :lleg) (push s left-footsteps))
         ((:right :rleg) (push s right-footsteps))
-        (t (error "unkown leg ~A" l/r)))
+        ((:left-first-transition :lleg-first-transition)
+         (push s left-first-transition-footsteps))
+        ((:right-first-transition :rleg-first-transition)
+         (push s right-first-transition-footsteps))
+        ((:left-second-transition :lleg-second-transition)
+         (push s left-second-transition-footsteps))
+        ((:right-second-transition :rleg-second-transition)
+         (push s right-second-transition-footsteps))
+        (t (error "unknown leg ~A" l/r)))
       ))
   (:transformation-by-leg-and-step-name (leg-name step-name)
     (case leg-name
       ((:left :lleg) (cdr (assoc step-name left-footsteps)))
       ((:right :rleg) (cdr (assoc step-name right-footsteps)))
-      (t (error "unkown leg ~A" leg-name))))
+      (t (error "unknown leg ~A" leg-name))))
   (:next-leg (l/r)
     (if (eq l/r :lleg) :rleg :lleg))
   (:next-step-coords (support-leg-coords l/r &optional (name nil))
@@ -691,12 +761,43 @@ building and searching."
            (case l/r
              ((:left :lleg) left-footsteps)
              ((:right :rleg) right-footsteps)
-             (t (error "unkown leg ~A" l/r)))))
+             ((:left-first-transition :lleg-first-transition)
+              left-first-transition-footsteps)
+             ((:right-first-transition :rleg-first-transition)
+              right-first-transition-footsteps)
+             ((:left-second-transition :lleg-second-transition)
+              left-second-transition-footsteps)
+             ((:right-second-transition :rleg-second-transition)
+              right-second-transition-footsteps)
+             (t (error "unknown leg ~A" l/r)))))
       (mapcar #'(lambda (trans)
-                  (cons (car trans)     ;transform
-                        (send (send support-leg-coords :copy-worldcoords) ;new pose
-                              :transform (cdr trans))))
+                  (let ((next-pose
+                         (send (send support-leg-coords :copy-worldcoords)
+                               :transform (cdr trans))))
+                    ;; Keep plist-values
+                    (setf (get next-pose :projecting-grid)
+                          (get support-leg-coords :projecting-grid))
+                    (unless (get support-leg-coords :projecting-grid)
+                      (ros::ros-error "projecting-grid is nil!")
+                      (error))
+                    (cons (car trans)     ;transform
+                          next-pose)))
               transformations)))
+  (:transition-second-step-coords (support-leg-coords l/r &optional (name nil))
+    (send self :next-step-coords support-leg-coords
+          (case l/r
+           ((:left :lleg) :left-second-transition)
+           ((:right :rleg) :right-second-transition))
+          name))
+  (:transition-first-step-coords (support-leg-coords l/r &optional (name nil))
+    (send self :next-step-coords support-leg-coords
+          (case l/r
+           ((:left :lleg) :left-first-transition)
+           ((:right :rleg) :right-first-transition))
+          name))
+  (:same-grid-next-steps (support-leg-coords l/r &optional (name nil))
+    ;; Do not need to project that
+    (send self :next-step-coords support-leg-coords l/r name))
   (:move-robot-model (&rest args) nil)
   (:calc-robot-coords (a-leg b-leg &rest args) ;dummy argumentsn
     (midcoords 0.5 a-leg b-leg))
