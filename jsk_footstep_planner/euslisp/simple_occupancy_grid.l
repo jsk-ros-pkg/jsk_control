@@ -258,7 +258,7 @@ which is inside of occupied cell"
                    (send coords :rotate-vector (float-vector 0 0 1))
                    (send plane-coords :rotate-vector (float-vector 0 0 1))))))
         (let ((ret (make-coords :pos point :rot (m* rot (send coords :worldrot)))))
-          (setf (get ret :projected-grid) self)
+          (setf (get ret :projecting-grid) self)
           ret))))
   (:placablep (point n)
     (bench-timer2
@@ -439,13 +439,57 @@ which is inside of occupied cell"
                           :local nil))
               (progn
                 ;; memoize projecting grid
-                
                 (setf (get projected-coords :projecting-grid) grid)
                 (setq new-candidates (cons
                                       (cons (car candidate)
                                             projected-coords)
                                       new-candidates)))))))
     new-candidates)))
+
+(defun project-coordinates-on-nearest-grid (coords grids)
+  (let ((min-distance 1000000)
+        (min-grid nil))
+    (dolist (grid grids)
+      (let ((projected-coords (send grid :project-coords coords)))
+        (if (send grid :occupiedp
+                  (send grid :index-pair (send projected-coords :worldpos)
+                        :local nil))
+            (let ((distance (norm (send coords :difference-position projected-coords))))
+              (when (< distance min-distance)
+                (setq min-distance distance)
+                (setq min-grid grid))))))
+    (if min-grid (send min-grid :project-coords coords))))
+
+(defun project-and-remove-on-grids (candidate-coordinates
+                                    grids-candidate
+                                    &optional (grids-blacklist))
+  "
+   1. Project coordinates on grid
+   2. Check center of coordinate can be supported by the grid
+   "
+  (let ((new-candidates nil))
+    (dolist (grid grids-candidate)
+      (when (not (member grid grids-blacklist))
+        (dolist (candidate candidate-coordinates)
+          (let ((projected-coords (send grid :project-coords (cdr candidate))))
+            (when (send grid :occupiedp
+                        (send grid
+                              :index-pair (send projected-coords :worldpos)
+                              :local nil))
+              (setf (get projected-coords :projecting-grid) grid) ;memoize :projecting-grid
+              (setf new-candidates (cons (cons (car candidate)
+                                               projected-coords)
+                                         new-candidates)))))))
+    (ros::ros-info "~A/~A projecting candidate" (length new-candidates) (length candidate-coordinates))
+    new-candidates))
+
+(defun remove-not-on-grids (candidate-coordinates
+                            grid)
+  (remove-if-not #'(lambda (c)
+                     (let ((coords (cdr c)))
+                       (send grid :occupiedp
+                             (send grid :index-pair (send coords :worldpos) :local nil))))
+                 candidate-coordinates))
 
 #|
 (load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
