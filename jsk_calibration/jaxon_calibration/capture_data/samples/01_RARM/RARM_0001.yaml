@@ -1,0 +1,12 @@
+camera_measurements:
+- {cam_id: head_camera, config: mmurooka_board}
+joint_commands:
+- controller: fullbody_controller
+  segments:
+  - duration: 1.05359
+    positions: [0.0, 0.0, -0.349066, 0.698132, -0.349066, 0.0, 0.0, 0.0, -0.349066, 0.698132, -0.349066, 0.0, 0.0, 0.0, 0.0, -0.523903, -0.174837, 0.638238, -0.247361, -0.937785, -0.459183, -1.84088, -1.17778, 0.450162, -0.892205, 0.0, 0.698132, 0.349066, 0.087266, -1.39626, 0.0, 0.0, -0.349066]
+joint_measurements:
+- {chain_id: RARM_chain,  config: tight_tol}
+- {chain_id: head_chain,  config: tight_tol}
+sample_id: RARM_0001
+target: {chain_id: RARM_chain, target_id: mmurooka_board}
