@@ -424,6 +424,10 @@
       (ros::ros-error "Failed to snap footprint"))
     res))
 
+(defun toggle-gui-debug-cb (req)
+  (setq *gui-debug* (not *gui-debug*))
+  (send req :response))
+
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
   ;; read parameters
@@ -443,6 +447,7 @@
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
   (setq *use-gui* (ros::get-param "~use_gui" t))
+  (setq *gui-debug* (ros::get-param "~gui_debug" nil))
   (if *use-gui*
       (make-irtviewer))
   (when *use-env-server*
@@ -466,6 +471,7 @@
   (ros::advertise (format nil "~A/footstep_successors" (ros::get-name)) jsk_footstep_msgs::FootstepArray)
   (ros::advertise (format nil "~A/footstep_successors_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
   (ros::advertise-service (format nil "~A/project_footprint" (ros::get-name)) jsk_interactive_marker::SnapFootPrint #'snap-footprint-cb)
+  (ros::advertise-service (format nil "~A/toggle_gui_debug" (ros::get-name)) std_srvs::Empty #'toggle-gui-debug-cb)
   ;; (ros::advertise-service "/change_successor"
   ;;   jsk_footstep_planner::ChangeSuccessor
   ;;   #'change-successor-cb)
