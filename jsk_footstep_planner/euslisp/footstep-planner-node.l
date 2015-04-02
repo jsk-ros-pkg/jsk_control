@@ -5,6 +5,7 @@
 (ros::roseus-add-srvs "jsk_pcl_ros")
 (ros::roseus-add-srvs "std_srvs")
 (ros::roseus-add-srvs "jsk_footstep_planner")
+(ros::roseus-add-srvs "jsk_interactive_marker")
 (ros::roseus-add-msgs "jsk_rviz_plugins")
 
 (comp:compile-file-if-src-newer
@@ -393,6 +394,36 @@
                 (cdr (assoc :transition-second-successors param))))
   )
 
+(defun snap-footprint-cb (req)
+  (let ((res (send req :response)))
+    (when *grids*
+      (let* ((input-pose (send req :input_pose))
+             (input-coords (ros::tf-pose-stamped->coords input-pose))
+             (trans (lookup-transform-with-duration
+                     *tf*
+                     *global-frame-id*
+                     (send input-pose :header :frame_id)
+                     (send input-pose :header :stamp)
+                     1.0)))
+        (when trans
+          (let ((transformed-input-coords (send trans :transform input-coords)))
+            (let ((projected-coords
+                   (project-coordinates-on-nearest-grid
+                    transformed-input-coords
+                    *grids*)))
+              (when projected-coords
+                (send res :success t)
+                (send res :snapped_pose
+                      (ros::coords->tf-pose-stamped
+                        projected-coords
+                        (send input-pose :header :frame_id)))
+                (send (send res :snapped_pose) :header :stamp
+                      (send input-pose :header :stamp))
+                ))))))
+    (unless (send res :success)
+      (ros::ros-error "Failed to snap footprint"))
+    res))
+
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
   ;; read parameters
@@ -434,6 +465,7 @@
   (ros::advertise (format nil "~A/footstep_count_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
   (ros::advertise (format nil "~A/footstep_successors" (ros::get-name)) jsk_footstep_msgs::FootstepArray)
   (ros::advertise (format nil "~A/footstep_successors_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
+  (ros::advertise-service (format nil "~A/project_footprint" (ros::get-name)) jsk_interactive_marker::SnapFootPrint #'snap-footprint-cb)
   ;; (ros::advertise-service "/change_successor"
   ;;   jsk_footstep_planner::ChangeSuccessor
   ;;   #'change-successor-cb)
