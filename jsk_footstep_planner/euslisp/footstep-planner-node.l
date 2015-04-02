@@ -351,6 +351,8 @@
                                    (send msg :grids))))
   (dotimes (i (length *grids*))
     (setf (get (elt *grids* i) :face-color) (color-category20 i)))
+  (when *remove-shadow-cells*
+    (remove-cells-with-projection *grids*))
   (when *use-gui*
     (send *irtviewer* :objects *grids*)
     (send *irtviewer* :draw-objects))
@@ -450,6 +452,7 @@
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
   (setq *use-gui* (ros::get-param "~use_gui" t))
+  (setq *remove-shadow-cells* (ros::get-param "~remove_shadow_cells" t))
   (setq *gui-debug* (ros::get-param "~gui_debug" nil))
   (setq *use-local-search* (ros::get-param "~use_local_search" t))
   (if *use-gui*
