@@ -498,19 +498,21 @@ building and searching."
                     (send (send candidate-node :state) :leg-face)
                     (send (send candidate-node :state) :projecting-grid))
                    (send self :add-to-open-list candidate-node)
-                   (send (send (send candidate-node :state) :leg-face) :draw-on :flush nil)
+                   (when *gui-debug*
+                     (send (send (send candidate-node :state) :leg-face)
+                           :draw-on :flush nil))
                    (setq foundp t))
                   (t
-                   (send (send (send candidate-node :state) :leg-face) :draw-on :flush nil :color (float-vector 0 1 0))
+                   (when *gui-debug*
+                     (send (send (send candidate-node :state) :leg-face)
+                           :draw-on :flush nil :color (float-vector 0 1 0)))
                    (incf rejected-counter)
                    nil))
             )))
       (incf debug-counter)
-      ;; (ros::ros-info "~A is rejected" rejected-counter)
-      ;;(when (= (mod debug-counter 100) 0)
+      (when *gui-debug*
         (send *irtviewer* :flush)
-        (x::window-main-one)
-        ;;)
+        (x::window-main-one))
       (not foundp)))
   
   (:hn (n p)
