@@ -23,9 +23,8 @@
 (let ((old-module (find "footstep_planner" *loaded-modules*
                         :key #'lisp::load-module-file-name :test #'equal)))
   (if old-module (sys::unbinload old-module)))
-;;(load "~/.ros/footstep_planner.so")
 (load "footstep_planner")
-;; (load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
+;;(load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/simple_occupancy_grid.l" (ros::rospack-find "jsk_footstep_planner")))
 (let ((old-module (find "simple_occupancy_grid" *loaded-modules*
@@ -84,6 +83,7 @@
                           :wd 0.8
                           :wp 0.0
                           :wg 1.0
+                          :transition-limit *transition-limit*
                           :timeout (ros::time+ start-time (ros::time *timeout*))
                           :planes *planes*
                           :grids *grids*
@@ -141,6 +141,7 @@
           (send server :set-aborted result))
         (return-from plan-execute-cb nil)))
     (ros::ros-info "Running Planning")
+    
     ;; creating initial step node from goal msg
     (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
       ;; Project leg-coords onto grid first
@@ -392,6 +393,8 @@
                       (make-coords :pos (float-vector x y 0)
                                    :rpy (float-vector (deg2rad theta) 0 0))))
                 (cdr (assoc :transition-second-successors param))))
+  (setq *transition-limit*
+        (cdr (assoc :default-transition-limit param)))
   )
 
 (defun snap-footprint-cb (req)
@@ -456,13 +459,6 @@
   (when *use-planes*
     (ros::subscribe "planes" jsk_recognition_msgs::PolygonArray #'planes-cb))
   
-  ;; (ros::advertise "/footstep" jsk_footstep_msgs::FootstepArray)
-  ;; (ros::advertise "/footstep_time" std_msgs::Float32)
-  ;; (ros::advertise "/footstep_count" std_msgs::Float32)
-  ;; (ros::advertise "/footstep_time_text" jsk_rviz_plugins::OverlayText)
-  ;; (ros::advertise "/footstep_count_text" jsk_rviz_plugins::OverlayText)
-  ;; (ros::advertise "/footstep_successors" jsk_footstep_msgs::FootstepArray)
-  ;; (ros::advertise "/footstep_successors_text" jsk_rviz_plugins::OverlayText)
   (ros::advertise (format nil "~A/footstep" (ros::get-name)) jsk_footstep_msgs::FootstepArray)
   (ros::advertise (format nil "~A/footstep_time" (ros::get-name)) std_msgs::Float32)
   (ros::advertise (format nil "~A/footstep_count" (ros::get-name)) std_msgs::Float32)
