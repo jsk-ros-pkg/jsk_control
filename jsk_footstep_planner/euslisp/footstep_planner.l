@@ -184,18 +184,28 @@ footstep-parameter"))
         (setq goal-leg-index (leg-index->leg-symbol min-index))
         (setq goal-corods (find-if #'(lambda (g) (eq (car g) goal-leg-index)) goal-footstep))
         )))
+  (:goal-footstep-coords (l/r)
+    (cdr (assoc l/r goal-footstep)))
   (:goal-test (state &key (debug-view nil))
-    ;;(if (eq (send state :l/r) goal-leg-index)
-        (let ((current-coords (send state :robot-coords)))
-          (let ((ndiff-pos (distance (send current-coords :worldpos)
-                                     (send goal-state :worldpos))))
-            (if (or (not thr) (< ndiff-pos thr))
-                (let* ((diff-rot (send current-coords
-                                       :difference-rotation goal-state))
-                       (ndiff-rot (norm diff-rot)))
-                  ;; when thr or rthr is nil, test returns t
-                  (or (not rthr) (< ndiff-rot rthr)))))))
-;;    )
+    (let ((current-coords (send state :worldcoords)))
+      (let ((ndiff-pos (distance (send current-coords :worldpos)
+                                 (send (send self :goal-footstep-coords (send state :l/r-index)) :worldpos))))
+        (if (or (not thr) (< ndiff-pos thr))
+            (let* ((diff-rot (send current-coords
+                                   :difference-rotation (send self :goal-footstep-coords (send state :l/r-index))))
+                   (ndiff-rot (norm diff-rot)))
+              ;; when thr or rthr is nil, test returns t
+              (or (not rthr) (< ndiff-rot rthr)))))))
+  (:goal-test2 (state &key (debug-view nil))
+    (let ((current-coords (send state :robot-coords)))
+      (let ((ndiff-pos (distance (send current-coords :worldpos)
+                                 (send goal-state :worldpos))))
+        (if (or (not thr) (< ndiff-pos thr))
+            (let* ((diff-rot (send current-coords
+                                   :difference-rotation goal-state))
+                   (ndiff-rot (norm diff-rot)))
+              ;; when thr or rthr is nil, test returns t
+              (or (not rthr) (< ndiff-rot rthr)))))))
   (:path-cost (from-node action to-state)
     ;; [J.Kuffner et. al.,
     ;;  Footstep Planning Among Obstacles for Biped Robots,
@@ -254,7 +264,7 @@ footstep-parameter"))
       (cond ((and next-leg-face planes)
              (face-on-faces next-leg-face planes))
             ((and next-leg-face grids)
-             (bench-timer
+             (bench-timer2
               is-face-possible-to-put-on-grid-timer
               (face-placable-p next-leg-face grids)))
             (t
@@ -291,7 +301,7 @@ footstep-parameter"))
                        next-leg
                        (send state :step-name))))
             (project-and-remove-on-grids
-             next-coord-candidate (list current-grid)))
+             next-coord-candidate (list current-grid) t))
         ;; case 2-4
         (let ((same-level-candidate       ;case  3
                 (send footstep-param :same-grid-next-steps
@@ -309,7 +319,7 @@ footstep-parameter"))
             #'(lambda (x)
                 (check-transition-limit current-step-coords (cdr x) transition-limit))
             (project-and-remove-on-grids
-             different-level-candidate grids (list current-grid))))))))
+             different-level-candidate grids (list current-grid) t)))))))
   (:successors (state &key (verbose nil))
     (bench-timer
      successors-timer
@@ -435,6 +445,10 @@ check between leg-object and obstacles."
     (if arg (setq angle-vector arg))
     angle-vector)
   (:l/r () l/r)
+  (:l/r-index ()
+    (case l/r
+          (:lleg jsk_footstep_msgs::Footstep::*LEFT*)
+          (:rleg jsk_footstep_msgs::Footstep::*RIGHT*)))
   (:step-name () step-name)
   )
 
@@ -607,11 +621,11 @@ building and searching."
     ;; this method is implemented by R.Ueda based on :stepcost-heuristic
     ;; written by K.Okada.
     ;; this heuristic can solve footstep planning with rotation constraint!
-    (let* ((goal-coords (send p :goal-state))
+    (let* ((goal-coords (send p :goal-footstep-coords (send (send n :state) :l/r-index)))
            (step (send p :step-max))
            (rotate (send p :rotate-max))
            (current-coords
-            (send (send n :state) :robot-coords))
+            (send (send n :state) :worldcoords))
            (v1 (normalize-vector (v- (send goal-coords :worldpos)
                                      (send current-coords :worldpos))))
            (v2 (matrix-column (send current-coords :worldrot) 0))
@@ -645,12 +659,10 @@ building and searching."
       (let ((rate (/ cost initial-expected-cost)))
         (* rate rate cost))))
   (:stepcost-z-heuristic (n p)
-    (let* ((goal-coords (send p :goal-state))
+    (let* ((goal-coords (send p :goal-footstep-coords (send (send n :state) :l/r-index)))
            (z-factor 10.0)
            (step (send p :step-max))
            (rotate (send p :rotate-max))
-           (current-coords
-            (send (send n :state) :robot-coords))
            (leg-coords
             (send (send n :state) :worldcoords))
            (v1 (normalize-vector (v- (send goal-coords :worldpos)
@@ -658,7 +670,7 @@ building and searching."
            (v2 (matrix-column (send leg-coords :worldrot) 0))
            (v3 (matrix-column (send goal-coords :worldrot) 0)))
       (let* ((2d-trans-cost (* (/ (distance2d (send goal-coords :worldpos)
-                                              (send current-coords :worldpos))
+                                              (send leg-coords :worldpos))
                                   step) 2))
              (z-trans-cost (* (* (/ (abs (elt (v- (send goal-coords :worldpos)
                                                   (send leg-coords :worldpos)) 2))

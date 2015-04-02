@@ -465,7 +465,9 @@ which is inside of occupied cell"
 
 (defun project-and-remove-on-grids (candidate-coordinates
                                     grids-candidate
-                                    &optional (grids-blacklist))
+                                    &optional
+                                    (grids-blacklist)
+                                    (enable-local-search))
   "
    1. Project coordinates on grid
    2. Check center of coordinate can be supported by the grid
@@ -482,7 +484,28 @@ which is inside of occupied cell"
               (setf (get projected-coords :projecting-grid) grid) ;memoize :projecting-grid
               (setf new-candidates (cons (cons (car candidate)
                                                projected-coords)
-                                         new-candidates)))))))
+                                         new-candidates))
+              (when (and enable-local-search *use-local-search*)
+                (let ((local-x-max 0)
+                      (local-x-min -50)
+                      (local-y-max 50)
+                      (local-y-min -50)
+                      (local-theta-min (- (deg2rad 5)))
+                      (local-theta-max (deg2rad 5))
+                      (sampling-num 3))
+                  (dotimes (xi sampling-num)
+                    (dotimes (yi sampling-num)
+                      (dotimes (thetai sampling-num)
+                        (let ((x (+ (* (/ (- local-x-max local-x-min) sampling-num) xi) local-x-min))
+                              (y (+ (* (/ (- local-y-max local-y-min) sampling-num) yi) local-y-min))
+                              (theta (+ (* (/ (- local-theta-max local-theta-min) sampling-num) thetai) local-theta-min)))
+                          (let ((trans (make-coords :pos (float-vector x y 0)
+                                                    :rpy (float-vector theta 0 0))))
+                            (let ((transed-coords (send (send projected-coords :copy-worldcoords) :transform trans)))
+                              (setf (get transed-coords :projecting-grid) grid)
+                              (setf new-candidates (cons (cons (car candidate)
+                                                               transed-coords)
+                                                         new-candidates)))))))))))))))
     (ros::ros-info "~A/~A projecting candidate" (length new-candidates) (length candidate-coordinates))
     new-candidates))
 

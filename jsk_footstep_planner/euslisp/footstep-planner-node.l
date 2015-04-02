@@ -32,7 +32,6 @@
   (if old-module (sys::unbinload old-module)))
 (load "simple_occupancy_grid")
 ;;(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
-;;(load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
 
 
 (setq *grids* nil)
@@ -160,6 +159,7 @@
                                                  (cadr projected-leg-coords))
                         :angle-vector nil))))
     (send prblm :goal-state goal-coords) ; goal coords
+    ;;(send prblm :goal-state goal-foot-coords)
     (send prblm :goal-footstep goal-foot-coords)
     ;;(send prblm :setup-goal initial-foot-coords)
     (let ((asolver (instance a*-footstep-graph-search-solver
@@ -451,6 +451,7 @@
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
   (setq *use-gui* (ros::get-param "~use_gui" t))
   (setq *gui-debug* (ros::get-param "~gui_debug" nil))
+  (setq *use-local-search* (ros::get-param "~use_local_search" t))
   (if *use-gui*
       (make-irtviewer))
   (when *use-env-server*
