@@ -263,6 +263,9 @@ which is inside of occupied cell"
         (let ((ret (make-coords :pos point :rot (m* rot (send coords :worldrot)))))
           (setf (get ret :projecting-grid) self)
           ret))))
+  (:project-point (p)
+    "Project point on to the plane"
+    (send plane-obj :project p))
   (:placablep (point n)
     (bench-timer2
      placablep-timer
@@ -333,6 +336,17 @@ which is inside of occupied cell"
     (setf (elt cell-bits (send self :cell-index index-pair)) 1))
   (:register-cell* (i j)
     (setf (elt cell-bits (send self :cell-index* i j)) 1))
+  (:remove-cell (index-pair)
+    (setf (elt cell-bits (send self :cell-index index-pair)) 0))
+  (:remove-cell* (i j)
+    (setf (elt cell-bits (send self :cell-index* i j)) 0))
+  (:map-cells (f)
+    "f should be lambda form like #'(lambda (x y) ...)"
+    (dotimes (i cell-width)
+      (dotimes (j cell-height)
+        (when (send self :occupiedp* i j)
+          (funcall f i j)
+          ))))
   )
 
 ;; Utilify functions for grid-maps (array of occupancy-grid)
@@ -516,6 +530,31 @@ which is inside of occupied cell"
                        (send grid :occupiedp
                              (send grid :index-pair (send coords :worldpos) :local nil))))
                  candidate-coordinates))
+
+(defun remove-cell-with-index (target-grid remover-grid i j)
+  (let ((p (send remover-grid :local-point-to-global-point
+                 (send remover-grid :cell-index-to-local-point i j))))
+    (let ((projected-p (send remover-grid :project-point p)))
+      (when (< (elt (v- projected-p p) 2) 0)
+        ;; remover-grid is upper of target-grid
+        (when (send target-grid :occupiedp (send target-grid :index-pair p))
+          (send target-grid :remove-cell (send target-grid :index-pair p)))))))
+
+(defun remove-cells-with-projection (grids)
+  (dotimes (i (length grids))
+    (dotimes (j (length grids))
+      (when (not (= i j))
+        (let ((target-grid (elt grids i))
+              (remover-grid (elt grids j)))
+          ;; For all grids in remover-grid
+          (send remover-grid :map-cells
+                #'(lambda (jx jy)
+                    (remove-cell-with-index target-grid remover-grid jx jy)
+                    (remove-cell-with-index target-grid remover-grid (1- jx) jy)
+                    (remove-cell-with-index target-grid remover-grid jx (1- jy))
+                    (remove-cell-with-index target-grid remover-grid (1+ jx) jy)
+                    (remove-cell-with-index target-grid remover-grid jx (1+ jy)))
+                ))))))
 
 #|
 (load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
