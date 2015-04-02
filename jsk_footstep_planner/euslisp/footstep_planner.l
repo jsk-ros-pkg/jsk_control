@@ -81,6 +81,7 @@ footstep-parameter"))
           near-side-goal
           collision-robot-model timeout
           successablep-timer
+          transition-limit
           successors-timer append-footstep-candidates-by-grids-timer
           is-face-possible-to-put-on-grid-timer))
 
@@ -98,6 +99,7 @@ footstep-parameter"))
                ((:robot r) nil)
                ((:leg-object lo) nil)
                ((:footstep-parameter param))
+               ((:transition-limit tlimit) nil)
                ((:step-max sm) 100.0)
                ((:rotate-max rm) (deg2ead 45.0))
                ((:thr th) 100.0)
@@ -105,6 +107,7 @@ footstep-parameter"))
                ((:rthr rth) (deg2rad 10))
                ((:collision-robot-model crm) nil)
                &allow-other-keys)
+    (setq transition-limit tlimit)
     (setq successablep-timer (instance counter-timer :init ":successablep"))
     (setq successors-timer (instance counter-timer :init ":successors"))
     (setq append-footstep-candidates-by-grids-timer (instance counter-timer :init "append-footstep-candidates-by-grids"))
@@ -302,8 +305,11 @@ footstep-parameter"))
                        (send state :step-name))))
           (append
            (remove-not-on-grids same-level-candidate current-grid)
-           (project-and-remove-on-grids
-            different-level-candidate grids (list current-grid)))))))
+           (remove-if-not
+            #'(lambda (x)
+                (check-transition-limit current-step-coords (cdr x) transition-limit))
+            (project-and-remove-on-grids
+             different-level-candidate grids (list current-grid))))))))
   (:successors (state &key (verbose nil))
     (bench-timer
      successors-timer
@@ -892,3 +898,18 @@ building and searching."
       (let ((distance-a (distance (send a :worldpos) foot-point))
             (distance-b (distance (send b :worldpos) foot-point)))
         (+ distance-a distance-b)))))
+
+(defun check-transition-limit (from-coords to-coords limits)
+  (let ((diff-coords (send from-coords :transformation to-coords)))
+    (if limits
+        (let ((x-limit (cdr (assoc :x limits)))
+              (z-limit (cdr (assoc :z limits)))
+              (roll-limit (cdr (assoc :roll limits)))
+              (pitch-limit (cdr (assoc :pitch limits))))
+          (let ((rpy (car (send diff-coords :rpy-angle)))
+                (pos (send diff-coords :worldpos)))
+            (and (< (abs (elt pos 0)) x-limit)
+                 (< (abs (elt pos 2)) z-limit)
+                 (< (abs (elt rpy 1)) pitch-limit)
+                 (< (abs (elt rpy 2)) roll-limit))))
+      t)))

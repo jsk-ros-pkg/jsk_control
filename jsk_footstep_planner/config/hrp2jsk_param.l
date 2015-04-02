@@ -7,9 +7,10 @@
                        (:z . 1)
                        (:y . 135)))
         (:default-transition-limit
-          ((:z . 210)
-           (:roll . 10)
-           (:pitch . 10)))
+          (:z . 210)
+          (:roll . 15)
+          (:pitch . 15)
+          (:x . 260))
         (:transition-first-successors
           (:transform (:x . 250) (:y . 210) (:theta . 0))
           (:transform (:x . 250) (:y . 210) (:theta . 5))
