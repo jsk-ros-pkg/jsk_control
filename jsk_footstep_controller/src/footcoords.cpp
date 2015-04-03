@@ -71,11 +71,14 @@ namespace jsk_footstep_controller
     // pnh.param("lfoot_sensor_frame", lfoot_sensor_frame_, std::string("lfsensor"));
     // pnh.param("rfoot_sensor_frame", rfoot_sensor_frame_, std::string("rfsensor"));
     pnh.param("force_threshold", force_thr_, 100.0);
+    support_status_ = AIR;
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
     pub_contact_state_ = pnh.advertise<jsk_footstep_controller::GroundContactState>("contact_state", 1);
     before_on_the_air_ = true;
     sub_lfoot_force_.subscribe(nh, "lfsensor", 1);
     sub_rfoot_force_.subscribe(nh, "rfsensor", 1);
+    periodic_update_timer_ = pnh.createTimer(ros::Duration(1.0 / 25),
+                                             boost::bind(&Footcoords::periodicTimerCallback, this, _1));
     sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
     sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_);
     sync_->registerCallback(boost::bind(&Footcoords::filter, this, _1, _2));
@@ -178,11 +181,37 @@ namespace jsk_footstep_controller
       return false;
     }
   }
-  
+
+  void Footcoords::periodicTimerCallback(const ros::TimerEvent& event)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    bool success_to_update;
+    if (support_status_ == AIR || support_status_ == BOTH_GROUND) {
+      publishState("ground");
+      success_to_update = computeMidCoords(event.current_real);
+      updateGroundTF();
+    }
+    else if (support_status_ == LLEG_GROUND) {
+      publishState("lfoot");
+      success_to_update = computeMidCoordsFromSingleLeg(event.current_real, true);
+      updateGroundTF();
+    }
+    else if (support_status_ == RLEG_GROUND) {
+      publishState("rfoot");
+      success_to_update = computeMidCoordsFromSingleLeg(event.current_real, false);
+      updateGroundTF();
+    }
+    if (success_to_update) {
+      publishTF(event.current_real);
+      diagnostic_updater_->update();
+      publishContactState(event.current_real);
+    }
+  }
+
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                           const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
   {
-    bool success_to_update = false;
+    boost::mutex::scoped_lock lock(mutex_);
     // lowpass filter
     tf::Vector3 lfoot_force_vector, rfoot_force_vector;
     if (!resolveForceTf(lfoot, rfoot, lfoot_force_vector, rfoot_force_vector)) {
@@ -195,11 +224,6 @@ namespace jsk_footstep_controller
     lforce_list_.push_back(ValueStamped::Ptr(new ValueStamped(lfoot->header, lfoot_force)));
     rforce_list_.push_back(ValueStamped::Ptr(new ValueStamped(rfoot->header, rfoot_force)));
 
-    // ROS_INFO("lforce_list: %lu", lforce_list_.size());
-    // ROS_INFO("rforce_list: %lu", rforce_list_.size());
-    // ROS_INFO("%f -> %f", lfoot->wrench.force.z, lfoot_force);
-    // ROS_INFO("%f -> %f", rfoot->wrench.force.z, rfoot_force);
-    // update prev value
     prev_lforce_ = lfoot_force;
     prev_rforce_ = rfoot_force;
 
@@ -211,42 +235,24 @@ namespace jsk_footstep_controller
         locked_midcoords_to_odom_on_ground_ = midcoords_.inverse() * ground_transform_;
       }
       support_status_ = BOTH_GROUND;
-      publishState("ground");
-      success_to_update = computeMidCoords(lfoot->header.stamp);
-      updateGroundTF();
     }
-    else if (allValueSmallerThan(lforce_list_, force_thr_) && 
+    else if (allValueSmallerThan(lforce_list_, force_thr_) &&
              allValueSmallerThan(rforce_list_, force_thr_)) {
       before_on_the_air_ = true;
       support_status_ = AIR;
-      publishState("air");
-      success_to_update = computeMidCoords(lfoot->header.stamp);
-      updateGroundTF();
     }
     else if (allValueLargerThan(lforce_list_, force_thr_)) {
       // only left
       support_status_ = LLEG_GROUND;
-      publishState("lfoot");
-      success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, true);
-      updateGroundTF();
     }
     else if (allValueLargerThan(rforce_list_, force_thr_)) {
       // only right
       support_status_ = RLEG_GROUND;
-      publishState("rfoot");
-      success_to_update = computeMidCoordsFromSingleLeg(lfoot->header.stamp, false);
-      updateGroundTF();
     }
     else {
       // unstable
       support_status_ = UNSTABLE;
       publishState("unstable");
-    }
-    
-    if (success_to_update) {
-      publishTF(lfoot->header.stamp);
-      diagnostic_updater_->update();
-      publishContactState(lfoot->header.stamp);
     }
     lforce_list_.removeBefore(lfoot->header.stamp - ros::Duration(sampling_time_));
     rforce_list_.removeBefore(rfoot->header.stamp - ros::Duration(sampling_time_));
