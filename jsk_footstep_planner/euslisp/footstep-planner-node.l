@@ -352,7 +352,7 @@
   (dotimes (i (length *grids*))
     (setf (get (elt *grids* i) :face-color) (color-category20 i)))
   (when *remove-shadow-cells*
-    (remove-cells-with-projection *grids*))
+    (remove-shadow-cells *grids*))
   (when *use-gui*
     (send *irtviewer* :objects *grids*)
     (send *irtviewer* :draw-objects))

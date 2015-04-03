@@ -531,30 +531,44 @@ which is inside of occupied cell"
                              (send grid :index-pair (send coords :worldpos) :local nil))))
                  candidate-coordinates))
 
-(defun remove-cell-with-index (target-grid remover-grid i j)
+(defun remove-shadow-cell-with-index (target-grid
+                                      remover-grid i j
+                                      x-padding y-padding)
   (let ((p (send remover-grid :local-point-to-global-point
-                 (send remover-grid :cell-index-to-local-point i j))))
-    (let ((projected-p (send remover-grid :project-point p)))
+                 (send remover-grid :cell-index-to-local-point i j)))
+        (counter 0))
+    (let ((projected-p (send target-grid :project-point p)))
       (when (< (elt (v- projected-p p) 2) 0)
         ;; remover-grid is upper of target-grid
-        (when (send target-grid :occupiedp (send target-grid :index-pair p))
-          (send target-grid :remove-cell (send target-grid :index-pair p)))))))
+        (let* ((index-pair (send target-grid :index-pair p :local t))
+               (center-x (car index-pair))
+               (center-y (cdr index-pair)))
+         (dotimes (ix (1+ (* x-padding)))
+           (dotimes (iy (1+ (* y-padding)))
+             (let ((x (+ center-x ix (- x-padding)))
+                   (y (+ center-y iy (- y-padding))))
+               (when (send target-grid :occupiedp (cons x y))
+                 (send target-grid :remove-cell (cons x y))
+                 (incf counter))))))))
+    counter))
 
-(defun remove-cells-with-projection (grids)
-  (dotimes (i (length grids))
-    (dotimes (j (length grids))
-      (when (not (= i j))
-        (let ((target-grid (elt grids i))
-              (remover-grid (elt grids j)))
-          ;; For all grids in remover-grid
-          (send remover-grid :map-cells
-                #'(lambda (jx jy)
-                    (remove-cell-with-index target-grid remover-grid jx jy)
-                    (remove-cell-with-index target-grid remover-grid (1- jx) jy)
-                    (remove-cell-with-index target-grid remover-grid jx (1- jy))
-                    (remove-cell-with-index target-grid remover-grid (1+ jx) jy)
-                    (remove-cell-with-index target-grid remover-grid jx (1+ jy)))
-                ))))))
+(defun remove-shadow-cells (grids)
+  (let ((counter 0))
+    (dotimes (i (length grids))
+      (let ((remover-grid (elt grids i)))
+        (send remover-grid :map-cells
+              #'(lambda (jx jy)
+                  (dotimes (j (length grids))
+                    (when (not (= i j))
+                      (let ((target-grid (elt grids j)))
+                        (incf counter 
+                              (remove-shadow-cell-with-index
+                               target-grid remover-grid
+                               jx jy 2 2))
+                        )))))))
+    (send-all grids :update-draw-vertices)
+    (ros::ros-info "Removed ~A cells as shadow" counter)))
+    
 
 #|
 (load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")
