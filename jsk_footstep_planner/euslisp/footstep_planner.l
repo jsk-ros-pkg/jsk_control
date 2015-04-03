@@ -456,7 +456,7 @@ check between leg-object and obstacles."
   (and (eq (send a :l/r) (send b :l/r))
        (< (distance (send (send a :worldcoords) :worldpos)
                     (send (send b :worldcoords) :worldpos))
-          50.0)
+          10.0)
        (< (norm (send (send a :worldcoords) :difference-rotation
                       (send b :worldcoords)))
           #.(deg2rad 10.0))))
@@ -756,7 +756,7 @@ building and searching."
     left-footsteps)
   (:right-footsteps ()
     right-footsteps)
-  (:foot-vertices (leg coords)
+  (:foot-vertices-old (leg coords)
     ;;     x     x
     ;;
     ;;        c
@@ -773,6 +773,26 @@ building and searching."
       (mapcar #'(lambda (v)
                   (let ((vv (send coords :transform-vector v)))
                     ;;(format t "~A -> ~A~%" v vv)
+                    vv))
+              local-vertices)))
+  (:foot-vertices (leg coords)
+    ;;     x     x
+    ;;
+    ;;        c
+    ;;
+    ;;     x     x
+    (let* ((size-x/2 (/ size-x 2))
+           (size-y/2 (/ size-y 2))
+           (local-vertices (list
+                            (float-vector size-x/2 size-y/2 0)
+                            (float-vector (- size-x/2) size-y/2 0)
+                            (float-vector (- size-x/2) (- size-y/2) 0)
+                            (float-vector size-x/2 (- size-y/2) 0))))
+      (dolist (v local-vertices)
+        (v+ v *leg-offset* v))
+      ;;(send coords :worldpos)
+      (mapcar #'(lambda (v)
+                  (let ((vv (send coords :transform-vector v)))
                     vv))
               local-vertices)))
   (:gen-footstep (&rest args)
