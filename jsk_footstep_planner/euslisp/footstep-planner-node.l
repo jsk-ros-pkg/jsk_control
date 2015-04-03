@@ -110,16 +110,6 @@
           (send server :set-aborted result)
           (return-from plan-execute-cb nil))))
 
-    ;; Visualize initial footsteps
-    (let ((first-step (make-footprint (car (car initial-foot-coords))))
-          (second-step (make-footprint (car (cadr initial-foot-coords)))))
-      (send first-step :move-to (cdr (car initial-foot-coords)) :world)
-      (send second-step :move-to (cdr (cadr initial-foot-coords)) :world)
-      (setq *initial-footsteps* (list first-step second-step))
-      (when *use-gui*
-        (send *irtviewer* :objects (append *initial-footsteps* *grids*))
-        (send *irtviewer* :draw-objects)))
-
     ;; Visualize goal footsteps
     (let ((first-step (make-footprint (car (car goal-foot-coords))))
           (second-step (make-footprint (car (cadr goal-foot-coords)))))
@@ -127,7 +117,7 @@
       (send second-step :move-to (cdr (cadr goal-foot-coords)) :world)
       (setq *goal-footsteps* (list first-step second-step))
       (when *use-gui*
-        (send *irtviewer* :objects (append *initial-footsteps* *goal-footsteps* *grids*))
+        (send *irtviewer* :objects (append *goal-footsteps* *grids*))
         (send *irtviewer* :draw-objects)))
 
     ;; Check goal footstep is possible or not first
@@ -149,6 +139,16 @@
                                        (project-coordinates-on-nearest-grid
                                         c *grids*))
                                    leg-coords)))
+        ;; Visualize initial footsteps
+        (let ((first-step (make-footprint (car (car initial-foot-coords))))
+              (second-step (make-footprint (car (cadr initial-foot-coords)))))
+          (send first-step :move-to (car projected-leg-coords) :world)
+          (send second-step :move-to (cadr projected-leg-coords) :world)
+          (setq *initial-footsteps* (list first-step second-step))
+          (when *use-gui*
+            (send *irtviewer* :objects (append *goal-footsteps* *initial-footsteps* *grids*))
+            (send *irtviewer* :draw-objects)))
+        
         (send prblm :start-state
               (instance step-node :init
                         :worldcoords (cadr projected-leg-coords)
@@ -371,6 +371,11 @@
     (setq *leg-size-x* (cdr (assoc :x foot-size)))
     (setq *leg-size-y* (cdr (assoc :y foot-size)))
     (setq *leg-size-z* (cdr (assoc :z foot-size))))
+  (let ((foot-offset (cdr (assoc :foot-offset param))))
+    (setq *leg-offset-x* (cdr (assoc :x foot-offset)))
+    (setq *leg-offset-y* (cdr (assoc :y foot-offset)))
+    (setq *leg-offset-z* (cdr (assoc :z foot-offset)))
+    (setq *leg-offset* (float-vector *leg-offset-x* *leg-offset-y* *leg-offset-z*)))
   (setq *footstep-successors*
         (mapcar #'(lambda (successor-param)
                     (let ((x (cdr (assoc :x successor-param)))
@@ -452,7 +457,7 @@
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
   (setq *use-gui* (ros::get-param "~use_gui" t))
-  (setq *remove-shadow-cells* (ros::get-param "~remove_shadow_cells" t))
+  (setq *remove-shadow-cells* (ros::get-param "~remove_shadow_cells" nil))
   (setq *gui-debug* (ros::get-param "~gui_debug" nil))
   (setq *use-local-search* (ros::get-param "~use_local_search" t))
   (if *use-gui*

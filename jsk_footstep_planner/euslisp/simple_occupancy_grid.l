@@ -500,8 +500,8 @@ which is inside of occupied cell"
                                                projected-coords)
                                          new-candidates))
               (when (and enable-local-search *use-local-search*)
-                (let ((local-x-max 0)
-                      (local-x-min -50)
+                (let ((local-x-max 50)
+                      (local-x-min 0)
                       (local-y-max 50)
                       (local-y-min -50)
                       (local-theta-min (- (deg2rad 5)))
@@ -564,7 +564,7 @@ which is inside of occupied cell"
                         (incf counter 
                               (remove-shadow-cell-with-index
                                target-grid remover-grid
-                               jx jy 2 2))
+                               jx jy 1 1))
                         )))))))
     (send-all grids :update-draw-vertices)
     (ros::ros-info "Removed ~A cells as shadow" counter)))
