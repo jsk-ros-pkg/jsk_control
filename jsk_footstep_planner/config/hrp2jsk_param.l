@@ -8,7 +8,7 @@
                        (:z . 1)
                        (:y . 135)))
         ;;(:foot-offset . ((:x . 20)
-        (:foot-offset . ((:x . 20)
+        (:foot-offset . ((:x . 0)
                          (:z . 0)
                          (:y . 0)))
         (:default-transition-limit
