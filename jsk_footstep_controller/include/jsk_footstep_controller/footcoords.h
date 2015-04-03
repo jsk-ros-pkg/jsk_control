@@ -125,7 +125,10 @@ namespace jsk_footstep_controller
     virtual bool resolveForceTf(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                                 const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
                                 tf::Vector3& lfoot_force, tf::Vector3& rfoot_force);
+    virtual void periodicTimerCallback(const ros::TimerEvent& event);
     // ros variables
+    boost::mutex mutex_;
+    ros::Timer periodic_update_timer_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
