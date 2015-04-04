@@ -568,7 +568,61 @@ which is inside of occupied cell"
                         )))))))
     (send-all grids :update-draw-vertices)
     (ros::ros-info "Removed ~A cells as shadow" counter)))
-    
+
+(defun footstep-set-placable-p (coords grid footstep-param lleg-trans rleg-trans
+                                       &optional debug)
+  "Check both of left and right footsteps can be supported by the grid"
+  (let ((lleg-coords
+         (send (send coords :copy-worldcoords) :transform lleg-trans))
+        (rleg-coords
+         (send (send coords :copy-worldcoords) :transform rleg-trans)))
+    (let ((lleg-face
+           (instance face :init :vertices
+                     (send footstep-param :foot-vertices :lleg lleg-coords)))
+          (rleg-face
+           (instance face :init :vertices
+                     (send footstep-param :foot-vertices :rleg rleg-coords))))
+      (if debug
+          (send-all (list lleg-face rleg-face)
+                    :draw-on :flush t))
+      (and (face-placable-p lleg-face grid)
+           (face-placable-p rleg-face grid)))))
+
+(defun local-search-footstep-on-grid
+  (projected-coords grid footstep-param lleg-trans rleg-trans)
+  "Locally search coordinates where can put left and right foot"
+  (if (footstep-set-placable-p
+       projected-coords grid footstep-param lleg-trans rleg-trans)
+      projected-coords
+    (let ((xrange 200.0)
+          (yrange 200.0)
+          (trange (deg2rad 30.0))
+          (sampling-num 10)
+          (candidates nil))
+      (ros::ros-warn "Projecting with local search")
+      (dotimes (ix sampling-num)
+        (dotimes (iy sampling-num)
+          (dotimes (it sampling-num)
+            (let ((x (- (/ (* xrange ix) sampling-num)
+                        (/ xrange 2.0)))
+                  (y (- (/ (* yrange iy) sampling-num)
+                        (/ yrange 2.0)))
+                  (theta (- (/ (* trange it) sampling-num)
+                            (/ trange 2.0))))
+              (let ((c (send (send projected-coords :copy-worldcoords)
+                             :transform
+                             (make-coords :pos (float-vector x y 0)
+                                          :rpy (float-vector theta 0 0)))))
+                (when (footstep-set-placable-p
+                       c grid footstep-param lleg-trans rleg-trans)
+                  (setf (get c :ix) ix)
+                  (setf (get c :iy) iy)
+                  (setf (get c :it) it)
+                  (push c candidates)))))))
+      (car (sort candidates #'< #'(lambda (c)
+                                    (+ (expt (- (get c :ix) (/ sampling-num 2.0)) 2)
+                                       (expt (- (get c :iy) (/ sampling-num 2.0)) 2)
+                                       (expt (- (get c :it) (/ sampling-num 2.0)) 2))))))))
 
 #|
 (load "package://jsk_footstep_planner/euslisp/simple_occupancy_grid.l")

@@ -64,7 +64,6 @@
               ))))))
 
 (defun plan-execute-cb (server goal)
-  (print goal)
   (setq *evaled-node-num* 0)
   (send-all *grids* :prepare-for-planning)
   (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
@@ -159,14 +158,8 @@
                                                  (cadr projected-leg-coords))
                         :angle-vector nil))))
     (send prblm :goal-state goal-coords) ; goal coords
-    ;;(send prblm :goal-state goal-foot-coords)
     (send prblm :goal-footstep goal-foot-coords)
-    ;;(send prblm :setup-goal initial-foot-coords)
     (let ((asolver (instance a*-footstep-graph-search-solver
-                             ;;:init 1.0 :stepcost-heuristic* prblm
-                             ;;:init 1.0 :stepcost-heuristic prblm
-                             ;;:init 1.0 :straight-heuristic prblm
-                             ;;:init 1.0 :manhattan-heuristic prblm
                              :init 1.0 *heuristic* prblm
                              :render-leg-object *leg*)))
       (let ((solver-nodes (send asolver :solve prblm)))
@@ -421,6 +414,17 @@
                    (project-coordinates-on-nearest-grid
                     transformed-input-coords
                     *grids*)))
+              (when (and projected-coords *snap-with-local-search*)
+                (print (ros::tf-pose->coords (send req :lleg_pose)))
+                (print (ros::tf-pose->coords (send req :rleg_pose)))
+                (setq projected-coords
+                      (local-search-footstep-on-grid
+                       projected-coords
+                       (get projected-coords :projecting-grid)
+                       (instance ros-footstep-parameter
+                                 :init *leg-size-x* *leg-size-y*)
+                       (ros::tf-pose->coords (send req :lleg_pose))
+                       (ros::tf-pose->coords (send req :rleg_pose)))))
               (when projected-coords
                 (send res :success t)
                 (send res :snapped_pose
@@ -460,6 +464,7 @@
   (setq *remove-shadow-cells* (ros::get-param "~remove_shadow_cells" nil))
   (setq *gui-debug* (ros::get-param "~gui_debug" nil))
   (setq *use-local-search* (ros::get-param "~use_local_search" t))
+  (setq *snap-with-local-search* (ros::get-param "~snap_with_local_search" t))
   (if *use-gui*
       (make-irtviewer))
   (when *use-env-server*
