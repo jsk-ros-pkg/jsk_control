@@ -76,11 +76,10 @@
     (ros::publish "breakpoint_text" msg)))
 
 (defun hrpsys-init-coords ()
-  (let ((param (send *ri* :get-foot-step-param)))
-    (midcoords
-     0.5
-     (send *ri* :abc-footstep->eus-footstep (send param :rleg_coords))
-     (send *ri* :abc-footstep->eus-footstep (send param :lleg_coords)))))
+  (midcoords
+   0.5
+   (send *ri* :get-foot-step-param :rleg-coords)
+   (send *ri* :get-foot-step-param :lleg-coords)))
 
 (defun walking-pose ;; this should be method
   (robot
@@ -136,10 +135,9 @@
                            (send footstep :footsteps)))
                   (footstep-coords0 (car footstep-coords))
                   (footstep-coords-rest (cdr footstep-coords))
-                  (hrpsys-coords (send *ri* :abc-footstep->eus-footstep
-                                       (send (send *ri* :get-foot-step-param)
-                                             (if (eq (send footstep-coords0 :name) :lleg)
-                                                 :lleg_coords :rleg_coords))))
+                  (hrpsys-coords (send *ri* :get-foot-step-param
+                                       (if (eq (send footstep-coords0 :name) :lleg)
+                                           :lleg-coords :rleg-coords)))
                   (hrpsys-mid-coords (hrpsys-init-coords)))
              (let* ((hrpsys->ros (send hrpsys-coords :transformation footstep-coords0))
                     (ros->hrpsys (send hrpsys->ros :inverse-transformation)))
