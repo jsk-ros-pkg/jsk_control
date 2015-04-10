@@ -186,6 +186,17 @@
     (send *staro* :fix-leg-to-coords (make-coords))
     (send* self :test-fullbody-ik :robot *staro* args))
    )
+  (:jaxon-test
+    (&rest args)
+    (require "package://hrpsys_ros_bridge_tutorials/models/jaxon.l")
+    (defvar *jaxon* (jaxon))
+    (objects (list *jaxon*))
+    (ros::roseus "fullbody_ik_client_test")
+    (do-until-key
+     (send *jaxon* :reset-manip-pose)
+     (send *jaxon* :fix-leg-to-coords (make-coords))
+     (send* self :test-fullbody-ik :robot *jaxon* args))
+    )
   (:atlas-test
    (&rest args)
    (require "package://hrpsys_gazebo_atlas/euslisp/atlas-model.l")
@@ -259,6 +270,8 @@
     (send ik-client-test :hrp2jsk-test :foot? foot?))
    ((substringp "staro" test)
     (send ik-client-test :staro-test :foot? foot?))
+   ((substringp "jaxon" test)
+    (send ik-client-test :jaxon-test :foot? foot?))
    ((substringp "pr2" test)
     (send ik-client-test :pr2-test :foot? foot?))
    ((substringp "atlas" test)

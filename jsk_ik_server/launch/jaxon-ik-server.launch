@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="roseus" type="roseus" name="jaxon_ik_server" output="screen"
+        args="$(find jsk_ik_server)/euslisp/ik-server-impl/jaxon-ik-server.l">
+    <param name="robot" value="jaxon"/>
+    <!--param name="additional_ik_options" value=":centroid-thre 10"/-->
+  </node>
+</launch>
