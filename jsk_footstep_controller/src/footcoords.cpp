@@ -194,12 +194,12 @@ namespace jsk_footstep_controller
     else if (support_status_ == LLEG_GROUND) {
       publishState("lfoot");
       success_to_update = computeMidCoordsFromSingleLeg(event.current_real, true);
-      updateGroundTF();
+      //updateGroundTF();
     }
     else if (support_status_ == RLEG_GROUND) {
       publishState("rfoot");
       success_to_update = computeMidCoordsFromSingleLeg(event.current_real, false);
-      updateGroundTF();
+      //updateGroundTF();
     }
     if (success_to_update) {
       publishTF(event.current_real);
