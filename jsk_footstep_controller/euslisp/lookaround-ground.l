@@ -9,14 +9,7 @@
 (ros::roseus-add-msgs "std_msgs")
 (ros::roseus-add-msgs "jsk_footstep_controller")
 
-(cond
- ((string= "hrp2jsk" (string-downcase *robot-name*))
-  (load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsk-interface.l"))
- ((string= "hrp2jsknt" (string-downcase *robot-name*))
-  (load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l"))
- ((string= "hrp2jsknts" (string-downcase *robot-name*))
-  (load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l")))
-
+(load (format nil "package://hrpsys_ros_bridge_tutorials/euslisp/~A-interface.l" *robot-name*))
 
 (init-robot-from-name *robot-name*)
 
