@@ -2,7 +2,7 @@
 
 (ros::roseus "lookaround_ground")
 
-(setq *robot-name* (ros::get-param "~robot" (unix::getenv "ROBOT")))
+(setq *robot-name* (ros::get-param "~robot" (string-downcase (unix::getenv "ROBOT"))))
 
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-srvs "std_srvs")
