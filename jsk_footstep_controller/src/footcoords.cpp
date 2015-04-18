@@ -62,6 +62,7 @@ namespace jsk_footstep_controller
               std::string("odom_on_ground"));
     pnh.param("parent_frame_id", parent_frame_id_, std::string("odom"));
     pnh.param("midcoords_frame_id", midcoords_frame_id_, std::string("ground"));
+    pnh.param("root_frame_id", root_frame_id_, std::string("BODY"));
     pnh.param("lfoot_frame_id", lfoot_frame_id_,
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
@@ -185,23 +186,29 @@ namespace jsk_footstep_controller
   void Footcoords::periodicTimerCallback(const ros::TimerEvent& event)
   {
     boost::mutex::scoped_lock lock(mutex_);
-    bool success_to_update;
+    bool success_to_update = computeMidCoords(event.current_real);
     if (support_status_ == AIR || support_status_ == BOTH_GROUND) {
       publishState("ground");
-      success_to_update = computeMidCoords(event.current_real);
-      updateGroundTF();
     }
-    else if (support_status_ == LLEG_GROUND) {
-      publishState("lfoot");
-      success_to_update = computeMidCoordsFromSingleLeg(event.current_real, true);
-      //updateGroundTF();
-    }
-    else if (support_status_ == RLEG_GROUND) {
-      publishState("rfoot");
-      success_to_update = computeMidCoordsFromSingleLeg(event.current_real, false);
-      //updateGroundTF();
+    else {
+      if (support_status_ == LLEG_GROUND) {
+        publishState("lfoot");
+      }
+      else if (support_status_ == RLEG_GROUND) {
+        publishState("rfoot");
+      }
     }
     if (success_to_update) {
+      tf::StampedTransform root_transform;
+      tf_listener_->lookupTransform(parent_frame_id_, root_frame_id_, event.current_real, root_transform);
+      root_link_pose_.setOrigin(root_transform.getOrigin());
+      root_link_pose_.setRotation(root_transform.getRotation());
+      // compute root_link -> midcoords
+      // root_link_pose_ := odom -> root_link
+      // midcoords_ := odom -> midcoords
+      // root_link_pose_ * T = midcoords_
+      // T = root_link_pose_^-1 * midcoords_
+      ground_transform_ = root_link_pose_.inverse() * midcoords_;
       publishTF(event.current_real);
       diagnostic_updater_->update();
       publishContactState(event.current_real);
@@ -467,7 +474,7 @@ namespace jsk_footstep_controller
     // we need odom -> odom_on_ground
     // 1. in order to get translation,
     //    project odom point to
-    if (support_status_ == BOTH_GROUND) {
+    if (false && support_status_ == BOTH_GROUND) {
       // use locked_midcoords_to_odom_on_ground_ during dual stance phase
       ground_transform_ = midcoords_ * locked_midcoords_to_odom_on_ground_;
     }
