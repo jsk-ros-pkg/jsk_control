@@ -9,7 +9,8 @@
 (ros::roseus-add-msgs "std_msgs")
 (ros::roseus-add-msgs "jsk_footstep_controller")
 
-(load (format nil "package://hrpsys_ros_bridge_tutorials/euslisp/~A-interface.l" *robot-name*))
+(load (format nil "package://hrpsys_ros_bridge_tutorials/euslisp/~A-interface.l" 
+              (string-downcase *robot-name*)))
 
 (init-robot-from-name *robot-name*)
 
@@ -26,15 +27,15 @@
               #'(lambda (mt)
                   (remove-if
                    #'(lambda (l) (find l (list (send *robot* :rleg
-:toe-p :child-link)
+                                                     :toe-p :child-link)
                                                (send *robot* :lleg
-:toe-p :child-link))))
+                                                     :toe-p :child-link))))
                    (send *robot* :link-list (send mt :parent))))
               mt))
          (tc (send-all mt :copy-worldcoords))
          ;; (lp #F(0 0 0))
          (vd (normalize-vector (v- lp (send (send *robot* :head
-:end-coords) :worldpos))))
+                                                  :end-coords) :worldpos))))
          (z (transform (send *robot* :head :end-coords :worldrot) #F(0 0 1)))
          )
     (send (car (last tc)) :newcoords
@@ -80,30 +81,44 @@
   (send *ri* :wait-interpolation)
   )
 
-(defun do-lookaround ()
-  ;; (send *robot* :reset-pose)
-  ;; (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
-  ;; (send *ri* :wait-interpolation)
-  (send *robot* :torso :waist-p :joint-angle 40)
-  (send *robot* :head :neck-y :joint-angle 0)
-  (send *robot* :head :neck-p :joint-angle 40)
-  (send *robot* :legs :move-end-pos (float-vector 0 0 -40))
-  (send *robot* :move-centroid-on-foot :both '(:lleg :rleg))
+(defun do-lookaround-jaxon ()
+  (send *robot* :reset-pose)
+  (send *robot* :head :neck-p :joint-angle 35)
+  (send *robot* :torso :waist-p :joint-angle 35)
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
-  ;; (unix:sleep 5)
-  ;; Call /tilt_laser_listener/clear_cache
-  (call-empty-service "/tilt_laser_listener/clear_cache")
-  ;; Call /locomotion/input/request
-  (call-empty-service "/locomotion/input/request")
-  ;; Wait for next publish
-  (wait-for-snapshot-publish)
-  ;;(read-line)
   (send *robot* :reset-pose)
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
   )
 
+(defun do-lookaround ()
+  ;; (send *robot* :reset-pose)
+  ;; (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+  ;; (send *ri* :wait-interpolation)
+  (cond ((or (string= *robot-name* "jaxon")
+             (string= *robot-name* "JAXON"))
+         (do-lookaround-jaxon))
+        (t
+         (send *robot* :torso :waist-p :joint-angle 40)
+         (send *robot* :head :neck-y :joint-angle 0)
+         (send *robot* :head :neck-p :joint-angle 40)
+         (send *robot* :legs :move-end-pos (float-vector 0 0 -40))
+         (send *robot* :move-centroid-on-foot :both '(:lleg :rleg))
+         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+         (send *ri* :wait-interpolation)
+         ;; (unix:sleep 5)
+         ;; Call /tilt_laser_listener/clear_cache
+         (call-empty-service "/tilt_laser_listener/clear_cache")
+         ;; Call /locomotion/input/request
+         (call-empty-service "/locomotion/input/request")
+         ;; Wait for next publish
+         (wait-for-snapshot-publish)
+         ;;(read-line)
+         (send *robot* :reset-pose)
+         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+         (send *ri* :wait-interpolation)
+         )))
 
 (defun look-around-callback (req)
   (do-lookaround)
