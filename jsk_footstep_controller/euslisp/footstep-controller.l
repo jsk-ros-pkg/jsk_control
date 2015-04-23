@@ -117,7 +117,7 @@
   ;; 3. convert the footstep respected to hrpsys-mid-coords
   (if (not *interruptible-mode*)
       (when *realp*
-        (walking-pose *robot* :root-link-height-offset -70)
+        (walking-pose *robot* :root-link-height-offset -80)
         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)))
   (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
@@ -319,20 +319,24 @@
         :swing-trajectory-delay-time-offset 0.25
         :default-orbit-type :stair
         :default-step-time 1.3
-        :default-double-support-ratio 0.32
+        ;; :default-double-support-ratio 0.32
+        :default-double-support-ratio 0.16
         :default-step-height 0.03)
   (send *ri* :set-auto-balancer-param :default-zmp-offsets
-        (list (float-vector 10 30 0) (float-vector 10 -30 0))))
+        (list (float-vector 10 30 0) (float-vector 10 -30 0)))
+  )
 
 (defun set-parameter-for-planar ()
   (send *ri* :set-gait-generator-param
         :default-orbit-type :cycloid
         :default-step-time 1.1
-        :default-double-support-ratio 0.32
+        ;;:default-double-support-ratio 0.32
+         :default-double-support-ratio 0.16
         :default-step-height 0.05)
   ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
   (send *ri* :set-auto-balancer-param :default-zmp-offsets
-        (list (float-vector 10 10 0) (float-vector 10 -10 0))))
+        (list (float-vector 10 10 0) (float-vector 10 -10 0)))
+  )
 
 (defun main()
   (ros::roseus "footstep_controller")

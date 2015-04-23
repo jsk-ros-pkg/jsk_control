@@ -87,6 +87,11 @@
   (send *robot* :torso :waist-p :joint-angle 35)
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
+  (call-empty-service "/tilt_laser_listener/clear_cache")
+  ;; Call /locomotion/input/request
+  (call-empty-service "/locomotion/input/request")
+  ;; Wait for next publish
+  (wait-for-snapshot-publish)
   (send *robot* :reset-pose)
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
