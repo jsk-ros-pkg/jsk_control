@@ -23,26 +23,30 @@ class VehicleJoyController(JSKJoyPlugin):
     latest = history.latest()
     handle_changed = False
     step_changed = False
+    handle_resolution = 0.02
+    step_resolution = 0.01
     if not latest:
       return
     if status.left:
-      self.current_handle_val = self.current_handle_val + 0.05
+      self.current_handle_val = self.current_handle_val + handle_resolution
       handle_changed = True
     elif status.right:
-      self.current_handle_val = self.current_handle_val - 0.05
+      self.current_handle_val = self.current_handle_val - handle_resolution
       handle_changed = True
     if status.circle:
-      self.current_step_val = self.current_step_val + 0.01
+      self.current_step_val = self.current_step_val + step_resolution
       if self.current_step_val > 1.0:
         self.current_step_val = 1.0
       step_changed = True
     elif status.cross:
-      self.current_step_val = self.current_step_val - 0.01
+      self.current_step_val = self.current_step_val - step_resolution
       if self.current_step_val < 0.0:
         self.current_step_val = 0.0
       step_changed = True
-    if handle_changed:
-      self.handle_publisher.publish(Float64(data = self.current_handle_val))
-    if step_changed:
-      self.step_publisher.publish(Float64(data = self.current_step_val))
+    self.handle_publisher.publish(Float64(data = self.current_handle_val))
+    self.step_publisher.publish(Float64(data = self.current_step_val))
+    # if handle_changed:
+    #   self.handle_publisher.publish(Float64(data = self.current_handle_val))
+    # if step_changed:
+    #   self.step_publisher.publish(Float64(data = self.current_step_val))
       
