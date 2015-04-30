@@ -17,8 +17,8 @@ class VehicleJoyController(JSKJoyPlugin):
     JSKJoyPlugin.__init__(self, name, args)
     self.current_handle_val = 0.0
     self.current_step_val = 0.0
-    self.handle_publisher = rospy.Publisher("/drive/operation/handle_cmd_fast", Float64)
-    self.step_publisher = rospy.Publisher("/drive/operation/accel_cmd_fast", Float64)
+    self.handle_publisher = rospy.Publisher("drive/operation/handle_cmd_fast", Float64)
+    self.step_publisher = rospy.Publisher("drive/operation/accel_cmd_fast", Float64)
   def joyCB(self, status, history):
     latest = history.latest()
     handle_changed = False
