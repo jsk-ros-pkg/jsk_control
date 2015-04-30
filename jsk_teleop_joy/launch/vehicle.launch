@@ -3,8 +3,8 @@
         <node pkg="joy" type="joy_node" name="joy_driver" output="screen" >
             <param name="dev" type="string" value="/dev/input/js0" />
             <param name="deadzone" value="0.2" />
-            <param name="autorepeat_rate" value="40" />
-            <param name="coalesce_interval" value="0.025" />
+            <param name="autorepeat_rate" value="50" />
+            <param name="coalesce_interval" value="0.01" />
             <remap from="/joy" to="joy" />
         </node>
         <node pkg="jsk_teleop_joy" type="joy.py" name="joy_manager" output="screen"
@@ -19,8 +19,8 @@
           </rosparam>
         </node>
         <node pkg="topic_tools" type="throttle" name="handle_throttle"
-              args="messages /drive/operation/handle_cmd_fast 1 /drive/operation/handle_cmd" />
+              args="messages /drive/operation/handle_cmd_fast 100 /drive/operation/handle_cmd" />
         <node pkg="topic_tools" type="throttle" name="accel_throttle"
-              args="messages /drive/operation/accel_cmd_fast 1 /drive/operation/accel_cmd" />
+              args="messages /drive/operation/accel_cmd_fast 100 /drive/operation/accel_cmd" />
     </group>
 </launch>
