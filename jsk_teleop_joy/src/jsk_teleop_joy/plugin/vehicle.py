@@ -28,6 +28,7 @@ class VehicleJoyController(JSKJoyPlugin):
     latest = history.latest()
     handle_resolution = 0.02
     neck_resolution = 0.1
+    neck_angle_max = 30.0
     accel_resolution = 0.01
     brake_resolution = 1.0
 
@@ -42,12 +43,12 @@ class VehicleJoyController(JSKJoyPlugin):
     # neck command
     if status.L1:
       self.current_neck_val = self.current_neck_val + neck_resolution
-      if self.current_neck_val > 30.0:
-        self.current_neck_val = 30.0
+      if self.current_neck_val > neck_angle_max:
+        self.current_neck_val = neck_angle_max
     elif status.R1:
       self.current_neck_val = self.current_neck_val - neck_resolution
-      if self.current_neck_val < -30.0:
-        self.current_neck_val = -30.0
+      if self.current_neck_val < -neck_angle_max:
+        self.current_neck_val = -neck_angle_max
     # accel command
     if status.circle:
       self.current_accel_val = self.current_accel_val + accel_resolution
