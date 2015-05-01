@@ -16,37 +16,46 @@ class VehicleJoyController(JSKJoyPlugin):
   def __init__(self, name, args):
     JSKJoyPlugin.__init__(self, name, args)
     self.current_handle_val = 0.0
-    self.current_step_val = 0.0
+    self.current_accel_val = 0.0
+    self.current_brake_val = 0.0
     self.handle_publisher = rospy.Publisher("drive/operation/handle_cmd_fast", Float64)
-    self.step_publisher = rospy.Publisher("drive/operation/accel_cmd_fast", Float64)
+    self.accel_publisher = rospy.Publisher("drive/operation/accel_cmd_fast", Float64)
+    self.brake_publisher = rospy.Publisher("drive/operation/brake_cmd_fast", Float64)
+
   def joyCB(self, status, history):
     latest = history.latest()
-    handle_changed = False
-    step_changed = False
     handle_resolution = 0.02
-    step_resolution = 0.01
+    accel_resolution = 0.01
+    brake_resolution = 1.0
+
     if not latest:
       return
+
+    # handle command
     if status.left:
       self.current_handle_val = self.current_handle_val + handle_resolution
-      handle_changed = True
     elif status.right:
       self.current_handle_val = self.current_handle_val - handle_resolution
-      handle_changed = True
+    # accel command
     if status.circle:
-      self.current_step_val = self.current_step_val + step_resolution
-      if self.current_step_val > 1.0:
-        self.current_step_val = 1.0
-      step_changed = True
-    elif status.cross:
-      self.current_step_val = self.current_step_val - step_resolution
-      if self.current_step_val < 0.0:
-        self.current_step_val = 0.0
-      step_changed = True
+      self.current_accel_val = self.current_accel_val + accel_resolution
+      if self.current_accel_val > 1.0:
+        self.current_accel_val = 1.0
+    else:
+      self.current_accel_val = self.current_accel_val - accel_resolution
+      if self.current_accel_val < 0.0:
+        self.current_accel_val = 0.0
+    # brake command
+    if status.cross:
+      self.current_brake_val = self.current_brake_val + brake_resolution
+      if self.current_brake_val > 1.0:
+        self.current_brake_val = 1.0
+    else:
+      self.current_brake_val = self.current_brake_val - brake_resolution
+      if self.current_brake_val < 0.0:
+        self.current_brake_val = 0.0
+
     self.handle_publisher.publish(Float64(data = self.current_handle_val))
-    self.step_publisher.publish(Float64(data = self.current_step_val))
-    # if handle_changed:
-    #   self.handle_publisher.publish(Float64(data = self.current_handle_val))
-    # if step_changed:
-    #   self.step_publisher.publish(Float64(data = self.current_step_val))
-      
+    self.accel_publisher.publish(Float64(data = self.current_accel_val))
+    self.brake_publisher.publish(Float64(data = self.current_brake_val))
+
