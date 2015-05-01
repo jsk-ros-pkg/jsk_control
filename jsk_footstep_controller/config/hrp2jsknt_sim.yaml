@@ -18,6 +18,3 @@ rfoot_frame_id: RLEG_LINK5
 # rfoot_offset: [0.072, -0.01, -0.105, 0, 0, 0, 1]
 lfoot_offset: [0.03, 0.01, -0.105, 0, 0, 0, 1]
 rfoot_offset: [0.03, -0.01, -0.105, 0, 0, 0, 1]
-# offset link coordinate -> end coords
-lfoot_endcoords_offset: [0.035589, 0.01, -0.105, 0, 0, 0, 1]
-rfoot_endcoords_offset: [0.035589, -0.01, -0.105, 0, 0, 0, 1]
