@@ -18,13 +18,17 @@ class VehicleJoyController(JSKJoyPlugin):
     self.current_handle_val = 0.0
     self.current_accel_val = 0.0
     self.current_brake_val = 0.0
+    self.current_neck_val = 0.0
     self.handle_publisher = rospy.Publisher("drive/operation/handle_cmd_fast", Float64)
     self.accel_publisher = rospy.Publisher("drive/operation/accel_cmd_fast", Float64)
     self.brake_publisher = rospy.Publisher("drive/operation/brake_cmd_fast", Float64)
+    self.neck_publisher = rospy.Publisher("drive/operation/neck_cmd_fast", Float64)
 
   def joyCB(self, status, history):
     latest = history.latest()
     handle_resolution = 0.02
+    neck_resolution = 0.1
+    neck_angle_max = 30.0
     accel_resolution = 0.01
     brake_resolution = 1.0
 
@@ -36,6 +40,15 @@ class VehicleJoyController(JSKJoyPlugin):
       self.current_handle_val = self.current_handle_val + handle_resolution
     elif status.right:
       self.current_handle_val = self.current_handle_val - handle_resolution
+    # neck command
+    if status.L1:
+      self.current_neck_val = self.current_neck_val + neck_resolution
+      if self.current_neck_val > neck_angle_max:
+        self.current_neck_val = neck_angle_max
+    elif status.R1:
+      self.current_neck_val = self.current_neck_val - neck_resolution
+      if self.current_neck_val < -neck_angle_max:
+        self.current_neck_val = -neck_angle_max
     # accel command
     if status.circle:
       self.current_accel_val = self.current_accel_val + accel_resolution
@@ -58,4 +71,4 @@ class VehicleJoyController(JSKJoyPlugin):
     self.handle_publisher.publish(Float64(data = self.current_handle_val))
     self.accel_publisher.publish(Float64(data = self.current_accel_val))
     self.brake_publisher.publish(Float64(data = self.current_brake_val))
-
+    self.neck_publisher.publish(Float64(data = self.current_neck_val))
