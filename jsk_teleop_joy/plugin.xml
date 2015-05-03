@@ -24,4 +24,6 @@
   </class>
   <class name="JSKInteractiveMarkerEndeffector" type="jsk_teleop_joy.plugin.jsk_interactive_marker_control.EndEffector">
   </class>
+  <class name="VehicleJoyController" type="jsk_teleop_joy.plugin.vehicle.VehicleJoyController">
+  </class>
 </library>
