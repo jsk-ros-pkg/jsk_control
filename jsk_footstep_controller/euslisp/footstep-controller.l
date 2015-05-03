@@ -117,7 +117,12 @@
   ;; 3. convert the footstep respected to hrpsys-mid-coords
   (if (not *interruptible-mode*)
       (when *realp*
-        (walking-pose *robot* :root-link-height-offset -80)
+        (cond
+         ((string= *robot-name* "JAXON")
+          (walking-pose *robot* :root-link-height-offset -80))
+         (t
+          (walking-pose *robot* :root-link-height-offset -70))
+          ))
         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)))
   (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
@@ -314,6 +319,13 @@
       res)))
 
 (defun set-parameter-for-stair ()
+  ((cond
+    ((string= *robot-name* "JAXON")
+     (set-parameter-for-stair-jaxon))
+    (t
+     (set-parameter-for-stair-hrp2)))))
+
+(defun set-parameter-for-stair-jaxon ()
   (send *ri* :set-gait-generator-param
         :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
         :swing-trajectory-delay-time-offset 0.25
@@ -323,15 +335,44 @@
         :default-double-support-ratio 0.16
         :default-step-height 0.03)
   (send *ri* :set-auto-balancer-param :default-zmp-offsets
+        (list (float-vector 10 30 0) (float-vector 10 -30 0))))
+
+(defun set-parameter-for-stair-hrp2 ()
+  (send *ri* :set-gait-generator-param
+        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+        :swing-trajectory-delay-time-offset 0.25
+        :default-orbit-type :stair
+        :default-step-time 1.3
+        :default-double-support-ratio 0.32
+        :default-step-height 0.03)
+  (send *ri* :set-auto-balancer-param :default-zmp-offsets
         (list (float-vector 10 30 0) (float-vector 10 -30 0)))
   )
 
 (defun set-parameter-for-planar ()
+  ((cond
+    ((string= *robot-name* "JAXON")
+     (set-parameter-for-planar-jaxon))
+    (t
+     (set-parameter-for-planar-hrp2)))))
+
+(defun set-parameter-for-planar-jaxon ()
   (send *ri* :set-gait-generator-param
         :default-orbit-type :cycloid
         :default-step-time 1.1
         ;;:default-double-support-ratio 0.32
          :default-double-support-ratio 0.16
+        :default-step-height 0.05)
+  ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
+  (send *ri* :set-auto-balancer-param :default-zmp-offsets
+        (list (float-vector 10 10 0) (float-vector 10 -10 0)))
+  )
+
+(defun set-parameter-for-planar-hrp2 ()
+  (send *ri* :set-gait-generator-param
+        :default-orbit-type :cycloid
+        :default-step-time 1.1
+        :default-double-support-ratio 0.32
         :default-step-height 0.05)
   ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
   (send *ri* :set-auto-balancer-param :default-zmp-offsets
@@ -348,7 +389,8 @@
     (if *interruptible-mode*
         (ros::ros-info "footstep controller running in interruptible mode"))
     (load interface-file)
-    (init-robot-from-name (ros::get-param "~robot_name" (unix::getenv "ROBOT")))
+    (setq *robot-name* (ros::get-param "~robot_name" (unix::getenv "ROBOT")))
+    (init-robot-from-name *robot-name*)
     ;; Set ABC parameters
     )
   ;; interface

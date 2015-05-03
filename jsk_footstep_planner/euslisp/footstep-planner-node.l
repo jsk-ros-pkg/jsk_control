@@ -446,7 +446,7 @@
   (ros::roseus "jsk_footstep_planner")
   ;; read parameters
   (let ((param-file (ros::get-param "~parameter_file"
-                                    "package://jsk_footstep_planner/config/hrp2jsk_param.l")))
+                      "package://jsk_footstep_planner/config/hrp2jsk_param.l")))
     (load param-file)
     (decompose-footstep-parameter *footstep-parameters*))
   ;; hrp2 footstep size is default
