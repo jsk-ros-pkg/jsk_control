@@ -144,7 +144,7 @@ namespace jsk_footstep_controller
   {
     try {
       if (!waitForEndEffectorTrasnformation(lfoot->header.stamp)) {
-        ROS_ERROR("failed to lookup transformation for sensor value");
+        ROS_ERROR("[Footcoords::resolveForceTf] failed to lookup transformation for sensor value");
         return false;
       }
       tf::StampedTransform lfoot_transform, rfoot_transform;
@@ -166,19 +166,19 @@ namespace jsk_footstep_controller
       return true;
     }
     catch (tf2::ConnectivityException &e) {
-      ROS_ERROR("transform error: %s", e.what());
+      ROS_ERROR("[Footcoords::resolveForceTf] transform error: %s", e.what());
       return false;
     }
     catch (tf2::InvalidArgumentException &e) {
-      ROS_ERROR("transform error: %s", e.what());
+      ROS_ERROR("[Footcoords::resolveForceTf] transform error: %s", e.what());
       return false;
     }
     catch (tf2::ExtrapolationException &e) {
-      ROS_ERROR("transform error: %s", e.what());
+      ROS_ERROR("[Footcoords::resolveForceTf] transform error: %s", e.what());
       return false;
     }
     catch (tf2::LookupException &e) {
-      ROS_ERROR("transform error: %s", e.what());
+      ROS_ERROR("[Footcoords::resolveForceTf] transform error: %s", e.what());
       return false;
     }
   }
@@ -222,7 +222,7 @@ namespace jsk_footstep_controller
     // lowpass filter
     tf::Vector3 lfoot_force_vector, rfoot_force_vector;
     if (!resolveForceTf(lfoot, rfoot, lfoot_force_vector, rfoot_force_vector)) {
-      ROS_ERROR("failed to resolve tf of force sensor");
+      ROS_ERROR("[Footcoords::filter] failed to resolve tf of force sensor");
       return;
     }
     // resolve tf
@@ -307,19 +307,19 @@ namespace jsk_footstep_controller
     }
     catch (tf2::ConnectivityException &e)
     {
-      ROS_ERROR("transform error: %s", e.what());
+      ROS_ERROR("[Footcoords::publishContactState] transform error: %s", e.what());
     }
     catch (tf2::InvalidArgumentException &e)
     {
-      ROS_ERROR("transform error: %s", e.what());
+      ROS_ERROR("[Footcoords::publishContactState] transform error: %s", e.what());
     }
     catch (tf2::ExtrapolationException &e)
     {
-      ROS_ERROR("transform error: %s", e.what());
+      ROS_ERROR("[Footcoords::publishContactState] transform error: %s", e.what());
     }
     catch (tf2::LookupException &e)
     {
-      ROS_ERROR("transform error: %s", e.what());
+      ROS_ERROR("[Footcoords::publishContactState] transform error: %s", e.what());
     }
 
   }
@@ -328,7 +328,7 @@ namespace jsk_footstep_controller
                                                  bool use_left_leg)
   {
     if (!waitForEndEffectorTrasnformation(stamp)) {
-      ROS_ERROR("Failed to lookup endeffector transformation");
+      ROS_ERROR("[Footcoords::computeMidCoordsFromSingleLeg] Failed to lookup endeffector transformation");
       return false;
     }
     else {
@@ -348,21 +348,21 @@ namespace jsk_footstep_controller
       }
       catch (tf2::ConnectivityException &e)
       {
-        ROS_ERROR("transform error: %s", e.what());
+        ROS_ERROR("[Footcoords::computeMidCoordsFromSingleLeg] transform error: %s", e.what());
         return false;
       }
       catch (tf2::InvalidArgumentException &e)
       {
-        ROS_ERROR("transform error: %s", e.what());
+        ROS_ERROR("[Footcoords::computeMidCoordsFromSingleLeg] transform error: %s", e.what());
         return false;
       }
       catch (tf2::ExtrapolationException &e)
       {
-        ROS_ERROR("transform error: %s", e.what());
+        ROS_ERROR("[Footcoords::computeMidCoordsFromSingleLeg] transform error: %s", e.what());
       }
       catch (tf2::LookupException &e)
       {
-        ROS_ERROR("transform error: %s", e.what());
+        ROS_ERROR("[Footcoords::computeMidCoordsFromSingleLeg] transform error: %s", e.what());
       }
 
 
@@ -372,7 +372,7 @@ namespace jsk_footstep_controller
   bool Footcoords::computeMidCoords(const ros::Time& stamp)
   {
     if (!waitForEndEffectorTrasnformation(stamp)) {
-      ROS_ERROR("Failed to lookup endeffector transformation");
+      ROS_ERROR("[Footcoords::computeMidCoords] Failed to lookup endeffector transformation");
       return false;
     }
     else {
@@ -396,21 +396,21 @@ namespace jsk_footstep_controller
       }
       catch (tf2::ConnectivityException &e)
       {
-        ROS_ERROR("transform error: %s", e.what());
+        ROS_ERROR("[Footcoords::computeMidCoords] transform error: %s", e.what());
         return false;
       }
       catch (tf2::InvalidArgumentException &e)
       {
-        ROS_ERROR("transform error: %s", e.what());
+        ROS_ERROR("[Footcoords::computeMidCoords] transform error: %s", e.what());
         return false;
       }
       catch (tf2::ExtrapolationException &e)
       {
-        ROS_ERROR("transform error: %s", e.what());
+        ROS_ERROR("[Footcoords::computeMidCoords] transform error: %s", e.what());
       }
       catch (tf2::LookupException &e)
       {
-        ROS_ERROR("transform error: %s", e.what());
+        ROS_ERROR("[Footcoords::computeMidCoords] transform error: %s", e.what());
       }
 
     }
@@ -423,14 +423,14 @@ namespace jsk_footstep_controller
     // lfsensor -> lleg_end_coords
     if (!tf_listener_->waitForTransform(
           lsensor_frame, lfoot_sensor_frame_, stamp, ros::Duration(1.0))) {
-      ROS_ERROR("failed to lookup transform between %s and %s",
+      ROS_ERROR("[Footcoords::waitForSensorFrameTransformation] failed to lookup transform between %s and %s",
                 lsensor_frame.c_str(),
                 lfoot_sensor_frame_.c_str());
       return false;
     }
     if (!tf_listener_->waitForTransform(
           rsensor_frame, rfoot_sensor_frame_, stamp, ros::Duration(1.0))) {
-      ROS_ERROR("failed to lookup transform between %s and %s",
+      ROS_ERROR("[Footcoords::waitForSensorFrameTransformation] failed to lookup transform between %s and %s",
                 rsensor_frame.c_str(),
                 rfoot_sensor_frame_.c_str());
       return false;
@@ -443,7 +443,7 @@ namespace jsk_footstep_controller
     // odom -> lfoot
     if (!tf_listener_->waitForTransform(
           parent_frame_id_, lfoot_frame_id_, stamp, ros::Duration(1.0))) {
-      ROS_ERROR("failed to lookup transform between %s and %s",
+      ROS_ERROR("[Footcoords::waitForEndEffectorTrasnformation] failed to lookup transform between %s and %s",
                 parent_frame_id_.c_str(),
                 lfoot_frame_id_.c_str());
       return false;
@@ -451,7 +451,7 @@ namespace jsk_footstep_controller
     // odom -> rfoot
     else if (!tf_listener_->waitForTransform(
                parent_frame_id_, rfoot_frame_id_, stamp, ros::Duration(1.0))) {
-      ROS_ERROR("failed to lookup transform between %s and %s",
+      ROS_ERROR("[Footcoords::waitForEndEffectorTrasnformation]failed to lookup transform between %s and %s",
                 parent_frame_id_.c_str(),
                 rfoot_frame_id_.c_str());
       return false;
@@ -459,7 +459,7 @@ namespace jsk_footstep_controller
     // lfoot -> rfoot
     else if (!tf_listener_->waitForTransform(
                lfoot_frame_id_, rfoot_frame_id_, stamp, ros::Duration(1.0))) {
-      ROS_ERROR("failed to lookup transform between %s and %s",
+      ROS_ERROR("[Footcoords::waitForEndEffectorTrasnformation]failed to lookup transform between %s and %s",
                 lfoot_frame_id_.c_str(),
                 rfoot_frame_id_.c_str());
       return false;
