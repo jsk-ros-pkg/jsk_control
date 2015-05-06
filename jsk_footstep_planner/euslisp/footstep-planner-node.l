@@ -66,188 +66,199 @@
 (defun plan-execute-cb (server goal)
   (setq *evaled-node-num* 0)
   (send-all *grids* :prepare-for-planning)
-  (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
-         (start-time (ros::time-now))
-         (prblm (instance footstep-planner-graph :init
-                          :scene nil :scene-grow 0
-                          :footstep-parameter param
-                          :obstacles nil
-                          :robot nil
-                          :step-max 100.0
-                          :rotate-max (deg2rad 10)
-                          :leg-object *leg*
-                          :thr 100.0
-                          :rthr (deg2rad 10)
-                          :wd 0.8
-                          :wp 0.0
-                          :wg 1.0
-                          :transition-limit *transition-limit*
-                          :timeout (ros::time+ start-time (ros::time *timeout*))
-                          :planes *planes*
-                          :grids *grids*
-                          :z-axis (float-vector 0 0 1)
-                          :collisoin-robot-model nil))
-         (goal-foot-coords (mapcar #'(lambda (f)
-                                       (footstep->consed-coords f goal))
-                                   (send goal :goal :goal_footstep :footsteps)))
-         (initial-foot-coords (mapcar #'(lambda (f) (footstep->consed-coords f goal))
-                                      (send goal :goal :initial_footstep :footsteps)))
-         (goal-coords (apply #'(lambda (x y) (midcoords 0.5 (cdr x) (cdr y))) goal-foot-coords))
-         ;; If the first step of goal footstep is lleg, planning starts with lleg
-         (start-leg (if (= (send (elt (send goal :goal :initial_footstep :footsteps) 0) :leg)
-                           jsk_footstep_msgs::Footstep::*LEFT*)
-                        :rleg :lleg))
-         (support-leg (if (eq start-leg :lleg) :rleg :lleg)))
-    ;; cheep hack
-    (setq *goal-header* (send goal :goal :initial_footstep :header))
-
-    ;; First of all, check *grid-maps* is available
-    (when *use-env-server*
-      (unless *grids*
-        (ros::ros-warn "Not yet *grids* is available")
-        (let ((result (send server :result)))
-          (send server :set-aborted result)
-          (return-from plan-execute-cb nil))))
-
-    ;; Visualize goal footsteps
-    (let ((first-step (make-footprint (car (car goal-foot-coords))))
-          (second-step (make-footprint (car (cadr goal-foot-coords)))))
-      ;;(print (list first-step second-step))
-      (send first-step :move-to (cdr (car goal-foot-coords)) :world)
-      (send second-step :move-to (cdr (cadr goal-foot-coords)) :world)
-      (setq *goal-footsteps* (list first-step second-step))
-      (when *use-gui*
-        (send *irtviewer* :objects (append *goal-footsteps* *grids*))
-        (send *irtviewer* :draw-objects)))
-
-    ;; Check goal footstep is possible or not first
-    (when *use-env-server*
-      (send-all *goal-footsteps* :worldpos) ;Force to update vertices
-      (when (or (not (cube-placable-p (car *goal-footsteps*) *grids*))
-                (not (cube-placable-p (cadr *goal-footsteps*) *grids*)))
-        (ros::ros-warn "Goal footstep is outside of grids")
-        (let ((result (send server :result)))
-          (send server :set-aborted result))
-        (return-from plan-execute-cb nil)))
-    (ros::ros-info "Running Planning")
+  ;; Compute g-sensor coords from global-frame-id
+  (let ((gsensor-coords nil))
+    ;; Lookup gsensor-coords until we found it
+    (while (null gsensor-coords)
+      (ros::ros-info "Waiting for gsensor coords")
+      (ros::sleep)
+      (setq gsensor-coords
+            (send *tf* :lookup-transform "gsensor" *global-frame-id* (ros::time 0))))
     
-    ;; creating initial step node from goal msg
-    (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
-      ;; Project leg-coords onto grid first
-      (let ((projected-leg-coords (mapcar
-                                   #'(lambda (c)
-                                       (project-coordinates-on-nearest-grid
-                                        c *grids*))
-                                   leg-coords)))
-        (when (or (null (car projected-leg-coords))
-                (null (cadr projected-leg-coords)))
-          (ros::ros-error "Failed to project first step")
+    (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
+           (start-time (ros::time-now))
+           (prblm (instance footstep-planner-graph :init
+                            :roll-paranoid *roll-paranoid*
+                            :scene nil :scene-grow 0
+                            :footstep-parameter param
+                            :obstacles nil
+                            :robot nil
+                            :step-max 100.0
+                            :rotate-max (deg2rad 10)
+                            :leg-object *leg*
+                            :thr 100.0
+                            :rthr (deg2rad 10)
+                            :wd 0.8
+                            :wp 0.0
+                            :wg 1.0
+                            :transition-limit *transition-limit*
+                            :timeout (ros::time+ start-time (ros::time *timeout*))
+                            :planes *planes*
+                            :grids *grids*
+                            :g-sensor-coords gsensor-coords
+                            :z-axis (float-vector 0 0 1)
+                            :collisoin-robot-model nil))
+           (goal-foot-coords (mapcar #'(lambda (f)
+                                         (footstep->consed-coords f goal))
+                                     (send goal :goal :goal_footstep :footsteps)))
+           (initial-foot-coords (mapcar #'(lambda (f) (footstep->consed-coords f goal))
+                                        (send goal :goal :initial_footstep :footsteps)))
+           (goal-coords (apply #'(lambda (x y) (midcoords 0.5 (cdr x) (cdr y))) goal-foot-coords))
+           ;; If the first step of goal footstep is lleg, planning starts with lleg
+           (start-leg (if (= (send (elt (send goal :goal :initial_footstep :footsteps) 0) :leg)
+                             jsk_footstep_msgs::Footstep::*LEFT*)
+                          :rleg :lleg))
+           (support-leg (if (eq start-leg :lleg) :rleg :lleg)))
+      ;; cheep hack
+      (setq *goal-header* (send goal :goal :initial_footstep :header))
+
+      ;; First of all, check *grid-maps* is available
+      (when *use-env-server*
+        (unless *grids*
+          (ros::ros-warn "Not yet *grids* is available")
+          (let ((result (send server :result)))
+            (send server :set-aborted result)
+            (return-from plan-execute-cb nil))))
+
+      ;; Visualize goal footsteps
+      (let ((first-step (make-footprint (car (car goal-foot-coords))))
+            (second-step (make-footprint (car (cadr goal-foot-coords)))))
+        ;;(print (list first-step second-step))
+        (send first-step :move-to (cdr (car goal-foot-coords)) :world)
+        (send second-step :move-to (cdr (cadr goal-foot-coords)) :world)
+        (setq *goal-footsteps* (list first-step second-step))
+        (when *use-gui*
+          (send *irtviewer* :objects (append *goal-footsteps* *grids*))
+          (send *irtviewer* :draw-objects)))
+
+      ;; Check goal footstep is possible or not first
+      (when *use-env-server*
+        (send-all *goal-footsteps* :worldpos) ;Force to update vertices
+        (when (or (not (cube-placable-p (car *goal-footsteps*) *grids*))
+                  (not (cube-placable-p (cadr *goal-footsteps*) *grids*)))
+          (ros::ros-warn "Goal footstep is outside of grids")
           (let ((result (send server :result)))
             (send server :set-aborted result))
-          (return-from plan-execute-cb nil))
-        ;; Visualize initial footsteps
-        (let ((first-step (make-footprint (car (car initial-foot-coords))))
-              (second-step (make-footprint (car (cadr initial-foot-coords)))))
-          (send first-step :move-to (car projected-leg-coords) :world)
-          (send second-step :move-to (cadr projected-leg-coords) :world)
-          (setq *initial-footsteps* (list first-step second-step))
-          (when *use-gui*
-            (send *irtviewer* :objects (append *goal-footsteps* *initial-footsteps* *grids*))
-            (send *irtviewer* :draw-objects)))
-        
-        (send prblm :start-state
-              (instance step-node :init
-                        :worldcoords (cadr projected-leg-coords)
-                        :prev-coords (car projected-leg-coords)
-                        :l/r start-leg
-                        :robot-coords (midcoords 0.5
-                                                 (car projected-leg-coords)
-                                                 (cadr projected-leg-coords))
-                        :angle-vector nil))))
-    (send prblm :goal-state goal-coords) ; goal coords
-    (send prblm :goal-footstep goal-foot-coords)
-    (let ((asolver (instance a*-footstep-graph-search-solver
-                             :init 1.0 *heuristic* prblm
-                             :render-leg-object *leg*)))
-      (let ((solver-nodes (send asolver :solve prblm)))
-        (send prblm :report)
-        (let ((result (send server :result)))
-          (if solver-nodes              ;successfully solved!
-              (let ((footsteps (instance jsk_footstep_msgs::FootstepArray :init)))
-                (send footsteps :header (send goal :goal :initial_footstep :header))
-                (send footsteps :footsteps
-                      (mapcar #'(lambda (n)
-                                  (let ((f (instance jsk_footstep_msgs::Footstep :init)))
-                                    (let ((pose (ros::coords->tf-pose (send (send n :state) :worldcoords))))
-                                      (send f :pose pose)
-                                      (if (eq (send (send n :state) :l/r) :lleg)
-                                          (send f :leg jsk_footstep_msgs::Footstep::*LEFT*)
-                                        (send f :leg jsk_footstep_msgs::Footstep::*RIGHT*))
-                                      f)))
-                              ;; remove the first step, because it will be the sampe step to the initial steps
-                              (cdr solver-nodes)))
-                (ros::ros-info "footsteps: ~A"
-                  (mapcar #'(lambda (n)
-                              (cons (send (send n :state) :l/r)
-                                    (send (send n :state) :worldcoords)))
-                          solver-nodes))
-                ;; finalize the footstep
-                (let ((last-foot (send (send (car (last solver-nodes)) :state) :l/r)))
-                  (let ((step-order (if (eq last-foot :lleg)
-                                        (list jsk_footstep_msgs::Footstep::*RIGHT* jsk_footstep_msgs::Footstep::*LEFT*)
-                                      (list jsk_footstep_msgs::Footstep::*LEFT* jsk_footstep_msgs::Footstep::*RIGHT*))))
-                    (let ((final-steps (list (find-if #'(lambda (s)
-                                                          (= (car step-order) (car s)))
-                                                      goal-foot-coords)
-                                             (find-if #'(lambda (s)
-                                                          (= (cadr step-order) (car s)))
-                                                      goal-foot-coords))))
-                      ;; append final steps and initial footstep
-                      (send footsteps :footsteps (append (send goal :goal :initial_footstep :footsteps)
-                                                         (send footsteps :footsteps)
-                                                         (mapcar #'(lambda (s)
-                                                                     (let ((f (instance jsk_footstep_msgs::Footstep :init)))
-                                                                       (let ((pose (ros::coords->tf-pose (cdr s))))
-                                                                         (send f :pose pose)
-                                                                         (send f :leg (car s))
-                                                                         f)))
-                                                                 final-steps))))))
-                ;; set the size of footsteps
-                (send-all (send footsteps :footsteps)
-                          :dimensions (instance geometry_msgs::Vector3 :init
-                                                :x (* 0.001 *leg-size-x*)
-                                                :y (* 0.001 *leg-size-y*)
-                                                :z (* 0.001 *leg-size-z*)))
-                (send result :result footsteps)
-                ;; publish the result for visualization
-                (let* ((now (ros::time-now))
-                       (str
-                        (format nil "took ~A sec to plan~%~A node are evaled~%"
-                                (send (ros::time- now start-time) :to-sec)
-                                *evaled-node-num*)))
-                  (ros::ros-warn str)
-                  (let ((msg (instance std_msgs::Float32 :init)))
-                    (send msg :data (send (ros::time- now start-time) :to-sec))
-                    (ros::publish (format nil "~A/footstep_time" (ros::get-name)) msg))
+          (return-from plan-execute-cb nil)))
+      (ros::ros-info "Running Planning")
+      
+      ;; creating initial step node from goal msg
+      (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
+        ;; Project leg-coords onto grid first
+        (let ((projected-leg-coords (mapcar
+                                     #'(lambda (c)
+                                         (project-coordinates-on-nearest-grid
+                                          c *grids*))
+                                     leg-coords)))
+          (when (or (null (car projected-leg-coords))
+                    (null (cadr projected-leg-coords)))
+            (ros::ros-error "Failed to project first step")
+            (let ((result (send server :result)))
+              (send server :set-aborted result))
+            (return-from plan-execute-cb nil))
+          ;; Visualize initial footsteps
+          (let ((first-step (make-footprint (car (car initial-foot-coords))))
+                (second-step (make-footprint (car (cadr initial-foot-coords)))))
+            (send first-step :move-to (car projected-leg-coords) :world)
+            (send second-step :move-to (cadr projected-leg-coords) :world)
+            (setq *initial-footsteps* (list first-step second-step))
+            (when *use-gui*
+              (send *irtviewer* :objects (append *goal-footsteps* *initial-footsteps* *grids*))
+              (send *irtviewer* :draw-objects)))
+          
+          (send prblm :start-state
+                (instance step-node :init
+                          :worldcoords (cadr projected-leg-coords)
+                          :prev-coords (car projected-leg-coords)
+                          :l/r start-leg
+                          :robot-coords (midcoords 0.5
+                                                   (car projected-leg-coords)
+                                                   (cadr projected-leg-coords))
+                          :angle-vector nil))))
+      (send prblm :goal-state goal-coords) ; goal coords
+      (send prblm :goal-footstep goal-foot-coords)
+      (let ((asolver (instance a*-footstep-graph-search-solver
+                               :init 1.0 *heuristic* prblm
+                               :render-leg-object *leg*)))
+        (let ((solver-nodes (send asolver :solve prblm)))
+          (send prblm :report)
+          (let ((result (send server :result)))
+            (if solver-nodes              ;successfully solved!
+                (let ((footsteps (instance jsk_footstep_msgs::FootstepArray :init)))
+                  (send footsteps :header (send goal :goal :initial_footstep :header))
+                  (send footsteps :footsteps
+                        (mapcar #'(lambda (n)
+                                    (let ((f (instance jsk_footstep_msgs::Footstep :init)))
+                                      (let ((pose (ros::coords->tf-pose (send (send n :state) :worldcoords))))
+                                        (send f :pose pose)
+                                        (if (eq (send (send n :state) :l/r) :lleg)
+                                            (send f :leg jsk_footstep_msgs::Footstep::*LEFT*)
+                                          (send f :leg jsk_footstep_msgs::Footstep::*RIGHT*))
+                                        f)))
+                                ;; remove the first step, because it will be the sampe step to the initial steps
+                                (cdr solver-nodes)))
+                  (ros::ros-info "footsteps: ~A"
+                    (mapcar #'(lambda (n)
+                                (cons (send (send n :state) :l/r)
+                                      (send (send n :state) :worldcoords)))
+                            solver-nodes))
+                  ;; finalize the footstep
+                  (let ((last-foot (send (send (car (last solver-nodes)) :state) :l/r)))
+                    (let ((step-order (if (eq last-foot :lleg)
+                                          (list jsk_footstep_msgs::Footstep::*RIGHT* jsk_footstep_msgs::Footstep::*LEFT*)
+                                        (list jsk_footstep_msgs::Footstep::*LEFT* jsk_footstep_msgs::Footstep::*RIGHT*))))
+                      (let ((final-steps (list (find-if #'(lambda (s)
+                                                            (= (car step-order) (car s)))
+                                                        goal-foot-coords)
+                                               (find-if #'(lambda (s)
+                                                            (= (cadr step-order) (car s)))
+                                                        goal-foot-coords))))
+                        ;; append final steps and initial footstep
+                        (send footsteps :footsteps (append (send goal :goal :initial_footstep :footsteps)
+                                                           (send footsteps :footsteps)
+                                                           (mapcar #'(lambda (s)
+                                                                       (let ((f (instance jsk_footstep_msgs::Footstep :init)))
+                                                                         (let ((pose (ros::coords->tf-pose (cdr s))))
+                                                                           (send f :pose pose)
+                                                                           (send f :leg (car s))
+                                                                           f)))
+                                                                   final-steps))))))
+                  ;; set the size of footsteps
+                  (send-all (send footsteps :footsteps)
+                            :dimensions (instance geometry_msgs::Vector3 :init
+                                                  :x (* 0.001 *leg-size-x*)
+                                                  :y (* 0.001 *leg-size-y*)
+                                                  :z (* 0.001 *leg-size-z*)))
+                  (send result :result footsteps)
+                  ;; publish the result for visualization
+                  (let* ((now (ros::time-now))
+                         (str
+                          (format nil "took ~A sec to plan~%~A node are evaled~%"
+                                  (send (ros::time- now start-time) :to-sec)
+                                  *evaled-node-num*)))
+                    (ros::ros-warn str)
+                    (let ((msg (instance std_msgs::Float32 :init)))
+                      (send msg :data (send (ros::time- now start-time) :to-sec))
+                      (ros::publish (format nil "~A/footstep_time" (ros::get-name)) msg))
+                    (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
+                      (send msg :text (format nil "Planning took ~A sec" 
+                                              (send (ros::time- now start-time) :to-sec)))
+                      (ros::publish (format nil "~A/footstep_time_text" (ros::get-name)) msg))
+                    (let ((msg (instance std_msgs::Float32 :init)))
+                      (send msg :data *evaled-node-num*)
+                      (ros::publish (format nil "~A/footstep_count" (ros::get-name)) msg)))
                   (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
-                    (send msg :text (format nil "Planning took ~A sec" 
-                                            (send (ros::time- now start-time) :to-sec)))
-                    (ros::publish (format nil "~A/footstep_time_text" (ros::get-name)) msg))
-                  (let ((msg (instance std_msgs::Float32 :init)))
-                    (send msg :data *evaled-node-num*)
-                    (ros::publish (format nil "~A/footstep_count" (ros::get-name)) msg)))
-                (let ((msg (instance jsk_rviz_plugins::OverlayText :init)))
-                  (send msg :text (format nil "~A nodes are expanded" 
-                                          *evaled-node-num*))
-                  (ros::publish (format nil "~A/footstep_count_text" (ros::get-name)) msg))
-                (ros::publish (format nil "~A/footstep" (ros::get-name)) footsteps)
-                (send server :set-succeeded result))
-            (send server :set-aborted result))
-          ))
+                    (send msg :text (format nil "~A nodes are expanded" 
+                                            *evaled-node-num*))
+                    (ros::publish (format nil "~A/footstep_count_text" (ros::get-name)) msg))
+                  (ros::publish (format nil "~A/footstep" (ros::get-name)) footsteps)
+                  (send server :set-succeeded result))
+              (send server :set-aborted result))
+            ))
+        )
       )
-    )
-  (send-all *grids* :report)
-  )
+    (send-all *grids* :report)
+    ))
 
 (setq *successors-count* 0)
 (setq *previous-successor-published-stamp* nil)
@@ -464,7 +475,8 @@
   (setq *planes* nil)
   (setq *heuristic* (read-from-string
                      (ros::get-param "~heuristic" ":stepcost-heuristic**")))
-                     ;;(ros::get-param "~heuristic" ":stepcost-z-heuristic*")))
+  ;;(ros::get-param "~heuristic" ":stepcost-z-heuristic*")))
+  (setq *roll-paranoid* (ros::get-param "~roll_paranoid" t))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
   (setq *use-gui* (ros::get-param "~use_gui" t))

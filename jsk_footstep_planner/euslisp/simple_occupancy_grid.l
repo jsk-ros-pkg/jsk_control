@@ -1,6 +1,7 @@
 ;; Utility to deal with jsk_recognition_msgs::SimpleOccupancyGrid(Array)
 
 (ros::roseus-add-msgs "jsk_recognition_msgs")
+(setq *debug-verbose* nil)
 ;; (comp:compile-file-if-src-newer
 ;;   (format nil "~A/euslisp/footstep_planner_util.l"
 ;;           (ros::rospack-find "jsk_footstep_planner")))
@@ -193,6 +194,25 @@
               )))))
     (send self :update-draw-vertices)
     )
+  ;; not correct
+  (:grid-world-roll-angle (g-sensor-coords)
+    (let* ((n*
+            (send g-sensor-coords :inverse-rotate-vector (send plane-obj :normal)))
+           (yz-n* (normalize-vector (float-vector 0 (elt n* 1) (elt n* 2)))))
+      (atan2 (elt yz-n* 1) (elt yz-n* 2))))
+  (:rolledp (g-sensor-coords &optional (threshold (deg2rad 5)))
+    (let* ((theta (send self :grid-world-roll-angle g-sensor-coords)))
+      (when *debug-verbose*
+        (ros::ros-info "theta: ~A" (rad2deg theta)))
+      (> (abs theta) threshold)))
+  (:roll-direction (g-sensor-coords &optional (threshold (deg2rad 5)))
+    (let* ((theta (send self :grid-world-roll-angle g-sensor-coords)))
+      (cond ((> theta threshold)
+             :left)
+            ((< theta (- threshold))
+             :right)
+            (t
+             nil))))
   (:local-point (index-pair &optional buf)
     (if buf
         (progn
@@ -481,47 +501,86 @@ which is inside of occupied cell"
                                     grids-candidate
                                     &optional
                                     (grids-blacklist)
-                                    (enable-local-search))
+                                    (enable-local-search)
+                                    (roll-paranoid nil)
+                                    (g-sensor-coords nil)
+                                    (current-grid)
+                                    (next-leg nil))
   "
    1. Project coordinates on grid
    2. Check center of coordinate can be supported by the grid
    "
+  (when roll-paranoid
+    ;; If roll-paranoid mode,
+    ;; we need to check legs for different levels
+    (when (send current-grid :rolledp g-sensor-coords)
+      (when *debug-verbose*
+        (ros::ros-info "current grid is ~A" (send current-grid :roll-direction g-sensor-coords)))
+      (cond
+       ((eq (send current-grid :roll-direction g-sensor-coords)
+            :left)                  ;should use right leg
+        (if (not (eq next-leg :rleg))
+            (return-from project-and-remove-on-grids nil)))
+       ((eq (send current-grid :roll-direction g-sensor-coords)
+            :right)                  ;should use right leg
+        (if (not (eq next-leg :lleg))
+            (return-from project-and-remove-on-grids nil)))
+       )))
   (let ((new-candidates nil))
     (dolist (grid grids-candidate)
-      (when (not (member grid grids-blacklist))
-        (dolist (candidate candidate-coordinates)
-          (let ((projected-coords (send grid :project-coords (cdr candidate))))
-            (when (send grid :occupiedp
-                        (send grid
-                              :index-pair (send projected-coords :worldpos)
-                              :local nil))
-              (setf (get projected-coords :projecting-grid) grid) ;memoize :projecting-grid
-              (setf new-candidates (cons (cons (car candidate)
-                                               projected-coords)
-                                         new-candidates))
-              (when (and enable-local-search *use-local-search*)
-                (let ((local-x-max 50)
-                      (local-x-min 0)
-                      (local-y-max 50)
-                      (local-y-min -50)
-                      (local-theta-min (- (deg2rad 5)))
-                      (local-theta-max (deg2rad 5))
-                      (sampling-num 3))
-                  (dotimes (xi sampling-num)
-                    (dotimes (yi sampling-num)
-                      (dotimes (thetai sampling-num)
-                        (let ((x (+ (* (/ (- local-x-max local-x-min) sampling-num) xi) local-x-min))
-                              (y (+ (* (/ (- local-y-max local-y-min) sampling-num) yi) local-y-min))
-                              (theta (+ (* (/ (- local-theta-max local-theta-min) sampling-num) thetai) local-theta-min)))
-                          (let ((trans (make-coords :pos (float-vector x y 0)
-                                                    :rpy (float-vector theta 0 0))))
-                            (let ((transed-coords (send (send projected-coords :copy-worldcoords) :transform trans)))
-                              (setf (get transed-coords :projecting-grid) grid)
-                              (setf new-candidates (cons (cons (car candidate)
-                                                               transed-coords)
-                                                         new-candidates)))))))))))))))
-    (ros::ros-info "~A/~A projecting candidate" (length new-candidates) (length candidate-coordinates))
-    new-candidates))
+      (let ((roll-check t))
+        (when roll-paranoid
+          (when *debug-verbose*
+            (ros::ros-info "rolledp2: ~A" (send grid :rolledp g-sensor-coords)))
+          (when (send grid :rolledp g-sensor-coords)
+            (when *debug-verbose*
+              (ros::ros-info "candidate grid is ~A" (send grid :roll-direction g-sensor-coords)))
+            (cond
+             ((eq (send grid :roll-direction g-sensor-coords)
+                  :left)                  ;should use right leg
+              (if (not (eq next-leg :lleg))
+                  (setq roll-check nil)))
+             ((eq (send grid :roll-direction g-sensor-coords)
+                  :right)                  ;should use right leg
+              (if (not (eq next-leg :rleg))
+                  (setq roll-check nil))
+              ))))
+        (when (and (not (member grid grids-blacklist))
+                   roll-check)
+          (dolist (candidate candidate-coordinates)
+            (let ((projected-coords (send grid :project-coords (cdr candidate))))
+              (when (send grid :occupiedp
+                          (send grid
+                                :index-pair (send projected-coords :worldpos)
+                                :local nil))
+                (setf (get projected-coords :projecting-grid) grid) ;memoize :projecting-grid
+                (setf new-candidates (cons (cons (car candidate)
+                                                 projected-coords)
+                                           new-candidates))
+                (when (and enable-local-search *use-local-search*)
+                  (let ((local-x-max 50)
+                        (local-x-min 0)
+                        (local-y-max 50)
+                        (local-y-min -50)
+                        (local-theta-min (- (deg2rad 5)))
+                        (local-theta-max (deg2rad 5))
+                        (sampling-num 3))
+                    (dotimes (xi sampling-num)
+                      (dotimes (yi sampling-num)
+                        (dotimes (thetai sampling-num)
+                          (let ((x (+ (* (/ (- local-x-max local-x-min) sampling-num) xi) local-x-min))
+                                (y (+ (* (/ (- local-y-max local-y-min) sampling-num) yi) local-y-min))
+                                (theta (+ (* (/ (- local-theta-max local-theta-min) sampling-num) thetai) local-theta-min)))
+                            (let ((trans (make-coords :pos (float-vector x y 0)
+                                                      :rpy (float-vector theta 0 0))))
+                              (let ((transed-coords (send (send projected-coords :copy-worldcoords) :transform trans)))
+                                (setf (get transed-coords :projecting-grid) grid)
+                                (setf new-candidates (cons (cons (car candidate)
+                                                                 transed-coords)
+                                                           new-candidates))))))))))))))))
+      (ros::ros-info "~A/~A projecting candidate" (length new-candidates) (length candidate-coordinates))
+      new-candidates))
+
 
 (defun remove-not-on-grids (candidate-coordinates
                             grid)

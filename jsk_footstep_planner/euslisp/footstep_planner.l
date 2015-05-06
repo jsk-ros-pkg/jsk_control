@@ -79,6 +79,8 @@ footstep-parameter"))
           goal-coords
           goal-leg-index
           near-side-goal
+          roll-paranoid
+          g-sensor-coords
           collision-robot-model timeout
           successablep-timer
           transition-limit
@@ -89,12 +91,14 @@ footstep-parameter"))
   (:init (&rest args
           &key ((:scene sc) nil)
                ((:scene-grow sg) 0.0)
+               ((:roll-paranoid rp) nil)
                ((:grow g) 0.2)
                ((:timeout tm) nil)
                ((:wd d) 1.0)
                ((:planes ps) nil)
                ((:grids gs) nil)
                ((:z-axis z) nil)
+               ((:g-sensor-coords gsc) nil)
                ((:wp p) 0.0)
                ((:robot r) nil)
                ((:leg-object lo) nil)
@@ -107,6 +111,8 @@ footstep-parameter"))
                ((:rthr rth) (deg2rad 10))
                ((:collision-robot-model crm) nil)
                &allow-other-keys)
+    (setq g-sensor-coords gsc)
+    (setq roll-paranoid rp)
     (setq transition-limit tlimit)
     (setq successablep-timer (instance counter-timer :init ":successablep"))
     (setq successors-timer (instance counter-timer :init ":successors"))
@@ -319,7 +325,10 @@ footstep-parameter"))
             #'(lambda (x)
                 (check-transition-limit current-step-coords (cdr x) transition-limit))
             (project-and-remove-on-grids
-             different-level-candidate grids (list current-grid) t)))))))
+             different-level-candidate grids (list current-grid) t
+             ;; For roll-paranoid
+             roll-paranoid g-sensor-coords current-grid
+             next-leg)))))))
   (:successors (state &key (verbose nil))
     (bench-timer
      successors-timer
@@ -940,8 +949,10 @@ building and searching."
               (pitch-limit (cdr (assoc :pitch limits))))
           (let ((rpy (car (send diff-coords :rpy-angle)))
                 (pos (send diff-coords :worldpos)))
-            (and (< (abs (elt pos 0)) x-limit)
-                 (< (abs (elt pos 2)) z-limit)
-                 (< (abs (elt rpy 1)) pitch-limit)
-                 (< (abs (elt rpy 2)) roll-limit))))
+            (let ((result 
+                   (and (< (abs (elt pos 0)) x-limit)
+                        (< (abs (elt pos 2)) z-limit)
+                        (< (abs (elt rpy 1)) pitch-limit)
+                        (< (abs (elt rpy 2)) roll-limit))))
+              result)))
       t)))
