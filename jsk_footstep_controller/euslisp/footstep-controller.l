@@ -122,7 +122,7 @@
           (walking-pose *robot* :root-link-height-offset -80))
          (t
           (walking-pose *robot* :root-link-height-offset -70))
-          ))
+          )
         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)))
   (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
@@ -241,7 +241,6 @@
                (publish-breakpoint-text " ")
                (let ((first-step (pop *footstep-list*)))
                  (setq second-step (car *footstep-list*))
-                       ;;(second-step (car *footstep-list*)))
                  (change-standing-mode first-step second-step)
                  (if (eq *walking-state* :climing-up) ;hack
                      (progn
@@ -257,7 +256,6 @@
                  (wait-for-double-stance-phase))
                (when *wait-convergence*
                  (wait-for-convergence))
-                ;;(format nil "Breakpoint!, error: ~A (~A)" *contact-error* (rad2deg *contact-error*)))
                (when *check-breakpoint*
                  (publish-breakpoint-text "Breakpoint!")
                  (setq req (instance jsk_footstep_controller::RequireMonitorStatusRequest :init))
@@ -319,11 +317,11 @@
       res)))
 
 (defun set-parameter-for-stair ()
-  ((cond
-    ((string= *robot-name* "JAXON")
-     (set-parameter-for-stair-jaxon))
-    (t
-     (set-parameter-for-stair-hrp2)))))
+  (cond
+   ((string= *robot-name* "JAXON")
+    (set-parameter-for-stair-jaxon))
+   (t
+    (set-parameter-for-stair-hrp2))))
 
 (defun set-parameter-for-stair-jaxon ()
   (send *ri* :set-gait-generator-param
@@ -350,11 +348,11 @@
   )
 
 (defun set-parameter-for-planar ()
-  ((cond
-    ((string= *robot-name* "JAXON")
-     (set-parameter-for-planar-jaxon))
-    (t
-     (set-parameter-for-planar-hrp2)))))
+  (cond
+   ((string= *robot-name* "JAXON")
+    (set-parameter-for-planar-jaxon))
+   (t
+    (set-parameter-for-planar-hrp2))))
 
 (defun set-parameter-for-planar-jaxon ()
   (send *ri* :set-gait-generator-param
