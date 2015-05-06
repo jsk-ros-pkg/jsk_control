@@ -112,6 +112,7 @@
     ;; Visualize goal footsteps
     (let ((first-step (make-footprint (car (car goal-foot-coords))))
           (second-step (make-footprint (car (cadr goal-foot-coords)))))
+      ;;(print (list first-step second-step))
       (send first-step :move-to (cdr (car goal-foot-coords)) :world)
       (send second-step :move-to (cdr (cadr goal-foot-coords)) :world)
       (setq *goal-footsteps* (list first-step second-step))
@@ -138,6 +139,12 @@
                                        (project-coordinates-on-nearest-grid
                                         c *grids*))
                                    leg-coords)))
+        (when (or (null (car projected-leg-coords))
+                (null (cadr projected-leg-coords)))
+          (ros::ros-error "Failed to project first step")
+          (let ((result (send server :result)))
+            (send server :set-aborted result))
+          (return-from plan-execute-cb nil))
         ;; Visualize initial footsteps
         (let ((first-step (make-footprint (car (car initial-foot-coords))))
               (second-step (make-footprint (car (cadr initial-foot-coords)))))
