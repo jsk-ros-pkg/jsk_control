@@ -195,18 +195,24 @@
     (send self :update-draw-vertices)
     )
   ;; not correct
-  (:grid-world-roll-angle (g-sensor-coords)
-    (let* ((n*
-            (send g-sensor-coords :inverse-rotate-vector (send plane-obj :normal)))
-           (yz-n* (normalize-vector (float-vector 0 (elt n* 1) (elt n* 2)))))
-      (atan2 (elt yz-n* 1) (elt yz-n* 2))))
-  (:rolledp (g-sensor-coords &optional (threshold (deg2rad 5)))
-    (let* ((theta (send self :grid-world-roll-angle g-sensor-coords)))
+  (:grid-world-roll-angle (g-sensor-coords x-coords)
+    (let* ((q (quaternion-from-two-vectors
+               (send x-coords :rotate-vector (float-vector 0 0 1))
+               (send g-sensor-coords :rotate-vector (float-vector 0 0 1))))
+           (r (quaternion2matrix q))
+           (trans (make-coords :rot r)))
+      (let* ((origin (send (send x-coords :copy-worldcoords) :transform trans))
+             (n*
+              (send origin :inverse-rotate-vector (send plane-obj :normal)))
+             (yz-n* (normalize-vector (float-vector 0 (elt n* 1) (elt n* 2)))))
+        (atan2 (elt yz-n* 1) (elt yz-n* 2)))))
+  (:rolledp (g-sensor-coords x-coords &optional (threshold (deg2rad 5)))
+    (let* ((theta (send self :grid-world-roll-angle g-sensor-coords x-coords)))
       (when *debug-verbose*
         (ros::ros-info "theta: ~A" (rad2deg theta)))
       (> (abs theta) threshold)))
-  (:roll-direction (g-sensor-coords &optional (threshold (deg2rad 5)))
-    (let* ((theta (send self :grid-world-roll-angle g-sensor-coords)))
+  (:roll-direction (g-sensor-coords x-coords &optional (threshold (deg2rad 5)))
+    (let* ((theta (send self :grid-world-roll-angle g-sensor-coords x-coords)))
       (cond ((> theta threshold)
              :left)
             ((< theta (- threshold))
@@ -505,7 +511,8 @@ which is inside of occupied cell"
                                     (roll-paranoid nil)
                                     (g-sensor-coords nil)
                                     (current-grid)
-                                    (next-leg nil))
+                                    (next-leg nil)
+                                    (parent-coords nil))
   "
    1. Project coordinates on grid
    2. Check center of coordinate can be supported by the grid
@@ -513,15 +520,15 @@ which is inside of occupied cell"
   (when roll-paranoid
     ;; If roll-paranoid mode,
     ;; we need to check legs for different levels
-    (when (send current-grid :rolledp g-sensor-coords)
+    (when (send current-grid :rolledp g-sensor-coords parent-coords)
       (when *debug-verbose*
-        (ros::ros-info "current grid is ~A" (send current-grid :roll-direction g-sensor-coords)))
+        (ros::ros-info "current grid is ~A" (send current-grid :roll-direction g-sensor-coords parent-coords)))
       (cond
-       ((eq (send current-grid :roll-direction g-sensor-coords)
+       ((eq (send current-grid :roll-direction g-sensor-coords parent-coords)
             :left)                  ;should use right leg
         (if (not (eq next-leg :rleg))
             (return-from project-and-remove-on-grids nil)))
-       ((eq (send current-grid :roll-direction g-sensor-coords)
+       ((eq (send current-grid :roll-direction g-sensor-coords parent-coords)
             :right)                  ;should use right leg
         (if (not (eq next-leg :lleg))
             (return-from project-and-remove-on-grids nil)))
@@ -531,16 +538,16 @@ which is inside of occupied cell"
       (let ((roll-check t))
         (when roll-paranoid
           (when *debug-verbose*
-            (ros::ros-info "rolledp2: ~A" (send grid :rolledp g-sensor-coords)))
-          (when (send grid :rolledp g-sensor-coords)
+            (ros::ros-info "rolledp2: ~A" (send grid :rolledp g-sensor-coords parent-coords)))
+          (when (send grid :rolledp g-sensor-coords parent-coords)
             (when *debug-verbose*
-              (ros::ros-info "candidate grid is ~A" (send grid :roll-direction g-sensor-coords)))
+              (ros::ros-info "candidate grid is ~A" (send grid :roll-direction g-sensor-coords parent-coords)))
             (cond
-             ((eq (send grid :roll-direction g-sensor-coords)
+             ((eq (send grid :roll-direction g-sensor-coords parent-coords)
                   :left)                  ;should use right leg
               (if (not (eq next-leg :lleg))
                   (setq roll-check nil)))
-             ((eq (send grid :roll-direction g-sensor-coords)
+             ((eq (send grid :roll-direction g-sensor-coords parent-coords)
                   :right)                  ;should use right leg
               (if (not (eq next-leg :rleg))
                   (setq roll-check nil))

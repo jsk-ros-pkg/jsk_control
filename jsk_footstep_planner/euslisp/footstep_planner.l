@@ -328,7 +328,7 @@ footstep-parameter"))
              different-level-candidate grids (list current-grid) t
              ;; For roll-paranoid
              roll-paranoid g-sensor-coords current-grid
-             next-leg)))))))
+             next-leg current-step-coords)))))))
   (:successors (state &key (verbose nil))
     (bench-timer
      successors-timer

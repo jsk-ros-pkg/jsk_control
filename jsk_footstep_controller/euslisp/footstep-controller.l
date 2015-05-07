@@ -199,18 +199,44 @@
 (defun different-height (st)
   (eq st :climing-up))
 
+(defun quaternion-from-two-vectors (a b)
+  (let* ((v0 (normalize-vector a))
+         (v1 (normalize-vector b))
+         (c (v. v1 v0)))
+    (if (eps= c -1.0)
+        (float-vector -1 0 0 0)
+      (let* ((axis (v* v0 v1))
+             (s (sqrt (* 2 (+ 1 c))))
+             (invs (/ 1.0 s)))
+        (let ((vec (scale invs axis))
+              (w (* 0.5 s)))
+          (normalize-vector (float-vector w (elt vec 0) (elt vec 1) (elt vec 2))))))))
+
+(defun compute-current-origin ()
+  ;; Only orientation is correct
+  (if (null *last-step*)
+      (send *footstep-transform* :copy-worldcoords)
+    (let* ((q (quaternion-from-two-vectors
+               (send *last-step* :rotate-vector (float-vector 0 0 1))
+               (send *footstep-transform* :rotate-vector (float-vector 0 0 1))))
+           (r (quaternion2matrix q))
+           (trans (make-coords :rot r)))
+      (send (send *last-step* :copy-worldcoords) :transform trans))))
+
 ;; In this function we need to set proper gait parameters
 ;; And prepare angle-vector for stepping
 (defun change-standing-mode (first-step next-step)
   (let ((next nil))
     ;; Plane condition
     ;; set *current-plane* and *next-plane*
-    (let ((world-first-step (send (send *footstep-transform* :inverse-transformation)
-                                  :transform first-step))
-          (world-next-step (send (send *footstep-transform* :inverse-transformation)
-                                 :transform next-step)))
+    (let* ((origin (compute-current-origin))
+           (world-first-step (send (send origin :inverse-transformation)
+                                   :transform first-step))
+           (world-next-step (send (send origin :inverse-transformation)
+                                  :transform next-step)))
       (setq *current-plane* (plane-condition-from-coords world-first-step))
       (setq *next-plane* (plane-condition-from-coords world-next-step))
+      (ros::ros-info "origin: ~A" origin)
       )
     ;; :standing, :climing-up or :plane
     
