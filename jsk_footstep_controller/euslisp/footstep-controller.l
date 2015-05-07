@@ -1,5 +1,5 @@
 #!/usr/bin/env roseus
-
+(load "package://drc_task_common/euslisp/test-drc-terrain-walk.l")
 ;; forostep-controller.l
 (ros::roseus-add-msgs "std_msgs")
 (ros::roseus-add-msgs "jsk_footstep_msgs")
@@ -25,7 +25,9 @@
 (setq *footstep-list-bak* nil)
 (setq *goal-id-bak* nil)
 (setq *interruptible-mode* nil)
-
+(setq *last-step* nil)
+(setq *height-threshold* 100)
+(setq *verbose* nil)
 ;; ((footstep footstep ....) (footstep footstep ....) ...)
 
 (defun footstep->coords (footstep frame-id)
@@ -81,34 +83,34 @@
    (send *ri* :get-foot-step-param :rleg-coords)
    (send *ri* :get-foot-step-param :lleg-coords)))
 
-(defun walking-pose ;; this should be method
-  (robot
-   &key (root-link-height-offset 0)
-        (root-link-pitch-offset 0)
-        (fix-coords (make-coords))
-        (default-pose-method :reset-pose))
-  "Generate and set walking pose.
-   default-pose-method is initial pose, reset-manip-pose by default.
-   Generated pose is near from default-pose-method pose.
-   root-link-height-offset is root height offset [mm] from default-pose-method.
-   root-link-pitch-offset is root pitch offset [deg] from default-pose-method."
-  (send robot default-pose-method)
-  (send robot :fix-leg-to-coords fix-coords)
-  (let ((lc (mapcar #'(lambda (l)
-                        (send robot l :end-coords :copy-worldcoords))
-                    '(:rleg :lleg))))
-    (send robot :move-coords
-          (send
-           (send (send (car (send robot :links)) :copy-worldcoords)
-                 :translate (float-vector 0 0 root-link-height-offset))
-           :rotate (deg2rad root-link-pitch-offset) :y)
-          (car (send robot :links)))
-    (mapcar #'(lambda (l c)
-                (send robot l :inverse-kinematics c))
-            '(:rleg :lleg) lc)
-    (send robot :move-centroid-on-foot :both '(:rleg :lleg))
-    (send robot :angle-vector)
-    ))
+;; (defun walking-pose ;; this should be method
+;;   (robot
+;;    &key (root-link-height-offset 0)
+;;         (root-link-pitch-offset 0)
+;;         (fix-coords (make-coords))
+;;         (default-pose-method :reset-pose))
+;;   "Generate and set walking pose.
+;;    default-pose-method is initial pose, reset-manip-pose by default.
+;;    Generated pose is near from default-pose-method pose.
+;;    root-link-height-offset is root height offset [mm] from default-pose-method.
+;;    root-link-pitch-offset is root pitch offset [deg] from default-pose-method."
+;;   (send robot default-pose-method)
+;;   (send robot :fix-leg-to-coords fix-coords)
+;;   (let ((lc (mapcar #'(lambda (l)
+;;                         (send robot l :end-coords :copy-worldcoords))
+;;                     '(:rleg :lleg))))
+;;     (send robot :move-coords
+;;           (send
+;;            (send (send (car (send robot :links)) :copy-worldcoords)
+;;                  :translate (float-vector 0 0 root-link-height-offset))
+;;            :rotate (deg2rad root-link-pitch-offset) :y)
+;;           (car (send robot :links)))
+;;     (mapcar #'(lambda (l c)
+;;                 (send robot l :inverse-kinematics c))
+;;             '(:rleg :lleg) lc)
+;;     (send robot :move-centroid-on-foot :both '(:rleg :lleg))
+;;     (send robot :angle-vector)
+;;     ))
 
 (defun new-goal-cb (server goal)
   ;; coordinate transformation:
@@ -125,15 +127,23 @@
           )
         (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
         (send *ri* :wait-interpolation)))
-  (cond ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
+  (cond ((= (send goal :goal :strategy)
+            jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
          (progn
            (print 'resuming)
            (setq *footstep-list* *footstep-list-bak*)
            (setq *footstep-list-bak* nil)
            (setq *goal-id* (send goal :goal_id :id))))
-        ((= (send goal :goal :strategy) jsk_footstep_msgs::ExecFootstepsGoal::*NEW_TARGET*)
+        ((= (send goal :goal :strategy)
+            jsk_footstep_msgs::ExecFootstepsGoal::*NEW_TARGET*)
          (let* ((footstep (send goal :goal :footstep)) ;jsk_footstep_msgs/FootstepArray
                 (frame-id (send footstep :header :frame_id)))
+           (setq *footstep-transform* nil)
+           (while (null *footstep-transform*)
+             (ros::ros-info "Waiting for footstep transform")
+             (setq *footstep-transform*
+                   (send *tf* :lookup-transform frame-id "ground" (ros::time 0)))
+             (ros::sleep))
            (let* ((footstep-coords            ; convert footstep to euslisp coords
                    (mapcar #'(lambda (footstep)
                                (footstep->coords footstep frame-id))
@@ -167,64 +177,178 @@
                    (setq *goal-id* (send goal :goal_id :id))
                    ))))))))
 
+(defun plane-condition-from-coords (coords)
+  (let ((z (send coords :rotate-vector (float-vector 0 0 1))))
+    (let ((yz (normalize-vector (float-vector 0 (elt z 1) (elt z 2)))))
+      (let ((theta (atan2 (elt yz 1) (elt yz 2))))
+        (if (> (abs theta) (deg2rad 5))
+            (if (> theta 0)
+                :left-rolling
+              :right-rolling)
+          :horizontal)))))    ;:horizontal include pitch rotated plane
+
+(defun rolling-plane-p (param)
+  (or (eq param :left-rolling)
+      (eq param :right-rolling)))
+
+(defun next-rolling ()
+  (rolling-plane-p *next-plane*))
+(defun current-rolling ()
+  (rolling-plane-p *current-plane*))
+
+(defun different-height (st)
+  (eq st :climing-up))
+
+;; In this function we need to set proper gait parameters
+;; And prepare angle-vector for stepping
 (defun change-standing-mode (first-step next-step)
   (let ((next nil))
+    ;; Plane condition
+    ;; set *current-plane* and *next-plane*
+    (let ((world-first-step (send (send *footstep-transform* :inverse-transformation)
+                                  :transform first-step))
+          (world-next-step (send (send *footstep-transform* :inverse-transformation)
+                                 :transform next-step)))
+      (setq *current-plane* (plane-condition-from-coords world-first-step))
+      (setq *next-plane* (plane-condition-from-coords world-next-step))
+      )
+    ;; :standing, :climing-up or :plane
+    
     (cond ((and (null first-step) (null next-step))
            (setq next :standing))
-          ((> (abs (elt (send (send next-step :transformation first-step) :worldpos) 2)) 10) ;1cm
+          ((null *last-step*)
+           (if (> (abs (elt (send (send first-step :transformation next-step)
+                                  :worldpos) 2))
+                  *height-threshold*)
+               (setq next :climing-up)
+             (setq next :plane)))
+          ((> (abs (elt (send (send *last-step* :transformation next-step)
+                              :worldpos) 2))
+              *height-threshold*) ;10cm
            (setq next :climing-up))
-          ;; hack
-          ;; ((eq *walking-state* :climing-up)
-          ;;  (setq next :climing-up2))
           (t
            (setq next :plane)))
+    (ros::ros-info "first-step: ~A" first-step)
+    (ros::ros-info "next-step: ~A" next-step)
+    (ros::ros-info "*last-step*: ~A" *last-step*)
     (ros::ros-info "walking state: ~A ==> ~A" *walking-state* next)
+    (ros::ros-info "plane condition: ~A ==> ~A" *current-plane* *next-plane*)
+    ;; R  -> rolling
+    ;; R^ -> not rolling
+    ;; H  -> different height
+    ;; H^ -> same height
     (cond
-     ;; N
-     ((or (and (eq next :standing) (eq *walking-state* :standing))
-          (and (eq next :plane) (eq *walking-state* :plane))
-          (and (eq *walking-state* :climing-up) (eq next :standing))
-          (and (eq *walking-state* :climing-up) (eq next :climing-up2))
-          (and (eq *walking-state* :climing-up2) (eq next :climing-up)))
-      (ros::ros-warn "do nothing about posture")
+     ;; R -> R, H
+     ((and (current-rolling)
+           (next-rolling)
+           (different-height next))
+      (robot-angle-straight)
+      (set-parameter-for-stair)
       )
-     ;; G
-     ((or (and (eq *walking-state* :plane) (eq next :standing))
-          (and (eq *walking-state* :climing-up2) (eq next :standing)))
-      (when *realp*
-        (walking-pose *robot* :root-link-height-offset 0)
-        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
-        (send *ri* :wait-interpolation)
-        ;;(send *ri* :set-gait-generator-param :default-orbit-type :cycloid)
-        (set-parameter-for-planar)
-        )
-      (ros::ros-warn "move down 0 mm and change mode to cycloid"))
-     ;; A
-     ((or (and (eq *walking-state* :standing) (eq next :plane))
-          (and (eq *walking-state* :climing-up2) (eq next :plane)))
-      (when *realp*
-        (walking-pose *robot* :root-link-height-offset -50)
-        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
-        (send *ri* :wait-interpolation)
-        ;;(send *ri* :set-gait-generator-param :default-orbit-type :cycloid)
-        (set-parameter-for-planar)
-        )
-      (ros::ros-warn "move down -50 mm and change mode to cycloid"))
-     ;; B
-     ((or (and (eq *walking-state* :standing) (eq next :climing-up))
-          (and (eq *walking-state* :plane) (eq next :climing-up)))
-      
-      (when *realp*
-        (walking-pose *robot* :root-link-height-offset -90)
-        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
-        (send *ri* :wait-interpolation)
-        ;;(send *ri* :set-gait-generator-param :default-orbit-type :stair)
-        (set-parameter-for-stair)
-        )
-      (ros::ros-warn "move down -90 mm and change mode to stair"))
+     ;; R -> R, H^
+     ((and (current-rolling)
+           (next-rolling)
+           (not (different-height next)))
+      (set-parameter-for-planar-rolling)
+      )
+     ;; R -> R^, H
+     ((and (current-rolling)
+           (not (next-rolling))
+           (different-height next))
+      (robot-angle-straight)
+      (set-parameter-for-stair)
+      )
+     ;; R -> R^, H^
+     ((and (current-rolling)
+           (not (next-rolling))
+           (not (different-height next)))
+      (robot-angle-straight)
+      (set-parameter-for-rolling)
+      )
+     ;; R^ -> R, H
+     ((and (not (current-rolling))
+           (next-rolling)
+           (different-height next))
+      (when (null *last-step*)          ;first time
+        (robot-angle-straight))
+      (set-parameter-for-stair)
+      )
+     ;; R^ -> R, H^
+     ((and (not (current-rolling))
+           (next-rolling)
+           (not (different-height next)))
+      (when (null *last-step*)          ;first time
+        (robot-angle-straight))
+      (set-parameter-for-rolling)
+      )
+     ;; R^ -> R^, H
+     ((and (not (current-rolling))
+           (not (next-rolling))
+           (different-height next))
+      (when (null *last-step*)          ;first time
+        (robot-angle-straight))
+      (set-parameter-for-stair)
+      )
+     ;; R^ -> R^, H^
+     ((and (not (current-rolling))
+           (not (next-rolling))
+           (not (different-height next)))
+      (when (null *last-step*)          ;first time
+        (robot-angle-straight))
+      (set-parameter-for-planar)
+      )
      (t
-      (ros::ros-error "Unknown mode change ~A => ~A" *walking-state* next)))
+      (ros::ros-warn "unknown status change")))
     (setq *walking-state* next)))
+
+(defun change-standing-mode-post ()
+  (cond
+     ;; R -> R, H
+     ((and (current-rolling)
+           (next-rolling)
+           (different-height *walking-state*))
+      (robot-angle-rolling *next-plane*)
+      )
+     ;; R -> R, H^
+     ((and (current-rolling)
+           (next-rolling)
+           (not (different-height *walking-state*)))
+      )
+     ;; R -> R^, H
+     ((and (current-rolling)
+           (not (next-rolling))
+           (different-height *walking-state*))
+      )
+     ;; R -> R^, H^
+     ((and (current-rolling)
+           (not (next-rolling))
+           (not (different-height *walking-state*)))
+      )
+     ;; R^ -> R, H
+     ((and (not (current-rolling))
+           (next-rolling)
+           (different-height *walking-state*))
+      (robot-angle-rolling *next-plane*)
+      )
+     ;; R^ ^> R, H^
+     ((and (not (current-rolling))
+           (next-rolling)
+           (not (different-height *walking-state*)))
+      (robot-angle-rolling *next-plane*)
+      )
+     ;; R^ -> R^, H
+     ((and (not (current-rolling))
+           (next-rolling)
+           (different-height *walking-state*))
+      )
+     ;; R^ -> R^, H^
+     ((and (not (current-rolling))
+           (not (next-rolling))
+           (not (different-height *walking-state*)))
+      )
+     (t
+      (ros::ros-warn "unknown status change")))
+  )
 
 (defun proc-goal-cb (server goal)
   (publish-breakpoint-text " ")
@@ -233,29 +357,39 @@
         (ros::ros-info "remaining footsteps: ~A" (length *footstep-list*))
         (cond ((<= (length *footstep-list*) 1) ;finish
                (progn
-                 (change-standing-mode nil nil)
+                 ;;(change-standing-mode nil nil)
                  (publish-breakpoint-text " ")
                  (let ((result (send server :result)))
-                   (send server :set-succeeded result))))
+                   (send server :set-succeeded result))
+                 ;; Clear last-step
+                 (setq *last-step* nil)))
               (t
                (publish-breakpoint-text " ")
                (let ((first-step (pop *footstep-list*)))
                  (setq second-step (car *footstep-list*))
                  (change-standing-mode first-step second-step)
-                 (if (eq *walking-state* :climing-up) ;hack
+                 ;; Send two footsteps at once for different plane transition
+                 (if (or (eq *walking-state* :climing-up) ;hack
+                         (not (eq *current-plane* *next-plane*)))
                      (progn
                        (let ((third-step (cadr *footstep-list*)))
                          (when *realp*
-                           (send *ri* :set-foot-steps (list first-step second-step third-step)))
+                           (send *ri* :set-foot-steps
+                                 (list first-step second-step third-step)))
+                         (setq *last-step* second-step)
                          (pop *footstep-list*)))
-                   (when *realp*
-                     (send *ri* :set-foot-steps (list first-step second-step)))
-                   ))
+                   (progn
+                     (when *realp*
+                       (send *ri* :set-foot-steps (list first-step second-step)))
+                     (setq *last-step* first-step))
+                   )
+                 )
                (when *wait-contact-state* 
                  ;;(unix:sleep 1)
                  (wait-for-double-stance-phase))
                (when *wait-convergence*
                  (wait-for-convergence))
+               (change-standing-mode-post)
                (when *check-breakpoint*
                  (publish-breakpoint-text "Breakpoint!")
                  (setq req (instance jsk_footstep_controller::RequireMonitorStatusRequest :init))
@@ -267,6 +401,7 @@
                      (unless (send res :go)
                        (preempt-cb server nil)))))))
     (progn
+      ;; done
       (print (send-all *footstep-list* :name))
       (print *footstep-list*)
       (when *realp*
@@ -316,6 +451,34 @@
       (send res :sexp (format nil "~A" *all-the-results*))
       res)))
 
+(defun robot-angle-straight ()
+  (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5)
+  (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+  (send *ri* :wait-interpolation)
+  )
+
+(defun robot-angle-rolling (policy)
+  ;; policy := :left-rolling or :right-rolling
+  (cond
+   ((eq policy :left-rolling)
+    (walking-pose *robot* :root-link-height-offset -50
+                  :root-link-pitch-offset 5 :root-link-roll-offset 5))
+   ((eq policy :right-rolling)
+    (walking-pose *robot* :root-link-height-offset -50
+                  :root-link-pitch-offset 5 :root-link-roll-offset -5))
+   )
+  (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+  (send *ri* :wait-interpolation)
+  )
+
+
+(defun set-parameter-for-rolling ()
+  (high-step-stair-param-hrp2jsk))
+
+(defun set-parameter-for-planar-rolling ()
+  (roll-terrain-stair-param-hrp2jsk))
+
+
 (defun set-parameter-for-stair ()
   (cond
    ((string= *robot-name* "JAXON")
@@ -336,16 +499,7 @@
         (list (float-vector 10 30 0) (float-vector 10 -30 0))))
 
 (defun set-parameter-for-stair-hrp2 ()
-  (send *ri* :set-gait-generator-param
-        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
-        :swing-trajectory-delay-time-offset 0.25
-        :default-orbit-type :stair
-        :default-step-time 1.3
-        :default-double-support-ratio 0.32
-        :default-step-height 0.03)
-  (send *ri* :set-auto-balancer-param :default-zmp-offsets
-        (list (float-vector 10 30 0) (float-vector 10 -30 0)))
-  )
+  (default-stair-param-hrp2jsk))
 
 (defun set-parameter-for-planar ()
   (cond
@@ -359,7 +513,7 @@
         :default-orbit-type :cycloid
         :default-step-time 1.1
         ;;:default-double-support-ratio 0.32
-         :default-double-support-ratio 0.16
+        :default-double-support-ratio 0.16
         :default-step-height 0.05)
   ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
   (send *ri* :set-auto-balancer-param :default-zmp-offsets
@@ -370,11 +524,12 @@
   (send *ri* :set-gait-generator-param
         :default-orbit-type :cycloid
         :default-step-time 1.1
+        :toe-angle 0 :heel-angle 0
         :default-double-support-ratio 0.32
         :default-step-height 0.05)
   ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
-  (send *ri* :set-auto-balancer-param :default-zmp-offsets
-        (list (float-vector 10 10 0) (float-vector 10 -10 0)))
+  ;; (send *ri* :set-auto-balancer-param :default-zmp-offsets
+  ;;       (list (float-vector 10 10 0) (float-vector 10 -10 0)))
   )
 
 (defun main()
