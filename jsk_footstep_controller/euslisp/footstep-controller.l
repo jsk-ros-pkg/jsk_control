@@ -179,13 +179,24 @@
 
 (defun plane-condition-from-coords (coords)
   (let ((z (send coords :rotate-vector (float-vector 0 0 1))))
-    (let ((yz (normalize-vector (float-vector 0 (elt z 1) (elt z 2)))))
-      (let ((theta (atan2 (elt yz 1) (elt yz 2))))
-        (if (> (abs theta) (deg2rad 5))
-            (if (> theta 0)
-                :left-rolling
-              :right-rolling)
-          :horizontal)))))    ;:horizontal include pitch rotated plane
+    (let ((yz (normalize-vector (float-vector 0 (elt z 1) (elt z 2))))
+          (xz (normalize-vector (float-vector (elt z 0) 0 (elt z 2)))))
+      (let ((rtheta (atan2 (elt yz 1) (elt yz 2)))
+            (ptheta (atan2 (elt xz 0) (elt xz 2))))
+        (cond ((and (> (abs rtheta) (deg2rad 5))
+                    (> rtheta 0))
+               :left-rolling)
+              ((and (> (abs rtheta) (deg2rad 5))
+                    (< rtheta 0))
+               :right-rolling)
+              ((and (> (abs ptheta) (deg2rad 5))
+                    (> ptheta 0))
+               :pitch-down)
+              ((and (> (abs ptheta) (deg2rad 5))
+                    (< ptheta 0))
+               :pitch-up)
+              (t
+               :horizontal))))))
 
 (defun rolling-plane-p (param)
   (or (eq param :left-rolling)
@@ -223,158 +234,190 @@
            (trans (make-coords :rot r)))
       (send (send *last-step* :copy-worldcoords) :transform trans))))
 
-;; In this function we need to set proper gait parameters
-;; And prepare angle-vector for stepping
+
+;; from plane, to plane, height change, before posture, after posture, gait parameter
+(setq *standing-mode-table*
+      '((H   H   H0  S   S   P)
+        (H   H   H+  S   S   S)
+        (H   H   H-  S   S   S)
+        (H   P+  H0  S   S   H)
+        (H   P+  H+  S   S   S)
+        (H   P+  H-  S   S   S)
+        (H   P-  H0  S   S   H)
+        (H   P-  H+  S   S   H)
+        (H   P-  H-  S   S   S)
+        (H   R   H0  S   R   H)
+        (H   R   H+  S   R   S)
+        (H   R   H-  S   R   H)
+        (P+  H   H0  S   S   H)
+        (P+  H   H+  S   S   S)
+        (P+  H   H-  S   S   H)
+        (P+  P+  H0  S   S   P)
+        (P+  P+  H+  S   S   S)
+        (P+  P+  H-  S   S   H)
+        (P+  P-  H0  S   S   H)
+        (P+  P-  H+  S   S   H)
+        (P+  P-  H-  S   S   H)
+        (P+  R   H0  S   R   H)
+        (P+  R   H+  S   R   S)
+        (P+  R   H-  S   R   H)
+        (P-  H   H0  S   S   H)
+        (P-  H   H+  S   S   S)
+        (P-  H   H-  S   S   S)
+        (P-  P+  H0  S   S   S)
+        (P-  P+  H+  S   S   S)
+        (P-  P+  H-  S   S   S)
+        (P-  P-  H0  S   S   P)
+        (P-  P-  H+  S   S   H)
+        (P-  P-  H-  S   S   S)
+        (P-  R   H0  S   R   H)
+        (P-  R   H+  S   R   S)
+        (P-  R   H-  S   R   S)
+        (R   H   H0  S   S   H)
+        (R   H   H+  R   S   S)
+        (R   H   H-  R   S   S)
+        (R   P+  H0  R   S   H)
+        (R   P+  H+  R   S   S)
+        (R   P+  H-  R   S   S)
+        (R   P-  H0  R   S   H)
+        (R   P-  H+  R   S   H)
+        (R   P-  H-  R   S   H)
+        (R   R   H0  R   R   R)
+        (R   R   H+  R   R   S)
+        (R   R   H-  R   R   S)))
+
+(defun compute-plane-condition (step)
+  (let* ((origin (compute-current-origin))
+         (world-step (send (send origin :inverse-transformation)
+                                 :transform step)))
+    (plane-condition-from-coords world-step)))
+
+(defun compute-height-transition (first-step next-step)
+  (cond ((and (null first-step) (null next-step))
+         :standing)
+        ((null *last-step*)
+         (cond ((> (elt (send (send first-step :transformation next-step)
+                              :worldpos) 2)
+                   *height-threshold*)
+                :climing-up)
+               ((< (elt (send (send first-step :transformation next-step)
+                              :worldpos) 2)
+                   (- *height-threshold*))
+                :climing-down)
+               (t
+                :plane)))
+        ((> (elt (send (send first-step :transformation next-step)
+                       :worldpos) 2)
+            *height-threshold*)
+         :climing-up)
+        ((< (elt (send (send first-step :transformation next-step)
+                       :worldpos) 2)
+            (- *height-threshold*))
+         :climing-down)
+        (t
+         :plane)))
+
+(defun convert-to-table-symbols (from to height)
+  (list (cond ((or (eq from :left-rolling)
+                   (eq from :right-rolling))
+               'R)
+              ((eq from :pitch-up)
+               'P+)
+              ((eq from :pitch-down)
+               'P-)
+              (t
+               'H))
+        (cond ((or (eq to :left-rolling)
+                   (eq to :right-rolling))
+               'R)
+              ((eq to :pitch-up)
+               'P+)
+              ((eq to :pitch-down)
+               'P-)
+              (t
+               'H))
+        (cond ((eq height :climing-up)
+               'H+)
+              ((eq height :climing-down)
+               'H-)
+              (t
+               'H0))))
+
+(defun set-parameter-from-table (from to height)
+  (multiple-value-bind
+   (from-s to-s height-s) (convert-to-table-symbols from to height)
+   (dolist (candidate *standing-mode-table*)
+     (when (and (eq from-s (car candidate))
+                (eq to-s (cadr candidate))
+                (eq height-s (caddr candidate)))
+       (let ((param-s (elt candidate 5)))
+         (ros::ros-info "set ri parameter for ~A" param-s)
+         (cond ((eq param-s 'S)
+                (set-parameter-for-stair))
+               ((eq param-s 'H)
+                (set-parameter-for-rolling))
+               ((eq param-s 'R)
+                (set-parameter-for-planar-rolling))
+               ((eq param-s 'P)
+                (set-parameter-for-planar)
+                )))
+       (return-from set-parameter-from-table t)))))
+
+(defun move-before-robot-from-table (from to height)
+  (multiple-value-bind
+   (from-s to-s height-s) (convert-to-table-symbols from to height)
+   (dolist (candidate *standing-mode-table*)
+     (when (and (eq from-s (car candidate))
+                (eq to-s (cadr candidate))
+                (eq height-s (caddr candidate)))
+       (let ((param-s (elt candidate 3)))
+         (ros::ros-info "move robot for ~A" param-s)
+         (cond ((eq param-s 'S)
+                (robot-angle-straight))
+               ((eq param-s 'R)
+                (robot-angle-rolling from))))
+       (return-from move-before-robot-from-table t)))))
+
+(defun move-after-robot-from-table (from to height)
+  (multiple-value-bind
+   (from-s to-s height-s) (convert-to-table-symbols from to height)
+   (dolist (candidate *standing-mode-table*)
+     (when (and (eq from-s (car candidate))
+                (eq to-s (cadr candidate))
+                (eq height-s (caddr candidate)))
+       (let ((param-s (elt candidate 4)))
+         (ros::ros-info "move robot for ~A" param-s)
+         (cond ((eq param-s 'S)
+                (robot-angle-straight))
+               ((eq param-s 'R)
+                (robot-angle-rolling to))))
+       (return-from move-after-robot-from-table t)))))
+
+
 (defun change-standing-mode (first-step next-step)
   (let ((next nil))
     ;; Plane condition
     ;; set *current-plane* and *next-plane*
-    (let* ((origin (compute-current-origin))
-           (world-first-step (send (send origin :inverse-transformation)
-                                   :transform first-step))
-           (world-next-step (send (send origin :inverse-transformation)
-                                  :transform next-step)))
-      (setq *current-plane* (plane-condition-from-coords world-first-step))
-      (setq *next-plane* (plane-condition-from-coords world-next-step))
-      (ros::ros-info "origin: ~A" origin)
-      )
+    (setq *current-plane* (compute-plane-condition first-step))
+    (setq *next-plane* (compute-plane-condition next-step))
     ;; :standing, :climing-up or :plane
+    (setq next (compute-height-transition first-step next-step))
     
-    (cond ((and (null first-step) (null next-step))
-           (setq next :standing))
-          ((null *last-step*)
-           (if (> (abs (elt (send (send first-step :transformation next-step)
-                                  :worldpos) 2))
-                  *height-threshold*)
-               (setq next :climing-up)
-             (setq next :plane)))
-          ((> (abs (elt (send (send *last-step* :transformation next-step)
-                              :worldpos) 2))
-              *height-threshold*) ;10cm
-           (setq next :climing-up))
-          (t
-           (setq next :plane)))
     (ros::ros-info "first-step: ~A" first-step)
     (ros::ros-info "next-step: ~A" next-step)
     (ros::ros-info "*last-step*: ~A" *last-step*)
     (ros::ros-info "walking state: ~A ==> ~A" *walking-state* next)
     (ros::ros-info "plane condition: ~A ==> ~A" *current-plane* *next-plane*)
-    ;; R  -> rolling
-    ;; R^ -> not rolling
-    ;; H  -> different height
-    ;; H^ -> same height
-    (cond
-     ;; R -> R, H
-     ((and (current-rolling)
-           (next-rolling)
-           (different-height next))
-      (robot-angle-straight)
-      (set-parameter-for-stair)
-      )
-     ;; R -> R, H^
-     ((and (current-rolling)
-           (next-rolling)
-           (not (different-height next)))
-      (set-parameter-for-planar-rolling)
-      )
-     ;; R -> R^, H
-     ((and (current-rolling)
-           (not (next-rolling))
-           (different-height next))
-      (robot-angle-straight)
-      (set-parameter-for-stair)
-      )
-     ;; R -> R^, H^
-     ((and (current-rolling)
-           (not (next-rolling))
-           (not (different-height next)))
-      (robot-angle-straight)
-      (set-parameter-for-rolling)
-      )
-     ;; R^ -> R, H
-     ((and (not (current-rolling))
-           (next-rolling)
-           (different-height next))
-      (when (null *last-step*)          ;first time
-        (robot-angle-straight))
-      (set-parameter-for-stair)
-      )
-     ;; R^ -> R, H^
-     ((and (not (current-rolling))
-           (next-rolling)
-           (not (different-height next)))
-      (when (null *last-step*)          ;first time
-        (robot-angle-straight))
-      (set-parameter-for-rolling)
-      )
-     ;; R^ -> R^, H
-     ((and (not (current-rolling))
-           (not (next-rolling))
-           (different-height next))
-      (when (null *last-step*)          ;first time
-        (robot-angle-straight))
-      (set-parameter-for-stair)
-      )
-     ;; R^ -> R^, H^
-     ((and (not (current-rolling))
-           (not (next-rolling))
-           (not (different-height next)))
-      (when (null *last-step*)          ;first time
-        (robot-angle-straight))
-      (set-parameter-for-planar)
-      )
-     (t
-      (ros::ros-warn "unknown status change")))
+
+    (set-parameter-from-table
+     *current-plane* *next-plane* next)
+    (move-before-robot-from-table
+     *current-plane* *next-plane* next)
     (setq *walking-state* next)))
 
 (defun change-standing-mode-post ()
-  (cond
-     ;; R -> R, H
-     ((and (current-rolling)
-           (next-rolling)
-           (different-height *walking-state*))
-      (robot-angle-rolling *next-plane*)
-      )
-     ;; R -> R, H^
-     ((and (current-rolling)
-           (next-rolling)
-           (not (different-height *walking-state*)))
-      )
-     ;; R -> R^, H
-     ((and (current-rolling)
-           (not (next-rolling))
-           (different-height *walking-state*))
-      )
-     ;; R -> R^, H^
-     ((and (current-rolling)
-           (not (next-rolling))
-           (not (different-height *walking-state*)))
-      )
-     ;; R^ -> R, H
-     ((and (not (current-rolling))
-           (next-rolling)
-           (different-height *walking-state*))
-      (robot-angle-rolling *next-plane*)
-      )
-     ;; R^ ^> R, H^
-     ((and (not (current-rolling))
-           (next-rolling)
-           (not (different-height *walking-state*)))
-      (robot-angle-rolling *next-plane*)
-      )
-     ;; R^ -> R^, H
-     ((and (not (current-rolling))
-           (next-rolling)
-           (different-height *walking-state*))
-      )
-     ;; R^ -> R^, H^
-     ((and (not (current-rolling))
-           (not (next-rolling))
-           (not (different-height *walking-state*)))
-      )
-     (t
-      (ros::ros-warn "unknown status change")))
-  )
+  (move-after-robot-from-table
+   *current-plane* *next-plane* *walking-state*))
 
 (defun proc-goal-cb (server goal)
   (publish-breakpoint-text " ")
@@ -396,6 +439,7 @@
                  (change-standing-mode first-step second-step)
                  ;; Send two footsteps at once for different plane transition
                  (if (or (eq *walking-state* :climing-up) ;hack
+                         (eq *walking-state* :climing-down) ;hack
                          (not (eq *current-plane* *next-plane*)))
                      (progn
                        (let ((third-step (cadr *footstep-list*)))
@@ -477,10 +521,17 @@
       (send res :sexp (format nil "~A" *all-the-results*))
       res)))
 
+(defun need-to-send-angle-vector-p (r)
+  (let ((av (send r :angle-vector))
+        (rv (send *ri* :state :reference-vector)))
+    (> (norm (v- av rv)) 5)))
+
 (defun robot-angle-straight ()
   (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5)
-  (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
-  (send *ri* :wait-interpolation)
+  ;; Check if we need to move robot or not
+  (when (need-to-send-angle-vector-p *robot*)
+    (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+    (send *ri* :wait-interpolation))
   )
 
 (defun robot-angle-rolling (policy)
@@ -493,8 +544,9 @@
     (walking-pose *robot* :root-link-height-offset -50
                   :root-link-pitch-offset 5 :root-link-roll-offset -5))
    )
-  (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
-  (send *ri* :wait-interpolation)
+  (when (need-to-send-angle-vector-p *robot*)
+    (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+    (send *ri* :wait-interpolation))
   )
 
 
