@@ -67,12 +67,11 @@ class VehicleJoyController(JSKJoyPlugin):
       self.set_current_step_as_max_flag = False
 
     # set current step as max flag
-    if status.triangle and not self.set_current_step_as_max_flag:
+    if status.triangle and not self.set_current_step_as_max_flag and self.current_accel_val > 0.0:
+      current_value = (self.max_step - self.min_step) * self.current_accel_val + self.min_step
       try:
-        current_value = (self.max_step - self.min_step) * self.current_accel_val + self.min_step
         update_value = rospy.ServiceProxy('drive/controller/set_max_step', SetValue)
-        next_value = update_value(current_value)
-        print current_value
+        self.max_step = update_value(current_value)
         self.accel_publisher.publish(Float64(data = 0.0))
         self.set_current_step_as_max_flag = True
       except rospy.ServiceException, e:
