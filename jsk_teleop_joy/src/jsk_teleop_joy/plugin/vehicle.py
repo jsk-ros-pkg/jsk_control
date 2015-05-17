@@ -33,7 +33,7 @@ class VehicleJoyController(JSKJoyPlugin):
 
   def joyCB(self, status, history):
     latest = history.latest()
-    handle_resolution = 0.05
+    handle_resolution = 0.025
     neck_y_resolution = 0.1
     neck_y_angle_max = 30.0
     max_accel_resolution = 0.05
