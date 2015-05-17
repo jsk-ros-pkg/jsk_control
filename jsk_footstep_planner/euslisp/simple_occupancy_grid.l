@@ -198,6 +198,22 @@
   (:grid-world-roll-angle (g-sensor-coords x-coords)
     (let* ((q (quaternion-from-two-vectors
                (send x-coords :rotate-vector (float-vector 0 0 1))
+               (send plane-coords :rotate-vector (float-vector 0 0 1))))
+           (trans (make-coords :rot (quaternion2matrix q))))
+      (let ((good-plane-coords (send (send x-coords :copy-worldcoords) :transform trans)))
+        ;;(let ((good-plane-world-coords (send (send g-sensor-coords :inverse-transformation)
+        (let ((good-plane-world-coords (send (send g-sensor-coords :copy-worldcoords)
+                                             :transform good-plane-coords)))
+          (ros::ros-info "g-sensor-corods: ~A" g-sensor-coords)
+          (ros::ros-info "good-plane-coords: ~A" good-plane-coords)
+          (let* ((n (send good-plane-world-coords :rotate-vector (float-vector 0 0 1)))
+                 (yz-n* (normalize-vector (float-vector 0 (elt n 1) (elt n 2)))))
+            (let ((ang (atan2 (elt yz-n* 1) (elt yz-n* 2))))
+              (ros::ros-info "ang: ~A" (rad2deg ang))
+              ang))))))
+  (:grid-world-roll-angle-old (g-sensor-coords x-coords)
+    (let* ((q (quaternion-from-two-vectors
+               (send x-coords :rotate-vector (float-vector 0 0 1))
                (send g-sensor-coords :rotate-vector (float-vector 0 0 1))))
            (r (quaternion2matrix q))
            (trans (make-coords :rot r)))
@@ -206,12 +222,12 @@
               (send origin :inverse-rotate-vector (send plane-obj :normal)))
              (yz-n* (normalize-vector (float-vector 0 (elt n* 1) (elt n* 2)))))
         (atan2 (elt yz-n* 1) (elt yz-n* 2)))))
-  (:rolledp (g-sensor-coords x-coords &optional (threshold (deg2rad 5)))
+  (:rolledp (g-sensor-coords x-coords &optional (threshold (deg2rad 10)))
     (let* ((theta (send self :grid-world-roll-angle g-sensor-coords x-coords)))
       (when *debug-verbose*
         (ros::ros-info "theta: ~A" (rad2deg theta)))
       (> (abs theta) threshold)))
-  (:roll-direction (g-sensor-coords x-coords &optional (threshold (deg2rad 5)))
+  (:roll-direction (g-sensor-coords x-coords &optional (threshold (deg2rad 10)))
     (let* ((theta (send self :grid-world-roll-angle g-sensor-coords x-coords)))
       (cond ((> theta threshold)
              :left)
@@ -520,9 +536,11 @@ which is inside of occupied cell"
   (when roll-paranoid
     ;; If roll-paranoid mode,
     ;; we need to check legs for different levels
+    (ros::ros-info "is current-grid rolling: ~A" (send current-grid :rolledp g-sensor-coords parent-coords))
     (when (send current-grid :rolledp g-sensor-coords parent-coords)
       (when *debug-verbose*
-        (ros::ros-info "current grid is ~A" (send current-grid :roll-direction g-sensor-coords parent-coords)))
+        (ros::ros-info "current grid is ~A"
+                       (send current-grid :roll-direction g-sensor-coords parent-coords)))
       (cond
        ((eq (send current-grid :roll-direction g-sensor-coords parent-coords)
             :left)                  ;should use right leg
@@ -539,6 +557,7 @@ which is inside of occupied cell"
         (when roll-paranoid
           (when *debug-verbose*
             (ros::ros-info "rolledp2: ~A" (send grid :rolledp g-sensor-coords parent-coords)))
+          (ros::ros-info "is next-grid rolling: ~A" (send grid :rolledp g-sensor-coords parent-coords))
           (when (send grid :rolledp g-sensor-coords parent-coords)
             (when *debug-verbose*
               (ros::ros-info "candidate grid is ~A" (send grid :roll-direction g-sensor-coords parent-coords)))

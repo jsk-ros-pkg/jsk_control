@@ -72,9 +72,9 @@
     (while (null gsensor-coords)
       (ros::ros-info "Waiting for gsensor coords")
       (ros::sleep)
-      (setq gsensor-coords
+      (setq gsensor-coords              ;gsensor -> ground
             (send *tf* :lookup-transform "gsensor" *global-frame-id* (ros::time 0))))
-    
+
     (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
            (start-time (ros::time-now))
            (prblm (instance footstep-planner-graph :init
@@ -171,6 +171,7 @@
                           :worldcoords (cadr projected-leg-coords)
                           :prev-coords (car projected-leg-coords)
                           :l/r start-leg
+                          :root t
                           :robot-coords (midcoords 0.5
                                                    (car projected-leg-coords)
                                                    (cadr projected-leg-coords))
@@ -476,7 +477,7 @@
   (setq *heuristic* (read-from-string
                      (ros::get-param "~heuristic" ":stepcost-heuristic**")))
   ;;(ros::get-param "~heuristic" ":stepcost-z-heuristic*")))
-  (setq *roll-paranoid* (ros::get-param "~roll_paranoid" t))
+  (setq *roll-paranoid* (ros::get-param "~roll_paranoid" nil))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" nil))
   (setq *use-gui* (ros::get-param "~use_gui" t))
@@ -491,7 +492,7 @@
   (setq *tf* (instance ros::transform-listener :init))
   (when *use-planes*
     (ros::subscribe "planes" jsk_recognition_msgs::PolygonArray #'planes-cb))
-  
+
   (ros::advertise (format nil "~A/footstep" (ros::get-name)) jsk_footstep_msgs::FootstepArray)
   (ros::advertise (format nil "~A/footstep_time" (ros::get-name)) std_msgs::Float32)
   (ros::advertise (format nil "~A/footstep_count" (ros::get-name)) std_msgs::Float32)

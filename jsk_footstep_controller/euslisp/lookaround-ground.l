@@ -11,7 +11,7 @@
 
 (load (format nil "package://hrpsys_ros_bridge_tutorials/euslisp/~A-interface.l" 
               (string-downcase *robot-name*)))
-
+(load "package://drc_task_common/euslisp/test-drc-terrain-walk.l")
 (init-robot-from-name *robot-name*)
 
 
@@ -82,9 +82,13 @@
   )
 
 (defun do-lookaround-jaxon ()
-  (send *robot* :reset-pose)
+  (walking-pose *robot*
+                :default-pose-method :reset-pose
+                :root-link-height-offset -80
+                :root-link-pitch-offset 20
+                :chest-link-pitch-offset 20)
   (send *robot* :head :neck-p :joint-angle 35)
-  (send *robot* :torso :waist-p :joint-angle 35)
+  ;;(send *robot* :torso :waist-p :joint-angle 35) ; it's not working because of model bug
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
   (call-empty-service "/tilt_laser_listener/clear_cache")
@@ -96,6 +100,14 @@
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
   )
+
+#|
+(walking-pose *jaxon*
+              :default-pose-method :reset-pose
+              :root-link-height-offset 0
+              :root-link-pitch-offset 20
+              :chest-link-pitch-offset 20)
+|#
 
 (defun do-lookaround ()
   ;; (send *robot* :reset-pose)
