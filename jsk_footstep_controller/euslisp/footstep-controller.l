@@ -1,8 +1,8 @@
 #!/usr/bin/env roseus
-(load "package://drc_task_common/euslisp/test-drc-terrain-walk.l")
-;; forostep-controller.l
 (ros::roseus-add-msgs "std_msgs")
 (ros::roseus-add-msgs "jsk_footstep_msgs")
+(load "package://drc_task_common/euslisp/test-drc-terrain-walk.l")
+;; forostep-controller.l
 (ros::roseus-add-msgs "jsk_rviz_plugins")
 (ros::roseus-add-srvs "jsk_footstep_controller")
 (ros::roseus-add-msgs "jsk_footstep_controller")
@@ -527,7 +527,9 @@
     (> (norm (v- av rv)) 5)))
 
 (defun robot-angle-straight ()
-  (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5)
+  (if (string= *robot-name* "JAXON")
+      (walking-pose *robot* :root-link-height-offset -120 :root-link-pitch-offset 5)
+    (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5))
   ;; Check if we need to move robot or not
   (when (need-to-send-angle-vector-p *robot*)
     (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
@@ -536,14 +538,16 @@
 
 (defun robot-angle-rolling (policy)
   ;; policy := :left-rolling or :right-rolling
-  (cond
-   ((eq policy :left-rolling)
-    (walking-pose *robot* :root-link-height-offset -50
-                  :root-link-pitch-offset 5 :root-link-roll-offset 5))
-   ((eq policy :right-rolling)
-    (walking-pose *robot* :root-link-height-offset -50
-                  :root-link-pitch-offset 5 :root-link-roll-offset -5))
-   )
+  (if (not (string= *robot-name* "JAXON"))
+      (cond
+       ((eq policy :left-rolling)
+        (walking-pose *robot* :root-link-height-offset -50
+                      :root-link-pitch-offset 5 :root-link-roll-offset 5))
+       ((eq policy :right-rolling)
+        (walking-pose *robot* :root-link-height-offset -50
+                      :root-link-pitch-offset 5 :root-link-roll-offset -5))
+       )
+    (walking-pose *robot* :root-link-height-offset -120 :root-link-pitch-offset 5))
   (when (need-to-send-angle-vector-p *robot*)
     (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
     (send *ri* :wait-interpolation))
@@ -554,30 +558,42 @@
   (high-step-stair-param-hrp2jsk))
 
 (defun set-parameter-for-planar-rolling ()
-  (roll-terrain-stair-param-hrp2jsk))
-
+  (if (string= "JAXON" *robot-name*)
+      (set-parameter-for-planar-jaxon)
+    (roll-terrain-stair-param-hrp2jsk)))
 
 (defun set-parameter-for-stair ()
-  (cond
-   ((string= *robot-name* "JAXON")
-    (set-parameter-for-stair-jaxon))
-   (t
-    (set-parameter-for-stair-hrp2))))
+  (default-stair-param-hrp2jsk)
+  (when (string= "JAXON" *robot-name*)
+    (send *ri* :set-auto-balancer-param :default-zmp-offsets
+          (list (float-vector -20 0 0) (float-vector -20 0 0))))
+  ;; (send *ri* :set-auto-balancer-param :default-zmp-offsets
+  ;;       (list (float-vector 0 -10 0) (float-vector 0 10 0)))
+  ;; (send *ri* :set-gait-generator-param
+  ;;       ;;:toe-angle 30 :heel-angle 5
+  ;;       :toe-angle 0 :heel-angle 0
+  ;;       :toe-heel-phase-ratio #f(0.08 0.22 0.2 0.0 0.2 0.25 0.05)
+  ;;       :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+  ;;       :swing-trajectory-delay-time-offset 0.25
+  ;;       :default-orbit-type :stair
+  ;;       :default-step-time 1.5
+  ;;       ;;:default-step-time 1.3
+  ;;       :default-double-support-ratio 0.2
+  ;;       ;;:default-double-support-ratio 0.16
+  ;;       :default-step-height 0.05)
+  )
 
-(defun set-parameter-for-stair-jaxon ()
-  (send *ri* :set-gait-generator-param
-        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
-        :swing-trajectory-delay-time-offset 0.25
-        :default-orbit-type :stair
-        :default-step-time 1.3
-        ;; :default-double-support-ratio 0.32
-        :default-double-support-ratio 0.16
-        :default-step-height 0.03)
-  (send *ri* :set-auto-balancer-param :default-zmp-offsets
-        (list (float-vector 10 30 0) (float-vector 10 -30 0))))
-
-(defun set-parameter-for-stair-hrp2 ()
-  (default-stair-param-hrp2jsk))
+;; (defun set-parameter-for-stair-jaxon ()
+;;   (send *ri* :set-gait-generator-param
+;;         :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+;;         :swing-trajectory-delay-time-offset 0.25
+;;         :default-orbit-type :stair
+;;         :default-step-time 1.3
+;;         ;; :default-double-support-ratio 0.32
+;;         :default-double-support-ratio 0.16
+;;         :default-step-height 0.03)
+;;   (send *ri* :set-auto-balancer-param :default-zmp-offsets
+;;         (list (float-vector 10 30 0) (float-vector 10 -30 0))))
 
 (defun set-parameter-for-planar ()
   (cond
@@ -589,13 +605,14 @@
 (defun set-parameter-for-planar-jaxon ()
   (send *ri* :set-gait-generator-param
         :default-orbit-type :cycloid
+        :toe-angle 0 :heel-angle 0
         :default-step-time 1.1
         ;;:default-double-support-ratio 0.32
         :default-double-support-ratio 0.16
         :default-step-height 0.05)
   ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
-  (send *ri* :set-auto-balancer-param :default-zmp-offsets
-        (list (float-vector 10 10 0) (float-vector 10 -10 0)))
+  ;; (send *ri* :set-auto-balancer-param :default-zmp-offsets
+  ;;       (list (float-vector 10 10 0) (float-vector 10 -10 0)))
   )
 
 (defun set-parameter-for-planar-hrp2 ()

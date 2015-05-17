@@ -44,7 +44,7 @@
      "You have to define :transformation-by-name in subclass of ~
 footstep-parameter"))
   (:next-leg (prev-leg)
-    (error         
+    (error
      "You have to define :next-leg-name in subclass of footstep-parameter"))
   (:next-step-coords (support-leg-coords l/r)
     (error
@@ -423,18 +423,20 @@ check between leg-object and obstacles."
 (defclass step-node
   :super node
   :slots (worldcoords l/r robot-coords prev-coords angle-vector step-name
-                      leg-face projecting-grid))
+                      root leg-face projecting-grid))
 
 (defmethod step-node
   (:init (&key ((:worldcoords wc) nil)
                ((:robot-coords rc) nil)
                ((:prev-coords pc) nil)
                ((:angle-vector av) nil)
+               ((:root rt) nil)
                ((:projecting-grid pg) nil)
                ((:l/r lr) nil)
                ((:leg-face lg) nil)
                ((:step-name sn) nil))
     (setq projecting-grid pg)
+    (setq root rt)
     (setq worldcoords wc)
     (setq step-name sn)
     (setq leg-face lg)
@@ -444,6 +446,7 @@ check between leg-object and obstacles."
     (setq l/r lr)
     self)
   ;; accessor
+  (:root () root)
   (:projecting-grid () projecting-grid)
   (:robot-coords () robot-coords)
   (:leg-face () leg-face)
@@ -462,13 +465,15 @@ check between leg-object and obstacles."
   )
 
 (defun step-node= (a b)
-  (and (eq (send a :l/r) (send b :l/r))
-       (< (distance (send (send a :worldcoords) :worldpos)
-                    (send (send b :worldcoords) :worldpos))
-          10.0)
-       (< (norm (send (send a :worldcoords) :difference-rotation
-                      (send b :worldcoords)))
-          #.(deg2rad 10.0))))
+  (if (or (send a :root) (send b :root))
+      nil
+    (and (eq (send a :l/r) (send b :l/r))
+         (< (distance (send (send a :worldcoords) :worldpos)
+                      (send (send b :worldcoords) :worldpos))
+            10.0)
+         (< (norm (send (send a :worldcoords) :difference-rotation
+                        (send b :worldcoords)))
+            #.(deg2rad 10.0)))))
 
 (defun distance2d (a b)
   (let ((diff (v- a b)))
@@ -949,7 +954,7 @@ building and searching."
               (pitch-limit (cdr (assoc :pitch limits))))
           (let ((rpy (car (send diff-coords :rpy-angle)))
                 (pos (send diff-coords :worldpos)))
-            (let ((result 
+            (let ((result
                    (and (< (abs (elt pos 0)) x-limit)
                         (< (abs (elt pos 2)) z-limit)
                         (< (abs (elt rpy 1)) pitch-limit)

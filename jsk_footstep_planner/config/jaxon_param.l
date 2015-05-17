@@ -13,9 +13,9 @@
                          (:y . 0)))
         (:default-transition-limit
           (:z . 230)
-          (:roll . 15)
-          (:pitch . 15)
-          (:x . 280))
+          (:roll . 20)
+          (:pitch . 20)
+          (:x . 300))
         (:transition-first-successors
           (:transform (:x . 250) (:y . 210) (:theta . 0))
           (:transform (:x . 250) (:y . 210) (:theta . 5))
