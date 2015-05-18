@@ -24,6 +24,10 @@
 (setq *goal-id* nil)
 (setq *footstep-list-bak* nil)
 (setq *goal-id-bak* nil)
+;; one of
+;;   :non-interupptible
+;;   :full-interruptible
+;;   :semi-interruptible
 (setq *interruptible-mode* nil)
 (setq *last-step* nil)
 (setq *height-threshold* 100)
@@ -117,16 +121,16 @@
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
   ;; 2. apply the inverse transformation to footstep-ocorods[1:]
   ;; 3. convert the footstep respected to hrpsys-mid-coords
-  (if (not *interruptible-mode*)
-      (when *realp*
-        (cond
-         ((string= *robot-name* "JAXON")
-          (walking-pose *robot* :root-link-height-offset -80))
-         (t
-          (walking-pose *robot* :root-link-height-offset -70))
-          )
-        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
-        (send *ri* :wait-interpolation)))
+  (cond ((eq *interruptible-mode* :non-interupptible)
+         (when *realp*
+           (cond
+            ((string= *robot-name* "JAXON")
+             (walking-pose *robot* :root-link-height-offset -80))
+            (t
+             (walking-pose *robot* :root-link-height-offset -70))
+            )
+           (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+           (send *ri* :wait-interpolation))))
   (cond ((= (send goal :goal :strategy)
             jsk_footstep_msgs::ExecFootstepsGoal::*RESUME*)
          (progn
@@ -421,69 +425,71 @@
 
 (defun proc-goal-cb (server goal)
   (publish-breakpoint-text " ")
-  (if *interruptible-mode*
-      (progn
-        (ros::ros-info "remaining footsteps: ~A" (length *footstep-list*))
-        (cond ((<= (length *footstep-list*) 1) ;finish
-               (progn
-                 ;;(change-standing-mode nil nil)
-                 (publish-breakpoint-text " ")
-                 (let ((result (send server :result)))
-                   (send server :set-succeeded result))
-                 ;; Clear last-step
-                 (setq *last-step* nil)))
-              (t
-               (publish-breakpoint-text " ")
-               (let ((first-step (pop *footstep-list*)))
-                 (setq second-step (car *footstep-list*))
-                 (change-standing-mode first-step second-step)
-                 ;; Send two footsteps at once for different plane transition
-                 (if (or (eq *walking-state* :climing-up) ;hack
-                         (eq *walking-state* :climing-down) ;hack
-                         (not (eq *current-plane* *next-plane*)))
-                     (progn
-                       (let ((third-step (cadr *footstep-list*)))
-                         (when *realp*
-                           (send *ri* :set-foot-steps
-                                 (list first-step second-step third-step)))
-                         (setq *last-step* second-step)
-                         (pop *footstep-list*)))
-                   (progn
-                     (when *realp*
-                       (send *ri* :set-foot-steps (list first-step second-step)))
-                     (setq *last-step* first-step))
-                   )
-                 )
-               (when *wait-contact-state* 
-                 ;;(unix:sleep 1)
-                 (wait-for-double-stance-phase))
-               (when *wait-convergence*
-                 (wait-for-convergence))
-               (change-standing-mode-post)
-               (when *check-breakpoint*
-                 (publish-breakpoint-text "Breakpoint!")
-                 (setq req (instance jsk_footstep_controller::RequireMonitorStatusRequest :init))
-                   (send req :header *contact-header*)
-                   (if(eq (send second-step :name) :rleg)
-                       (send req :threshold (deg2rad 1.5)) ;lleg
-                     (send req :threshold (deg2rad 1.7))) ;rleg
-                   (let ((res (ros::service-call "require_foot_contact_monitor" req)))
-                     (unless (send res :go)
-                       (preempt-cb server nil)))))))
-    (progn
-      ;; done
-      (print (send-all *footstep-list* :name))
-      (print *footstep-list*)
-      (when *realp*
-        (send *ri* :set-foot-steps *footstep-list*))
-      (setq *footstep-list* nil)
-      (when *realp*
-        (walking-pose *robot* :root-link-height-offset 0)
-        (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
-        (send *ri* :wait-interpolation))
-      (send server :set-succeeded (send server :result))
-      )
-    ))
+  (cond ((or (eq *interruptible-mode* :full-interruptible)
+             (eq *interruptible-mode* :semi-interruptible))
+         (ros::ros-info "remaining footsteps: ~A" (length *footstep-list*))
+         (cond ((<= (length *footstep-list*) 1) ;finish
+                (progn
+                  ;;(change-standing-mode nil nil)
+                  (publish-breakpoint-text " ")
+                  (let ((result (send server :result)))
+                    (send server :set-succeeded result))
+                  ;; Clear last-step
+                  (setq *last-step* nil)))
+               (t
+                (publish-breakpoint-text " ")
+                (let ((first-step (pop *footstep-list*)))
+                  (setq second-step (car *footstep-list*))
+                  (change-standing-mode first-step second-step)
+                  ;; Send two footsteps at once for different plane transition
+                  (if (or (eq *walking-state* :climing-up) ;hack
+                          (eq *walking-state* :climing-down) ;hack
+                          (not (eq *current-plane* *next-plane*)))
+                      (progn
+                        (let ((third-step (cadr *footstep-list*)))
+                          (when *realp*
+                            (send *ri* :set-foot-steps
+                                  (list first-step second-step third-step)))
+                          (setq *last-step* second-step)
+                          (pop *footstep-list*)))
+                    (progn
+                      (when *realp*
+                        (send *ri* :set-foot-steps (list first-step second-step)))
+                      (setq *last-step* first-step))
+                    )
+                  )
+                (when *wait-contact-state* 
+                  ;;(unix:sleep 1)
+                  (wait-for-double-stance-phase))
+                (when *wait-convergence*
+                  (wait-for-convergence))
+                (change-standing-mode-post)
+                (when *check-breakpoint*
+                  (publish-breakpoint-text "Breakpoint!")
+                  (setq req (instance jsk_footstep_controller::RequireMonitorStatusRequest :init))
+                  (send req :header *contact-header*)
+                  (if(eq (send second-step :name) :rleg)
+                      (send req :threshold (deg2rad 1.5)) ;lleg
+                    (send req :threshold (deg2rad 1.7))) ;rleg
+                  (let ((res (ros::service-call "require_foot_contact_monitor" req)))
+                    (unless (send res :go)
+                      (preempt-cb server nil)))))))
+        ((eq *interruptible-mode* :non-interupptible)
+         ;; done
+         (print (send-all *footstep-list* :name))
+         (print *footstep-list*)
+         (when *realp*
+           (send *ri* :set-foot-steps *footstep-list*))
+         (setq *footstep-list* nil)
+         (when *realp*
+           (walking-pose *robot* :root-link-height-offset 0)
+           (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+           (send *ri* :wait-interpolation))
+         (send server :set-succeeded (send server :result))
+         )
+        ))
+      
+        
 
 (defun wait-for-convergence ()
   (let ((prev-angles (send *ri* :state :potentio-vector)))
@@ -616,9 +622,9 @@
   (let ((interface-file
          (ros::get-param "~interface_file"
            "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")))
-    (setq *interruptible-mode* (ros::get-param "~interruptible_mode" nil))
-    (if *interruptible-mode*
-        (ros::ros-info "footstep controller running in interruptible mode"))
+    (setq *interruptible-mode*
+          (read-from-string
+           (ros::get-param "~interruptible_mode" ":non-interupptible")))
     (load interface-file)
     (setq *robot-name* (ros::get-param "~robot_name" (unix::getenv "ROBOT")))
     (init-robot-from-name *robot-name*)
