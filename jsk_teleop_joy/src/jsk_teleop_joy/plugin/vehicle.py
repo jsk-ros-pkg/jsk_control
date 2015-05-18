@@ -28,6 +28,7 @@ class VehicleJoyController(JSKJoyPlugin):
       }
     self.synchronizeAllCommand()
     print >> sys.stderr, "Joystick initialization is finished"
+    self.initialize_service = rospy.Service('drive/operation/initialize', Empty, self.initializeServiceCallback)
     self.synchronize_service = rospy.Service('drive/operation/synchronize', Empty, self.synchronizeServiceCallback)
 
   def joyCB(self, status, history):
@@ -86,6 +87,10 @@ class VehicleJoyController(JSKJoyPlugin):
     for command in self.command_states.values():
       command.synchronize()
 
+  def initializeServiceCallback(self, req):
+    self.initializeAllCommand()
+    return EmptyResponse()
+      
   def synchronizeServiceCallback(self, req):
     self.synchronizeAllCommand()
     return EmptyResponse()
