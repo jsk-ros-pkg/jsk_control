@@ -25,7 +25,7 @@
 (setq *footstep-list-bak* nil)
 (setq *goal-id-bak* nil)
 ;; one of
-;;   :non-interupptible
+;;   :non-interrupptible
 ;;   :full-interruptible
 ;;   :semi-interruptible
 (setq *interruptible-mode* nil)
@@ -121,7 +121,7 @@
   ;; 1. calc transformation from hrpsys-coords to footstep-coords[0].
   ;; 2. apply the inverse transformation to footstep-ocorods[1:]
   ;; 3. convert the footstep respected to hrpsys-mid-coords
-  (cond ((eq *interruptible-mode* :non-interupptible)
+  (cond ((eq *interruptible-mode* :non-interrupptible)
          (when *realp*
            (cond
             ((string= *robot-name* "JAXON")
@@ -474,7 +474,7 @@
                   (let ((res (ros::service-call "require_foot_contact_monitor" req)))
                     (unless (send res :go)
                       (preempt-cb server nil)))))))
-        ((eq *interruptible-mode* :non-interupptible)
+        ((eq *interruptible-mode* :non-interrupptible)
          ;; done
          (print (send-all *footstep-list* :name))
          (print *footstep-list*)
@@ -619,17 +619,10 @@
 (defun main()
   (ros::roseus "footstep_controller")
   ;; *ri*
-  (let ((interface-file
-         (ros::get-param "~interface_file"
-           "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")))
-    (setq *interruptible-mode*
-          (read-from-string
-           (ros::get-param "~interruptible_mode" ":non-interupptible")))
-    (load interface-file)
-    (setq *robot-name* (ros::get-param "~robot_name" (unix::getenv "ROBOT")))
-    (init-robot-from-name *robot-name*)
-    ;; Set ABC parameters
-    )
+  (setq *robot-name* (ros::get-param "~robot" (string-downcase (unix::getenv "ROBOT"))))
+  (load (format nil "package://hrpsys_ros_bridge_tutorials/euslisp/~A-interface.l"
+                (string-downcase *robot-name*)))
+  (init-robot-from-name *robot-name*)
   ;; interface
   (setq *tf* (instance ros::transform-listener :init))
   (ros::advertise-service "require_log"
