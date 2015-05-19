@@ -35,9 +35,11 @@ class VehicleJoyController(JSKJoyPlugin):
     latest = history.latest()
     handle_resolution = 0.025 # rad
     neck_y_resolution = 0.1 # deg
-    neck_y_angle_max = 30.0
+    neck_y_angle_max = 35.0
+    neck_y_angle_min = -35.0
     neck_p_resolution = 0.1 # deg
-    neck_p_angle_max = 20.0
+    neck_p_angle_max = 35.0
+    neck_p_angle_min = -35.0
     max_accel_resolution = 0.05
     max_brake_resolution = 1.0
 
@@ -49,14 +51,14 @@ class VehicleJoyController(JSKJoyPlugin):
       self.command_states["handle"].command = self.command_states["handle"].command + handle_resolution * status.left_analog_x
     # neck_y command
     if status.left:
-      self.command_states["neck_y"].command = self.commandJointAngle(self.command_states["neck_y"].command, neck_y_resolution, neck_y_angle_max)
+      self.command_states["neck_y"].command = self.commandJointAngle(self.command_states["neck_y"].command, neck_y_resolution, neck_y_angle_max, neck_y_angle_min)
     elif status.right:
-      self.command_states["neck_y"].command = self.commandJointAngle(self.command_states["neck_y"].command, -neck_y_resolution, neck_y_angle_max)
+      self.command_states["neck_y"].command = self.commandJointAngle(self.command_states["neck_y"].command, -neck_y_resolution, neck_y_angle_max, neck_y_angle_min)
     # neck_p command (head goes down when neck_p incleases)
     if status.up:
-      self.command_states["neck_p"].command = self.commandJointAngle(self.command_states["neck_p"].command, -neck_p_resolution, neck_p_angle_max)
+      self.command_states["neck_p"].command = self.commandJointAngle(self.command_states["neck_p"].command, -neck_p_resolution, neck_p_angle_max, neck_p_angle_min)
     elif status.down:
-      self.command_states["neck_p"].command = self.commandJointAngle(self.command_states["neck_p"].command, neck_p_resolution, neck_p_angle_max)
+      self.command_states["neck_p"].command = self.commandJointAngle(self.command_states["neck_p"].command, neck_p_resolution, neck_p_angle_max, neck_p_angle_min)
     # accel command
     if status.right_analog_y:
       self.command_states["accel"].command = max(status.right_analog_y, 0.0)
@@ -71,12 +73,12 @@ class VehicleJoyController(JSKJoyPlugin):
     for command in self.command_states.values():
       command.publishCommand()
     
-  def commandJointAngle(self, current_value, resolution, max_value): # max_value assumed to be positive
+  def commandJointAngle(self, current_value, resolution, max_value, min_value): # max_value assumed to be positive
     next_value = current_value + resolution
     if next_value > max_value:
       next_value = max_value
-    elif next_value < -max_value:
-      next_value = -max_value
+    elif next_value < min_value:
+      next_value = min_value
     return next_value
 
   def initializeAllCommand(self):
