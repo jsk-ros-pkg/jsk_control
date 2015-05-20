@@ -31,7 +31,7 @@
 (setq *interruptible-mode* nil)
 (setq *last-step* nil)
 (setq *height-threshold* 100)
-(setq *verbose* nil)
+(setq *angle-threshold* (deg2rad 7))
 ;; ((footstep footstep ....) (footstep footstep ....) ...)
 
 (defun footstep->coords (footstep frame-id)
@@ -49,6 +49,62 @@
 (setq *contact-header* nil)
 (setq *contact-state* jsk_footstep_controller::GroundContactState::*CONTACT_UNSTABLE*)
 (setq *contact-error* 0)
+
+(defun absmin (a b)
+  (if (< (abs a) (abs b))
+      a
+    b))
+
+(defun coords-z-pitch-and-roll-angle (coords)
+  (let ((pitch-angle (absmin (elt (car (send coords :rpy-angle)) 1)
+                             (elt (cadr (send coords :rpy-angle)) 1)))
+        (roll-angle (absmin (elt (car (send coords :rpy-angle)) 2)
+                            (elt (cadr (send coords :rpy-angle)) 2))))
+    (list (elt (send coords :worldpos) 2) pitch-angle roll-angle)))
+
+(defun separate-by-footsteps (footsteps)
+  (let ((groups nil)
+        (current-groups nil)
+        (prev-footstep nil))
+    (dolist (foot footsteps)
+      (if (null current-groups)
+          (setq current-groups (list foot))
+        (progn
+          ;; Compute transformation from previous step to current step
+          (let ((trans (send prev-footstep :transformation foot)))
+            (multiple-value-bind (zdiff pitch roll)
+                (coords-z-pitch-and-roll-angle trans)
+              (if (or (> (abs pitch) *angle-threshold*)
+                      (> (abs roll) *angle-threshold*)
+                      (> (abs zdiff) 50))
+                  (progn ;the end of group because of different plane level
+                    (setq groups (append groups (list current-groups)))
+                    (setq current-groups (list foot)))
+                (progn
+                  (setq current-groups (append current-groups (list foot))))
+                )))))
+      (setq prev-footstep foot))
+    (if current-groups
+        (setq groups (append groups (list current-groups))))
+    groups))
+
+
+(defun separate-footstep-with-poststeps (grouped-footsteps)
+  (let ((final-group nil))
+    (dolist (group grouped-footsteps)
+      (if (null final-group)
+          (setq final-group (list group))
+        (progn
+          (if (> (length group) 2)
+              (progn                    ;first 2 steps should be special group
+                (setq final-group (append final-group (list (list (car group)
+                                                                  (cadr group)))
+                                          (list (cddr group)))))
+            (progn                      ;no enough steps
+              (setq final-group (append final-group (list group)))))
+          )))
+    final-group))
+
 (defun contact-state-callback (msg)
   (setq *contact-state* (send msg :contact_state))
   (setq *contact-error* (send msg :error_pitch_angle))
@@ -86,35 +142,6 @@
    0.5
    (send *ri* :get-foot-step-param :rleg-coords)
    (send *ri* :get-foot-step-param :lleg-coords)))
-
-;; (defun walking-pose ;; this should be method
-;;   (robot
-;;    &key (root-link-height-offset 0)
-;;         (root-link-pitch-offset 0)
-;;         (fix-coords (make-coords))
-;;         (default-pose-method :reset-pose))
-;;   "Generate and set walking pose.
-;;    default-pose-method is initial pose, reset-manip-pose by default.
-;;    Generated pose is near from default-pose-method pose.
-;;    root-link-height-offset is root height offset [mm] from default-pose-method.
-;;    root-link-pitch-offset is root pitch offset [deg] from default-pose-method."
-;;   (send robot default-pose-method)
-;;   (send robot :fix-leg-to-coords fix-coords)
-;;   (let ((lc (mapcar #'(lambda (l)
-;;                         (send robot l :end-coords :copy-worldcoords))
-;;                     '(:rleg :lleg))))
-;;     (send robot :move-coords
-;;           (send
-;;            (send (send (car (send robot :links)) :copy-worldcoords)
-;;                  :translate (float-vector 0 0 root-link-height-offset))
-;;            :rotate (deg2rad root-link-pitch-offset) :y)
-;;           (car (send robot :links)))
-;;     (mapcar #'(lambda (l c)
-;;                 (send robot l :inverse-kinematics c))
-;;             '(:rleg :lleg) lc)
-;;     (send robot :move-centroid-on-foot :both '(:rleg :lleg))
-;;     (send robot :angle-vector)
-;;     ))
 
 (defun new-goal-cb (server goal)
   ;; coordinate transformation:
@@ -406,7 +433,6 @@
     (setq *next-plane* (compute-plane-condition next-step))
     ;; :standing, :climing-up or :plane
     (setq next (compute-height-transition first-step next-step))
-    
     (ros::ros-info "first-step: ~A" first-step)
     (ros::ros-info "next-step: ~A" next-step)
     (ros::ros-info "*last-step*: ~A" *last-step*)
@@ -425,8 +451,7 @@
 
 (defun proc-goal-cb (server goal)
   (publish-breakpoint-text " ")
-  (cond ((or (eq *interruptible-mode* :full-interruptible)
-             (eq *interruptible-mode* :semi-interruptible))
+  (cond ((eq *interruptible-mode* :full-interruptible)
          (ros::ros-info "remaining footsteps: ~A" (length *footstep-list*))
          (cond ((<= (length *footstep-list*) 1) ;finish
                 (progn
@@ -458,7 +483,7 @@
                       (setq *last-step* first-step))
                     )
                   )
-                (when *wait-contact-state* 
+                (when *wait-contact-state*
                   ;;(unix:sleep 1)
                   (wait-for-double-stance-phase))
                 (when *wait-convergence*
@@ -474,6 +499,36 @@
                   (let ((res (ros::service-call "require_foot_contact_monitor" req)))
                     (unless (send res :go)
                       (preempt-cb server nil)))))))
+        ((eq *interruptible-mode* :semi-interruptible) ;only JAXON is supported!!
+         (print :semi-interruptible!!)
+         (let* ((prev-step (car *footstep-list*))
+                (plane-separated-footsteps (separate-by-footsteps (cdr *footstep-list*)))
+                (grouped-footsteps (separate-footstep-with-poststeps plane-separated-footsteps)))
+           (format t "groups: ~A~%" (length grouped-footsteps))
+           (format t "group nums: ~A~%" (mapcar #'length grouped-footsteps))
+           (format t "group: ~A~%" grouped-footsteps)
+           (dotimes (i (length grouped-footsteps))
+             (format t "i: ~A~%" i)
+             (let ((target-footsteps (elt grouped-footsteps i)))
+               (change-standing-mode prev-step (car target-footsteps))
+               ;; ;; check if next step is on the same level or not
+               (when *realp*
+                 (send *ri* :set-foot-steps (cons prev-step target-footsteps)))
+               (when *wait-convergence*
+                 (wait-for-convergence))
+               ;; Postprepare joint angles
+               (robot-angle-straight)
+               ;; Prepare for the next footstep
+               (if (>= (length target-footsteps) 2)
+                   (setq *last-step* (elt target-footsteps (- (length target-footsteps) 2)))
+                 (setq prev-step *last-step*))
+               (setq prev-step (elt target-footsteps (1- (length target-footsteps))))
+               )
+             )
+           )
+         (setq *footstep-list* nil)
+         (send server :set-succeeded (send server :result))
+         (setq *last-step* nil))        ;clear for next
         ((eq *interruptible-mode* :non-interrupptible)
          ;; done
          (print (send-all *footstep-list* :name))
@@ -488,8 +543,6 @@
          (send server :set-succeeded (send server :result))
          )
         ))
-      
-        
 
 (defun wait-for-convergence ()
   (let ((prev-angles (send *ri* :state :potentio-vector)))
@@ -534,7 +587,7 @@
 
 (defun robot-angle-straight ()
   (if (string= *robot-name* "JAXON")
-      (walking-pose *robot* :root-link-height-offset -120 :root-link-pitch-offset 5)
+      (walking-pose *robot* :root-link-height-offset -80 :root-link-pitch-offset 5)
     (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5))
   ;; Check if we need to move robot or not
   (when (need-to-send-angle-vector-p *robot*)
@@ -553,7 +606,7 @@
         (walking-pose *robot* :root-link-height-offset -50
                       :root-link-pitch-offset 5 :root-link-roll-offset -5))
        )
-    (walking-pose *robot* :root-link-height-offset -120 :root-link-pitch-offset 5))
+    (walking-pose *robot* :root-link-height-offset -80 :root-link-pitch-offset 5))
   (when (need-to-send-angle-vector-p *robot*)
     (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
     (send *ri* :wait-interpolation))
@@ -636,7 +689,8 @@
 (defun main()
   (ros::roseus "footstep_controller")
   ;; *ri*
-  (setq *robot-name* (ros::get-param "~robot" (string-downcase (unix::getenv "ROBOT"))))
+  (setq *robot-name* (string-upcase (ros::get-param "~robot" (string-downcase (unix::getenv "ROBOT")))))
+  (setq *interruptible-mode* (read-from-string (ros::get-param "~interruptible_mode" ":semi-interruptible")))
   (load (format nil "package://hrpsys_ros_bridge_tutorials/euslisp/~A-interface.l"
                 (string-downcase *robot-name*)))
   (init-robot-from-name *robot-name*)
@@ -673,4 +727,23 @@
 (dotimes (i (1- (length footsteps)))
   (print (rad2deg (acos (v. (normalize-vector (send (elt footsteps i) :z-axis)) (normalize-vector (send (elt footsteps (1+ i)) :z-axis)))))
   )
+|#
+
+
+#|
+(separate-footstep-with-poststeps
+ (separate-by-footsteps (list (make-coords) 
+                             (make-coords) (make-coords) (make-coords) (make-coords)
+                             (make-coords :pos (float-vector 100 0 100))
+                             (make-coords :pos (float-vector 200 0 100))
+                             (make-coords :pos (float-vector 300 0 100))
+                             (send (make-coords :pos (float-vector 300 0 100))
+                                   :rotate (deg2rad 10) :x)
+                             (send (make-coords :pos (float-vector 400 0 100))
+                                   :rotate (deg2rad 10) :x)
+                             (send (make-coords :pos (float-vector 500 0 100))
+                                   :rotate (deg2rad 10) :x)
+                             (send (make-coords :pos (float-vector 600 0 100))
+                                   :rotate (deg2rad 10) :x)
+                             )))
 |#
