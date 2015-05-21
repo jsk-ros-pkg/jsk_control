@@ -63,6 +63,7 @@ namespace jsk_footstep_controller
     pnh.param("parent_frame_id", parent_frame_id_, std::string("odom"));
     pnh.param("midcoords_frame_id", midcoords_frame_id_, std::string("ground"));
     pnh.param("root_frame_id", root_frame_id_, std::string("BODY"));
+    pnh.param("odom_root_frame_id", odom_root_frame_id_, std::string("odom_root"));
     pnh.param("lfoot_frame_id", lfoot_frame_id_,
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
@@ -203,6 +204,7 @@ namespace jsk_footstep_controller
       tf_listener_->lookupTransform(parent_frame_id_, root_frame_id_, event.current_real, root_transform);
       root_link_pose_.setOrigin(root_transform.getOrigin());
       root_link_pose_.setRotation(root_transform.getRotation());
+      // midcoords is a center coordinates of two feet
       // compute root_link -> midcoords
       // root_link_pose_ := odom -> root_link
       // midcoords_ := odom -> midcoords
@@ -501,18 +503,30 @@ namespace jsk_footstep_controller
   void Footcoords::publishTF(const ros::Time& stamp)
   {
     // publish midcoords_ and ground_cooords_
-    geometry_msgs::TransformStamped ros_midcoords, ros_ground_coords;
+    geometry_msgs::TransformStamped ros_midcoords, ros_ground_coords, ros_odom_root_coords;
+    // ros_midcoords: ROOT -> ground
+    // ros_ground_coords: odom -> odom_on_ground
+    // ros_odom_root_coords: odom -> odom_root
+    // ros_ground_coords: odom_root -> odom_on_ground
     std_msgs::Header header;
     header.stamp = stamp;
     header.frame_id = parent_frame_id_;
     ros_midcoords.header = header;
     ros_midcoords.child_frame_id = midcoords_frame_id_;
-    ros_ground_coords.header = header;
+    ros_ground_coords.header.stamp = stamp;
+    ros_ground_coords.header.frame_id = odom_root_frame_id_;
     ros_ground_coords.child_frame_id = output_frame_id_;
+    ros_odom_root_coords.header.stamp = stamp;
+    ros_odom_root_coords.header.frame_id = parent_frame_id_;
+    ros_odom_root_coords.child_frame_id = odom_root_frame_id_;
+    tf::Transform odom_root_to_odom;
+    odom_root_to_odom.setRotation(root_link_pose_.inverse().getRotation());
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
     tf::transformTFToMsg(ground_transform_, ros_ground_coords.transform);
+    tf::transformTFToMsg(odom_root_to_odom, ros_odom_root_coords.transform);
     std::vector<geometry_msgs::TransformStamped> tf_transforms;
     tf_transforms.push_back(ros_midcoords);
+    tf_transforms.push_back(ros_odom_root_coords);
     tf_transforms.push_back(ros_ground_coords);
     tf_broadcaster_.sendTransform(tf_transforms);
   }

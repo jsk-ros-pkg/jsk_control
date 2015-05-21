@@ -71,7 +71,7 @@ namespace jsk_footstep_controller
   private:
   };
 
-  
+
   class ValueStamped
   {
   public:
@@ -148,6 +148,7 @@ namespace jsk_footstep_controller
     std::string lfoot_sensor_frame_;
     std::string rfoot_sensor_frame_;
     std::string root_frame_id_;
+    std::string odom_root_frame_id_;
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
     tf::Transform root_link_pose_;
