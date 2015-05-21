@@ -2,7 +2,7 @@ import rospy
 
 import actionlib
 from jsk_teleop_joy.joy_plugin import JSKJoyPlugin
-from drc_task_common.srv import SetValue
+from drc_task_common.srv import StringRequest, StringRequestResponse
 
 try:
   imp.find_module("std_msgs")
@@ -29,7 +29,7 @@ class VehicleJoyController(JSKJoyPlugin):
     self.synchronizeAllCommand()
     print >> sys.stderr, "Joystick initialization is finished"
     self.initialize_service = rospy.Service('drive/operation/initialize', Empty, self.initializeServiceCallback)
-    self.synchronize_service = rospy.Service('drive/operation/synchronize', Empty, self.synchronizeServiceCallback)
+    self.synchronize_service = rospy.Service('drive/operation/synchronize', StringRequest, self.synchronizeServiceCallback)
 
   def joyCB(self, status, history):
     latest = history.latest()
@@ -85,17 +85,30 @@ class VehicleJoyController(JSKJoyPlugin):
     for command in self.command_states.values():
       command.initialize()
 
+  def synchronizeCommand(self, key):
+    self.command_states[key].synchronize()
+
   def synchronizeAllCommand(self):
-    for command in self.command_states.values():
-      command.synchronize()
+    for key in self.command_states.keys():
+      self.synchronizeCommand(key)
+
 
   def initializeServiceCallback(self, req):
     self.initializeAllCommand()
     return EmptyResponse()
       
   def synchronizeServiceCallback(self, req):
-    self.synchronizeAllCommand()
-    return EmptyResponse()
+    key = req.data.lower()
+    if key in self.command_states:
+      self.synchronizeCommand(key)
+    elif key == "neck":
+      self.synchronizeCommand("neck_p")
+      self.synchronizeCommand("neck_y")
+    elif key == "all":
+      self.synchronizeAllCommand(key)
+    else:
+      print >> sys.stderr, "Invalid key"
+    return StringRequestResponse()
 
 class VehicleCommandState():
   def __init__(self, command_name, pub_type, sub_type, robot_topic):
