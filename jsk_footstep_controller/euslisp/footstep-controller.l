@@ -5,6 +5,7 @@
 ;; forostep-controller.l
 (ros::roseus-add-msgs "jsk_rviz_plugins")
 (ros::roseus-add-srvs "jsk_footstep_controller")
+(ros::roseus-add-srvs "std_srvs")
 (ros::roseus-add-msgs "jsk_footstep_controller")
 
 (defvar *all-the-results* nil)
@@ -460,7 +461,9 @@
                   (let ((result (send server :result)))
                     (send server :set-succeeded result))
                   ;; Clear last-step
-                  (setq *last-step* nil)))
+                  (setq *last-step* nil)
+                  (when *auto-lookground*
+                    (lookaround-ground))))
                (t
                 (publish-breakpoint-text " ")
                 (let ((first-step (pop *footstep-list*)))
@@ -528,7 +531,9 @@
            )
          (setq *footstep-list* nil)
          (send server :set-succeeded (send server :result))
-         (setq *last-step* nil))        ;clear for next
+         (setq *last-step* nil)        ;clear for next
+         (when *auto-lookground*
+           (lookaround-ground)))
         ((eq *interruptible-mode* :non-interrupptible)
          ;; done
          (print (send-all *footstep-list* :name))
@@ -541,8 +546,14 @@
            (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
            (send *ri* :wait-interpolation))
          (send server :set-succeeded (send server :result))
+         (when *auto-lookground*
+           (lookaround-ground))
          )
         ))
+
+(defun lookaround-ground ()
+  (let ((req (instance std_srvs::EmptyRequest :init)))
+    (ros::service-call "/lookaround_ground" req)))
 
 (defun wait-for-convergence ()
   (let ((prev-angles (send *ri* :state :potentio-vector)))
@@ -691,6 +702,7 @@
   ;; *ri*
   (setq *robot-name* (string-upcase (ros::get-param "~robot" (string-downcase (unix::getenv "ROBOT")))))
   (setq *interruptible-mode* (read-from-string (ros::get-param "~interruptible_mode" ":semi-interruptible")))
+  (setq *auto-lookground* (ros::get-param "~auto_lookground" t))
   (load (format nil "package://hrpsys_ros_bridge_tutorials/euslisp/~A-interface.l"
                 (string-downcase *robot-name*)))
   (init-robot-from-name *robot-name*)
