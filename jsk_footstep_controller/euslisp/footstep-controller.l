@@ -172,8 +172,10 @@
            (setq *footstep-transform* nil)
            (while (null *footstep-transform*)
              (ros::ros-info "Waiting for footstep transform")
+             ;; (setq *footstep-transform*
+             ;;       (send *tf* :lookup-transform frame-id "ground" (ros::time 0)))
              (setq *footstep-transform*
-                   (send *tf* :lookup-transform frame-id "ground" (ros::time 0)))
+                   (send *tf* :lookup-transform frame-id "gsensor" (ros::time 0)))
              (ros::sleep))
            (let* ((footstep-coords            ; convert footstep to euslisp coords
                    (mapcar #'(lambda (footstep)
@@ -514,6 +516,7 @@
                ;; ;; check if next step is on the same level or not
                (when *realp*
                  (send *ri* :set-foot-steps (cons prev-step target-footsteps)))
+               (format t ":set-foot-steps ~A" (cons prev-step target-footsteps))
                (when *wait-convergence*
                  (wait-for-convergence))
                ;; Postprepare joint angles
@@ -587,7 +590,18 @@
 
 (defun robot-angle-straight ()
   (if (string= *robot-name* "JAXON")
-      (walking-pose *robot* :root-link-height-offset -80 :root-link-pitch-offset 5)
+      (progn
+        (walking-pose *robot*
+                      ;;:default-pose-method :narrow-width-pose
+                      :default-pose-method :reset-manip-pose
+                      ;;:root-link-height-offset -80 ; -140 for stair
+                      ;; :root-link-pitch-offset 5    ;20 for stair
+                      :root-link-pitch-offset 20
+                      ;;:root-link-height-offset -140 ; for stair
+                      :root-link-height-offset -140 ; for stair
+                      :chest-link-pitch-offset 20 ; for stair
+                      )
+        (send *robot* :head :neck-p :joint-angle 35))
     (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5))
   ;; Check if we need to move robot or not
   (when (need-to-send-angle-vector-p *robot*)
@@ -606,7 +620,7 @@
         (walking-pose *robot* :root-link-height-offset -50
                       :root-link-pitch-offset 5 :root-link-roll-offset -5))
        )
-    (walking-pose *robot* :root-link-height-offset -80 :root-link-pitch-offset 5))
+    (robot-angle-straight))
   (when (need-to-send-angle-vector-p *robot*)
     (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
     (send *ri* :wait-interpolation))
@@ -614,15 +628,32 @@
 
 
 (defun set-parameter-for-rolling ()
-  (high-step-stair-param-hrp2jsk))
+  (high-step-stair-param-hrp2jsk)
+  (send *ri* :set-gait-generator-param
+        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+        :swing-trajectory-delay-time-offset 0.2
+        :default-double-support-static-ratio 0.0
+        ))
 
 (defun set-parameter-for-planar-rolling ()
   (if (string= "JAXON" *robot-name*)
       (set-parameter-for-planar-jaxon)
-    (roll-terrain-stair-param-hrp2jsk)))
+    (roll-terrain-stair-param-hrp2jsk))
+  (send *ri* :set-gait-generator-param
+        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+        :swing-trajectory-delay-time-offset 0.2
+        :default-double-support-static-ratio 0.0
+        ))
 
 (defun set-parameter-for-stair ()
   (default-stair-param-hrp2jsk)
+  (send *ri* :set-gait-generator-param
+        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+        :swing-trajectory-delay-time-offset 0.2
+        :default-step-time 1.7
+        :default-double-support-ratio 0.29
+        :default-double-support-static-ratio 0.117
+        )
   (when (string= "JAXON" *robot-name*)
     (send *ri* :set-auto-balancer-param :default-zmp-offsets
           (list (float-vector -20 0 0) (float-vector -20 0 0))))
@@ -668,6 +699,7 @@
         :default-step-time 1.1
         ;;:default-double-support-ratio 0.32
         :default-double-support-ratio 0.16
+        :default-double-support-static-ratio 0.0
         :default-step-height 0.05)
   ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
   ;; (send *ri* :set-auto-balancer-param :default-zmp-offsets
