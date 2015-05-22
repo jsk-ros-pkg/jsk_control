@@ -22,7 +22,7 @@ class VehicleJoyController(JSKJoyPlugin):
     self.command_states = {
       "handle": HandleCommandState("handle", Float64, Float32, "drive/controller/goal_handle_angle"),
       "accel": VehicleCommandState("accel", Float64, Float32, "drive/controller/step"),
-      "brake": VehicleCommandState("brake", Float64, None, None),
+      "brake": VehicleCommandState("brake", Float64, None, None), # do not support brake synchronize
       "neck_y": VehicleCommandState("neck_y", Float64, Float32, "drive/controller/neck_y_angle"),
       "neck_p": VehicleCommandState("neck_p", Float64, Float32, "drive/controller/neck_p_angle")
       }
@@ -86,6 +86,7 @@ class VehicleJoyController(JSKJoyPlugin):
       command.initialize()
 
   def synchronizeCommand(self, key):
+    print >> sys.stderr, "Sync " + key
     self.command_states[key].synchronize()
 
   def synchronizeAllCommand(self):
@@ -94,6 +95,7 @@ class VehicleJoyController(JSKJoyPlugin):
 
 
   def initializeServiceCallback(self, req):
+    print >> sys.stderr, "initialize vehicle joy"
     self.initializeAllCommand()
     return EmptyResponse()
       
@@ -105,7 +107,7 @@ class VehicleJoyController(JSKJoyPlugin):
       self.synchronizeCommand("neck_p")
       self.synchronizeCommand("neck_y")
     elif key == "all":
-      self.synchronizeAllCommand(key)
+      self.synchronizeAllCommand()
     else:
       print >> sys.stderr, "Invalid key"
     return StringRequestResponse()
@@ -131,9 +133,9 @@ class VehicleCommandState():
     if self.robot_topic != None and self.sub_type != None:
       try:
         rospy.wait_for_message(self.robot_topic, self.sub_type, timeout)
+        self.command = self.robot_value
       except rospy.ROSException, e:
         print >> sys.stderr, "Cannot subscribe " + self.robot_topic
-    self.command = self.robot_value
   def publishCommand(self):
     pub_msg = self.pub_type(data = self.command)
     self.publisher.publish(pub_msg)
