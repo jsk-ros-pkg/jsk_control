@@ -117,6 +117,7 @@ class VehicleCommandState():
     self.command_name = command_name
     self.pub_type = pub_type
     self.sub_type = sub_type
+    self.wait_for_message_flag = True
     self.robot_topic = robot_topic
     self.publisher = rospy.Publisher("drive/operation/" + self.command_name + "_cmd_fast", self.pub_type)
     if robot_topic and self.sub_type:
@@ -132,7 +133,10 @@ class VehicleCommandState():
   def synchronize(self, timeout = 1.0):
     if self.robot_topic != None and self.sub_type != None:
       try:
-        rospy.wait_for_message(self.robot_topic, self.sub_type, timeout)
+        print >> sys.stderr, "Sync with " + self.robot_topic
+        if self.wait_for_message_flag:
+          rospy.wait_for_message(self.robot_topic, self.sub_type, timeout)
+          self.wait_for_message_flag = False
         self.command = self.robot_value
       except rospy.ROSException, e:
         print >> sys.stderr, "Cannot subscribe " + self.robot_topic
@@ -141,5 +145,8 @@ class VehicleCommandState():
     self.publisher.publish(pub_msg)
 
 class HandleCommandState(VehicleCommandState):
-  def synchronize(self):
-    self.command = self.robot_value * numpy.pi / 180.0 # robot_value[rad] -> command[deg]
+  def callback(self, msg):
+    self.robot_value = msg.data * numpy.pi / 180.0 # goal_handle_angle[deg] -> command[rad]
+  # def synchronize(self):
+  #   self.command = self.robot_value * numpy.pi / 180.0 # robot_value[deg] -> command[rad]
+    
