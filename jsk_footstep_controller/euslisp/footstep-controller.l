@@ -184,8 +184,9 @@
                ;; (send *ri* :state)
                ;; (setq *footstep-transform*
                ;;       (send (send *ri* :worldcoords) :copy-worldcoords))
-               (send *tf* :lookup-transform frame-id "imu_floor" (ros::time 0)) ;;, ground -> imu
-               (ros::sleep))
+               (setq *footstep-transform* (send *tf* :lookup-transform frame-id "imu_floor" (ros::time 0))) ;;, ground -> imu
+               (if *footstep-transform* (return-from nil nil))
+               (ros::sleep)))
            (let* ((footstep-coords            ; convert footstep to euslisp coords
                    (mapcar #'(lambda (footstep)
                                (footstep->coords footstep frame-id))
@@ -398,7 +399,9 @@
        (let ((param-s (elt candidate 5)))
          (ros::ros-info "set ri parameter for ~A" param-s)
          (cond ((eq param-s 'S)
-                (set-parameter-for-stair))
+                (if (eq from-s 'P-)
+                    (set-parameter-for-rolling)
+                  (set-parameter-for-stair)))
                ((eq param-s 'H)
                 (set-parameter-for-rolling))
                ((eq param-s 'R)
@@ -410,18 +413,29 @@
 
 (defun move-before-robot-from-table (from to height)
   (multiple-value-bind
-   (from-s to-s height-s) (convert-to-table-symbols from to height)
-   (dolist (candidate *standing-mode-table*)
-     (when (and (eq from-s (car candidate))
-                (eq to-s (cadr candidate))
-                (eq height-s (caddr candidate)))
-       (let ((param-s (elt candidate 3)))
-         (ros::ros-info "move robot for ~A" param-s)
-         (cond ((eq param-s 'S)
-                (robot-angle-straight))
-               ((eq param-s 'R)
-                (robot-angle-rolling from))))
-       (return-from move-before-robot-from-table t)))))
+      (from-s to-s height-s) (convert-to-table-symbols from to height)
+    (dolist (candidate *standing-mode-table*)
+      (when (and (eq from-s (car candidate))
+                 (eq to-s (cadr candidate))
+                 (eq height-s (caddr candidate)))
+        (let ((param-s (elt candidate 3))
+              (gait-param (elt candidate 5)))
+          (ros::ros-info "move robot for ~A/~A" param-s gait-param)
+          (if (string= *robot-name* "JAXON")
+              (progn
+                (cond ((or (eq gait-param 'P)
+                           (eq gait-param 'R))
+                       (robot-angle-straight-ease))
+                      (t
+                       (robot-angle-straight))))
+            (progn
+              (cond ((eq param-s 'S)
+                     (robot-angle-straight))
+                    ((eq param-s 'P)
+                     (robot-angle-planar))
+                    ((eq param-s 'R)
+                     (robot-angle-rolling from))))))
+        (return-from move-before-robot-from-table t)))))
 
 (defun move-after-robot-from-table (from to height)
   (multiple-value-bind
@@ -621,16 +635,52 @@
                       ;; :root-link-pitch-offset 5    ;20 for stair
                       ;;:root-link-pitch-offset 20
                       ;;:root-link-height-offset -140 ; for stair
-                      :root-link-height-offset -140 ; for stair
+                      :root-link-height-offset -100 ; for stair
                       ;;:chest-link-pitch-offset 20 ; for stair
                       ;; :chest-link-pitch-offset 5
                       :root-link-pitch-offset 5
                       )
+          ;; (walking-pose *robot*
+          ;;       :default-pose-method :narrow-width-pose
+          ;;       :root-link-height-offset -140
+          ;;       :root-link-pitch-offset 20
+          ;;       :chest-link-pitch-offset 20)
         (send *robot* :head :neck-p :joint-angle 35))
     (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5))
   ;; Check if we need to move robot or not
   (when (need-to-send-angle-vector-p *robot*)
-    (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+    ;;(send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+    (send *ri* :angle-vector (send *robot* :angle-vector) 2000)
+    (send *ri* :wait-interpolation))
+  )
+
+(defun robot-angle-straight-ease ()
+  (if (string= *robot-name* "JAXON")
+      (progn
+        (walking-pose *robot*
+                      ;;:default-pose-method :narrow-width-pose
+                      :default-pose-method :reset-manip-pose
+                      ;;:root-link-height-offset -80 ; -140 for stair
+                      ;; :root-link-pitch-offset 5    ;20 for stair
+                      ;;:root-link-pitch-offset 20
+                      ;;:root-link-height-offset -140 ; for stair
+                      :root-link-height-offset -40 ; for stair
+                      ;;:chest-link-pitch-offset 20 ; for stair
+                      ;; :chest-link-pitch-offset 5
+                      :root-link-pitch-offset 5
+                      )
+        ;; (walking-pose *robot*
+        ;;               :default-pose-method :narrow-width-pose
+        ;;               :root-link-height-offset -140
+        ;;               :root-link-pitch-offset 20
+        ;;               :chest-link-pitch-offset 20)
+        ;; (send *robot* :head :neck-p :joint-angle 35)
+        )
+    (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5))
+  ;; Check if we need to move robot or not
+  (when (need-to-send-angle-vector-p *robot*)
+    ;;(send *ri* :angle-vector (send *robot* :angle-vector) 5000)
+    (send *ri* :angle-vector (send *robot* :angle-vector) 2000)
     (send *ri* :wait-interpolation))
   )
 
@@ -681,7 +731,8 @@
         )
   (when (string= "JAXON" *robot-name*)
     (send *ri* :set-auto-balancer-param :default-zmp-offsets
-          (list (float-vector -20 0 0) (float-vector -20 0 0))))
+          (list (float-vector -20 0 0) (float-vector -20 0 0)))
+    )
   ;; (send *ri* :set-auto-balancer-param :default-zmp-offsets
   ;;       (list (float-vector 0 -10 0) (float-vector 0 10 0)))
   ;; (send *ri* :set-gait-generator-param

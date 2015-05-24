@@ -87,6 +87,12 @@
                 :root-link-height-offset -80
                 :root-link-pitch-offset 20
                 :chest-link-pitch-offset 20)
+  ;; (walking-pose *robot*
+  ;;               :default-pose-method :narrow-width-pose
+  ;;               :root-link-height-offset -40
+  ;;               :root-link-pitch-offset 20
+  ;;               :chest-link-pitch-offset 20)
+
   (send *robot* :head :neck-p :joint-angle 35)
   ;;(send *robot* :torso :waist-p :joint-angle 35) ; it's not working because of model bug
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
@@ -97,6 +103,12 @@
   ;; Wait for next publish
   (wait-for-snapshot-publish)
   (send *robot* :reset-pose)
+  ;; (walking-pose *robot*
+  ;;               :default-pose-method :narrow-width-pose
+  ;;               :root-link-height-offset -140
+  ;;               :root-link-pitch-offset 20
+  ;;               :chest-link-pitch-offset 20)
+
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
   )

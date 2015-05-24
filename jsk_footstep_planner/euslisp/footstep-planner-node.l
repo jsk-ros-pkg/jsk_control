@@ -73,7 +73,7 @@
       (ros::ros-info "Waiting for gsensor coords")
       (ros::sleep)
       (setq gsensor-coords              ;gsensor -> ground
-            (send *tf* :lookup-transform "gsensor" *global-frame-id* (ros::time 0))))
+            (send *tf* :lookup-transform "imu_floor" *global-frame-id* (ros::time 0))))
 
     (let* ((param (instance ros-footstep-parameter :init *leg-size-x* *leg-size-y*))
            (start-time (ros::time-now))
@@ -475,11 +475,12 @@
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
   (setq *heuristic* (read-from-string
+                     ;;(ros::get-param "~heuristic" ":straight-heuristic")))
                      (ros::get-param "~heuristic" ":stepcost-heuristic**")))
   ;;(ros::get-param "~heuristic" ":stepcost-z-heuristic*")))
-  (setq *roll-paranoid* (ros::get-param "~roll_paranoid" t))
+  (setq *roll-paranoid* (ros::get-param "~roll_paranoid" nil))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
-  (setq *use-env-server* (ros::get-param "~use_env_server" nil))
+  (setq *use-env-server* (ros::get-param "~use_env_server" t))
   (setq *use-gui* (ros::get-param "~use_gui" t))
   (setq *remove-shadow-cells* (ros::get-param "~remove_shadow_cells" nil))
   (setq *gui-debug* (ros::get-param "~gui_debug" nil))
