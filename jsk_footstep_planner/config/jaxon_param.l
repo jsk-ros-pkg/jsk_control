@@ -12,7 +12,7 @@
                          (:z . 0)
                          (:y . 0)))
         (:default-transition-limit
-          (:z . 230)
+          (:z . 260)
           (:roll . 20)
           (:pitch . 20)
           (:x . 300))
