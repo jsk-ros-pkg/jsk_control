@@ -520,6 +520,7 @@ namespace jsk_footstep_controller
     ros_odom_root_coords.header.frame_id = parent_frame_id_;
     ros_odom_root_coords.child_frame_id = odom_root_frame_id_;
     tf::Transform odom_root_to_odom;
+    odom_root_to_odom.setOrigin(tf::Vector3(0, 0, 0));
     odom_root_to_odom.setRotation(root_link_pose_.inverse().getRotation());
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
     tf::transformTFToMsg(ground_transform_, ros_ground_coords.transform);
