@@ -27,9 +27,11 @@ class VehicleJoyController(JSKJoyPlugin):
       "neck_p": VehicleCommandState("neck_p", Float64, Float32, "drive/controller/neck_p_angle")
       }
     self.synchronizeAllCommand()
+    self.execute_flag = False
     print >> sys.stderr, "Joystick initialization is finished"
     self.initialize_service = rospy.Service('drive/operation/initialize', Empty, self.initializeServiceCallback)
     self.synchronize_service = rospy.Service('drive/operation/synchronize', StringRequest, self.synchronizeServiceCallback)
+    self.subscriber = rospy.Subscriber('drive/execute_flag', Bool, self.executeFlagCallback)
 
   def joyCB(self, status, history):
     latest = history.latest()
@@ -43,7 +45,7 @@ class VehicleJoyController(JSKJoyPlugin):
     max_accel_resolution = 0.05
     max_brake_resolution = 1.0
 
-    if not latest:
+    if not self.execute_flag or not latest:
       return
     
     # handle command
@@ -93,6 +95,9 @@ class VehicleJoyController(JSKJoyPlugin):
     for key in self.command_states.keys():
       self.synchronizeCommand(key)
 
+  def executeFlagCallback(self, msg):
+    self.execute_flag = msg.data
+    print >> sys.stderr, "set execute_flag as " + str(self.execute_flag)
 
   def initializeServiceCallback(self, req):
     print >> sys.stderr, "initialize vehicle joy"
