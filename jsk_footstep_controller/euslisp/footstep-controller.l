@@ -171,13 +171,21 @@
          (let* ((footstep (send goal :goal :footstep)) ;jsk_footstep_msgs/FootstepArray
                 (frame-id (send footstep :header :frame_id)))
            (setq *footstep-transform* nil)
-           (while (null *footstep-transform*)
-             (ros::ros-info "Waiting for footstep transform")
-             ;; (setq *footstep-transform*
-             ;;       (send *tf* :lookup-transform frame-id "ground" (ros::time 0)))
-             (setq *footstep-transform*
-                   (send *tf* :lookup-transform frame-id "gsensor" (ros::time 0)))
-             (ros::sleep))
+           (let ((counter 0))
+             (while (null *footstep-transform*)
+               (incf counter)
+               (when (> counter 255)
+                 (ros::ros-error "Failed to lookup transform of imu_floor")
+                 (send server :set-preempted)
+                 (return-from new-goal-cb t))
+               (ros::ros-info "Waiting for footstep transform")
+               ;; (setq *footstep-transform*
+               ;;       (send *tf* :lookup-transform frame-id "ground" (ros::time 0)))
+               ;; (send *ri* :state)
+               ;; (setq *footstep-transform*
+               ;;       (send (send *ri* :worldcoords) :copy-worldcoords))
+               (send *tf* :lookup-transform frame-id "imu_floor" (ros::time 0)) ;;, ground -> imu
+               (ros::sleep))
            (let* ((footstep-coords            ; convert footstep to euslisp coords
                    (mapcar #'(lambda (footstep)
                                (footstep->coords footstep frame-id))
@@ -217,6 +225,8 @@
           (xz (normalize-vector (float-vector (elt z 0) 0 (elt z 2)))))
       (let ((rtheta (atan2 (elt yz 1) (elt yz 2)))
             (ptheta (atan2 (elt xz 0) (elt xz 2))))
+        (ros::ros-info "rtheta: ~A" rtheta)
+        (ros::ros-info "ptheta: ~A" ptheta)
         (cond ((and (> (abs rtheta) (deg2rad 5))
                     (> rtheta 0))
                :left-rolling)
@@ -323,7 +333,8 @@
 (defun compute-plane-condition (step)
   (let* ((origin (compute-current-origin))
          (world-step (send (send origin :inverse-transformation)
-                                 :transform step)))
+                           :transform step)))
+    (print world-step)
     (plane-condition-from-coords world-step)))
 
 (defun compute-height-transition (first-step next-step)
@@ -439,6 +450,7 @@
     (ros::ros-info "first-step: ~A" first-step)
     (ros::ros-info "next-step: ~A" next-step)
     (ros::ros-info "*last-step*: ~A" *last-step*)
+    (ros::ros-info "*footstep-transform* ~A" *footstep-transform*)
     (ros::ros-info "walking state: ~A ==> ~A" *walking-state* next)
     (ros::ros-info "plane condition: ~A ==> ~A" *current-plane* *next-plane*)
 
@@ -607,10 +619,12 @@
                       :default-pose-method :reset-manip-pose
                       ;;:root-link-height-offset -80 ; -140 for stair
                       ;; :root-link-pitch-offset 5    ;20 for stair
-                      :root-link-pitch-offset 20
+                      ;;:root-link-pitch-offset 20
                       ;;:root-link-height-offset -140 ; for stair
                       :root-link-height-offset -140 ; for stair
-                      :chest-link-pitch-offset 20 ; for stair
+                      ;;:chest-link-pitch-offset 20 ; for stair
+                      ;; :chest-link-pitch-offset 5
+                      :root-link-pitch-offset 5
                       )
         (send *robot* :head :neck-p :joint-angle 35))
     (walking-pose *robot* :root-link-height-offset -50 :root-link-pitch-offset 5))
@@ -704,13 +718,23 @@
     (set-parameter-for-planar-hrp2))))
 
 (defun set-parameter-for-planar-jaxon ()
+  ;; (send *ri* :set-gait-generator-param
+  ;;       ;;:default-orbit-type :cycloid
+  ;;       :default-orbit-type :cycloiddelay
+  ;;       :toe-angle 0 :heel-angle 0
+  ;;       :default-step-time 1.2
+  ;;       :default-double-support-ratio 0.32
+  ;;       ;;:default-double-support-ratio 0.16
+  ;;       :default-double-support-static-ratio 0.0
+  ;;       :default-step-height 0.05)
   (send *ri* :set-gait-generator-param
-        :default-orbit-type :cycloid
+        ;;:default-orbit-type :cycloid
+        :default-orbit-type :stair
         :toe-angle 0 :heel-angle 0
-        :default-step-time 1.1
-        ;;:default-double-support-ratio 0.32
-        :default-double-support-ratio 0.16
-        :default-double-support-static-ratio 0.0
+        :default-step-time 1.7
+        :default-double-support-ratio 0.29
+        :default-double-support-static-ratio 0.117
+        ;;:default-double-support-ratio 0.16
         :default-step-height 0.05)
   ;; [[0.010, 0.01, 0], [0.010, -0.01, 0]]
   ;; (send *ri* :set-auto-balancer-param :default-zmp-offsets
@@ -719,7 +743,7 @@
 
 (defun set-parameter-for-planar-hrp2 ()
   (send *ri* :set-gait-generator-param
-        :default-orbit-type :cycloid
+        :default-orbit-type :cycloiddelay
         :default-step-time 1.1
         :toe-angle 0 :heel-angle 0
         :default-double-support-ratio 0.32
