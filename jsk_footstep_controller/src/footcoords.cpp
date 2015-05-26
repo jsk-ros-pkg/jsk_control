@@ -39,6 +39,7 @@
 #include <tf_conversions/tf_eigen.h>
 #include <jsk_pcl_ros/pcl_conversion_util.h>
 #include <tf_conversions/tf_eigen.h>
+#include <jsk_pcl_ros/pcl_conversion_util.h>
 
 namespace jsk_footstep_controller
 {
@@ -521,7 +522,16 @@ namespace jsk_footstep_controller
     ros_odom_root_coords.child_frame_id = odom_root_frame_id_;
     tf::Transform odom_root_to_odom;
     odom_root_to_odom.setOrigin(tf::Vector3(0, 0, 0));
-    odom_root_to_odom.setRotation(root_link_pose_.inverse().getRotation());
+    /* We should take into account pitch and roll only. */
+    Eigen::Affine3f root_link_pose_inv;
+    tf::transformTFToEigen(root_link_pose_.inverse(), root_link_pose_inv);
+    float r, p, y;
+    tf::Transform root_link_pose_inv_wo_y_tf;
+    pcl::getEulerAngles(root_link_pose_inv, r, p, y);
+    Eigen::Affine3f root_link_pose_inv_wo_y = Eigen::Affine3f::Identity() * Eigen::AngleAxisf(r, Eigen::Vector3f::UnitX())
+      * Eigen::AngleAxisf(p, Eigen::Vector3f::UnitY());
+    tf::transformEigenToTF(root_link_pose_inv_wo_y, root_link_pose_inv_wo_y_tf);
+    odom_root_to_odom.setRotation(root_link_pose_inv_wo_y_tf.getRotation());
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
     tf::transformTFToMsg(ground_transform_, ros_ground_coords.transform);
     tf::transformTFToMsg(odom_root_to_odom, ros_odom_root_coords.transform);
