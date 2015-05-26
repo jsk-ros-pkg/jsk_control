@@ -126,7 +126,9 @@
   ;; (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   ;; (send *ri* :wait-interpolation)
   (cond ((or (string= *robot-name* "jaxon")
-             (string= *robot-name* "JAXON"))
+             (string= *robot-name* "JAXON")
+             (string= *robot-name* "JAXON_RED")
+             (string= *robot-name* "jaxon_red"))
          (do-lookaround-jaxon))
         (t
          (send *robot* :torso :waist-p :joint-angle 40)
