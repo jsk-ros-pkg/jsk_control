@@ -457,6 +457,39 @@
       (ros::ros-error "Failed to snap footprint"))
     res))
 
+(defun snap-footprint-topic-cb (msg)
+  (when *grids*
+    (let* ((input-pose (send msg :input_pose))
+           (input-coords (ros::tf-pose-stamped->coords input-pose))
+           (trans (lookup-transform-with-duration
+                   *tf*
+                   *global-frame-id*
+                   (send input-pose :header :frame_id)
+                   (send input-pose :header :stamp)
+                   1.0)))
+      (when trans
+        (let ((transformed-input-coords (send trans :transform input-coords)))
+          (let ((projected-coords
+                 (project-coordinates-on-nearest-grid
+                  transformed-input-coords
+                  *grids*)))
+            (when (and projected-coords *snap-with-local-search*)
+              (print (ros::tf-pose->coords (send msg :lleg_pose)))
+              (print (ros::tf-pose->coords (send msg :rleg_pose)))
+              (setq projected-coords
+                    (local-search-footstep-on-grid
+                     projected-coords
+                     (get projected-coords :projecting-grid)
+                     (instance ros-footstep-parameter
+                               :init *leg-size-x* *leg-size-y*)
+                     (ros::tf-pose->coords (send msg :lleg_pose))
+                     (ros::tf-pose->coords (send msg :rleg_pose)))))
+            (when projected-coords
+              (ros::publish (format nil "~A/projected_footprint" (ros::get-name))
+                            (ros::coords->tf-pose-stamped 
+                             projected-coords
+                             (send msg :header :frame_id))))))))))
+
 (defun toggle-gui-debug-cb (req)
   (setq *gui-debug* (not *gui-debug*))
   (send req :response))
@@ -503,6 +536,8 @@
   (ros::advertise (format nil "~A/footstep_successors_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
   (ros::advertise-service (format nil "~A/project_footprint" (ros::get-name)) jsk_interactive_marker::SnapFootPrint #'snap-footprint-cb)
   (ros::advertise-service (format nil "~A/toggle_gui_debug" (ros::get-name)) std_srvs::Empty #'toggle-gui-debug-cb)
+  (ros::advertise (format nil "~A/projected_footprint" (ros::get-name)) geometry_msgs::PoseStamped)
+  (ros::subscribe (format nil "~A/project_footprint" (ros::get-name)) jsk_interactive_marker::SnapFootPrintInput #'snap-footprint-topic-cb)
   ;; (ros::advertise-service "/change_successor"
   ;;   jsk_footstep_planner::ChangeSuccessor
   ;;   #'change-successor-cb)
