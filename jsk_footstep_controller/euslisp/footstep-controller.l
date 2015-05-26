@@ -152,7 +152,8 @@
   (cond ((eq *interruptible-mode* :non-interrupptible)
          (when *realp*
            (cond
-            ((string= *robot-name* "JAXON")
+            ((or (string= *robot-name* "JAXON")
+                 (string= *robot-name* "JAXON_RED"))
              (walking-pose *robot* :root-link-height-offset -80))
             (t
              (walking-pose *robot* :root-link-height-offset -70))
@@ -421,7 +422,8 @@
         (let ((param-s (elt candidate 3))
               (gait-param (elt candidate 5)))
           (ros::ros-info "move robot for ~A/~A" param-s gait-param)
-          (if (string= *robot-name* "JAXON")
+          (if (or (string= *robot-name* "JAXON")
+                  (string= *robot-name* "JAXON_RED"))
               (progn
                 (cond ((or (eq gait-param 'P)
                            (eq gait-param 'R))
@@ -626,7 +628,8 @@
     (> (norm (v- av rv)) 5)))
 
 (defun robot-angle-straight ()
-  (if (string= *robot-name* "JAXON")
+  (if (or (string= *robot-name* "JAXON")
+          (string= *robot-name* "JAXON_RED"))
       (progn
         (walking-pose *robot*
                       ;;:default-pose-method :narrow-width-pose
@@ -655,7 +658,8 @@
   )
 
 (defun robot-angle-straight-ease ()
-  (if (string= *robot-name* "JAXON")
+  (if (or (string= *robot-name* "JAXON")
+          (string= *robot-name* "JAXON_RED"))
       (progn
         (walking-pose *robot*
                       ;;:default-pose-method :narrow-width-pose
@@ -686,7 +690,8 @@
 
 (defun robot-angle-rolling (policy)
   ;; policy := :left-rolling or :right-rolling
-  (if (not (string= *robot-name* "JAXON"))
+  (if (not (or (string= *robot-name* "JAXON")
+               (string= *robot-name* "JAXON_RED")))
       (cond
        ((eq policy :left-rolling)
         (walking-pose *robot* :root-link-height-offset -50
@@ -711,7 +716,8 @@
         ))
 
 (defun set-parameter-for-planar-rolling ()
-  (if (string= "JAXON" *robot-name*)
+  (if (or (string= "JAXON" *robot-name*)
+          (string= "JAXON_RED" *robot-name*))
       (set-parameter-for-planar-jaxon)
     (roll-terrain-stair-param-hrp2jsk))
   (send *ri* :set-gait-generator-param
@@ -723,13 +729,17 @@
 (defun set-parameter-for-stair ()
   (default-stair-param-hrp2jsk)
   (send *ri* :set-gait-generator-param
-        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
+        :toe-heel-phase-ratio #f(0.02 0.28 0.2 0.0 0.2 0.25 0.05)
+        :stair-trajectory-way-point-offset #f(0.05 0.0 0)
+        :default-step-height 0.07
+        ;; :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
         :swing-trajectory-delay-time-offset 0.2
         :default-step-time 1.7
         :default-double-support-ratio 0.29
         :default-double-support-static-ratio 0.117
         )
-  (when (string= "JAXON" *robot-name*)
+  (when (or (string= "JAXON" *robot-name*)
+            (string= "JAXON_RED" *robot-name*))
     (send *ri* :set-auto-balancer-param :default-zmp-offsets
           (list (float-vector -20 0 0) (float-vector -20 0 0)))
     )
@@ -763,7 +773,8 @@
 
 (defun set-parameter-for-planar ()
   (cond
-   ((string= *robot-name* "JAXON")
+   ((or (string= *robot-name* "JAXON")
+        (string= *robot-name* "JAXON_RED"))
     (set-parameter-for-planar-jaxon))
    (t
     (set-parameter-for-planar-hrp2))))

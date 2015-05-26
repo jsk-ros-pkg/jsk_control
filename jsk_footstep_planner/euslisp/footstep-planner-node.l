@@ -464,8 +464,8 @@
 (defun main ()
   (ros::roseus "jsk_footstep_planner")
   ;; read parameters
-  (let ((param-file (ros::get-param "~parameter_file"
-                      "package://jsk_footstep_planner/config/hrp2jsk_param.l")))
+  (let ((param-file (format nil "package://jsk_footstep_planner/config/~A_param.l"
+                            (string-downcase (unix::getenv "ROBOT")))))
     (load param-file)
     (decompose-footstep-parameter *footstep-parameters*))
   ;; hrp2 footstep size is default
