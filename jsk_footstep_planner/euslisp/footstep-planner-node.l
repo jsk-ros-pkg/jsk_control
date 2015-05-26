@@ -6,6 +6,7 @@
 (ros::roseus-add-srvs "std_srvs")
 (ros::roseus-add-srvs "jsk_footstep_planner")
 (ros::roseus-add-srvs "jsk_interactive_marker")
+(ros::roseus-add-msgs "jsk_interactive_marker")
 (ros::roseus-add-msgs "jsk_rviz_plugins")
 
 (comp:compile-file-if-src-newer
@@ -486,9 +487,9 @@
                      (ros::tf-pose->coords (send msg :rleg_pose)))))
             (when projected-coords
               (ros::publish (format nil "~A/projected_footprint" (ros::get-name))
-                            (ros::coords->tf-pose-stamped 
+                            (ros::coords->tf-pose-stamped
                              projected-coords
-                             (send msg :header :frame_id))))))))))
+                             (send msg :input_pose :header :frame_id))))))))))
 
 (defun toggle-gui-debug-cb (req)
   (setq *gui-debug* (not *gui-debug*))
