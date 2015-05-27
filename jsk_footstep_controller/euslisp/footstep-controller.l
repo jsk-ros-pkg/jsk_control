@@ -198,6 +198,7 @@
                                        (if (eq (send footstep-coords0 :name) :lleg)
                                            :lleg-coords :rleg-coords)))
                   (hrpsys-mid-coords (hrpsys-init-coords)))
+             (ros::ros-info "footstep-coords: ~A" footstep-coords)
              (let* ((hrpsys->ros (send hrpsys-coords :transformation footstep-coords0))
                     (ros->hrpsys (send hrpsys->ros :inverse-transformation)))
                (let ((transformed-footstep
@@ -641,7 +642,7 @@
                       :root-link-height-offset -100 ; for stair
                       ;;:chest-link-pitch-offset 20 ; for stair
                       ;; :chest-link-pitch-offset 5
-                      :root-link-pitch-offset 5
+                      :root-link-pitch-offset 10
                       )
           ;; (walking-pose *robot*
           ;;       :default-pose-method :narrow-width-pose
@@ -671,7 +672,7 @@
                       :root-link-height-offset -40 ; for stair
                       ;;:chest-link-pitch-offset 20 ; for stair
                       ;; :chest-link-pitch-offset 5
-                      :root-link-pitch-offset 5
+                      :root-link-pitch-offset 10
                       )
         ;; (walking-pose *robot*
         ;;               :default-pose-method :narrow-width-pose
@@ -730,7 +731,8 @@
   (default-stair-param-hrp2jsk)
   (send *ri* :set-gait-generator-param
         :toe-heel-phase-ratio #f(0.02 0.28 0.2 0.0 0.2 0.25 0.05)
-        :stair-trajectory-way-point-offset #f(0.05 0.0 0)
+        ;;:stair-trajectory-way-point-offset #f(0.05 0.0 0)
+        :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
         :default-step-height 0.07
         ;; :stair-trajectory-way-point-offset #f(0.03 -0.0 0)
         :swing-trajectory-delay-time-offset 0.2

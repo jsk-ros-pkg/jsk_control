@@ -509,8 +509,8 @@
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
   (setq *heuristic* (read-from-string
-                     ;;(ros::get-param "~heuristic" ":straight-heuristic")))
-                     (ros::get-param "~heuristic" ":stepcost-heuristic**")))
+                     (ros::get-param "~heuristic" ":straight-heuristic")))
+                     ;;(ros::get-param "~heuristic" ":stepcost-heuristic**")))
   ;;(ros::get-param "~heuristic" ":stepcost-z-heuristic*")))
   (setq *roll-paranoid* (ros::get-param "~roll_paranoid" nil))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
