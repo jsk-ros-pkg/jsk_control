@@ -416,6 +416,10 @@
         (cdr (assoc :default-transition-limit param)))
   )
 
+(defun set-heuristic-cb (req)
+  (setq *heuristic* (read-from-string (send req :heuristic)))
+  (send req :response))
+
 (defun snap-footprint-cb (req)
   (let ((res (send req :response)))
     (when *grids*
@@ -535,6 +539,7 @@
   (ros::advertise (format nil "~A/footstep_successors" (ros::get-name)) jsk_footstep_msgs::FootstepArray)
   (ros::advertise (format nil "~A/footstep_successors_text" (ros::get-name)) jsk_rviz_plugins::OverlayText)
   (ros::advertise-service (format nil "~A/project_footprint" (ros::get-name)) jsk_interactive_marker::SnapFootPrint #'snap-footprint-cb)
+  (ros::advertise-service (format nil "~A/set_heuristic" (ros::get-name)) jsk_interactive_marker::SetHeuristic #'set-heuristic-cb)
   (ros::advertise-service (format nil "~A/toggle_gui_debug" (ros::get-name)) std_srvs::Empty #'toggle-gui-debug-cb)
   (ros::advertise (format nil "~A/projected_footprint" (ros::get-name)) geometry_msgs::PoseStamped)
   (ros::subscribe (format nil "~A/project_footprint" (ros::get-name)) jsk_interactive_marker::SnapFootPrintInput #'snap-footprint-topic-cb)
