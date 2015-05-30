@@ -64,7 +64,7 @@ class VehicleJoyController(JSKJoyPlugin):
     # accel command
     if status.right_analog_y:
       self.command_states["accel"].command = max(status.right_analog_y, 0.0)
-      if status.right_analog_y < -0.9:
+      if status.right_analog_y < -0.5:
         self.command_states["brake"].command = 1.0
       else:
         self.command_states["brake"].command = 0.0
@@ -138,10 +138,11 @@ class VehicleCommandState():
   def synchronize(self, timeout = 1.0):
     if self.robot_topic != None and self.sub_type != None:
       try:
-        print >> sys.stderr, "Sync with " + self.robot_topic
         if self.wait_for_message_flag:
           rospy.wait_for_message(self.robot_topic, self.sub_type, timeout)
           self.wait_for_message_flag = False
+        print >> sys.stderr, "Sync with " + self.robot_topic
+        print "%s -> %s" % (str(self.command), str(self.robot_value))
         self.command = self.robot_value
       except rospy.ROSException, e:
         print >> sys.stderr, "Cannot subscribe " + self.robot_topic
