@@ -523,7 +523,10 @@ namespace jsk_footstep_controller
     tf::Transform odom_root_to_odom;
     odom_root_to_odom.setOrigin(tf::Vector3(0, 0, 0));
     /* We should take into account pitch and roll only. */
+    // root_link_pose := odom -> root
+    // root_link_pose_inv := root -> odom
     Eigen::Affine3f root_link_pose_inv;
+    
     tf::transformTFToEigen(root_link_pose_.inverse(), root_link_pose_inv);
     float r, p, y;
     tf::Transform root_link_pose_inv_wo_y_tf;
@@ -534,7 +537,7 @@ namespace jsk_footstep_controller
     odom_root_to_odom.setRotation(root_link_pose_inv_wo_y_tf.getRotation());
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
     tf::transformTFToMsg(ground_transform_, ros_ground_coords.transform);
-    tf::transformTFToMsg(odom_root_to_odom, ros_odom_root_coords.transform);
+    tf::transformTFToMsg(odom_root_to_odom.inverse(), ros_odom_root_coords.transform);
     std::vector<geometry_msgs::TransformStamped> tf_transforms;
     tf_transforms.push_back(ros_midcoords);
     tf_transforms.push_back(ros_odom_root_coords);
