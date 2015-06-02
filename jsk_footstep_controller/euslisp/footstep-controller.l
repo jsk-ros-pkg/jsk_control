@@ -507,12 +507,20 @@
                       (progn
                         (let ((third-step (cadr *footstep-list*)))
                           (when *realp*
+                            (send *ri* :state)
+                            (send *ri* :adjust-foot-steps
+                                  (send (send *ri* :robot) :rleg :end-coords :copy-worldcoords)
+                                  (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords)
                             (send *ri* :set-foot-steps
                                   (list first-step second-step third-step)))
                           (setq *last-step* second-step)
                           (pop *footstep-list*)))
                     (progn
                       (when *realp*
+                        (send *ri* :state)
+                        (send *ri* :adjust-foot-steps
+                              (send (send *ri* :robot) :rleg :end-coords :copy-worldcoords)
+                              (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords)
                         (send *ri* :set-foot-steps (list first-step second-step)))
                       (setq *last-step* first-step))
                     )
@@ -547,6 +555,10 @@
                (change-standing-mode prev-step (car target-footsteps))
                ;; ;; check if next step is on the same level or not
                (when *realp*
+                 (send *ri* :state)
+                 (send *ri* :adjust-foot-steps
+                       (send (send *ri* :robot) :rleg :end-coords :copy-worldcoords)
+                       (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords))
                  (send *ri* :set-foot-steps (cons prev-step target-footsteps)))
                (format t ":set-foot-steps ~A" (cons prev-step target-footsteps))
                (when *wait-convergence*
@@ -571,6 +583,10 @@
          (print (send-all *footstep-list* :name))
          (print *footstep-list*)
          (when *realp*
+           (send *ri* :state)
+           (send *ri* :adjust-foot-steps
+                 (send (send *ri* :robot) :rleg :end-coords :copy-worldcoords)
+                 (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords)
            (send *ri* :set-foot-steps *footstep-list*))
          (setq *footstep-list* nil)
          (when *realp*
