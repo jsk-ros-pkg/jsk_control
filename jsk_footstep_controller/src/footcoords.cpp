@@ -366,7 +366,7 @@ namespace jsk_footstep_controller
           tf_listener_->lookupTransform(
             root_frame_id_, rfoot_frame_id_, stamp, foot_transform);
         }
-        midcoords_ = foot_transform;
+        midcoords_ = foot_transform.inverse();
         return true;
       }
       catch (tf2::ConnectivityException &e)
@@ -415,6 +415,7 @@ namespace jsk_footstep_controller
         tf::Vector3 mid_pos = lfoot_pos.lerp(rfoot_pos, 0.5);
         midcoords_.setOrigin(mid_pos);
         midcoords_.setRotation(mid_rot);
+        midcoords_ = midcoords_;
         return true;
       }
       catch (tf2::ConnectivityException &e)
@@ -533,7 +534,8 @@ namespace jsk_footstep_controller
     std_msgs::Header header;
     header.stamp = stamp;
     header.frame_id = parent_frame_id_;
-    ros_midcoords.header = header;
+    ros_midcoords.header.stamp = stamp;
+    ros_midcoords.header.frame_id = root_frame_id_;
     ros_midcoords.child_frame_id = midcoords_frame_id_;
     ros_ground_coords.header.stamp = stamp;
     ros_ground_coords.header.frame_id = odom_root_frame_id_;
