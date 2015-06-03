@@ -516,7 +516,7 @@
                      (ros::get-param "~heuristic" ":straight-heuristic")))
                      ;;(ros::get-param "~heuristic" ":stepcost-heuristic**")))
   ;;(ros::get-param "~heuristic" ":stepcost-z-heuristic*")))
-  (setq *roll-paranoid* (ros::get-param "~roll_paranoid" nil))
+  (setq *roll-paranoid* (ros::get-param "~roll_paranoid" t))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
   (setq *use-env-server* (ros::get-param "~use_env_server" t))
   (setq *use-gui* (ros::get-param "~use_gui" t))
