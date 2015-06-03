@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf_conversions
   std_msgs
   message_generation genmsg message_filters sensor_msgs geometry_msgs tf jsk_topic_tools
+  eigen_conversions
 )
 
 add_message_files(FILES
