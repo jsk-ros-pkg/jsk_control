@@ -51,7 +51,9 @@ namespace jsk_footstep_controller
     lforce_list_.resize(0);
     rforce_list_.resize(0);
     tf_listener_.reset(new tf::TransformListener());
+    odom_pose_ = Eigen::Affine3d::Identity();
     ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
+    root_link_pose_.setIdentity();
     midcoords_.setRotation(tf::Quaternion(0, 0, 0, 1));
     diagnostic_updater_->setHardwareID("none");
     diagnostic_updater_->add("Support Leg Status", this, 
@@ -78,6 +80,8 @@ namespace jsk_footstep_controller
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
     pub_contact_state_ = pnh.advertise<jsk_footstep_controller::GroundContactState>("contact_state", 1);
     before_on_the_air_ = true;
+    odom_sub_ = pnh.subscribe<nav_msgs::Odometry>("/odom", 1, 
+                                                 &Footcoords::odomCallback, this);
     sub_lfoot_force_.subscribe(nh, "lfsensor", 1);
     sub_rfoot_force_.subscribe(nh, "rfsensor", 1);
     periodic_update_timer_ = pnh.createTimer(ros::Duration(1.0 / 25),
@@ -200,22 +204,38 @@ namespace jsk_footstep_controller
         publishState("rfoot");
       }
     }
-    if (success_to_update) {
-      tf::StampedTransform root_transform;
-      tf_listener_->lookupTransform(parent_frame_id_, root_frame_id_, event.current_real, root_transform);
-      root_link_pose_.setOrigin(root_transform.getOrigin());
-      root_link_pose_.setRotation(root_transform.getRotation());
+    //if (success_to_update) {
+    tf::StampedTransform root_transform;
+    try {
+      // tf_listener_->lookupTransform(parent_frame_id_, root_frame_id_, event.current_real, root_transform);
+      // root_link_pose_.setOrigin(root_transform.getOrigin());
+      // root_link_pose_.setRotation(root_transform.getRotation());
+    }
+    catch (tf2::ConnectivityException &e) {
+      ROS_ERROR("[Footcoords::resolveForceTf] transform error: %s", e.what());
+    }
+    catch (tf2::InvalidArgumentException &e) {
+      ROS_ERROR("[Footcoords::resolveForceTf] transform error: %s", e.what());
+    }
+    catch (tf2::ExtrapolationException &e) {
+      ROS_ERROR("[Footcoords::resolveForceTf] transform error: %s", e.what());
+    }
+    catch (tf2::LookupException &e) {
+      ROS_ERROR("[Footcoords::resolveForceTf] transform error: %s", e.what());
+    }
+      //}
+
       // midcoords is a center coordinates of two feet
       // compute root_link -> midcoords
       // root_link_pose_ := odom -> root_link
       // midcoords_ := odom -> midcoords
       // root_link_pose_ * T = midcoords_
       // T = root_link_pose_^-1 * midcoords_
-      ground_transform_ = root_link_pose_.inverse() * midcoords_;
+    //ground_transform_ = root_link_pose_.inverse() * midcoords_;
+    ground_transform_ = midcoords_;
       publishTF(event.current_real);
       diagnostic_updater_->update();
       publishContactState(event.current_real);
-    }
   }
 
   void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
@@ -340,11 +360,11 @@ namespace jsk_footstep_controller
         tf::StampedTransform foot_transform; // parent -> foot
         if (use_left_leg) {     // left on the ground
           tf_listener_->lookupTransform(
-            parent_frame_id_, lfoot_frame_id_, stamp, foot_transform);
+            root_frame_id_, lfoot_frame_id_, stamp, foot_transform);
         }
         else {                  // right on the ground
           tf_listener_->lookupTransform(
-            parent_frame_id_, rfoot_frame_id_, stamp, foot_transform);
+            root_frame_id_, rfoot_frame_id_, stamp, foot_transform);
         }
         midcoords_ = foot_transform;
         return true;
@@ -383,10 +403,10 @@ namespace jsk_footstep_controller
       {
         tf::StampedTransform lfoot_transform;
         tf_listener_->lookupTransform(
-          parent_frame_id_, lfoot_frame_id_, stamp, lfoot_transform);
+          root_frame_id_, lfoot_frame_id_, stamp, lfoot_transform);
         tf::StampedTransform rfoot_transform;
         tf_listener_->lookupTransform(
-          parent_frame_id_, rfoot_frame_id_, stamp, rfoot_transform);
+          root_frame_id_, rfoot_frame_id_, stamp, rfoot_transform);
         tf::Quaternion lfoot_rot = lfoot_transform.getRotation();
         tf::Quaternion rfoot_rot = rfoot_transform.getRotation();
         tf::Quaternion mid_rot = lfoot_rot.slerp(rfoot_rot, 0.5);
@@ -445,17 +465,17 @@ namespace jsk_footstep_controller
   {
     // odom -> lfoot
     if (!tf_listener_->waitForTransform(
-          parent_frame_id_, lfoot_frame_id_, stamp, ros::Duration(1.0))) {
+          root_frame_id_, lfoot_frame_id_, stamp, ros::Duration(1.0))) {
       ROS_ERROR("[Footcoords::waitForEndEffectorTrasnformation] failed to lookup transform between %s and %s",
-                parent_frame_id_.c_str(),
+                root_frame_id_.c_str(),
                 lfoot_frame_id_.c_str());
       return false;
     }
     // odom -> rfoot
     else if (!tf_listener_->waitForTransform(
-               parent_frame_id_, rfoot_frame_id_, stamp, ros::Duration(1.0))) {
+               root_frame_id_, rfoot_frame_id_, stamp, ros::Duration(1.0))) {
       ROS_ERROR("[Footcoords::waitForEndEffectorTrasnformation]failed to lookup transform between %s and %s",
-                parent_frame_id_.c_str(),
+                root_frame_id_.c_str(),
                 rfoot_frame_id_.c_str());
       return false;
     }
@@ -504,11 +524,12 @@ namespace jsk_footstep_controller
   void Footcoords::publishTF(const ros::Time& stamp)
   {
     // publish midcoords_ and ground_cooords_
-    geometry_msgs::TransformStamped ros_midcoords, ros_ground_coords, ros_odom_root_coords;
+    geometry_msgs::TransformStamped ros_midcoords, ros_ground_coords, ros_odom_root_coords, ros_odom_to_body_coords;
+
     // ros_midcoords: ROOT -> ground
-    // ros_ground_coords: odom -> odom_on_ground
-    // ros_odom_root_coords: odom -> odom_root
-    // ros_ground_coords: odom_root -> odom_on_ground
+    // ros_ground_coords: odom -> odom_on_ground = identity
+    // ros_odom_root_coords: odom -> odom_root = identity
+    // ros_ground_coords: odom_root -> odom_on_ground = identity
     std_msgs::Header header;
     header.stamp = stamp;
     header.frame_id = parent_frame_id_;
@@ -520,26 +541,28 @@ namespace jsk_footstep_controller
     ros_odom_root_coords.header.stamp = stamp;
     ros_odom_root_coords.header.frame_id = parent_frame_id_;
     ros_odom_root_coords.child_frame_id = odom_root_frame_id_;
-    tf::Transform odom_root_to_odom;
-    odom_root_to_odom.setOrigin(tf::Vector3(0, 0, 0));
-    /* We should take into account pitch and roll only. */
-    Eigen::Affine3f root_link_pose_inv;
-    tf::transformTFToEigen(root_link_pose_.inverse(), root_link_pose_inv);
-    float r, p, y;
-    tf::Transform root_link_pose_inv_wo_y_tf;
-    pcl::getEulerAngles(root_link_pose_inv, r, p, y);
-    Eigen::Affine3f root_link_pose_inv_wo_y = Eigen::Affine3f::Identity() * Eigen::AngleAxisf(r, Eigen::Vector3f::UnitX())
-      * Eigen::AngleAxisf(p, Eigen::Vector3f::UnitY());
-    tf::transformEigenToTF(root_link_pose_inv_wo_y, root_link_pose_inv_wo_y_tf);
-    odom_root_to_odom.setRotation(root_link_pose_inv_wo_y_tf.getRotation());
+    ros_odom_to_body_coords.header.stamp = stamp;
+    ros_odom_to_body_coords.header.frame_id = parent_frame_id_;
+    ros_odom_to_body_coords.child_frame_id = root_frame_id_;
+    
+    Eigen::Affine3d identity = Eigen::Affine3d::Identity();
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
-    tf::transformTFToMsg(ground_transform_, ros_ground_coords.transform);
-    tf::transformTFToMsg(odom_root_to_odom, ros_odom_root_coords.transform);
+    tf::transformEigenToMsg(identity, ros_ground_coords.transform);
+    tf::transformEigenToMsg(identity, ros_odom_root_coords.transform);
+    tf::transformEigenToMsg(identity, ros_ground_coords.transform);
+    tf::transformEigenToMsg(odom_pose_, ros_odom_to_body_coords.transform);
     std::vector<geometry_msgs::TransformStamped> tf_transforms;
     tf_transforms.push_back(ros_midcoords);
     tf_transforms.push_back(ros_odom_root_coords);
     tf_transforms.push_back(ros_ground_coords);
+    tf_transforms.push_back(ros_odom_to_body_coords);
     tf_broadcaster_.sendTransform(tf_transforms);
+  }
+
+  void Footcoords::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    tf::poseMsgToEigen(odom_msg->pose.pose, odom_pose_);
   }
 }
 

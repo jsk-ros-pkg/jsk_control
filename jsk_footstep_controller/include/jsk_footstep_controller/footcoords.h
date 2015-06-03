@@ -35,7 +35,7 @@
 
 #ifndef JSK_FOOTSTEP_CONTROLLER_FOOTCOORDS_H_
 #define JSK_FOOTSTEP_CONTROLLER_FOOTCOORDS_H_
-
+#include <Eigen/Geometry>
 #include <geometry_msgs/WrenchStamped.h>
 #include <tf/transform_listener.h>
 #include <diagnostic_updater/diagnostic_updater.h>
@@ -46,7 +46,7 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <jsk_footstep_controller/GroundContactState.h>
-
+#include <nav_msgs/Odometry.h>
 
 namespace jsk_footstep_controller
 {
@@ -126,9 +126,12 @@ namespace jsk_footstep_controller
                                 const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
                                 tf::Vector3& lfoot_force, tf::Vector3& rfoot_force);
     virtual void periodicTimerCallback(const ros::TimerEvent& event);
+    virtual void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
     // ros variables
     boost::mutex mutex_;
+    Eigen::Affine3d odom_pose_;
     ros::Timer periodic_update_timer_;
+    ros::Subscriber odom_sub_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
