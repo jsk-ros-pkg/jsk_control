@@ -510,7 +510,7 @@
                             (send *ri* :state)
                             (send *ri* :adjust-foot-steps
                                   (send (send *ri* :robot) :rleg :end-coords :copy-worldcoords)
-                                  (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords)
+                                  (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords))
                             (send *ri* :set-foot-steps
                                   (list first-step second-step third-step)))
                           (setq *last-step* second-step)
@@ -520,7 +520,7 @@
                         (send *ri* :state)
                         (send *ri* :adjust-foot-steps
                               (send (send *ri* :robot) :rleg :end-coords :copy-worldcoords)
-                              (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords)
+                              (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords))
                         (send *ri* :set-foot-steps (list first-step second-step)))
                       (setq *last-step* first-step))
                     )
@@ -586,7 +586,7 @@
            (send *ri* :state)
            (send *ri* :adjust-foot-steps
                  (send (send *ri* :robot) :rleg :end-coords :copy-worldcoords)
-                 (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords)
+                 (send (send *ri* :robot) :lleg :end-coords :copy-worldcoords))
            (send *ri* :set-foot-steps *footstep-list*))
          (setq *footstep-list* nil)
          (when *realp*
