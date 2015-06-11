@@ -2,6 +2,64 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [jsk_footstep_controller] Fix typo
+* [jsk_footstep_controller] Finally fixed
+* [jsk_footstep_controller] FInally fix odom on ground
+* [jsk_footstep_controller] Call adjust-foot-steps before set-foot-steps
+* [jsk_footstep_controller] Fix parameters for jaxon red
+* [jsk_footstep_planner] Support JAXON_RED
+* [jsk_footstep_controller] Fix odom_root yaw orientation
+* [jsk_footstep_controller] Fix footcoords initialization
+* [jsk_footstep_planner, jsk_footstep_controller] Update for las vegas terrain with jaxon
+* [jsk_footstep_controller] Update gait generator parameter for jaxon
+* [jsk_footstep_controller] Update parameter for jaxon
+* [jsk_footstep_controller] Fix resolvance of odom orientation
+* [jsk_footstep_controller] Automatically lookaround ground after finishing walking
+* [jsk_footstep_controller] Add :semi-interruptible mode
+* [jsk_footstep_controller] Decide file to load from ROBOT environmental variable
+* [jsk_footstep_controller] Add semi/full/non interruptible mode
+* [jsk_footstep_planner, jsk_footstep_controller] Update for jaxon terrain
+* [jsk_footstep_controller] Change gait generator parameters according to
+  plane condition including pitch angle and taking into account
+  if transition is upward or downward
+* [jsk_footstep_planner, jsk_footstep_controller] Compute x and y from
+  previous coordinates to detect rolled plane
+* [jsk_footstep_planner, jsk_footstep_controller] Support rolling terrain, I hope
+* [jsk_footstep_planner, jsk_footstep_controller] Fix typo and update parameter for terrain
+* [jsk_footstep_controller/lookaround-ground] Do not stretch knee if HRP2 has toe joints
+* [jsk_footstep_controller/footcoords] More readable error output
+* [jsk_footstep_planner, jsk_footstep_controller] Support jaxon parameter files
+* [jsk_footstep_controller] Remove unused parameter
+* [jsk_footstep_planner, jsk_footstep_controller] Support jaxon footstep planning, Do not merge yet
+* [jsk_footstep_controller] Support jaxon motion
+* [jsk_footste_controller] Fix odom_on_ground consistency but ignore correctness during single stance phase
+* need down-case for URATA robot
+* [jsk_footstep_controller] Support hrpsys robots in lookaround-ground.l like JAXON
+* [jsk_footstep_controller] Do not update odom_on_ground in single stance phase
+* [jsk_footstep_controller] Remove sleep in lookaround-ground.l
+* [jsk_footstep_controller] Update according to the latest :get-foot-step-param of rtm-robot-interface
+* [jsk_footstep_controller] Update ground and odom_on_ground periodically rather than synchronizing with force sensors.
+  Just update contact states from force sensors
+* [jsk_footstep_controller] Use the latest best gait generator parameters
+* [jsk_footstep_controller] Re-work interruptible (step-by-step) walking mode
+* [jsk_footstep_controller] Add sleep to wait for st convergence in lookaround-ground.l
+* [jsk_footstep_controller] Update AutoBalancer parameter
+* [jsk_footstep_controller] Remove read-line for debug in lookaround-ground.l
+* [jsk_footstep_controller] Update pose to look ground: Streching knee and
+  specify wait pitch directly
+* [jsk_footstep_controller] Support HRP2JSK, HRP2JSKNT and HRP2JSKNTS
+* [jsk_footstep_planner] A lot of improvements on planner
+  * Fix about orientation of projected footstep
+  * Lazy evaluation to check if footprint is able to be on grid
+  * Use mid-coords of footprints to evaluate heuristic
+* [jsk_footstep_planner] Support SimpleOccupancyGrid in footstep planner
+* [jsk_footstep_controller] Wait for tf transformation to resolve force sensor transformation.
+* [jsk_footstep_controller] Check tf2::LookupException
+* [jsk_footstep_controller] transform force vector to specified frame_id in footcoords
+* [jsk_footstep_coords] Do not update transformation between ground and odom on ground during dual leg stance phase
+
 0.1.5 (2015-01-08)
 ------------------
 * Update drcmodel for current planner

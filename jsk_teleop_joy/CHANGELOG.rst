@@ -2,6 +2,32 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [drc_task_common] Modify threshold of brake: 0.9 -> 0.5
+* [jsk_teleop_joy] Subscribe execute flag and disable update command when execute flag is false
+* [jsk_teleop_joy] Call wait_for_message only once in synchronize
+* [jsk_teleop_joy] synchronizeAllCommand do not takes argument
+* [jsk_teleop_joy] Support single synchroniation
+* [jsk_teleop_joy] Fix neck-p/y joint command range
+* [jsk_teleop_joy] Add initialization service to vehicle joy
+* [jsk_teleop_joy] Add synchronize method to vehicle plugin to prevent overwrite previous command when respown
+* [jsk_teleop_joy] Remove set_current_step_as_max functions because they are moved to vehicle_ui
+* [jsk_teleop_joy] Add neck-p interface to joystick controller for vehicle task
+* [jsk_teleop_joy] Speed down handling command: 0.05->0.025
+* [jsk_teleop_joy] Do not set 0.0 command as max step
+* [jsk_teleop_joy] Add set_current_step_as_max function to vehicle_ui
+* [jsk_teleop_joy] Modify teleop command in joystick controller for vehicle task
+* [jsk_teleop_joy] Rename vehicle.launch to joy_vehicle.launch
+* [jsk_teleop_joy] Add neck_angle_max valiable
+* [jsk_teleop_joy] Add functions for look around to vehicle.launch
+* Add brake command and modify accel command specification
+* Add arguments to determine joystick dev path and namespace for ocs
+* [jsk_teleop_joy] Adjsut command publish rate for vehicle
+* [jsk_teleop_joy] Adjsut handle resolution and modify to publish topic constantly
+* [jsk_teleop_joy] Add joystick program for vehicle
+* remove DEV argument because it was removed from robot_trackball_head.launch
+
 0.1.5 (2015-01-08)
 ------------------
 * [joy_mouse] Use name of kensington mouse and remove dev file

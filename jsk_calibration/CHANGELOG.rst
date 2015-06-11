@@ -2,6 +2,42 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* rename url
+* [JAXON] add jaxon_calibration
+* [JAXON] add motion generation method for jaxon camera calibration
+* [jsk_calibration] Fix effort and velocity for joint_states which does not have effort and velocity
+  in joint_states_appender.py
+* [jsk_calibration] Update HRP2JSKNT calibration for multisense
+* [jsk_calibration] Update README.md
+* [jsk_calibration] append velocity and effort as well as name and position in joint_states_appender.py
+* [jsk_calibration] Fix remapping of joint_states for HRP2JSKNTS
+* [jsk_calibration] Fix documentation to show image
+* [jsk_calibration] update documentation
+* [jsk_calibration] Add launch files for hrp2jsknts calibration
+* [jsk_calibration] Add hrp2jsknts to hrp2-calibration
+* [jsk_calibration] Add joint_states_appender.py to handle multiple
+  joint_states in calibration time.
+* Updated to generate motion for hrp2w
+* use least rpy angle for compatibility?
+* add initial_poses.yaml for staro, and some update for staro calib
+* [jsk_calibration] udpate parameters for staro
+* fix board parmeter
+* update poses for staro
+* update generate-staro-files
+* fix camera joint name
+* update camera name
+* [jsk_calibration] Fix robust-motion bug and not use it as default
+* [jsk_calibration] Do not check collision if IK failed and fix unit of initial_poses.yaml
+* [jsk_calibration] Fix :write-initial-pose-yaml by Yohei's patch.
+* [jsk_calibration] Write initial_poses.yaml to speed up optimization
+* update
+* [jsk_calibration] Fix typoe of the files
+* add estimate params
+* fix chain length
+* add staro_calibration
+
 0.1.5 (2015-01-08)
 ------------------
 * Add utility script to test a lot of calibration parameters

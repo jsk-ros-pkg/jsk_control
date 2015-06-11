@@ -2,6 +2,12 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* add files for jaxonred
+* add jaxon to ik_server
+* change order in find_pkg
+
 0.1.5 (2015-01-08)
 ------------------
 * pass warnp as argument in :fullbody-ik-main

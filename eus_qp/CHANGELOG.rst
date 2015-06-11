@@ -2,6 +2,12 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [eus_qp] Fix for indigo. Eigen3 on indigo may not provide Eigen::internal::sqrt
+  Eigen::internal::abs, in order to provide them, we define these function in qp_lib.cpp
+  before including qp stuff.
+
 0.1.5 (2015-01-08)
 ------------------
 

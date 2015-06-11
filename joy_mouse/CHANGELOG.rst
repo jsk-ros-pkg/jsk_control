@@ -2,6 +2,11 @@
 Changelog for package joy_mouse
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [joy_mouse] Update README.md about udev a little bit
+* [joy_mouse] Add documentation about how to set up udev
+
 0.1.5 (2015-01-08)
 ------------------
 * [joy_mouse] Use name of kensington mouse and remove dev file
