@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-06-11)
+------------------
 * [jsk_footstep_controller] Fix typo
 * [jsk_footstep_controller] Finally fixed
 * [jsk_footstep_controller] FInally fix odom on ground

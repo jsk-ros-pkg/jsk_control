@@ -2,8 +2,8 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-06-11)
+------------------
 * rename url
 * [JAXON] add jaxon_calibration
 * [JAXON] add motion generation method for jaxon camera calibration

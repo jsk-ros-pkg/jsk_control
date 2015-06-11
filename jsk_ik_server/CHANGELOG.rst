@@ -2,8 +2,8 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-06-11)
+------------------
 * add files for jaxonred
 * add jaxon to ik_server
 * change order in find_pkg

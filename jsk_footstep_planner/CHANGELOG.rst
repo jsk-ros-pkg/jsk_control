@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-06-11)
+------------------
 * [jsk_footstep_planner] Enable roll paranoid mode
 * Merge pull request #327 from garaemon/set-heuristic
   [jsk_footstep_planner] Add service interface to set heursitic function

@@ -2,8 +2,8 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-06-11)
+------------------
 * [drc_task_common] Modify threshold of brake: 0.9 -> 0.5
 * [jsk_teleop_joy] Subscribe execute flag and disable update command when execute flag is false
 * [jsk_teleop_joy] Call wait_for_message only once in synchronize

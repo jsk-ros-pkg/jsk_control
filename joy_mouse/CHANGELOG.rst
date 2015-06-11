@@ -2,8 +2,8 @@
 Changelog for package joy_mouse
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-06-11)
+------------------
 * [joy_mouse] Update README.md about udev a little bit
 * [joy_mouse] Add documentation about how to set up udev
 

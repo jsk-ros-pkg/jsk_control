@@ -2,8 +2,8 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-06-11)
+------------------
 * [eus_qpoases] Ignore bin directory
 * [eus_qpoases] Support ccache
 
