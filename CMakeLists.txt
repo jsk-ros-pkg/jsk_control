@@ -15,6 +15,7 @@ MESSAGE(-- find_caffe -- ${CAFFE_ROOT_DIR})
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${CAFFE_ROOT_DIR}/include)
+include_directories(${CAFFE_ROOT_DIR}/.build_release/src)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
