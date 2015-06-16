@@ -5,12 +5,14 @@ cmake_minimum_required(VERSION 2.4.6)
 find_package(catkin COMPONENTS cmake_modules)
 ## find_package(OMPL REQUIRED)
 
-execute_process(COMMAND locate caffe
-  COMMAND grep -e "/caffe$"
-  COMMAND head -1
-  OUTPUT_VARIABLE CAFFE_ROOT_DIR
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
+execute_process(COMMAND cmake -E chdir ${PROJECT_SOURCE_DIR} bash make.sh)
+set(CAFFE_ROOT_DIR ${PROJECT_SOURCE_DIR}/3rdparty/caffe)
+# execute_process(COMMAND locate caffe
+#   COMMAND grep -e "/caffe$"
+#   COMMAND head -1
+#   OUTPUT_VARIABLE CAFFE_ROOT_DIR
+#   OUTPUT_STRIP_TRAILING_WHITESPACE
+#   )
 MESSAGE(-- find_caffe -- ${CAFFE_ROOT_DIR})
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
