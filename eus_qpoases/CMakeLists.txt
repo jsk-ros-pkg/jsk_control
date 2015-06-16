@@ -25,3 +25,5 @@ add_executable(example1  examples/example1.cpp)
 target_link_libraries(example1 qpOASES)
 add_library(eus_qpoases SHARED src/eus_qpoases.cpp)
 target_link_libraries(eus_qpoases qpOASES)
+
+add_rostest(test/eus_qpoases.test)
