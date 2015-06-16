@@ -8,7 +8,7 @@ caffe::SolverParameter solver_param;
 std::shared_ptr<caffe::Solver<double>> solver;
 
 extern "C" {
-  int deep_learning_test (const int isize, const int dsize, double* idata, double* ddata, double* idummy, double* ddummy) {
+  int deep_learning_test (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy) {
     //
     // caffe::SolverParameter solver_param;
     caffe::ReadProtoFromTextFileOrDie("solver.prototxt", &solver_param);
