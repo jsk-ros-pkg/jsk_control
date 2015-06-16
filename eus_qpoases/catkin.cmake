@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(eus_qpoases)
 
-find_package(catkin REQUIRED COMPONENTS mk)
+find_package(catkin REQUIRED COMPONENTS rostest mk)
 
 execute_process(
   COMMAND cmake -E chdir ${CMAKE_CURRENT_BINARY_DIR}
@@ -29,4 +29,4 @@ set_target_properties(eus_qpoases PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_
 add_dependencies(eus_qpoases qpOASES_built)
 target_link_libraries(eus_qpoases qpOASES)
 
-
+add_rostest(test/eus_qpoases.test)
