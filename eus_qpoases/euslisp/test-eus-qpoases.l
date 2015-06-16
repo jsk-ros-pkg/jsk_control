@@ -25,7 +25,10 @@
                :eval-coeff-vector q)))
     (warn ";; solution ~A => ~A~%"
           ret
-          (eps-v= (float-vector (/ 20.0 7.0) (/ 16.0 7.0)) ret)) ;; correct solution
+          (setq ret
+		(eps-v= (float-vector (/ 20.0 7.0) (/ 16.0 7.0)) ret)))
+    ;; correct solution
+    ret
     ))
 
 ;;
@@ -55,7 +58,9 @@
                :equality-vector B)))
     (warn ";; solution ~A => ~A~%"
           ret
-          (eps-v= (float-vector (/ -1.0 7.0) (/ 16.0 7.0)) ret)) ;; correct solution
+          (setq ret (eps-v= (float-vector (/ -1.0 7.0) (/ 16.0 7.0)) ret)))
+    ;; correct solution
+    ret
     ))
 
 ;;
@@ -86,7 +91,9 @@
                :state-min-vector LB)))
     (warn ";; solution ~A => ~A~%"
           ret
-          (eps-v= (float-vector (/ 2.0 7.0) (/ 5.0 14.0)) ret)) ;; correct solution
+          (setq ret (eps-v= (float-vector (/ 2.0 7.0) (/ 5.0 14.0)) ret)))
+    ;; correct solution
+    ret
     ))
 
 (warn ";; (demo-eus-qpOASES1)~%")
