@@ -4,13 +4,16 @@
 #include <array>
 #include <caffe/caffe.hpp>
 
+caffe::SolverParameter solver_param;
+std::shared_ptr<caffe::Solver<double>> solver;
+
 extern "C" {
   int deep_learning_test (const int isize, const int dsize, double* idata, double* ddata, double* idummy, double* ddummy) {
     //
-    caffe::SolverParameter solver_param;
+    // caffe::SolverParameter solver_param;
     caffe::ReadProtoFromTextFileOrDie("solver.prototxt", &solver_param);
-    std::shared_ptr<caffe::Solver<double>> solver =
-      std::shared_ptr<caffe::Solver<double>>(caffe::GetSolver<double>(solver_param));
+    // std::shared_ptr<caffe::Solver<double>> solver =
+    solver = std::shared_ptr<caffe::Solver<double>>(caffe::GetSolver<double>(solver_param));
     boost::shared_ptr<caffe::Net<double>> net = solver->net();
     boost::shared_ptr<caffe::MemoryDataLayer<double>> input_layer =
       boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(net->layer_by_name("input"));
