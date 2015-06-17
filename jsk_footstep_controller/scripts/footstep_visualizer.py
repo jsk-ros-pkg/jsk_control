@@ -10,7 +10,7 @@ from tf.transformations import *
 import cv2 as cv
 import numpy as np
 from threading import Lock
-
+from math import pi
 msg_lock = Lock()
 def matrixFromTranslationQuaternion(trans, q):
     return  concatenate_matrices(translation_matrix(trans),
@@ -70,8 +70,9 @@ def periodicCallback(event):
         
         lleg_pose = matrixFromTranslationQuaternion(lleg_pos, lleg_rot)
         rleg_pose = matrixFromTranslationQuaternion(rleg_pos, rleg_rot)
-        mid_coords = matrixFromTranslationQuaternion((lleg_pos + rleg_pos) / 2.0,
-                                                     quaternion_slerp(lleg_rot, rleg_rot, 0.5))
+        mid_coords = concatenate_matrices(matrixFromTranslationQuaternion((lleg_pos + rleg_pos) / 2.0,
+                                                                          quaternion_slerp(lleg_rot, rleg_rot, 0.5)),
+                                          euler_matrix(pi, 0, 0))
         lleg_from_mid = concatenate_matrices(inverse_matrix(mid_coords),
                                              lleg_pose)
         rleg_from_mid = concatenate_matrices(inverse_matrix(mid_coords),
