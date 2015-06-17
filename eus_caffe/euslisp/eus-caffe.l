@@ -31,18 +31,40 @@
   *eus-caffe-plugin*
   "deep_learning_test"
   (:integer :integer :string :string :string :string)
-  :integer)
+  :float)
 
-(defforeign _get_ip_blobs
+(defforeign _get_ip_blob_by_id
   *eus-caffe-plugin*
-  "get_ip_blobs"
+  "get_ip_blob_by_id"
   (:integer :string)
   :integer)
 
+(defforeign _calc_learning_data
+  *eus-caffe-plugin*
+  "calc_learning_data"
+  (:integer :string :string :string)
+  :integer)
+
+(defun calc-learning-test
+  (&key
+   (isize 32)
+   (input (instantiate float-vector isize))
+   (output (instantiate float-vector isize))
+   (idummy (instantiate float-vector (length input))))
+  (_calc_learning_data isize input output idummy)
+  output)
+
+(defun get-ip-blob-by-id
+  (&key
+   (blob_id 0)
+   (ret (instantiate float-vector 32)))
+  (_get_ip_blob_by_id blob_id ret)
+  ret)
+
 (defun eus-caffe-test
   (&key
-   (isize (* 2 32))
    (dsize 32)
+   (isize (* 2 dsize))
    (idata)
    (ddata)
    (idummy)
@@ -53,8 +75,8 @@
     (setq idata (instantiate float-vector isize))
     (setq ddata (instantiate float-vector dsize))
     (dotimes (i dsize)
-      (let* ((x (- (random 2.0) 1.0))
-	     (y (- (random 2.0) 1.0)))
+      (let* ((x (* 10 (- (random 2.0) 1.0)))
+	     (y (* 10 (- (random 2.0) 1.0))))
 	(setf (aref idata (* i 2)) x)
 	(setf (aref idata (+ 1 (* i 2))) y)
 	(setf (aref ddata i) (+ (* 3 x) (* -2 y) 4))
