@@ -78,22 +78,22 @@ def periodicCallback(event):
                                              rleg_pose)
         lleg_points = verticesPoints(lleg_vertices, lleg_from_mid, scale, image_size)
         rleg_points = verticesPoints(rleg_vertices, rleg_from_mid, scale, image_size)
-        image = np.zeros((image_size, image_size, 3), dtype=np.uint8)
-        cv.line(image, lleg_points[0], lleg_points[1], (0, 255, 0), 2)
-        cv.line(image, lleg_points[1], lleg_points[2], (0, 255, 0), 2)
-        cv.line(image, lleg_points[2], lleg_points[3], (0, 255, 0), 2)
-        cv.line(image, lleg_points[3], lleg_points[0], (0, 255, 0), 2)
-        cv.line(image, rleg_points[0], rleg_points[1], (0, 0, 255), 2)
-        cv.line(image, rleg_points[1], rleg_points[2], (0, 0, 255), 2)
-        cv.line(image, rleg_points[2], rleg_points[3], (0, 0, 255), 2)
-        cv.line(image, rleg_points[3], rleg_points[0], (0, 0, 255), 2)
+        image = np.zeros((image_size, image_size, 4), dtype=np.uint8)
+        cv.line(image, lleg_points[0], lleg_points[1], (0, 255, 0, 255), 2)
+        cv.line(image, lleg_points[1], lleg_points[2], (0, 255, 0, 255), 2)
+        cv.line(image, lleg_points[2], lleg_points[3], (0, 255, 0, 255), 2)
+        cv.line(image, lleg_points[3], lleg_points[0], (0, 255, 0, 255), 2)
+        cv.line(image, rleg_points[0], rleg_points[1], (0, 0, 255, 255), 2)
+        cv.line(image, rleg_points[1], rleg_points[2], (0, 0, 255, 255), 2)
+        cv.line(image, rleg_points[2], rleg_points[3], (0, 0, 255, 255), 2)
+        cv.line(image, rleg_points[3], rleg_points[0], (0, 0, 255, 255), 2)
         if lleg_cop_msg:
             lleg_cop_point_2d = verticesPoints([lleg_cop_point],
                                                concatenate_matrices(inverse_matrix(mid_coords),
                                                                     lleg_cop_origin),
                                                scale,
                                                image_size)[0]
-            cv.circle(image, lleg_cop_point_2d, 5, (0, 255, 0), -1)
+            cv.circle(image, lleg_cop_point_2d, 5, (0, 255, 0, 255), -1)
             lleg_cop_msg = None
         if rleg_cop_msg:
             rleg_cop_point_2d = verticesPoints([rleg_cop_point],
@@ -101,10 +101,10 @@ def periodicCallback(event):
                                                                     rleg_cop_origin),
                                                scale,
                                                image_size)[0]
-            cv.circle(image, rleg_cop_point_2d, 5, (0, 0, 255), -1)
+            cv.circle(image, rleg_cop_point_2d, 5, (0, 0, 255, 255), -1)
             rleg_cop_msg = None
         bridge = CvBridge()
-        pub.publish(bridge.cv2_to_imgmsg(image, "bgr8"))
+        pub.publish(bridge.cv2_to_imgmsg(image, "bgra8"))
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         # rospy.logerr("Failed to lookup transform")
         pass
