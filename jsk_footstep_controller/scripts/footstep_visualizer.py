@@ -36,7 +36,7 @@ def transformToMatrix(transform):
 
 #def cop_callback(lleg_cop, rleg_cop):
 def periodicCallback(event):
-    global tf_buffer, lleg_cop_msg, rleg_cop_msg
+    global tf_buffer, lleg_cop_msg, rleg_cop_msg, zmp_msg
     try:
         msg_lock.acquire()
         _lleg_pose = tf_buffer.lookup_transform(root_link, lleg_end_coords, rospy.Time())
@@ -53,6 +53,12 @@ def periodicCallback(event):
             rleg_cop_point = np.array([rleg_cop_msg.point.x,
                                        rleg_cop_msg.point.y,
                                        rleg_cop_msg.point.z])
+        if zmp_msg:
+            _zmp_origin = tf_buffer.lookup_transform(root_link, zmp_msg.header.frame_id, rospy.Time())
+            zmp_origin = transformToMatrix(_zmp_origin.transform)
+            zmp_point = np.array([zmp_msg.point.x,
+                                       zmp_msg.point.y,
+                                       zmp_msg.point.z])
         lleg_pos = np.array([_lleg_pose.transform.translation.x,
                              _lleg_pose.transform.translation.y,
                              _lleg_pose.transform.translation.z])
@@ -104,6 +110,14 @@ def periodicCallback(event):
                                                image_size)[0]
             cv.circle(image, rleg_cop_point_2d, 5, (0, 0, 255, 255), -1)
             rleg_cop_msg = None
+        if zmp_msg:
+            zmp_point_2d = verticesPoints([zmp_point],
+                                               concatenate_matrices(inverse_matrix(mid_coords),
+                                                                    zmp_origin),
+                                               scale,
+                                               image_size)[0]
+            cv.circle(image, zmp_point_2d, 5, (0, 255, 255, 255), -1)
+            zmp_msg = None
         bridge = CvBridge()
         pub.publish(bridge.cv2_to_imgmsg(image, "bgra8"))
     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
@@ -114,6 +128,7 @@ def periodicCallback(event):
 
 lleg_cop_msg = None
 rleg_cop_msg = None
+zmp_msg = None
 def llegCopCallback(msg):
     global lleg_cop_msg
     with msg_lock:
@@ -126,6 +141,12 @@ def rlegCopCallback(msg):
         rleg_cop_msg = msg
 
 
+def zmpCallback(msg):
+    global zmp_msg
+    with msg_lock:
+        zmp_msg = msg
+
+        
 if __name__ == "__main__":
     rospy.init_node("footstep_visualizer")
     pub = rospy.Publisher("~output", Image)
@@ -134,7 +155,7 @@ if __name__ == "__main__":
     lleg_end_coords = rospy.get_param("~lleg_end_coords", "lleg_end_coords")
     rleg_end_coords = rospy.get_param("~rleg_end_coords", "rleg_end_coords")
     image_size = rospy.get_param("~image_size", 400)
-    scale = rospy.get_param("~scale", 1.0)
+    scale = rospy.get_param("~scale", 0.6)
     lleg_vertices = rospy.get_param("~lleg_vertices", [[0.137525, -0.070104],
                                                        [-0.106925, -0.070104],
                                                        [-0.106925,  0.070104],
@@ -147,6 +168,7 @@ if __name__ == "__main__":
     root_link = rospy.get_param("~root_link", "BODY")
     lleg_sub = rospy.Subscriber("/lfsensor_cop", PointStamped, llegCopCallback)
     rleg_sub = rospy.Subscriber("/rfsensor_cop", PointStamped, rlegCopCallback)
+    zmp_sub = rospy.Subscriber("/zmp", PointStamped, zmpCallback)
     # lleg_cop_sub = Subscriber("/lfsensor_cop", PointStamped)
     # rleg_cop_sub = Subscriber("/rfsensor_cop", PointStamped)
     # ts = TimeSynchronizer([lleg_cop_sub, rleg_cop_sub], 10)
