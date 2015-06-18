@@ -35,8 +35,10 @@
    (out-path "/tmp/net.png")
    (eog-open? t)
    )
-  (unix:system (format nil "python ~A/python/draw_net.py ~A ~A"
-		       caffe-root net-path out-path))
+  ;; PYTHONPATH=$PYTHONPATH:`pwd` python draw_net.py train_val.prototxt net.png --rankdir "TB"
+  (unix:system
+   (format nil "PYTHONPATH=$PYTHONPATH:~A/python python ~A/python/draw_net.py ~A ~A --rankdir \"TB\""
+	   caffe-root caffe-root net-path out-path))
   (if eog-open?
       (unix:system (format nil "eog ~A &" out-path)))
   out-path)
