@@ -283,7 +283,7 @@ footstep-parameter"))
                                          (send state :worldcoords)
                                          next-leg
                                          (send state :step-name))))
-        (ros::ros-info "~A candidates" (length next-coords-candidate))
+        ;;(ros::ros-info "~A candidates" (length next-coords-candidate))
         ;; remove steps collide with obstacles
         next-coords-candidate)))
   (:successors-with-grids (state &key (verbose nil))
