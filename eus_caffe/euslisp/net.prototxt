@@ -10,6 +10,7 @@ layers {
     width: 1
   }
 }
+
 layers {
   name: "ip"
   type: INNER_PRODUCT
@@ -27,6 +28,7 @@ layers {
     }
   }
 }
+
 layers {
   name: "target"
   type: MEMORY_DATA
@@ -39,6 +41,7 @@ layers {
     width: 1
   }
 }
+
 layers {
   name: "loss"
   type: EUCLIDEAN_LOSS
