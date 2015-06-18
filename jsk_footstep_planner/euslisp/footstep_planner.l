@@ -888,11 +888,10 @@ building and searching."
                     ;; Keep plist-values
                     (setf (get next-pose :projecting-grid)
                           (get support-leg-coords :projecting-grid))
-                    (unless (get support-leg-coords :projecting-grid)
-                      (ros::ros-error "projecting-grid is nil!")
-                      (error))
-                    (cons (car trans)     ;transform
-                          next-pose)))
+                    ;; (unless (get support-leg-coords :projecting-grid)
+                    ;;   (ros::ros-error "projecting-grid is nil!")
+                    ;;   (error "projecting-grid is nil!"))
+                    (cons (car trans) next-pose)))
               transformations)))
   (:transition-second-step-coords (support-leg-coords l/r &optional (name nil))
     (send self :next-step-coords support-leg-coords
