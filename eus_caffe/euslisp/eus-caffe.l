@@ -27,6 +27,20 @@
 			    (unix:getenv "LD_LIBRARY_PATH")
 			    (read-line (piped-fork "rospack find eus_caffe"))))))
 
+(defun net-image
+  (&key
+   (caffe-root
+    (format nil "~A/3rdparty/caffe" (ros::rospack-find "eus_caffe")))
+   (net-path "net.prototxt")
+   (out-path "/tmp/net.png")
+   (eog-open? t)
+   )
+  (unix:system (format nil "python ~A/python/draw_net.py ~A ~A"
+		       caffe-root net-path out-path))
+  (if eog-open?
+      (unix:system (format nil "eog ~A &" out-path)))
+  out-path)
+
 (defforeign _eus-caffe-test
   *eus-caffe-plugin*
   "deep_learning_test"
