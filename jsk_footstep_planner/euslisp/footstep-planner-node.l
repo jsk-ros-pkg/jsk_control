@@ -20,7 +20,7 @@
 ;;(load "~/ros/hydro_parent/src/jskeus/irteus/irtgraph.l")
 (comp:compile-file-if-src-newer
   (format nil "~A/euslisp/footstep_planner.l" (ros::rospack-find "jsk_footstep_planner")))
-;; (load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
+(load "package://jsk_footstep_planner/euslisp/footstep_planner.l")
 (let ((old-module (find "footstep_planner" *loaded-modules*
                         :key #'lisp::load-module-file-name :test #'equal)))
   (if old-module (sys::unbinload old-module)))
@@ -146,13 +146,17 @@
       ;; creating initial step node from goal msg
       (let ((leg-coords (mapcar #'cdr initial-foot-coords)))
         ;; Project leg-coords onto grid first
-        (let ((projected-leg-coords (mapcar
-                                     #'(lambda (c)
-                                         (project-coordinates-on-nearest-grid
-                                          c *grids*))
-                                     leg-coords)))
-          (when (or (null (car projected-leg-coords))
-                    (null (cadr projected-leg-coords)))
+        (let ((projected-leg-coords (if *use-env-server*
+                                        (mapcar
+                                         #'(lambda (c)
+                                             (project-coordinates-on-nearest-grid
+                                              c *grids*))
+                                         leg-coords)
+                                      leg-coords)))
+          ;; Check if the first step on grid
+          (when (and *use-env-server*
+                     (or (null (car projected-leg-coords))
+                         (null (cadr projected-leg-coords))))
             (ros::ros-error "Failed to project first step")
             (let ((result (send server :result)))
               (send server :set-aborted result))
@@ -513,8 +517,7 @@
   (setq *timeout* (ros::get-param "~timeout" 10))
   (setq *planes* nil)
   (setq *heuristic* (read-from-string
-                     (ros::get-param "~heuristic" ":straight-heuristic")))
-                     ;;(ros::get-param "~heuristic" ":stepcost-heuristic**")))
+                     (ros::get-param "~heuristic" ":stepcost-heuristic**")))
   ;;(ros::get-param "~heuristic" ":stepcost-z-heuristic*")))
   (setq *roll-paranoid* (ros::get-param "~roll_paranoid" t))
   (setq *use-planes* (ros::get-param "~use_planes" nil))
