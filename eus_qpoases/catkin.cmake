@@ -30,3 +30,8 @@ add_dependencies(eus_qpoases qpOASES_built)
 target_link_libraries(eus_qpoases qpOASES)
 
 add_rostest(test/eus_qpoases.test)
+
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/build/qpOASES/libs/
+  DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/build/qpOASES-source/include/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
