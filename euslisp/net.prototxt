@@ -1,6 +1,7 @@
-layers {
+name: "hoge"
+layer {
   name: "input"
-  type: MEMORY_DATA
+  type: "MemoryData"
   top: "input"
   top: "dummy_label1"
   memory_data_param {
@@ -10,10 +11,9 @@ layers {
     width: 1
   }
 }
-
-layers {
+layer {
   name: "ip"
-  type: INNER_PRODUCT
+  type: "InnerProduct"
   bottom: "input"
   top: "ip"
   inner_product_param {
@@ -28,10 +28,9 @@ layers {
     }
   }
 }
-
-layers {
+layer {
   name: "target"
-  type: MEMORY_DATA
+  type: "MemoryData"
   top: "target"
   top: "dummy_label2"
   memory_data_param {
@@ -41,10 +40,9 @@ layers {
     width: 1
   }
 }
-
-layers {
+layer {
   name: "loss"
-  type: EUCLIDEAN_LOSS
+  type: "EuclideanLoss"
   bottom: "ip"
   bottom: "target"
   top: "loss"
