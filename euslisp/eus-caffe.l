@@ -27,7 +27,7 @@
 			    (unix:getenv "LD_LIBRARY_PATH")
 			    (read-line (piped-fork "rospack find eus_caffe"))))))
 
-(defun net-image
+(defun gen-net-image
   (&key
    (caffe-root
     (format nil "~A/3rdparty/caffe" (ros::rospack-find "eus_caffe")))
