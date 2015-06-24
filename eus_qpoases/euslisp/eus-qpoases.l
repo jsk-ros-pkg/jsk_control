@@ -81,15 +81,15 @@
              (:pl-high 3)
              (t 2))
        status)
-      ;;(if debug
-      (let ((int-status (round (elt status 0))))
-        (unless (= int-status 0)
-          (print
-           (case int-status
+      (if debug
+          (let ((int-status (round (elt status 0))))
+            (unless (= int-status 0)
+              (print
+               (case int-status
                  (0 :QP-problem-solved)
                  (1 :QP-could-not-be-solved-within-given-number-of-iterations)
                  (-1 :QP-could-not-be-solved-due-to-an-internal-error)
                  (-2 :QP-is-infeasible-and-thus-could-not-be-solved)
-                 (-3 :QP-is-unbounded-and-thus-could-not-be-solved)))))
+                 (-3 :QP-is-unbounded-and-thus-could-not-be-solved))))))
       ret)))
 
