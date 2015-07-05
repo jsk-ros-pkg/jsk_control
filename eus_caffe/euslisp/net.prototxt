@@ -15,7 +15,7 @@ layer {
   name: "ip"
   type: "InnerProduct"
   bottom: "input"
-  top: "ip"
+  top: "output"
   inner_product_param {
     num_output: 1
     weight_filler {
@@ -43,7 +43,7 @@ layer {
 layer {
   name: "loss"
   type: "EuclideanLoss"
-  bottom: "ip"
+  bottom: "output"
   bottom: "target"
   top: "loss"
 }
