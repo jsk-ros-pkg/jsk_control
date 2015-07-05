@@ -1,9 +1,9 @@
-net: "net.prototxt"
+net: "net2.prototxt"
 solver_type: SGD
 base_lr: 0.01
 lr_policy: "step"
 gamma: 0.5
 stepsize: 500
-max_iter: 50000
+max_iter: 5000
 momentum: 0.9
 display: 1000
