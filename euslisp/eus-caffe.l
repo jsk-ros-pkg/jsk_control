@@ -49,32 +49,33 @@
   (:integer :integer :string :string :string :string)
   :float)
 
-(defforeign _get_ip_blob_by_id
+(defforeign _get_ip_layer_blob
   *eus-caffe-plugin*
-  "get_ip_blob_by_id"
-  (:integer :string)
+  "get_ip_layer_blob"
+  (:integer :string :integer)
   :integer)
 
 (defforeign _calc_learning_data
   *eus-caffe-plugin*
   "calc_learning_data"
-  (:integer :string :string :string)
+  (:integer :integer :string :string :string)
   :integer)
 
 (defun calc-learning-test
   (&key
    (isize 32)
+   (osize 32)
    (input (instantiate float-vector isize))
-   (output (instantiate float-vector isize))
+   (output (instantiate float-vector osize))
    (idummy (instantiate float-vector (length input))))
-  (_calc_learning_data isize input output idummy)
+  (_calc_learning_data isize osize input output idummy)
   output)
 
-(defun get-ip-blob-by-id
+(defun get-ip-layer-blob
   (&key
    (blob_id 0)
    (ret (instantiate float-vector 32)))
-  (_get_ip_blob_by_id blob_id ret)
+  (_get_ip_layer_blob blob_id ret (length ret))
   ret)
 
 (defun eus-caffe-test
