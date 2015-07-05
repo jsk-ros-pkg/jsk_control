@@ -8,14 +8,15 @@ caffe::SolverParameter solver_param;
 std::shared_ptr<caffe::Solver<double>> solver;
 
 extern "C" {
-  int get_blob_data (boost::shared_ptr<caffe::Blob<double> > blob, double* ret) {
+  int get_blob_data (boost::shared_ptr<caffe::Blob<double> > blob, double* ret, int osize) {
     if ( blob == NULL ){
       std::cout << std::endl;
       std::cout << "[get_blob_data] null blob" << std::endl;
       return -1;
     }
     std::cout << "(" << blob->count() << ") "<< " (";
-    for ( int i=0; i<blob->count(); i++ ){
+    if ( osize < 0 || osize > blob->count() ) osize = blob->count();
+    for ( int i=0; i<osize; i++ ){
       ret[i] = blob->cpu_data()[i];
       std::cout << ret[i] << " ";
     }
@@ -25,7 +26,7 @@ extern "C" {
 }
 
 extern "C" {
-  int get_blob_by_id_and_layer_name (std::string name, int blob_id, double* ret) {
+  int get_blob_by_id_and_layer_name (std::string name, int blob_id, double* ret, int osize) {
     boost::shared_ptr<caffe::Net<double>> net = solver->net();
     std::vector<boost::shared_ptr<caffe::Blob<double> > > ip_blobs = net->layer_by_name(name)->blobs();
     std::cout << name << "[" << blob_id << "<" << ip_blobs.size() << "]" ;
@@ -34,14 +35,7 @@ extern "C" {
       std::cout << " --- too large blob_id" << std::endl;
       return -1;
     }
-    return get_blob_data(ip_blobs[blob_id], ret);
-    // std::cout << "(" << ip_blobs[blob_id]->count() << ") "<< " (";
-    // for ( int i=0; i<ip_blobs[blob_id]->count(); i++ ){
-    //   ret[i] = ip_blobs[blob_id]->cpu_data()[i];
-    //   std::cout << ret[i] << " ";
-    // }
-    // std::cout << ")" << std::endl;
-    // return 0;
+    return get_blob_data(ip_blobs[blob_id], ret, osize);
   }
 }
 
@@ -63,28 +57,20 @@ extern "C" {
     solver->Solve();
     //
     // get_blob_by_id_and_layer_name("loss",0,idummy);
-    get_blob_data( net->blob_by_name("loss"), idummy);
+    get_blob_data( net->blob_by_name("loss"), idummy, 1);
     return idummy[0];
   }
 }
 
 extern "C" {
-  int get_ip_blob_by_id (int blob_id, double* ret) {
-    return get_blob_by_id_and_layer_name("ip",blob_id,ret);
-    // boost::shared_ptr<caffe::Net<double>> net = solver->net();
-    // std::vector<boost::shared_ptr<caffe::Blob<double> > > ip_blobs = net->layer_by_name("ip")->blobs();
-    // std::cout << "ip_blob[" << blob_id << "](" << ip_blobs[blob_id]->count() << ") "<< " (";
-    // for ( int i=0; i<ip_blobs[blob_id]->count(); i++ ){
-    //   ret[i] = ip_blobs[blob_id]->cpu_data()[i];
-    //   std::cout << ret[i] << " ";
-    // }
-    // std::cout << ")" << std::endl;
-    // return 0;
+  int get_ip_layer_blob (int blob_id, double* ret, int osize) {
+    return get_blob_by_id_and_layer_name("ip",blob_id,ret, osize);
   }
 }
 
 extern "C" {
-  int calc_learning_data (int inputsize, double* input, double* output, double* idummy){
+  int calc_learning_data (int inputsize, int outputsize,
+			  double* input, double* output, double* idummy){
     boost::shared_ptr<caffe::Net<double>> net = solver->net();
     boost::shared_ptr<caffe::MemoryDataLayer<double>> input_layer =
       boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(net->layer_by_name("input"));
@@ -93,14 +79,7 @@ extern "C" {
     input_layer->Reset(input, idummy, inputsize);
     net->ForwardPrefilled(nullptr);
     //
-    get_blob_data(net->blob_by_name("ip"), output);
-    // boost::shared_ptr<caffe::Blob<double> > ip = net->blob_by_name("ip");
-    // std::cout << "ip_blob(" << ip->shape(1) << ") "<< " (";
-    // for ( int i=0 ; i<ip->shape(1); i++ ){
-    //   output[i] = ip->cpu_data()[i];
-    //   std::cout << output[i] << " ";
-    // }
-    // std::cout << ")" << std::endl;
+    get_blob_data(net->blob_by_name("output"), output, outputsize);
     return 0;
   }
 }
