@@ -1,9 +1,9 @@
 net: "net2.prototxt"
 solver_type: SGD
-base_lr: 0.01
+base_lr: 0.03
 lr_policy: "step"
-gamma: 0.5
-stepsize: 500
-max_iter: 5000
+gamma: 0.95
+stepsize: 10000 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
+max_iter: 300000
 momentum: 0.9
-display: 1000
+display: 100
