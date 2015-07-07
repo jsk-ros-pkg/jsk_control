@@ -1,5 +1,8 @@
 #!/usr/bin/env roseus
 
+(if (not (find-package "CAFFE")) (make-package "CAFFE"))
+(In-package "CAFFE")
+
 (defvar *eus-caffe-plugin*
   (labels
       ((library_search
@@ -31,7 +34,7 @@
   (&key
    (caffe-root
     (format nil "~A/3rdparty/caffe" (ros::rospack-find "eus_caffe")))
-   (net-path "net.prototxt")
+   (net-path "net2.prototxt")
    (out-path "/tmp/net.png")
    (eog-open? t)
    )
@@ -61,10 +64,10 @@
   (:integer :integer :string :string :string)
   :integer)
 
-(defun calc-learning-test
+(defun calc-forward
   (&key
    (isize 32)
-   (osize 32)
+   (osize 1)
    (input (instantiate float-vector isize))
    (output (instantiate float-vector osize))
    (idummy (instantiate float-vector (length input))))
@@ -78,9 +81,21 @@
   (_get_ip_layer_blob blob_id ret (length ret))
   ret)
 
-(defun eus-caffe-test
+(defun learn
   (&key
-   (dsize 32)
+   (dsize 3200)
+   (isize (* 2 dsize))
+   (idata (instantiate float-vector isize))
+   (ddata (instantiate float-vector dsize))
+   (idummy (instantiate float-vector isize))
+   (ddummy (instantiate float-vector dsize))
+   )
+  (_eus-caffe-test isize dsize idata ddata idummy ddummy)
+  )
+
+(defun linear-equation-test
+  (&key
+   (dsize 3200)
    (isize (* 2 dsize))
    (idata)
    (ddata)
