@@ -40,9 +40,9 @@ extern "C" {
 }
 
 extern "C" {
-  double deep_learning_test (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy) {
+  double caffe_learn (char* solver_path, int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy) {
     //
-    caffe::ReadProtoFromTextFileOrDie("solver.prototxt", &solver_param);
+    caffe::ReadProtoFromTextFileOrDie(solver_path, &solver_param);
     solver = std::shared_ptr<caffe::Solver<double>>(caffe::GetSolver<double>(solver_param));
     //
     boost::shared_ptr<caffe::Net<double>> net = solver->net();
@@ -69,7 +69,7 @@ extern "C" {
 }
 
 extern "C" {
-  int calc_learning_data (int inputsize, int outputsize,
+  int calc_forward (int inputsize, int outputsize,
 			  double* input, double* output, double* idummy){
     boost::shared_ptr<caffe::Net<double>> net = solver->net();
     boost::shared_ptr<caffe::MemoryDataLayer<double>> input_layer =
@@ -81,5 +81,12 @@ extern "C" {
     //
     get_blob_data(net->blob_by_name("output"), output, outputsize);
     return 0;
+  }
+}
+
+extern "C" {
+  int string_test (char* text) {
+    std::cout << text << std::endl;
+    return -1;
   }
 }
