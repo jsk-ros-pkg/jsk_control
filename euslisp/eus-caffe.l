@@ -46,10 +46,10 @@
       (unix:system (format nil "eog ~A &" out-path)))
   out-path)
 
-(defforeign _eus-caffe-test
+(defforeign _learn
   *eus-caffe-plugin*
-  "deep_learning_test"
-  (:integer :integer :string :string :string :string)
+  "caffe_learn"
+  (:string :integer :integer :string :string :string :string)
   :float)
 
 (defforeign _get_ip_layer_blob
@@ -58,11 +58,17 @@
   (:integer :string :integer)
   :integer)
 
-(defforeign _calc_learning_data
+(defforeign _calc_forward
   *eus-caffe-plugin*
-  "calc_learning_data"
+  "calc_forward"
   (:integer :integer :string :string :string)
   :integer)
+
+;; (defforeign string-test
+;;   *eus-caffe-plugin*
+;;   "string_test"
+;;   (:string)
+;;   :integer)
 
 (defun calc-forward
   (&key
@@ -71,7 +77,7 @@
    (input (instantiate float-vector isize))
    (output (instantiate float-vector osize))
    (idummy (instantiate float-vector (length input))))
-  (_calc_learning_data isize osize input output idummy)
+  (_calc_forward isize osize input output idummy)
   output)
 
 (defun get-ip-layer-blob
@@ -83,6 +89,7 @@
 
 (defun learn
   (&key
+   (solver "solver.prototxt")
    (dsize 3200)
    (isize (* 2 dsize))
    (idata (instantiate float-vector isize))
@@ -90,11 +97,12 @@
    (idummy (instantiate float-vector isize))
    (ddummy (instantiate float-vector dsize))
    )
-  (_eus-caffe-test isize dsize idata ddata idummy ddummy)
+  (_learn solver isize dsize idata ddata idummy ddummy)
   )
 
 (defun linear-equation-test
   (&key
+   (solver "solver.prototxt")
    (dsize 3200)
    (isize (* 2 dsize))
    (idata)
@@ -118,5 +126,5 @@
   (cond
    ((not ddummy) (setq ddummy (instantiate float-vector dsize))))
   ;;
-  (_eus-caffe-test isize dsize idata ddata idummy ddummy)
+  (_learn solver isize dsize idata ddata idummy ddummy)
   )
