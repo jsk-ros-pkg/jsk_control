@@ -12,12 +12,6 @@ layer {
   }
 }
 layer {
-  name: "flatdata"
-  type: "Flatten"
-  bottom: "input"
-  top: "flatdata"
-}
-layer {
   name: "ip"
   type: "InnerProduct"
   bottom: "input"
@@ -31,11 +25,11 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 1000
+    num_output: 50
     weight_filler {
       type: "gaussian"
       std: 1
-      sparse: 15
+      sparse: 1
     }
     bias_filler {
       type: "constant"
@@ -50,10 +44,10 @@ layer {
   top: "encode1neuron"
 }
 layer {
-  name: "encode2"
+  name: "middle1"
   type: "InnerProduct"
   bottom: "encode1neuron"
-  top: "encode2"
+  top: "middle1"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -63,11 +57,11 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 500
+    num_output: 10
     weight_filler {
       type: "gaussian"
       std: 1
-      sparse: 15
+      sparse: 1
     }
     bias_filler {
       type: "constant"
@@ -78,45 +72,13 @@ layer {
 layer {
   name: "encode2neuron"
   type: "Sigmoid"
-  bottom: "encode2"
+  bottom: "middle1"
   top: "encode2neuron"
-}
-layer {
-  name: "encode3"
-  type: "InnerProduct"
-  bottom: "encode2neuron"
-  top: "encode3"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 1
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 250
-    weight_filler {
-      type: "gaussian"
-      std: 1
-      sparse: 15
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "encode3neuron"
-  type: "Sigmoid"
-  bottom: "encode3"
-  top: "encode3neuron"
 }
 layer {
   name: "output"
   type: "InnerProduct"
-  bottom: "encode3neuron"
+  bottom: "encode2neuron"
   top: "output"
   param {
     lr_mult: 1
