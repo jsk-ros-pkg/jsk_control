@@ -90,21 +90,50 @@
 (defun learn
   (&key
    (solver "solver.prototxt")
-   (dsize 3200)
-   (isize (* 2 dsize))
+   (size 3200)
+   (dsize size)
+   (isize size)
    (idata (instantiate float-vector isize))
    (ddata (instantiate float-vector dsize))
-   (idummy (instantiate float-vector isize))
-   (ddummy (instantiate float-vector dsize))
+   (iclass (instantiate float-vector size))
+   (dclass (instantiate float-vector size))
    )
-  (_learn solver isize dsize idata ddata idummy ddummy)
+  (_learn solver (length iclass) (length dclass)
+	  idata ddata
+	  iclass dclass)
   )
 
 (defun linear-equation-test
   (&key
    (solver "solver.prototxt")
+   (size 3200)
+   (dsize size)
+   (isize (* 2 size))
+   (idata)
+   (ddata)
+   (iclass (instantiate float-vector size)) ;; dummy
+   (dclass iclass)
+   )
+  (cond
+   ((or (not idata) (not ddata))
+    (setq idata (instantiate float-vector isize))
+    (setq ddata (instantiate float-vector dsize))
+    (dotimes (i size)
+      (let* ((x (* 10 (- (random 2.0) 1.0)))
+	     (y (* 10 (- (random 2.0) 1.0))))
+	(setf (aref idata (* i 2)) x)
+	(setf (aref idata (+ 1 (* i 2))) y)
+	(setf (aref ddata i) (+ (* 3 x) (* -2 y) 4))
+	))))
+  ;;
+  (_learn solver size size idata ddata iclass dclass)
+  )
+
+(defun linear-equation-test2
+  (&key
+   (solver "solver.prototxt")
    (dsize 3200)
-   (isize (* 2 dsize))
+   (isize dsize)
    (idata)
    (ddata)
    (idummy)
@@ -114,12 +143,13 @@
    ((or (not idata) (not ddata))
     (setq idata (instantiate float-vector isize))
     (setq ddata (instantiate float-vector dsize))
-    (dotimes (i dsize)
-      (let* ((x (* 10 (- (random 2.0) 1.0)))
-	     (y (* 10 (- (random 2.0) 1.0))))
-	(setf (aref idata (* i 2)) x)
-	(setf (aref idata (+ 1 (* i 2))) y)
-	(setf (aref ddata i) (+ (* 3 x) (* -2 y) 4))
+    (dotimes (i (/ dsize 2))
+      (let* ((x (* 1 (- (random 2.0) 1.0)))
+	     (y (* 1 (- (random 2.0) 1.0))))
+	(setf (aref idata (* 2 i)) x)
+	(setf (aref idata (+ 1 (* 2 i))) y)
+	(setf (aref ddata (* 2 i)) (+ x y))
+	(setf (aref ddata (+ 1 (* 2 i))) (+ x y))
 	))))
   (cond
    ((not idummy) (setq idummy (instantiate float-vector isize))))
