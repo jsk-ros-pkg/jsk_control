@@ -17,6 +17,22 @@
 (defvar *angle-vector-map*)
 (defvar *ef-coords-map*)
 
+(defun shuffle-random-vector-map
+  nil
+  (labels ((swap (a i j)
+		 (let* ((c (aref a i)))
+		   (setf (aref a i) (aref a j))
+		   (setf (aref a j) c))))
+    (dotimes (i *sample-points*)
+      (let* ((r (random *sample-points*)))
+	(dotimes (j (length *rarm-joints*))
+	  (swap *angle-vector-map*
+		(+ j (* (length *rarm-joints*) i))
+		(+ j (* (length *rarm-joints*) r))))
+	(dotimes (j 6)
+	  (swap *ef-coords-map*
+		(+ j (* 6 i)) (+ j (* 6 r))))))))
+
 (defun gen-ik-learning-data
   (&key (sep 6)
 	(sample-points (expt sep (length *rarm-joints*)))
@@ -67,6 +83,7 @@
 		(itter (cdr jlist))))
 	     )))
     (itter *rarm-joints*)
+    (shuffle-random-vector-map)
     (dump-ik-learning-data)
     ))
 
@@ -148,6 +165,32 @@
    :idata *ef-coords-map*
    :ddata *angle-vector-map*
    ))
+
+(defun check-test-data
+  (&optional
+   (i 0)
+   (input (instantiate float-vector 6))
+   (output (instantiate float-vector 6))
+   c
+   )
+  (dotimes (j 6) (setf (aref input j) (aref *ef-coords-map* (+ (* i 6) j))))
+  (dotimes (j (length *rarm-joints*))
+    (setf (aref output j)
+	  (aref *angle-vector-map* (+ (* i (length *rarm-joints*)) j))))
+  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
+		       :rot (matrix-exponent (subseq input 3 6))))
+  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		:transform c :local))
+  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
+       *rarm-joints* output)
+  (send *viewer* :draw-objects :flush nil)
+  (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+  (send *viewer* :viewsurface :flush)
+  (print (concatenate
+	  float-vector
+	  (send c :difference-position (send *robot* :rarm :end-coords))
+	  (send c :difference-rotation (send *robot* :rarm :end-coords))))
+  )
 
 (defun ik-test
   (&optional
