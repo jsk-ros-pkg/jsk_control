@@ -13,7 +13,7 @@
 	  *rarm-links*
 	  (send *robot* :hand :rarm :links)))
 
-(defvar *sample-points* 32000)
+(defvar *sample-points* 3200)
 (defvar *angle-vector-map*)
 (defvar *ef-coords-map*)
 
@@ -74,9 +74,9 @@
 		      (send *robot* :rarm :end-coords)))
       (dotimes (j (length *rarm-joints*))
 	(setf (aref *angle-vector-map* (+ j (* i (length *rarm-joints*))))
-	      (send (nth j *rarm-joints*) :joint-angle)))
+	      (deg2rad (send (nth j *rarm-joints*) :joint-angle))))
       (dotimes (j 3)
-	(setf (aref *ef-coords-map* (+ j (* i 6))) (aref pos j)))
+	(setf (aref *ef-coords-map* (+ j (* i 6))) (* 1e-3 (aref pos j))))
       (dotimes (j 3)
 	(setf (aref *ef-coords-map* (+ 3 j (* i 6))) (aref rot j)))
       )
@@ -87,20 +87,65 @@
 
 (load-ik-learning-data)
 
+(defun ik-learn
+  nil
+  (caffe::learn
+   :solver "ik_solver.prototxt"
+   :size *sample-points*
+   :idata *ef-coords-map*
+   :ddata *angle-vector-map*
+   ))
+
+(defun ik-test
+  (&optional
+   (i 0)
+   (input (instantiate float-vector 6))
+   (output (instantiate float-vector 6))
+   c
+   )
+  (dotimes (j 6) (setf (aref input j) (aref *ef-coords-map* (+ (* i 6) j))))
+  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
+		       :rot (matrix-exponent (subseq input 3 6))))
+  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		:transform c :local))
+  (caffe::calc-forward
+   :input input :osize (length output) :output output)
+  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
+       *rarm-joints* output)
+  (send *viewer* :draw-objects :flush nil)
+  (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+  (send *viewer* :viewsurface :flush)
+  (print (concatenate
+	  float-vector
+	  (send c :difference-position (send *robot* :rarm :end-coords))
+	  (send c :difference-rotation (send *robot* :rarm :end-coords))))
+  )
+
+(defun ik-random-test
+  nil
+  (let* ((c (make-coords :pos (v+ (float-vector 436.244 -210.8 766.991)
+				  (random-vector 500.0))
+			 :rpy (random-vector 3.14)))
+	 (b (send (car (send *robot* :links)) :copy-worldcoords))
+	 (av (instantiate float-vector (length *rarm-joints*))))
+    (caffe::calc-forward
+     :input (concatenate float-vector
+			 (scale 1e-3 (send b :difference-position c))
+			 (send b :difference-rotation c))
+     :osize (length av)
+     :output av)
+    (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
+    (send *viewer* :draw-objects :flush nil)
+    (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+    (send *viewer* :viewsurface :flush)
+    (print (concatenate float-vector
+			(send c :difference-position (send *robot* :rarm :end-coords))
+			(send c :difference-rotation (send *robot* :rarm :end-coords))))
+    ))
+
+
 #|
 
-(caffe::learn
- :solver "ik_solver.prototxt"
- :dsize (length *ef-coords-map*)
- :isize (length *angle-vector-map*)
- :idata *angle-vector-map*
- :ddata *ef-coords-map*
- )
+(caffe::gen-net-image :net-path "ik_net.prototxt")
 
-(caffe::learn
- :solver "ik_solver.prototxt"
- :dsize (/ (length *ef-coords-map*) 10)
- :isize (/ (length *angle-vector-map*) 10)
- :idata *angle-vector-map*
- :ddata *ef-coords-map*
- )
+
