@@ -245,4 +245,4 @@
 (caffe::gen-net-image :net-path "ik_net.prototxt")
 
 (caffe::initialize-solver :solver "ik_solver.prototxt" :solverstate "_iter_5000000.solverstate")
-(caffe::initialize-solver :solver "ik_solver.prototxt" :solverstate "rarm_ik.solverstate")
+(caffe::initialize-solver :solver "ik_solver.prototxt" :solverstate "ik_net_iter_5000000.solverstate")
