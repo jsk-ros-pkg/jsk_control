@@ -3,6 +3,8 @@
 #include <random>
 #include <array>
 #include <caffe/caffe.hpp>
+#include <sys/stat.h>
+#include <cassert>
 
 caffe::SolverParameter solver_param;
 std::shared_ptr<caffe::Solver<double>> solver;
@@ -40,10 +42,24 @@ extern "C" {
 }
 
 extern "C" {
-  double caffe_learn (char* solver_path, int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy) {
+  int create_solver (char* solver_path, char* solverstate){
+    struct stat buf;
+    if (solver_path && stat(solver_path, &buf)==0){
+      caffe::ReadProtoFromTextFileOrDie(solver_path, &solver_param);
+      solver = std::shared_ptr<caffe::Solver<double>>(caffe::GetSolver<double>(solver_param));
+      if (solverstate && stat(solverstate, &buf)==0) {
+	std::cout << "Restoring previous solver status from " << solverstate << std::endl;
+	solver->Restore(solverstate);
+      }
+    }
+    return 0;
+  }
+}
+
+extern "C" {
+  int initialize_solver (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy){
     //
-    caffe::ReadProtoFromTextFileOrDie(solver_path, &solver_param);
-    solver = std::shared_ptr<caffe::Solver<double>>(caffe::GetSolver<double>(solver_param));
+    assert(solver);
     //
     boost::shared_ptr<caffe::Net<double>> net = solver->net();
     boost::shared_ptr<caffe::MemoryDataLayer<double>> input_layer =
@@ -54,11 +70,21 @@ extern "C" {
       boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(net->layer_by_name("target"));
     assert(target_layer);
     target_layer->Reset(ddata, ddummy, dsize);
+    //
+    return 1;
+  }
+}
+
+extern "C" {
+  double caffe_learn () {
+    assert(solver);
+    //
     solver->Solve();
     //
-    // get_blob_by_id_and_layer_name("loss",0,idummy);
-    get_blob_data( net->blob_by_name("loss"), idummy, 1);
-    return idummy[0];
+    double buf[1];
+    boost::shared_ptr<caffe::Net<double>> net = solver->net();
+    get_blob_data( net->blob_by_name("loss"), buf, 1);
+    return buf[0];
   }
 }
 
