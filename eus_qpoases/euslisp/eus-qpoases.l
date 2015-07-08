@@ -32,7 +32,7 @@
         (inequality-max-vector)
         (inequality-dim (if inequality-matrix (array-dimension inequality-matrix 0) 0))
         (print-level :pl-none)
-        (debug)
+        (debug t)
         (status (float-vector 0))
         )
   (if (and inequality-matrix (= (length inequality-min-vector) 0))
