@@ -46,10 +46,22 @@
       (unix:system (format nil "eog ~A &" out-path)))
   out-path)
 
+(defforeign _create_solver
+  *eus-caffe-plugin*
+  "create_solver"
+  (:string :string)
+  :integer)
+
+(defforeign _initialize_solver
+  *eus-caffe-plugin*
+  "initialize_solver"
+  (:integer :integer :string :string :string :string)
+  :integer)
+
 (defforeign _learn
   *eus-caffe-plugin*
   "caffe_learn"
-  (:string :integer :integer :string :string :string :string)
+  ()
   :float)
 
 (defforeign _get_ip_layer_blob
@@ -87,9 +99,10 @@
   (_get_ip_layer_blob blob_id ret (length ret))
   ret)
 
-(defun learn
+(defun initialize-solver
   (&key
    (solver "solver.prototxt")
+   (solverstate "")
    (size 3200)
    (dsize size)
    (isize size)
@@ -98,10 +111,21 @@
    (iclass (instantiate float-vector size))
    (dclass (instantiate float-vector size))
    )
-  (_learn solver (length iclass) (length dclass)
-	  idata ddata
-	  iclass dclass)
+  (_create_solver solver solverstate)
+  (_initialize_solver (length iclass) (length dclass)
+		      idata ddata iclass dclass)
+  ;; (_learn)
   )
+
+(defun learn
+  (&rest
+   args
+   &key
+   (initialize? t)
+   &allow-other-keys
+   )
+  (if initialize? (apply 'initialize-solver args))
+  (_learn))
 
 (defun linear-equation-test
   (&key
@@ -126,35 +150,46 @@
 	(setf (aref ddata i) (+ (* 3 x) (* -2 y) 4))
 	))))
   ;;
-  (_learn solver size size idata ddata iclass dclass)
+  (learn :solver solver
+	 :isize size
+	 :dsize size
+	 :idata idata
+	 :ddata ddata
+	 :iclass iclass
+	 :dclass dclass)
+  ;;
+  (format t " -- check net state~%  ~A->~A~%  ~A->~A~%  ~A->~A~%"
+	  (float-vector 0 0) (calc-forward :input (float-vector 0 0) :osize 1)
+	  (float-vector 0 2) (calc-forward :input (float-vector 0 2) :osize 1)
+	  (float-vector 2 5) (calc-forward :input (float-vector 2 5) :osize 1))
   )
 
-(defun linear-equation-test2
-  (&key
-   (solver "solver.prototxt")
-   (dsize 3200)
-   (isize dsize)
-   (idata)
-   (ddata)
-   (idummy)
-   (ddummy)
-   )
-  (cond
-   ((or (not idata) (not ddata))
-    (setq idata (instantiate float-vector isize))
-    (setq ddata (instantiate float-vector dsize))
-    (dotimes (i (/ dsize 2))
-      (let* ((x (* 1 (- (random 2.0) 1.0)))
-	     (y (* 1 (- (random 2.0) 1.0))))
-	(setf (aref idata (* 2 i)) x)
-	(setf (aref idata (+ 1 (* 2 i))) y)
-	(setf (aref ddata (* 2 i)) (+ x y))
-	(setf (aref ddata (+ 1 (* 2 i))) (+ x y))
-	))))
-  (cond
-   ((not idummy) (setq idummy (instantiate float-vector isize))))
-  (cond
-   ((not ddummy) (setq ddummy (instantiate float-vector dsize))))
-  ;;
-  (_learn solver isize dsize idata ddata idummy ddummy)
-  )
+;; (defun linear-equation-test2
+;;   (&key
+;;    (solver "solver.prototxt")
+;;    (dsize 3200)
+;;    (isize dsize)
+;;    (idata)
+;;    (ddata)
+;;    (idummy)
+;;    (ddummy)
+;;    )
+;;   (cond
+;;    ((or (not idata) (not ddata))
+;;     (setq idata (instantiate float-vector isize))
+;;     (setq ddata (instantiate float-vector dsize))
+;;     (dotimes (i (/ dsize 2))
+;;       (let* ((x (* 1 (- (random 2.0) 1.0)))
+;; 	     (y (* 1 (- (random 2.0) 1.0))))
+;; 	(setf (aref idata (* 2 i)) x)
+;; 	(setf (aref idata (+ 1 (* 2 i))) y)
+;; 	(setf (aref ddata (* 2 i)) (+ x y))
+;; 	(setf (aref ddata (+ 1 (* 2 i))) (+ x y))
+;; 	))))
+;;   (cond
+;;    ((not idummy) (setq idummy (instantiate float-vector isize))))
+;;   (cond
+;;    ((not ddummy) (setq ddummy (instantiate float-vector dsize))))
+;;   ;;
+;;   (_learn solver isize dsize idata ddata idummy ddummy)
+;;   )
