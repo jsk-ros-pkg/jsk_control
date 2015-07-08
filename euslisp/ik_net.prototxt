@@ -57,7 +57,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 20
+    num_output: 30
     weight_filler {
       type: "gaussian"
       std: 1
@@ -76,9 +76,41 @@ layer {
   top: "encode2neuron"
 }
 layer {
-  name: "output"
+  name: "middle2"
   type: "InnerProduct"
   bottom: "encode2neuron"
+  top: "middle2"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 10
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "encode3neuron"
+  type: "Sigmoid"
+  bottom: "middle2"
+  top: "encode3neuron"
+}
+layer {
+  name: "output"
+  type: "InnerProduct"
+  bottom: "encode3neuron"
   top: "output"
   param {
     lr_mult: 1
