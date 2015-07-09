@@ -34,7 +34,7 @@ public:
       } else {
 	this->txn_ = std::shared_ptr<caffe::db::Transaction>(this->db_->NewTransaction());
       }
-      if ( this->cursor_ ) this->cursor_ = NULL;
+      if ( this->cursor_ ) this->cursor_.reset();
     } else {
       if ( this->cursor_ ){
 	this->cursor_.reset(this->db_->NewCursor());
@@ -42,12 +42,41 @@ public:
 	this->cursor_ = std::shared_ptr<caffe::db::Cursor>(this->db_->NewCursor());
       }
       this->read(0);
-      if ( this->txn_ ) this->txn_ = NULL;
+      if ( this->txn_ ) this->txn_.reset();
     }
     return 0;
   }
 
+  int get_data_size(){
+    assert(this->cursor_);
+    return this->datum_.data().size();
+  }
+
+  int get_key_size(){
+    assert(this->cursor_);
+    return this->cursor_->key().size();
+  }
+
+  int get_data(char* buf){
+    assert(this->cursor_);
+    const std::string& val = this->datum_.data();
+    for ( int i=0; i<val.size() ; i++ ){
+      buf[i] = val[i];
+    }
+    return val.size();
+  }
+
+  int get_key(char* buf){
+    assert(this->cursor_);
+    const std::string& val = this->cursor_->key();
+    for ( int i=0; i<val.size() ; i++ ){
+      buf[i] = val[i];
+    }
+    return val.size();
+  }
+
   int get_shape(double* ret){
+    assert(this->cursor_);
     ret[0] = this->datum_.channels();
     ret[1] = this->datum_.width();
     ret[2] = this->datum_.height();
@@ -89,11 +118,11 @@ public:
   }
 
   int close(){
-    this->txn_->Commit();
-    this->db_->Close();
-    if ( this->txn_ ) this->txn_ = NULL;
-    if ( this->db_ ) this->db_ = NULL;
-    if ( this->cursor_ ) this->cursor_ = NULL;
+    if ( this->txn_ ) this->txn_->Commit();
+    if ( this->db_ ) this->db_->Close();
+    if ( this->txn_ ) this->txn_.reset();
+    if ( this->db_ ) this->db_.reset();
+    if ( this->cursor_ ) this->cursor_.reset();
     return 0;
   }
 };
@@ -107,4 +136,8 @@ extern "C" {
   int eus_db_read(int step){ return ed->read(step) ; }
   int eus_db_dump(){ return ed->dump_datum() ; }
   int eus_db_get_shape(double* ret){ return ed->get_shape(ret) ; }
+  int eus_db_get_data(char* ret){ return ed->get_data(ret) ; }
+  int eus_db_get_key(char* ret){ return ed->get_key(ret) ; }
+  int eus_db_get_data_size(){ return ed->get_data_size() ; }
+  int eus_db_get_key_size(){ return ed->get_key_size() ; }
 }
