@@ -3,7 +3,6 @@ layer {
   name: "input"
   type: "Data"
   top: "input"
-  top: "dummy_label1"
   include {
     phase: TRAIN
   }
@@ -107,7 +106,6 @@ layer {
   name: "target"
   type: "Data"
   top: "target"
-  top: "dummy_label2"
   include {
     phase: TRAIN
   }

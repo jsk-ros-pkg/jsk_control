@@ -1,4 +1,4 @@
-net: "linear_equation_net.prototxt"
+net: "linear_equation_db_net.prototxt"
 solver_type: SGD
 base_lr: 0.01
 lr_policy: "step"
