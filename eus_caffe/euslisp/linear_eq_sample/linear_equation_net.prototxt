@@ -1,4 +1,4 @@
-name: "MNISTAutoencoder"
+name: "linear_equation_net"
 layer {
   name: "input"
   type: "MemoryData"
