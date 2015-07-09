@@ -32,5 +32,5 @@ catkin_package()
 add_library(eus_caffe SHARED src/eus_caffe_lib.cpp)
 target_link_libraries(eus_caffe ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0)
 
-add_library(eus_caffe_db SHARED src/eus_db.cpp)
+add_library(eus_caffe_db SHARED src/eus_caffe_db_lib.cpp)
 target_link_libraries(eus_caffe_db ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0)
