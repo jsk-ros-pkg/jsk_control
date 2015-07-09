@@ -1,4 +1,4 @@
-name: "MNISTAutoencoder"
+name: "sample_net"
 layer {
   name: "input"
   type: "MemoryData"
