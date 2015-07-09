@@ -85,6 +85,11 @@ public:
     return this->datum_.data().size();
   }
 
+  int get_float_data_size(){
+    assert(this->cursor_);
+    return this->datum_.float_data_size();
+  }
+
   int get_key_size(){
     assert(this->cursor_);
     return this->cursor_->key().size();
@@ -97,6 +102,14 @@ public:
       buf[i] = val[i];
     }
     return val.size();
+  }
+
+  int get_float_data(double* buf){
+    assert(this->cursor_);
+    for ( int i=0; i<this->datum_.float_data_size() ; i++ ){
+      buf[i] = this->datum_.float_data(i);
+    }
+    return this->datum_.float_data_size();
   }
 
   int get_key(char* buf){
@@ -137,17 +150,37 @@ public:
     return 0;
   }
 
-  int put(int chan, int width, int height, int label, char* key, char* data, int data_max){
+  int _put(int chan, int width, int height, int label, char* key, char* data, int data_max, double* float_data, int float_data_max){
     assert(this->txn_);
     this->datum_.set_channels(chan);
     this->datum_.set_height(width);
     this->datum_.set_width(height);
     this->datum_.set_label(label);
-    this->datum_.set_data(data, data_max);
+    if ( data && data_max > 0 ){
+      this->datum_.set_data(data, data_max);
+    } else {
+      this->datum_.clear_data();
+    }
+    if ( float_data && float_data_max > 0 ){
+      this->datum_.clear_float_data();
+      for ( int i=0 ; i<float_data_max; i++ ){
+	this->datum_.add_float_data((float)float_data[i]);
+      }
+    } else {
+      this->datum_.clear_data();
+    }
     std::string datum_str;
     this->datum_.SerializeToString(&datum_str);
     this->txn_->Put(key, datum_str);
     return 0;
+  }
+
+  int put(int chan, int width, int height, int label, char* key, char* data, int data_max){
+    return this->_put(chan,width,height,label,key,data,data_max,NULL,0);
+  }
+
+  int put_double(int chan, int width, int height, int label, char* key, double* data, int data_max){
+    return this->_put(chan,width,height,label,key,NULL,0,data,data_max);
   }
 
 };
@@ -157,12 +190,15 @@ std::shared_ptr<eus_db> ed(new eus_db);
 extern "C" {
   int eus_db_open(char* db_type, char* path, int mode){ return ed->open(db_type, path, mode); }
   int eus_db_put(int chan, int width, int height, int label, char* id_str, char* data, int data_max){ return ed->put(chan,width,height,label,id_str,data,data_max); }
+  int eus_db_put_double(int chan, int width, int height, int label, char* id_str, double* data, int data_max){ return ed->put_double(chan,width,height,label,id_str,data,data_max); }
   int eus_db_close(){ return ed->close() ; }
   int eus_db_read(int step){ return ed->read(step) ; }
   int eus_db_dump(){ return ed->dump_datum() ; }
   int eus_db_get_shape(double* ret){ return ed->get_shape(ret) ; }
   int eus_db_get_data(char* ret){ return ed->get_data(ret) ; }
+  int eus_db_get_float_data(double* ret){ return ed->get_float_data(ret) ; }
   int eus_db_get_key(char* ret){ return ed->get_key(ret) ; }
   int eus_db_get_data_size(){ return ed->get_data_size() ; }
+  int eus_db_get_float_data_size(){ return ed->get_float_data_size() ; }
   int eus_db_get_key_size(){ return ed->get_key_size() ; }
 }
