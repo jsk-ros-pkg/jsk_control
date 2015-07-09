@@ -59,3 +59,9 @@
   (caffe::db-close)
   ;;
   )
+
+(defun db-learn
+  nil
+  (caffe::_create_solver "linear_equation_db.prototxt" "")
+  (caffe::_learn)
+  )
