@@ -33,10 +33,14 @@
 
 (defforeign _db-open *eus-caffe-db-plugin* "eus_db_open" (:string :string :integer) :integer)
 (defforeign _db-put *eus-caffe-db-plugin* "eus_db_put" (:integer :integer :integer :integer :string :string :integer) :integer)
-(defforeign db-close *eus-caffe-db-plugin* "eus_db_close" (:string :string) :integer)
+(defforeign db-close *eus-caffe-db-plugin* "eus_db_close" () :integer)
 (defforeign db-read *eus-caffe-db-plugin* "eus_db_read" (:integer) :integer)
 (defforeign db-dump *eus-caffe-db-plugin* "eus_db_dump" () :integer)
-(defforeign db-get-shape *eus-caffe-db-plugin* "eus_db_get_shape" (:string) :integer)
+(defforeign _db-get-shape *eus-caffe-db-plugin* "eus_db_get_shape" (:string) :integer)
+(defforeign _db-get-key *eus-caffe-db-plugin* "eus_db_get_key" (:string) :integer)
+(defforeign _db-get-data *eus-caffe-db-plugin* "eus_db_get_data" (:string) :integer)
+(defforeign db-get-key-size *eus-caffe-db-plugin* "eus_db_get_key_size" () :integer)
+(defforeign db-get-data-size *eus-caffe-db-plugin* "eus_db_get_data_size" () :integer)
 
 (defun db-open
   (&key (dtype "lmdb") (path "test") (mode #\w))
@@ -45,3 +49,18 @@
 (defun db-put
   (&key (channel 1) (width 1) (height 1) (label 1) (id_str "000") (data ""))
   (_db-put channel width height label id_str data (length data)))
+
+(defun db-get-key
+  (&key (ret (instantiate string (db-get-key-size))))
+  (_db-get-key ret)
+  ret)
+
+(defun db-get-data
+  (&key (ret (instantiate string (db-get-data-size))))
+  (_db-get-data ret)
+  ret)
+
+(defun db-get-shape
+  (&key (ret (instantiate float-vector 3)))
+  (_db-get-shape ret)
+  ret)
