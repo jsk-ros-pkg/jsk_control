@@ -1,6 +1,6 @@
 #!/usr/bin/env roseus
 
-(require "eus-caffe.l")
+(require "../eus-caffe.l")
 (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
 
 (defvar *robot* (hrp2jsknt))
@@ -159,6 +159,9 @@
 
 (defun ik-learn
   nil
+  (if (or (zerop (length *ef-coords-map*))
+	  (zerop (length *angle-vector-map*)))
+      (load-ik-learning-data))
   (caffe::learn
    :solver "ik_solver.prototxt"
    :size *sample-points*
