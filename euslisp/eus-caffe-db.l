@@ -34,11 +34,14 @@
 (defforeign _db-open *eus-caffe-db-plugin* "eus_db_open" (:string :string :integer) :integer)
 (defforeign _db-put *eus-caffe-db-plugin* "eus_db_put" (:integer :integer :integer :integer :string :string :integer) :integer)
 (defforeign db-close *eus-caffe-db-plugin* "eus_db_close" (:string :string) :integer)
+(defforeign db-read *eus-caffe-db-plugin* "eus_db_read" (:integer) :integer)
+(defforeign db-dump *eus-caffe-db-plugin* "eus_db_dump" () :integer)
+(defforeign db-get-shape *eus-caffe-db-plugin* "eus_db_get_shape" (:string) :integer)
 
 (defun db-open
-  (&optional (dtype "lmdb") (path "test") (mode #\w))
+  (&key (dtype "lmdb") (path "test") (mode #\w))
   (_db-open dtype path mode))
 
 (defun db-put
-  (&optional (channel 1) (width 1) (height 1) (label 1) (id_str "000") (data ""))
+  (&key (channel 1) (width 1) (height 1) (label 1) (id_str "000") (data ""))
   (_db-put channel width height label id_str data (length data)))
