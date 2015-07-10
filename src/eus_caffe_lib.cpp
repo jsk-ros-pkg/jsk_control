@@ -132,7 +132,7 @@ public:
     return 0;
   }
 
-  int calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){
+  int calc_forward (int inputsize, int outputsize, double* input, double* output){
     if ( ! this->_check(this->test_net, "test_net") ) return -1 ;
     //
     // std::cout << "calc_forward" << std::endl;
@@ -194,7 +194,7 @@ extern "C" {
   int eus_caffe_reset_memory_layer (char* name, int size, double* data, double* label){ return ec->reset_memory_layer(name,size,data,label); }
   int eus_caffe_initialize_solver (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy){ return ec->initialize_solver(isize,dsize,idata,ddata,idummy,ddummy); }
   double eus_caffe_learn () { return ec->caffe_learn(); }
-  int eus_caffe_calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){ return ec->calc_forward(inputsize,outputsize,input,output,idummy);}
+  int eus_caffe_calc_forward (int inputsize, int outputsize, double* input, double* output){ return ec->calc_forward(inputsize,outputsize,input,output);}
   int eus_caffe_memory_calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){ return ec->memory_calc_forward(inputsize,outputsize,input,output,idummy);}
   int eus_caffe_gen_test_net (char* net_path, char* train_file){ return ec->gen_test_net(net_path, train_file); }
 }
