@@ -30,6 +30,12 @@
 			    (unix:getenv "LD_LIBRARY_PATH")
 			    (read-line (piped-fork "rospack find eus_caffe"))))))
 
+(defforeign _create_solver *eus-caffe-plugin* "create_solver" (:string :string) :integer)
+(defforeign _initialize_solver *eus-caffe-plugin* "initialize_solver" (:integer :integer :string :string :string :string) :integer)
+(defforeign _learn *eus-caffe-plugin* "caffe_learn" () :float)
+(defforeign _get_ip_layer_blob *eus-caffe-plugin* "get_ip_layer_blob" (:integer :string :integer) :integer)
+(defforeign _calc_forward *eus-caffe-plugin* "calc_forward" (:integer :integer :string :string :string) :integer)
+
 (defun gen-net-image
   (&key
    (caffe-root
@@ -45,42 +51,6 @@
   (if eog-open?
       (unix:system (format nil "eog ~A &" out-path)))
   out-path)
-
-(defforeign _create_solver
-  *eus-caffe-plugin*
-  "create_solver"
-  (:string :string)
-  :integer)
-
-(defforeign _initialize_solver
-  *eus-caffe-plugin*
-  "initialize_solver"
-  (:integer :integer :string :string :string :string)
-  :integer)
-
-(defforeign _learn
-  *eus-caffe-plugin*
-  "caffe_learn"
-  ()
-  :float)
-
-(defforeign _get_ip_layer_blob
-  *eus-caffe-plugin*
-  "get_ip_layer_blob"
-  (:integer :string :integer)
-  :integer)
-
-(defforeign _calc_forward
-  *eus-caffe-plugin*
-  "calc_forward"
-  (:integer :integer :string :string :string)
-  :integer)
-
-;; (defforeign string-test
-;;   *eus-caffe-plugin*
-;;   "string_test"
-;;   (:string)
-;;   :integer)
 
 (defun calc-forward
   (&key
