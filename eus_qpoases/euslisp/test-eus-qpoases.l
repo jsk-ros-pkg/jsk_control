@@ -96,6 +96,39 @@
     ret
     ))
 
+;; In feasible
+(defun demo-eus-qpOASES4
+  ()
+  (let* ((X0 (float-vector 0 0))
+         (H (scale-matrix
+             2
+             (make-matrix
+              2 2
+              (list (list 1 0.5) (list 0.5 2)))))
+         (q (float-vector -8 -12))
+         (LB (float-vector 10 10))
+         (UB (float-vector -10 -10))
+         (ret0 (solve-qpoases
+                :initial-state x0
+                :eval-weight-matrix H
+                :eval-coeff-vector q
+                :state-min-vector LB
+                :state-max-vector UB
+                ))
+         (ret1 (solve-qpoases
+                :initial-state x0
+                :eval-weight-matrix H
+                :eval-coeff-vector q
+                :state-min-vector LB
+                :state-max-vector UB
+                :check-status nil
+                )))
+    (warn ";; solution => ~A, ~A~%" ret0 ret1)
+    ;; correct solution
+    (and (not ret0) ret1)
+    ))
+
 (warn ";; (demo-eus-qpOASES1)~%")
 (warn ";; (demo-eus-qpOASES2)~%")
 (warn ";; (demo-eus-qpOASES3)~%")
+(warn ";; (demo-eus-qpOASES4)~%")
