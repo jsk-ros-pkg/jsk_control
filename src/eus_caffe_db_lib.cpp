@@ -5,7 +5,7 @@
 
 #include <caffe/util/db.hpp>
 
-class eus_db{
+class eus_caffe_db{
 private:
   std::shared_ptr<caffe::db::DB> db_;
   std::shared_ptr<caffe::db::Transaction> txn_;
@@ -13,9 +13,9 @@ private:
   caffe::Datum datum_;
 
 public:
-  eus_db(){
+  eus_caffe_db(){
   }
-  ~eus_db(){
+  ~eus_caffe_db(){
     this->close();
   }
 
@@ -185,20 +185,20 @@ public:
 
 };
 
-std::shared_ptr<eus_db> ed(new eus_db);
+std::shared_ptr<eus_caffe_db> ed(new eus_caffe_db);
 
 extern "C" {
-  int eus_db_open(char* db_type, char* path, int mode){ return ed->open(db_type, path, mode); }
-  int eus_db_put(int chan, int width, int height, int label, char* id_str, char* data, int data_max){ return ed->put(chan,width,height,label,id_str,data,data_max); }
-  int eus_db_put_double(int chan, int width, int height, int label, char* id_str, double* data, int data_max){ return ed->put_double(chan,width,height,label,id_str,data,data_max); }
-  int eus_db_close(){ return ed->close() ; }
-  int eus_db_read(int step){ return ed->read(step) ; }
-  int eus_db_dump(){ return ed->dump_datum() ; }
-  int eus_db_get_shape(double* ret){ return ed->get_shape(ret) ; }
-  int eus_db_get_data(char* ret){ return ed->get_data(ret) ; }
-  int eus_db_get_float_data(double* ret){ return ed->get_float_data(ret) ; }
-  int eus_db_get_key(char* ret){ return ed->get_key(ret) ; }
-  int eus_db_get_data_size(){ return ed->get_data_size() ; }
-  int eus_db_get_float_data_size(){ return ed->get_float_data_size() ; }
-  int eus_db_get_key_size(){ return ed->get_key_size() ; }
+  int eus_caffe_db_open(char* db_type, char* path, int mode){ return ed->open(db_type, path, mode); }
+  int eus_caffe_db_put(int chan, int width, int height, int label, char* id_str, char* data, int data_max){ return ed->put(chan,width,height,label,id_str,data,data_max); }
+  int eus_caffe_db_put_double(int chan, int width, int height, int label, char* id_str, double* data, int data_max){ return ed->put_double(chan,width,height,label,id_str,data,data_max); }
+  int eus_caffe_db_close(){ return ed->close() ; }
+  int eus_caffe_db_read(int step){ return ed->read(step) ; }
+  int eus_caffe_db_dump(){ return ed->dump_datum() ; }
+  int eus_caffe_db_get_shape(double* ret){ return ed->get_shape(ret) ; }
+  int eus_caffe_db_get_data(char* ret){ return ed->get_data(ret) ; }
+  int eus_caffe_db_get_float_data(double* ret){ return ed->get_float_data(ret) ; }
+  int eus_caffe_db_get_key(char* ret){ return ed->get_key(ret) ; }
+  int eus_caffe_db_get_data_size(){ return ed->get_data_size() ; }
+  int eus_caffe_db_get_float_data_size(){ return ed->get_float_data_size() ; }
+  int eus_caffe_db_get_key_size(){ return ed->get_key_size() ; }
 }
