@@ -10,6 +10,7 @@ class eus_caffe {
 private:
   caffe::SolverParameter solver_param;
   boost::shared_ptr<caffe::Solver<double>> solver;
+  boost::shared_ptr<caffe::Net<double>> test_net;
 
 public:
   template <typename T> bool _check(boost::shared_ptr<T> val, std::string name){
@@ -36,7 +37,23 @@ public:
   int get_blob_data (char* name, double* ret, int osize) {
     if ( ! this->_check(this->solver, "solver") ) return -1 ;
     boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
+    return get_blob_data( net, name, ret, osize);
+  }
+
+  int get_blob_data (boost::shared_ptr<caffe::Net<double>> net, char* name, double* ret, int osize) {
+    if ( ! this->_check(net, "net") ) return -1 ;
     return _get_blob_data( net->blob_by_name(name), ret, osize);
+  }
+
+  int get_input_blob_data(int id, double* ret, int osize){
+    if ( ! this->_check(this->solver, "solver") ) return -1 ;
+    if ( id >= this->solver->net()->input_blobs().size() ){
+      std::cout << "too large id for input layer "
+		<< id << " > " << this->solver->net()->input_blobs().size()
+		<< std::endl;
+      return 1;
+    }
+    return this->_get_blob_data( boost::shared_ptr<caffe::Blob<double> >(this->solver->net()->input_blobs()[id]), ret ,osize);
   }
 
   int get_layer_blob_data (char* name, int blob_id, double* ret, int osize) {
@@ -92,25 +109,76 @@ public:
   double caffe_learn () {
     if ( ! this->_check(this->solver, "solver") ) return -1 ;
     //
+    // caffe::set_phase(caffe::TRAIN);
     this->solver->Solve();
     //
     double buf[1];
     boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
-    get_blob_data((char*)"loss", buf, 1);
+    get_blob_data(net, (char*)"loss", buf, 1);
     return buf[0];
   }
 
-  int calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){
-    if ( ! this->_check(this->solver, "solver") ) return -1 ;
+  int memory_calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){
+    if ( ! this->_check(this->solver, "solver") ) return 1 ;
     boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
     boost::shared_ptr<caffe::MemoryDataLayer<double>> input_layer =
       boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(net->layer_by_name("input"));
-    if ( ! this->_check(input_layer, "input_layer") ) return -1 ;
+    if ( ! this->_check(input_layer, "input_layer") ) return 1 ;
     //
     input_layer->Reset(input, idummy, inputsize);
     net->ForwardPrefilled(nullptr);
     //
-    get_blob_data((char*)"output", output, outputsize);
+    get_blob_data(net, (char*)"output", output, outputsize);
+    return 0;
+  }
+
+  int calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){
+    if ( ! this->_check(this->test_net, "test_net") ) return -1 ;
+    //
+    // std::cout << "calc_forward" << std::endl;
+    // boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
+    caffe::Blob<double>* blob = new caffe::Blob<double>();
+    std::vector<caffe::Blob<double>*> bottom;
+    caffe::BlobProto blob_proto;
+    blob_proto.set_num(1);
+    blob_proto.set_channels(inputsize/outputsize);
+    blob_proto.set_height(1);
+    blob_proto.set_width(1);
+    for ( int i=0 ; i<inputsize ; i++ ) blob_proto.add_data(input[i]);
+    blob->FromProto(blob_proto);
+    bottom.push_back(blob);
+    // double ret[10]; this->_get_blob_data(boost::shared_ptr<caffe::Blob<double>>(blob), ret, 10);
+    // std::cout << " -- initialize done" << std::endl;
+    this->test_net->Forward(bottom, nullptr);
+    // net->Forward(bottom, nullptr);
+    // std::cout << " -- forwarding done" << std::endl;
+    //
+    get_blob_data(this->test_net, (char*)"output", output, outputsize);
+    return 0;
+  }
+
+  int gen_test_net (char* net_path_, char* train_file){
+    struct stat buf;
+    const char* net_path ;
+    if ( net_path_ && stat(net_path_, &buf)==0) {
+      net_path = net_path_;
+    } else if ( this->solver && this->solver_param.has_net() && stat(this->solver_param.net().c_str(), &buf)==0) {
+      net_path = this->solver_param.net().c_str();
+    } else {
+      std::cout << " network missing" << std::endl;
+      return 1;
+    }
+    if ( this->test_net ) this->test_net.reset();
+    this->test_net = boost::shared_ptr<caffe::Net<double>>(new caffe::Net<double>(net_path, caffe::TEST));
+    //
+    if (train_file && stat(train_file, &buf)==0){
+      this->test_net->CopyTrainedLayersFrom(train_file);
+    } else if ( this->solver ) {
+      this->test_net->ShareTrainedLayersWith(this->solver->net().get());
+    } else {
+      std::cout << " no layer params" << std::endl;
+      return 1;
+    }
     return 0;
   }
 };
@@ -119,6 +187,7 @@ boost::shared_ptr<eus_caffe> ec(new eus_caffe);
 
 extern "C" {
   int eus_caffe_get_blob_data (char* name, double* ret, int osize){ return ec->get_blob_data(name,ret,osize); }
+  int eus_caffe_get_input_blob_data (int id, double* ret, int osize){ return ec->get_input_blob_data(id,ret,osize); }
   int eus_caffe_get_layer_blob_data (char* name, int blob_id, double* ret, int osize) { return ec->get_layer_blob_data(name,blob_id,ret,osize); }
   //
   int eus_caffe_create_solver (char* solver_path, char* solverstate){ return ec->create_solver(solver_path,solverstate); }
@@ -126,4 +195,6 @@ extern "C" {
   int eus_caffe_initialize_solver (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy){ return ec->initialize_solver(isize,dsize,idata,ddata,idummy,ddummy); }
   double eus_caffe_learn () { return ec->caffe_learn(); }
   int eus_caffe_calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){ return ec->calc_forward(inputsize,outputsize,input,output,idummy);}
+  int eus_caffe_memory_calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){ return ec->memory_calc_forward(inputsize,outputsize,input,output,idummy);}
+  int eus_caffe_gen_test_net (char* net_path, char* train_file){ return ec->gen_test_net(net_path, train_file); }
 }
