@@ -52,7 +52,7 @@
       (return gen-linear-equation-db (print 'db-open-failed)))
   (let* ((buf (instantiate float-vector iscale)))
     (dotimes (i size)
-      (dotimes (j iscale) (setf (aref buf j) (aref idata (+ j (* i dscale)))))
+      (dotimes (j iscale) (setf (aref buf j) (aref idata (+ j (* i iscale)))))
       (caffe::db-put-double
        :channels iscale :width 1 :height 1 :label 0
        :id_str (zero-string i) :data buf)))
