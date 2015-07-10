@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="test_contact_wrench_opt" pkg="eus_qp" type="test_contact_wrench_opt.l" time-limit="10.0">
+  </test>
+</launch>

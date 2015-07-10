@@ -15,4 +15,5 @@
   <build_depend>roscpp</build_depend>
   <run_depend>euslisp</run_depend>
   <run_depend>eigen</run_depend>
+  <test_depend>eus_qpoases</test_depend>
 </package>
