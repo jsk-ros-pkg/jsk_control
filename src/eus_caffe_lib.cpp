@@ -60,21 +60,27 @@ public:
     return 0;
   }
 
-  int initialize_solver (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy){
-    //
+  int reset_memory_layer(char* name, int size, double* data, double* label){
     assert(this->solver);
     //
     boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
-    boost::shared_ptr<caffe::MemoryDataLayer<double>> input_layer =
-      boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(net->layer_by_name("input"));
-    assert(input_layer);
-    input_layer->Reset(idata, idummy, isize);
-    boost::shared_ptr<caffe::MemoryDataLayer<double>> target_layer =
-      boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(net->layer_by_name("target"));
-    assert(target_layer);
-    target_layer->Reset(ddata, ddummy, dsize);
+    const boost::shared_ptr<caffe::Layer<double>> layer_org = net->layer_by_name(name);
+    if ( ! layer_org ){
+      std::cout << " reset_memory_layer failed, " << name << " missing!!" << std::endl;
+      return 1;
+    }
+    if ( layer_org->type() == "MemoryData" ) {
+      boost::shared_ptr<caffe::MemoryDataLayer<double>> layer =
+	boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(layer_org);
+      layer->Reset(data, label, size);
+    }
     //
-    return 1;
+    return 0;
+  }
+
+  // deprecated
+  int initialize_solver (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy){
+    return this->reset_memory_layer("input", isize, idata, idummy) + this->reset_memory_layer("target", dsize, ddata, ddummy);
   }
 
   double caffe_learn () {
@@ -109,6 +115,7 @@ extern "C" {
   int eus_caffe_get_layer_blob_data (char* name, int blob_id, double* ret, int osize) { return ec->get_layer_blob_data(name,blob_id,ret,osize); }
   //
   int eus_caffe_create_solver (char* solver_path, char* solverstate){ return ec->create_solver(solver_path,solverstate); }
+  int eus_caffe_reset_memory_layer (char* name, int size, double* data, double* label){ return ec->reset_memory_layer(name,size,data,label); }
   int eus_caffe_initialize_solver (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy){ return ec->initialize_solver(isize,dsize,idata,ddata,idummy,ddummy); }
   double eus_caffe_learn () { return ec->caffe_learn(); }
   int eus_caffe_calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){ return ec->calc_forward(inputsize,outputsize,input,output,idummy);}

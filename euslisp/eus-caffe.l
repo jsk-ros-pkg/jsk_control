@@ -34,6 +34,7 @@
 (defforeign _get_blob_data *eus-caffe-plugin* "eus_caffe_get_blob_data" (:string :integer :string :integer) :integer)
 ;;
 (defforeign _create_solver *eus-caffe-plugin* "eus_caffe_create_solver" (:string :string) :integer)
+(defforeign _reset_memory_layer *eus-caffe-plugin* "eus_caffe_reset_memory_layer" (:string :integer :string :string) :integer)
 (defforeign _initialize_solver *eus-caffe-plugin* "eus_caffe_initialize_solver" (:integer :integer :string :string :string :string) :integer)
 (defforeign _learn *eus-caffe-plugin* "eus_caffe_learn" () :float)
 (defforeign _calc_forward *eus-caffe-plugin* "eus_caffe_calc_forward" (:integer :integer :string :string :string) :integer)
