@@ -8,7 +8,8 @@
 (deftest test-soft
   (if (and (demo-eus-qpOASES1)
 	   (demo-eus-qpOASES2)
-	   (demo-eus-qpOASES3))
+	   (demo-eus-qpOASES3)
+           (demo-eus-qpOASES4))
       (assert t)
     (throw :eus_qpoases_fail nil)))
 

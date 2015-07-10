@@ -34,6 +34,7 @@
         (print-level :pl-none)
         (debug t)
         (status (float-vector 0))
+        (check-status t)
         )
   (if (and inequality-matrix (= (length inequality-min-vector) 0))
       (setq inequality-min-vector (fill (instantiate float-vector inequality-dim) (- inf-var))))
@@ -81,8 +82,10 @@
              (:pl-high 3)
              (t 2))
        status)
-      (if debug
-          (let ((int-status (round (elt status 0))))
+      ;; Check status and return value
+      (let ((int-status (round (elt status 0))))
+        ;; Check and print
+        (if debug
             (unless (= int-status 0)
               (print
                (case int-status
@@ -90,6 +93,11 @@
                  (1 :QP-could-not-be-solved-within-given-number-of-iterations)
                  (-1 :QP-could-not-be-solved-due-to-an-internal-error)
                  (-2 :QP-is-infeasible-and-thus-could-not-be-solved)
-                 (-3 :QP-is-unbounded-and-thus-could-not-be-solved))))))
-      ret)))
+                 (-3 :QP-is-unbounded-and-thus-could-not-be-solved)))))
+        ;; Return value
+        (cond
+         ((not check-status) ret)
+         ((= int-status 0) ret)
+         (t nil))
+        ))))
 

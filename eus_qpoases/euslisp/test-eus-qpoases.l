@@ -12,6 +12,7 @@
 ;; =>2.85714 2.28571
 (defun demo-eus-qpOASES1
   ()
+  "Demo for unbounded QP."
   (let* ((X0 (float-vector 0 0))
          (H (scale-matrix
              2
@@ -39,6 +40,7 @@
 ;; =>-0.142857 2.28571
 (defun demo-eus-qpOASES2
   ()
+  "Demo for QP with equality constraint."
   (let* ((X0 (float-vector 10 10))
          (H (scale-matrix
              2
@@ -72,6 +74,7 @@
 ;; =>0.285714 0.357143
 (defun demo-eus-qpOASES3
   ()
+  "Demo for simply-bounded QP with equality constraint."
   (let* ((X0 (float-vector 10 10))
          (H (make-matrix
              2 2
@@ -96,6 +99,43 @@
     ret
     ))
 
-(warn ";; (demo-eus-qpOASES1)~%")
-(warn ";; (demo-eus-qpOASES2)~%")
-(warn ";; (demo-eus-qpOASES3)~%")
+;; In feasible
+(defun demo-eus-qpOASES4
+  ()
+  "Demo for infeasible QP."
+  (let* ((X0 (float-vector 0 0))
+         (H (scale-matrix
+             2
+             (make-matrix
+              2 2
+              (list (list 1 0.5) (list 0.5 2)))))
+         (q (float-vector -8 -12))
+         ;; Infeasible lower bound and upper bound
+         (LB (float-vector 10 10))
+         (UB (float-vector -10 -10))
+         ;; check-status = t => return value should be nil.
+         (ret0 (solve-qpoases
+                :initial-state x0
+                :eval-weight-matrix H
+                :eval-coeff-vector q
+                :state-min-vector LB
+                :state-max-vector UB
+                ))
+         ;; check-status = nil => something is returned.
+         (ret1 (solve-qpoases
+                :initial-state x0
+                :eval-weight-matrix H
+                :eval-coeff-vector q
+                :state-min-vector LB
+                :state-max-vector UB
+                :check-status nil
+                )))
+    (warn ";; solution => ~A, ~A~%" ret0 ret1)
+    ;; correct solution
+    (and (not ret0) ret1)
+    ))
+
+(warn ";; (demo-eus-qpOASES1) ;; ~A~%" (documentation 'demo-eus-qpOASES1))
+(warn ";; (demo-eus-qpOASES2) ;; ~A~%" (documentation 'demo-eus-qpOASES2))
+(warn ";; (demo-eus-qpOASES3) ;; ~A~%" (documentation 'demo-eus-qpOASES3))
+(warn ";; (demo-eus-qpOASES4) ;; ~A~%" (documentation 'demo-eus-qpOASES4))
