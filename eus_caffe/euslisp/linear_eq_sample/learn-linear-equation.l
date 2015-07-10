@@ -34,7 +34,10 @@
 		:dclass dclass)
   ;;
   (format t " -- check net state~%  ~A->~A~%  ~A->~A~%  ~A->~A~%"
-	  (float-vector 0 0) (caffe::calc-forward :input (float-vector 0 0) :osize 1)
-	  (float-vector 0 2) (caffe::calc-forward :input (float-vector 0 2) :osize 1)
-	  (float-vector 2 5) (caffe::calc-forward :input (float-vector 2 5) :osize 1))
+	  (float-vector 0 0)
+	  (caffe::memory-calc-forward :input (float-vector 0 0) :osize 1)
+	  (float-vector 0 2)
+	  (caffe::memory-calc-forward :input (float-vector 0 2) :osize 1)
+	  (float-vector 2 5)
+	  (caffe::memory-calc-forward :input (float-vector 2 5) :osize 1))
   )
