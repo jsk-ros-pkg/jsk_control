@@ -86,6 +86,14 @@
    (solverstate ""))
   (_create_solver solver solverstate))
 
+(defun reset-memory-layer
+  (&key
+   (name "input")
+   (size 3200)
+   (data (instantiate float-vector (* 1 size)))
+   (label (instantiate float-vector size)))
+  (_reset_memory_layer name size data label))
+
 (defun initialize-solver
   (&key
    (solver "solver.prototxt")
@@ -98,7 +106,7 @@
    (iclass (instantiate float-vector size))
    (dclass (instantiate float-vector size))
    )
-  (_create_solver solver solverstate)
+  (create-solver :solver solver :solverstate solverstate)
   (_initialize_solver (length iclass) (length dclass)
 		      idata ddata iclass dclass)
   ;; (_learn)
