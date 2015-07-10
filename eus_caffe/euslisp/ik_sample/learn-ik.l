@@ -207,7 +207,7 @@
 		       :rot (matrix-exponent (subseq input 3 6))))
   (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
 		:transform c :local))
-  (caffe::calc-forward
+  (caffe::memory-calc-forward
    :input input :osize (length output) :output output)
   (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
        *rarm-joints* output)
@@ -227,7 +227,7 @@
 			 :rpy (random-vector 3.14)))
 	 (b (send (car (send *robot* :links)) :copy-worldcoords))
 	 (av (instantiate float-vector (length *rarm-joints*))))
-    (caffe::calc-forward
+    (caffe::memory-calc-forward
      :input (concatenate float-vector
 			 (scale 1e-3 (send b :difference-position c))
 			 (send b :difference-rotation c))
