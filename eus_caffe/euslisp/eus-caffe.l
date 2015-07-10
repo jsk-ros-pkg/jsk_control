@@ -38,7 +38,7 @@
 (defforeign _reset_memory_layer *eus-caffe-plugin* "eus_caffe_reset_memory_layer" (:string :integer :string :string) :integer)
 (defforeign _initialize_solver *eus-caffe-plugin* "eus_caffe_initialize_solver" (:integer :integer :string :string :string :string) :integer)
 (defforeign _learn *eus-caffe-plugin* "eus_caffe_learn" () :float)
-(defforeign _calc_forward *eus-caffe-plugin* "eus_caffe_calc_forward" (:integer :integer :string :string :string) :integer)
+(defforeign _calc_forward *eus-caffe-plugin* "eus_caffe_calc_forward" (:integer :integer :string :string) :integer)
 (defforeign _memory_calc_forward *eus-caffe-plugin* "eus_caffe_memory_calc_forward" (:integer :integer :string :string :string) :integer)
 (defforeign _gen_test_net *eus-caffe-plugin* "eus_caffe_gen_test_net" (:string :string) :integer)
 
@@ -82,12 +82,11 @@
 
 (defun calc-forward
   (&key
-   (isize 32)
+   (isize 2)
    (osize 1)
    (input (instantiate float-vector isize))
-   (output (instantiate float-vector osize))
-   (idummy (instantiate float-vector (length input))))
-  (_calc_forward isize osize input output idummy)
+   (output (instantiate float-vector osize)))
+  (_calc_forward (length input) (length output) input output)
   output)
 
 (defun memory-calc-forward
