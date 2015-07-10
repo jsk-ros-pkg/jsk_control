@@ -64,4 +64,15 @@
   nil
   (caffe::_create_solver "linear_equation_db.prototxt" "")
   (caffe::_learn)
+  ;; test
+  (caffe::gen-test-net :netproto "linear_equation_db_net_predict.prototxt"
+		       ;; :caffemodel "sample_iter_100000.caffemodel"
+		       )
+  (format t " -- check net state~%  ~A->~A~%  ~A->~A~%  ~A->~A~%"
+	  (float-vector 0 0)
+	  (caffe::calc-forward :input (float-vector 0 0) :isize 2 :osize 1)
+	  (float-vector 0 2)
+	  (caffe::calc-forward :input (float-vector 0 2) :isize 2 :osize 1)
+	  (float-vector 2 5)
+	  (caffe::calc-forward :input (float-vector 2 5) :isize 2 :osize 1))
   )
