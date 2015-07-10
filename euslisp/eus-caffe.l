@@ -31,13 +31,16 @@
 			    (read-line (piped-fork "rospack find eus_caffe"))))))
 
 (defforeign _get_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_layer_blob_data" (:string :integer :string :integer) :integer)
-(defforeign _get_blob_data *eus-caffe-plugin* "eus_caffe_get_blob_data" (:string :integer :string :integer) :integer)
+(defforeign _get_input_blob_data *eus-caffe-plugin* "eus_caffe_get_input_blob_data" (:integer :string :integer) :integer)
+(defforeign _get_blob_data *eus-caffe-plugin* "eus_caffe_get_blob_data" (:string :string :integer) :integer)
 ;;
 (defforeign _create_solver *eus-caffe-plugin* "eus_caffe_create_solver" (:string :string) :integer)
 (defforeign _reset_memory_layer *eus-caffe-plugin* "eus_caffe_reset_memory_layer" (:string :integer :string :string) :integer)
 (defforeign _initialize_solver *eus-caffe-plugin* "eus_caffe_initialize_solver" (:integer :integer :string :string :string :string) :integer)
 (defforeign _learn *eus-caffe-plugin* "eus_caffe_learn" () :float)
 (defforeign _calc_forward *eus-caffe-plugin* "eus_caffe_calc_forward" (:integer :integer :string :string :string) :integer)
+(defforeign _memory_calc_forward *eus-caffe-plugin* "eus_caffe_memory_calc_forward" (:integer :integer :string :string :string) :integer)
+(defforeign _gen_test_net *eus-caffe-plugin* "eus_caffe_gen_test_net" (:string :string) :integer)
 
 (defun gen-net-image
   (&key
@@ -63,6 +66,13 @@
   (_get_layer_blob_data name blob_id ret (length ret))
   ret)
 
+(defun get-input-blob-data
+  (&key
+   (id 0)
+   (ret (instantiate float-vector 32)))
+  (_get_input_blob_data id ret (length ret))
+  ret)
+
 (defun get-blob-data
   (&key
    (name "ip")
@@ -78,6 +88,16 @@
    (output (instantiate float-vector osize))
    (idummy (instantiate float-vector (length input))))
   (_calc_forward isize osize input output idummy)
+  output)
+
+(defun memory-calc-forward
+  (&key
+   (isize 32)
+   (osize 1)
+   (input (instantiate float-vector isize))
+   (output (instantiate float-vector osize))
+   (idummy (instantiate float-vector (length input))))
+  (_memory_calc_forward isize osize input output idummy)
   output)
 
 (defun create-solver
@@ -122,3 +142,6 @@
   (if initialize? (apply 'initialize-solver args))
   (_learn))
 
+(defun gen-test-net
+  (&key (netproto "") (caffemodel ""))
+  (_gen_test_net netproto caffemodel))
