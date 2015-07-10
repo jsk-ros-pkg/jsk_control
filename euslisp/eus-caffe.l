@@ -30,11 +30,13 @@
 			    (unix:getenv "LD_LIBRARY_PATH")
 			    (read-line (piped-fork "rospack find eus_caffe"))))))
 
-(defforeign _create_solver *eus-caffe-plugin* "create_solver" (:string :string) :integer)
-(defforeign _initialize_solver *eus-caffe-plugin* "initialize_solver" (:integer :integer :string :string :string :string) :integer)
-(defforeign _learn *eus-caffe-plugin* "caffe_learn" () :float)
-(defforeign _get_ip_layer_blob *eus-caffe-plugin* "get_ip_layer_blob" (:integer :string :integer) :integer)
-(defforeign _calc_forward *eus-caffe-plugin* "calc_forward" (:integer :integer :string :string :string) :integer)
+(defforeign _get_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_layer_blob_data" (:string :integer :string :integer) :integer)
+(defforeign _get_blob_data *eus-caffe-plugin* "eus_caffe_get_blob_data" (:string :integer :string :integer) :integer)
+;;
+(defforeign _create_solver *eus-caffe-plugin* "eus_caffe_create_solver" (:string :string) :integer)
+(defforeign _initialize_solver *eus-caffe-plugin* "eus_caffe_initialize_solver" (:integer :integer :string :string :string :string) :integer)
+(defforeign _learn *eus-caffe-plugin* "eus_caffe_learn" () :float)
+(defforeign _calc_forward *eus-caffe-plugin* "eus_caffe_calc_forward" (:integer :integer :string :string :string) :integer)
 
 (defun gen-net-image
   (&key
@@ -52,6 +54,21 @@
       (unix:system (format nil "eog ~A &" out-path)))
   out-path)
 
+(defun get-layer-blob-data
+  (&key
+   (name "ip")
+   (blob_id 0)
+   (ret (instantiate float-vector 32)))
+  (_get_layer_blob_data name blob_id ret (length ret))
+  ret)
+
+(defun get-blob-data
+  (&key
+   (name "ip")
+   (ret (instantiate float-vector 32)))
+  (_get_layer_blob_data name ret (length ret))
+  ret)
+
 (defun calc-forward
   (&key
    (isize 32)
@@ -62,12 +79,11 @@
   (_calc_forward isize osize input output idummy)
   output)
 
-(defun get-ip-layer-blob
+(defun create-solver
   (&key
-   (blob_id 0)
-   (ret (instantiate float-vector 32)))
-  (_get_ip_layer_blob blob_id ret (length ret))
-  ret)
+   (solver "solver.prototxt")
+   (solverstate ""))
+  (_create_solver solver solverstate))
 
 (defun initialize-solver
   (&key
