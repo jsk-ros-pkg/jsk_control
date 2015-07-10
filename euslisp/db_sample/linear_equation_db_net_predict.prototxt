@@ -1,20 +1,9 @@
 name: "linear_equation_net"
-layer {
-  name: "input"
-  type: "Data"
-  top: "input"
-  transform_param {
-    scale: 1.0
-  }
-  include {
-    phase: TRAIN
-  }
-  data_param {
-    source: "input_lmdb_linear_equation"
-    batch_size: 32
-    backend: LMDB
-  }
-}
+input: "input"
+input_dim: 1 ## num
+input_dim: 2 ## channel
+input_dim: 1 ## w
+input_dim: 1 ## h
 layer {
   name: "ip"
   type: "InnerProduct"
@@ -104,27 +93,4 @@ layer {
       value: 0
     }
   }
-}
-layer {
-  name: "target"
-  type: "Data"
-  top: "target"
-  transform_param {
-    scale: 1.0
-  }
-  include {
-    phase: TRAIN
-  }
-  data_param {
-    source: "target_lmdb_linear_equation"
-    batch_size: 32
-    backend: LMDB
-  }
-}
-layer {
-  name: "loss"
-  type: "EuclideanLoss"
-  bottom: "output"
-  bottom: "target"
-  top: "loss"
 }
