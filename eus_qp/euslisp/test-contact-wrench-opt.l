@@ -60,7 +60,10 @@
        ;; draw cop
        (let* ((cop (send robot :calc-cop-from-force-moment ;; dummy using of robot
                          f m cc cc)))
-         (when cop (send cop :draw-on :flush nil :color #F(1 0 0) :width 4 :size 30)))
+         (when cop (send cop :draw-on :flush nil :color #F(1 0 0) :width 4 :size 30))))
+   (car (cadr (memq :wrench-list ret-list))) (cadr (cadr (memq :wrench-list ret-list))) contact-coords-list)
+  (mapcar
+   #'(lambda (f m cc)
        ;; draw force
        (with-set-color-line-width
         *viewer* #F(1 0.3 1) 5
