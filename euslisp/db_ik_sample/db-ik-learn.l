@@ -41,7 +41,7 @@
 
 (defun gen-random-ik-learning-data
   (&key
-   (sample-points 100)
+   (sample-points 5000)
    (joint-list (send *robot* :joint-list))
    ;;
    (target-path "target_lmdb_joint_angle")
@@ -85,7 +85,7 @@
   (caffe::db-set-id 1) (caffe::db-close)
   )
 
-(defun db-learn
+(defun db-image-ik-learn
   nil
   ;; (caffe::_create_solver "linear_equation_db.prototxt" "")
   ;; (caffe::_learn)
