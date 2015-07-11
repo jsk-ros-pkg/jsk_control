@@ -31,6 +31,7 @@
 			    (read-line (piped-fork "rospack find eus_caffe"))))))
 
 
+(defforeign db-set-id *eus-caffe-db-plugin* "eus_caffe_db_set_id" (:integer) :integer)
 (defforeign _db-open *eus-caffe-db-plugin* "eus_caffe_db_open" (:string :string :integer) :integer)
 (defforeign _db-put *eus-caffe-db-plugin* "eus_caffe_db_put" (:integer :integer :integer :integer :string :string :integer) :integer)
 (defforeign _db-put-double *eus-caffe-db-plugin* "eus_caffe_db_put_double" (:integer :integer :integer :integer :string :string :integer) :integer)
