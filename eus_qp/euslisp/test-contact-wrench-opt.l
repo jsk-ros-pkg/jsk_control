@@ -9,11 +9,15 @@
   ;;   (setq *robot* (hrp2jsk)))
   (unless (boundp '*robot*)
     (load "irteus/demo/sample-robot-model.l")
-    (setq *robot* (instance sample-robot :init)))
+    (setq *robot* (instance sample-robot :init))
+    (send-all (send *robot* :joint-list) :max-joint-torque 15.0))
   (unless (boundp '*cbox*)
     (load "models/cardboard-box-object.l")
     (setq *cbox* (cardboard-box))
-    (send (car (send *cbox* :links)) :weight 20000.0)) ;; 20kg
+    (send (car (send *cbox* :links)) :weight 20000.0) ;; 20kg
+    (let ((ccoords2 (make-cascoords :coords (send (send *cbox* :copy-worldcoords) :transform (make-coords :pos (float-vector 0 215 185) :rpy (list 0 0 pi/2))))))
+      (send *cbox* :assoc ccoords2)
+      (send *cbox* :put :face-coords-2 ccoords2)))
   (unless (boundp '*irtviewer*)
     (make-irtviewer))
   (send *robot* :put :contact-constraint-list
@@ -60,10 +64,13 @@
        ;; draw cop
        (let* ((cop (send robot :calc-cop-from-force-moment ;; dummy using of robot
                          f m cc cc)))
-         (when cop (send cop :draw-on :flush nil :color #F(1 0 0) :width 4 :size 30)))
+         (when cop (send cop :draw-on :flush nil :color #F(1 0 0) :width 4 :size 30))))
+   (car (cadr (memq :wrench-list ret-list))) (cadr (cadr (memq :wrench-list ret-list))) contact-coords-list)
+  (mapcar
+   #'(lambda (f m cc)
        ;; draw force
        (with-set-color-line-width
-        *viewer* #F(0 1 0) 5
+        *viewer* #F(1 0.3 1) 5
         (send *irtviewer* :viewer :draw-arrow
               (send cc :worldpos)
               (v+ (send cc :worldpos) (scale 1 f)))))
@@ -104,7 +111,8 @@
   (let ((ret
          (wrench-distribute-from-total-wrench
           contact-coords-list contact-constraint-matrix-list
-          :robot *robot*)))
+          :robot *robot*
+          :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector))))
     (draw-force-value ret)
     (send *irtviewer* :viewer :viewsurface :flush)
     ret))
@@ -125,7 +133,9 @@
          (union-link-list (send *robot* :calc-union-link-list link-list))
          (ret (funcall func
                        contact-coords-list contact-constraint-matrix-list
-                       :robot *robot*)))
+                       :robot *robot*
+                       :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector)
+                       )))
     (draw-force-value ret :union-link-list union-link-list)
     (send *irtviewer* :viewer :viewsurface :flush)
     ret))
@@ -164,7 +174,7 @@
     (send *robot* :move-centroid-on-foot :both '(:rleg :lleg))
     (send *irtviewer* :draw-objects)
     (push (funcall func) ret)
-    (reverse ret)))
+    (every #'identity (reverse ret))))
 
 (warn ";; (setup)~%")
 (warn ";; (test-distribute-all :func #'test-wrench-torque-distribute-by-qp)~%")
@@ -221,75 +231,201 @@
             (mapcar #'(lambda (x) (norm (send *robot* :wrench-list->wrench-vector (cadr (memq :wrench-list x))))) ret4))
     ))
 
-(defun demo-cbox-wrench-calc-1
-  ()
-  "Demo for cbox wrench calculation. cbox is neutral pos rot."
-  ;; setup contact constraint
-  ;; box size 190, 215, 185
-  (send *cbox* :put :contact-constraint-list
-        (list (instance default-contact-constraint
-                        :init
-                        :mu-trans 0.5 :mu-rot 0.05
-                        :l-min-x -190 :l-max-x 190
-                        :l-min-y -215 :l-max-y 215)))
-  (send *cbox* :newcoords (make-coords))
-  (objects (list *cbox*))
+(defun demo-cbox-wrench-calc-comon
+  (contact-constraint-list
+   contact-coords-list)
+  (send *cbox* :put :contact-constraint-list contact-constraint-list)
   ;; calc total static wrench
   (send *cbox* :calc-torque :calc-statics-p t)
-  (let* ((contact-coords-list (list (send *cbox* :worldcoords)))
-         (ret
-          (wrench-distribute-from-total-wrench
-           contact-coords-list
-           (mapcar #'(lambda (c-constraint c-coords)
-                       (send c-constraint :calc-constraint-matrix c-coords))
-                   (send *cbox* :get :contact-constraint-list) contact-coords-list)
-           :robot *cbox*)))
+  (let ((ret
+         (wrench-distribute-from-total-wrench
+          contact-coords-list
+          (mapcar #'(lambda (c-constraint c-coords)
+                      (send c-constraint :calc-constraint-matrix c-coords))
+                  contact-constraint-list contact-coords-list)
+          :robot *cbox*
+          :contact-constraint-vector-list (send-all contact-constraint-list :get-constraint-vector))))
     (draw-force-value
      ret :limbs nil :robot *cbox*
      :contact-coords-list contact-coords-list)
     ret))
 
-(defun demo-cbox-wrench-calc-2
-  (&key (mu-trans 0.5) (l-min-x -190) (l-max-x 190))
-  "Demo for cbox wrench calculation. cbox is tilting."
-  ;; setup contact constraint
-  ;; box size 190, 215, 185
-  (send *cbox* :put :contact-constraint-list
-        (list (instance default-contact-constraint
-                        :init
-                        :mu-trans mu-trans :mu-rot 0.05
-                        :l-min-x l-min-x :l-max-x l-max-x
-                        :l-min-y -215 :l-max-y 215)
-              (instance default-contact-constraint
-                        :init
-                        :mu-trans mu-trans :mu-rot 0.05
-                        :l-min-x l-min-x :l-max-x l-max-x
-                        :l-min-y -185 :l-max-y 185)
-              ))
+(defun set-cbox-pose-neutral
+  ()
+  (send *cbox* :newcoords (make-coords))
+  (objects (list *cbox*))
+  )
+
+(defun set-cbox-pose-tilting
+  ()
   ;; move models
   (send *cbox* :newcoords (make-coords))
-  (setq ccoords2 (make-cascoords :pos (send *cbox* :transform-vector (float-vector 0 215 185))
-                                 :rpy (list 0 0 pi/2)))
-  (send *cbox* :assoc ccoords2)
   (send *cbox* :rotate (deg2rad -30) :x)
   (send *cbox* :rotate (deg2rad -10) :y)
   (objects (list *cbox*))
-  ;; calc total static wrench
-  (send *cbox* :calc-torque :calc-statics-p t)
-  (let* ((contact-coords-list (list (send *cbox* :worldcoords) ccoords2))
-         (ret
-          (wrench-distribute-from-total-wrench
-           contact-coords-list
-           (mapcar #'(lambda (c-constraint c-coords)
-                       (send c-constraint :calc-constraint-matrix c-coords))
-                   (send *cbox* :get :contact-constraint-list) contact-coords-list)
-           :robot *cbox*)))
-    (draw-force-value
-     ret :limbs nil :robot *cbox*
-     :contact-coords-list contact-coords-list)
-    ret))
-(warn ";; (demo-cbox-wrench-calc-1) ;; ~A~%" (documentation 'demo-cbox-wrench-calc-1))
-(warn ";; (demo-cbox-wrench-calc-2) ;; ~A~%" (documentation 'demo-cbox-wrench-calc-2))
+  )
+
+(defun demo-cbox-wrench-calc-1
+  ()
+  "Demo for cbox wrench calculation by default-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   ;; setup contact constraint
+   ;; box size 190, 215, 185
+   (list (instance default-contact-constraint
+                   :init
+                   :mu-trans 0.5 :mu-rot 0.05
+                   :l-min-x -190 :l-max-x 190
+                   :l-min-y -215 :l-max-y 215))
+   (list (send *cbox* :worldcoords))
+   ))
+
+(defun demo-cbox-wrench-calc-2
+  ()
+  "Demo for cbox wrench calculation by norm-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance norm-contact-constraint :init :fz))
+   (list (send *cbox* :worldcoords))
+   ))
+
+(defun demo-cbox-wrench-calc-3
+  ()
+  "Demo for cbox wrench calculation by 2D-translational-friction-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance 2D-translational-friction-contact-constraint :init 0.5))
+   (list (send *cbox* :worldcoords))
+   ))
+
+(defun demo-cbox-wrench-calc-4
+  ()
+  "Demo for cbox wrench calculation by rotational-friction-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance rotational-friction-contact-constraint :init 0.05 :fz))
+   (list (send *cbox* :worldcoords))
+   ))
+
+(defun demo-cbox-wrench-calc-5
+  ()
+  "Demo for cbox wrench calculation by 2D-cop-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance 2D-cop-contact-constraint :init 190 -190 215 -215))
+   (list (send *cbox* :worldcoords))
+   ))
+
+(defun demo-cbox-wrench-calc-6
+  (&key (mu-trans 0.5) (l-min-x -190) (l-max-x 190))
+  "Demo for cbox wrench calculation by default-contact-constraint. cbox is tilting."
+  (set-cbox-pose-tilting)
+  (demo-cbox-wrench-calc-comon
+   ;; setup contact constraint
+   ;; box size 190, 215, 185
+   (list (instance default-contact-constraint
+                   :init
+                   :mu-trans mu-trans :mu-rot 0.05
+                   :l-min-x l-min-x :l-max-x l-max-x
+                   :l-min-y -215 :l-max-y 215)
+         (instance default-contact-constraint
+                   :init
+                   :mu-trans mu-trans :mu-rot 0.05
+                   :l-min-x l-min-x :l-max-x l-max-x
+                   :l-min-y -185 :l-max-y 185)
+         )
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
+(defun demo-cbox-wrench-calc-7
+  ()
+  "Demo for cbox wrench calculation by norm-contact-constraint. cbox is tilting."
+  (set-cbox-pose-tilting)
+  (demo-cbox-wrench-calc-comon
+   (list (instance norm-contact-constraint :init :fz) (instance norm-contact-constraint :init :fz))
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
+(defun demo-cbox-wrench-calc-8
+  ()
+  "Demo for cbox wrench calculation by 2D-translational-friction-contact-constraint. cbox is tilting."
+  (set-cbox-pose-tilting)
+  (demo-cbox-wrench-calc-comon
+   (list (instance 2D-translational-friction-contact-constraint :init 0.5) (instance 2D-translational-friction-contact-constraint :init 0.5))
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
+(defun demo-cbox-wrench-calc-9
+  ()
+  "Demo for cbox wrench calculation by rotational-friction-contact-constraint. cbox is tilting."
+  (set-cbox-pose-tilting)
+  (demo-cbox-wrench-calc-comon
+   (list (instance rotational-friction-contact-constraint :init 0.05 :fz) (instance rotational-friction-contact-constraint :init 0.05 :fz))
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
+(defun demo-cbox-wrench-calc-10
+  ()
+  "Demo for cbox wrench calculation by 2D-cop-contact-constraint. cbox is tilting."
+  (set-cbox-pose-tilting)
+  (demo-cbox-wrench-calc-comon
+   ;; setup contact constraint
+   ;; box size 190, 215, 185
+   (list (instance 2D-cop-contact-constraint :init 190 -190 215 -215)
+         (instance 2D-cop-contact-constraint :init 190 -190 185 -185))
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
+(defun demo-cbox-wrench-calc-11
+  ()
+  "Demo for cbox wrench calculation by default-contact-constraint. cbox is tilting. Infeasible solution."
+  (set-cbox-pose-tilting)
+  (not
+   (demo-cbox-wrench-calc-comon
+    ;; setup contact constraint
+    ;; box size 190, 215, 185
+    (list (instance default-contact-constraint
+                    :init
+                    :mu-trans 0.05 :mu-rot 0.05
+                    :l-min-x -50 :l-max-x 50
+                    :l-min-y -50 :l-max-y 50)
+          (instance default-contact-constraint
+                    :init
+                    :mu-trans 0.05 :mu-rot 0.05
+                    :l-min-x -50 :l-max-x 50
+                    :l-min-y -50 :l-max-y 50)
+          )
+    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+    )))
+
+(defun demo-cbox-wrench-calc-12
+  ()
+  "Demo for cbox wrench calculation by min-max-contact-constraint. cbox is tilting."
+  (set-cbox-pose-tilting)
+  (demo-cbox-wrench-calc-comon
+   (list (instance min-max-contact-constraint
+                   :init :fz 40.0 :min/max :max)
+         (instance min-max-contact-constraint
+                   :init :nz 5.0 :min/max :min))
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
+(defun demo-cbox-wrench-calc-all
+  (&key (press-enter-p t))
+  (let ((ret))
+    (dotimes (i 12)
+      (format t ";; demo-cbox-wrench-calc-~d~%" (1+ i))
+      (push (funcall (eval (read-from-string (format nil "#'demo-cbox-wrench-calc-~d" (1+ i))))) ret)
+      (when press-enter-p (format t ";; press enter~%") (read-line)))
+    (every #'identity ret)
+    ))
+
+;; Usage
+(warn ";; cbox demo functions~%")
+(dotimes (i 12)
+  (warn ";;   (demo-cbox-wrench-calc-~d) ;; ~A~%" (1+ i)
+        (documentation (read-from-string (format nil "demo-cbox-wrench-calc-~d" (1+ i))))))
+(warn ";;   (demo-cbox-wrench-calc-all) ;; for all tests~%")
 
 #|
 (defun test-wrench-comp ()
