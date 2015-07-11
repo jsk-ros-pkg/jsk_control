@@ -1,0 +1,18 @@
+net: "cnn.prototxt"
+solver_type: SGD
+base_lr: 0.01
+lr_policy: "step"
+gamma: 0.9
+stepsize: 1000 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
+max_iter: 3000
+momentum: 0.9
+display: 10
+snapshot_prefix: "cnn"
+## base_lr: 0.001
+## momentum: 0.9
+## lr_policy: "fixed"
+## display: 5
+## max_iter: 4000
+## snapshot: 4000
+## snapshot_prefix: "cnn"
+## solver_mode: CPU
