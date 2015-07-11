@@ -243,7 +243,8 @@
           (mapcar #'(lambda (c-constraint c-coords)
                       (send c-constraint :calc-constraint-matrix c-coords))
                   contact-constraint-list contact-coords-list)
-          :robot *cbox*)))
+          :robot *cbox*
+          :contact-constraint-vector-list (send-all contact-constraint-list :get-constraint-vector))))
     (draw-force-value
      ret :limbs nil :robot *cbox*
      :contact-coords-list contact-coords-list)
@@ -397,10 +398,22 @@
     (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
     )))
 
+(defun demo-cbox-wrench-calc-12
+  ()
+  "Demo for cbox wrench calculation by min-max-contact-constraint. cbox is tilting."
+  (set-cbox-pose-tilting)
+  (demo-cbox-wrench-calc-comon
+   (list (instance min-max-contact-constraint
+                   :init :fz 40.0 :min/max :max)
+         (instance min-max-contact-constraint
+                   :init :nz 5.0 :min/max :min))
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
   (let ((ret))
-    (dotimes (i 11)
+    (dotimes (i 12)
       (format t ";; demo-cbox-wrench-calc-~d~%" (1+ i))
       (push (funcall (eval (read-from-string (format nil "#'demo-cbox-wrench-calc-~d" (1+ i))))) ret)
       (when press-enter-p (format t ";; press enter~%") (read-line)))
@@ -409,7 +422,7 @@
 
 ;; Usage
 (warn ";; cbox demo functions~%")
-(dotimes (i 11)
+(dotimes (i 12)
   (warn ";;   (demo-cbox-wrench-calc-~d) ;; ~A~%" (1+ i)
         (documentation (read-from-string (format nil "demo-cbox-wrench-calc-~d" (1+ i))))))
 (warn ";;   (demo-cbox-wrench-calc-all) ;; for all tests~%")

@@ -404,6 +404,23 @@
    (send-super :init))
   )
 
+(defclass min-max-contact-constraint
+  :super contact-constraint
+  :slots (axis limit-value)
+  )
+
+(defmethod min-max-contact-constraint
+  (:init
+   (v-axis v-limit-value &key (min/max :min))
+   "Calc constraint param for min max constraint.
+    axis is axis of normal (such as fz).
+    min/max is :min => min value limitation. min/max is :max => max value limitation."
+   (setq limit-value v-limit-value)
+   (setq constraint-param-list
+         (calc-constraint-param-list-for-min-max v-axis v-limit-value :min/max min/max))
+   (send-super :init))
+  )
+
 (defclass default-contact-constraint
   :super contact-constraint
   :slots ()
@@ -475,16 +492,23 @@
     (list :matrix ret :vector (list 0 0))
     ))
 
+(defun calc-constraint-param-list-for-min-max
+  (axis limit-value &key (min/max :min))
+  "Calc constraint param for min max constraint.
+   axis is axis of normal (such as fz).
+   min/max is :min => min value limitation. min/max is :max => max value limitation."
+  (let* ((ret (list (make-list 6 :initial-element 0)))
+         (axis-idx (force-axis->index axis)))
+    (setf (elt (car ret) axis-idx) (case min/max (:min 1) (:max -1)))
+    (list :matrix ret :vector (list (case min/max (:min limit-value) (:max (- limit-value)))))
+    ))
+
 (defun calc-constraint-param-list-for-norm
   (norm-axis &key (norm 1))
   "Calc constraint param for non-negative contact constraint.
    norm-axis is axis of normal (such as fz).
    norm = 1 is non-negative constraint. norm = -1 is non-positive constraint."
-  (let* ((ret (list (make-list 6 :initial-element 0)))
-         (norm-idx (force-axis->index norm-axis)))
-    (setf (elt (car ret) norm-idx) norm)
-    (list :matrix ret :vector (list 0))
-    ))
+  (calc-constraint-param-list-for-min-max norm-axis 0.0 :min/max (if (= norm 1) :min :max)))
 
 (defun calc-constraint-param-list-for-2D-cop
   (l-max-1 l-min-1 l-max-2 l-min-2 ;; [mm]
