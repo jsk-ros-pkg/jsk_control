@@ -2,19 +2,6 @@
 (require "../eus-caffe.l")
 (require "../eus-caffe-db.l")
 
-(defun zero-string
-  (i &optional
-     (length 5)
-     (ret (instantiate string length))
-     (istr (format nil "~A" i)))
-  (dotimes (j length)
-    (setf (aref ret j)
-	  (if (>= j (- length (length istr)))
-	      (aref istr (min (length istr)
-			      (- j (- length (length istr)))))
-	    #\0)))
-  ret)
-
 (defun gen-linear-equation-db
   (&key
    (target-path "target_lmdb_linear_equation")
@@ -44,12 +31,12 @@
 	(caffe::db-set-id 0)
 	(caffe::db-put-double
 	 :channels dscale :width 1 :height 1 :label 0
-	 :id_str (zero-string i) :data dbuf)
+	 :id_str (caffe::zero-string i) :data dbuf)
 	;;
 	(caffe::db-set-id 1)
 	(caffe::db-put-double
 	 :channels iscale :width 1 :height 1 :label 0
-	 :id_str (zero-string i) :data ibuf)
+	 :id_str (caffe::zero-string i) :data ibuf)
 	)))
   (caffe::db-set-id 0) (caffe::db-close)
   (caffe::db-set-id 1) (caffe::db-close)
