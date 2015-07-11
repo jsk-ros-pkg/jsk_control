@@ -46,6 +46,19 @@
 (defforeign db-get-data-size *eus-caffe-db-plugin* "eus_caffe_db_get_data_size" () :integer)
 (defforeign db-get-float-data-size *eus-caffe-db-plugin* "eus_caffe_db_get_float_data_size" () :integer)
 
+(defun zero-string
+  (i &optional
+     (length 5)
+     (ret (instantiate string length))
+     (istr (format nil "~A" i)))
+  (dotimes (j length)
+    (setf (aref ret j)
+	  (if (>= j (- length (length istr)))
+	      (aref istr (min (length istr)
+			      (- j (- length (length istr)))))
+	    #\0)))
+  ret)
+
 (defun db-open
   (&key (dtype "lmdb") (path "test") (mode #\r))
   (_db-open dtype path mode))
