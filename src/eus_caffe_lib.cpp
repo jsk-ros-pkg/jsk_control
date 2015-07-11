@@ -22,7 +22,7 @@ public:
     }
   }
 
-  int _get_blob_data (boost::shared_ptr<caffe::Blob<double> > blob, double* ret, int osize) {
+  int get_blob_data (boost::shared_ptr<caffe::Blob<double> > blob, double* ret, int osize) {
     if ( ! this->_check(blob, "blob") ) return -1 ;
     std::cout << "[i E " << blob->count() << "] = "<< " (";
     if ( osize < 0 || osize > blob->count() ) osize = blob->count();
@@ -37,12 +37,12 @@ public:
   int get_blob_data (char* name, double* ret, int osize) {
     if ( ! this->_check(this->solver, "solver") ) return -1 ;
     boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
-    return get_blob_data( net, name, ret, osize);
+    return this->get_blob_data( net, name, ret, osize);
   }
 
   int get_blob_data (boost::shared_ptr<caffe::Net<double>> net, char* name, double* ret, int osize) {
     if ( ! this->_check(net, "net") ) return -1 ;
-    return _get_blob_data( net->blob_by_name(name), ret, osize);
+    return this->get_blob_data( net->blob_by_name(name), ret, osize);
   }
 
   int get_input_blob_data(int id, double* ret, int osize){
@@ -53,7 +53,7 @@ public:
 		<< std::endl;
       return 1;
     }
-    return this->_get_blob_data( boost::shared_ptr<caffe::Blob<double> >(this->solver->net()->input_blobs()[id]), ret ,osize);
+    return this->get_blob_data( boost::shared_ptr<caffe::Blob<double> >(this->solver->net()->input_blobs()[id]), ret ,osize);
   }
 
   int get_layer_blob_data (char* name, int blob_id, double* ret, int osize) {
@@ -67,7 +67,7 @@ public:
       std::cout << " --- too large blob_id" << std::endl;
       return -1;
     }
-    return _get_blob_data(ip_blobs[blob_id], ret, osize);
+    return this->get_blob_data(ip_blobs[blob_id], ret, osize);
   }
 
   int create_solver (char* solver_path, char* solverstate){
@@ -114,7 +114,7 @@ public:
     //
     double buf[1];
     boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
-    get_blob_data(net, (char*)"loss", buf, 1);
+    this->get_blob_data(net, (char*)"loss", buf, 1);
     return buf[0];
   }
 
@@ -128,7 +128,7 @@ public:
     input_layer->Reset(input, idummy, inputsize);
     net->ForwardPrefilled(nullptr);
     //
-    get_blob_data(net, (char*)"output", output, outputsize);
+    this->get_blob_data(net, (char*)"output", output, outputsize);
     return 0;
   }
 
@@ -153,7 +153,7 @@ public:
     // net->Forward(bottom, nullptr);
     // std::cout << " -- forwarding done" << std::endl;
     //
-    get_blob_data(this->test_net, (char*)"output", output, outputsize);
+    this->get_blob_data(this->test_net, (char*)"output", output, outputsize);
     return 0;
   }
 
