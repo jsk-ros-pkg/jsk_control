@@ -6,12 +6,12 @@
 (require "package://eus_qp/euslisp/test-contact-wrench-opt.l")
 (setup)
 
-(deftest test-all
+(deftest test-samplerobot-distribute
   (assert (and (test-distribute-all :func #'test-wrench-torque-distribute-by-qp :press-enter-p nil)
                (test-distribute-all :func #'test-wrench-distribute-by-pseudo-inverse :press-enter-p nil)
-               (test-distribute-all :func #'test-wrench-distribute-by-qp :press-enter-p nil)
-               (demo-cbox-wrench-calc-1)
-               (demo-cbox-wrench-calc-2))))
+               (test-distribute-all :func #'test-wrench-distribute-by-qp :press-enter-p nil))))
+(deftest test-cbox-distribute
+  (assert (demo-cbox-wrench-calc-all :press-enter-p nil)))
 
 (run-all-tests)
 (exit 0)
