@@ -46,7 +46,7 @@
 (defforeign db-get-float-data-size *eus-caffe-db-plugin* "eus_caffe_db_get_float_data_size" () :integer)
 
 (defun db-open
-  (&key (dtype "lmdb") (path "test") (mode #\w))
+  (&key (dtype "lmdb") (path "test") (mode #\r))
   (_db-open dtype path mode))
 
 (defun db-put
