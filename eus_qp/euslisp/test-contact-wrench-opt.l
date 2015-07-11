@@ -63,7 +63,7 @@
          (when cop (send cop :draw-on :flush nil :color #F(1 0 0) :width 4 :size 30)))
        ;; draw force
        (with-set-color-line-width
-        *viewer* #F(0 1 0) 5
+        *viewer* #F(1 0.3 1) 5
         (send *irtviewer* :viewer :draw-arrow
               (send cc :worldpos)
               (v+ (send cc :worldpos) (scale 1 f)))))
