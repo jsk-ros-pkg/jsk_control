@@ -62,8 +62,9 @@
 
 (defun db-learn
   nil
-  (caffe::_create_solver "linear_equation_db.prototxt" "")
-  (caffe::_learn)
+  ;; (caffe::_create_solver "linear_equation_db.prototxt" "")
+  ;; (caffe::_learn)
+  (caffe::learn :solver "linear_equation_db.prototxt" :size 0)
   ;; test
   (caffe::gen-test-net :netproto "linear_equation_db_net_predict.prototxt"
 		       ;; :caffemodel "sample_iter_100000.caffemodel"
