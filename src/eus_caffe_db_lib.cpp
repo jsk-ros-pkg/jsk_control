@@ -21,9 +21,22 @@ public:
 
   int open(char* db_type, char* path, int m){
     struct stat buf;
-    caffe::db::Mode mode = ((m == 'w') ? caffe::db::NEW : caffe::db::READ) ;
-    if (mode == caffe::db::NEW && path && stat(path, &buf)==0){
-      std::cout << "unable to open file " << path << std::endl;
+    caffe::db::Mode mode;
+    int file_exist = stat(path, &buf);
+    switch ( m ){
+    case 'n': mode = caffe::db::NEW; break;
+    case 'w': mode = caffe::db::WRITE; break;
+    case 'r': mode = caffe::db::READ; break;
+    default:
+      std::cout << "unknown mode character " << m << std::endl;
+      std::cout << " -- read mode" << std::endl;
+      mode = caffe::db::READ;
+    }
+    if (mode == caffe::db::NEW && path && file_exist==0){
+      std::cout << "unable to create file " << path << std::endl;
+      return 1;
+    } else if ((mode == caffe::db::WRITE || mode == caffe::db::READ) && file_exist!=0){
+      std::cout << "unable to read file " << path << std::endl;
       return 1;
     }
     //
