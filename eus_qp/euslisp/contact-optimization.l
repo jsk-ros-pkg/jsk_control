@@ -273,12 +273,12 @@
   (:get-constraint-vector () constraint-vector)
   )
 
-(defclass 2D-translational-contact-constraint
+(defclass 2D-translational-friction-contact-constraint
   :super contact-constraint
   :slots (mu-trans norm-axis)
   )
 
-(defmethod 2D-translational-contact-constraint
+(defmethod 2D-translational-friction-contact-constraint
   (:init
    (tmp-mu-trans &key ((:norm-axis tmp-norm-axis) :fz))
    "Calc conatraint param list for translational friction.
@@ -312,12 +312,12 @@
    )
   )
 
-(defclass rotational-contact-constraint
+(defclass rotational-friction-contact-constraint
   :super contact-constraint
   :slots (mu-rot norm-axis fric-axis)
   )
 
-(defmethod rotational-contact-constraint
+(defmethod rotational-friction-contact-constraint
   (:init
    (tmp-mu-rot tmp-norm-axis &key ((:fric-axis tmp-fric-axis)))
    "Calc conatraint param list for translational friction.
@@ -407,8 +407,8 @@
    (setq contact-constraint-list
          (list
            ;; friction
-           (instance 2D-translational-contact-constraint :init mu-trans)
-           (instance rotational-contact-constraint :init mu-rot :fz)
+           (instance 2D-translational-friction-contact-constraint :init mu-trans)
+           (instance rotational-friction-contact-constraint :init mu-rot :fz)
            ;; cop
            (instance 2D-cop-contact-constraint :init l-max-x l-min-x l-max-y l-min-y)
            ;; fz
