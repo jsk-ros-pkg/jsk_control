@@ -24,40 +24,35 @@
    (iscale 2)
    (dsize (* dscale size))
    (isize (* iscale size))
-   idata ddata
    )
-  (cond
-   ((or (not idata) (not ddata))
-    (setq idata (instantiate float-vector isize))
-    (setq ddata (instantiate float-vector dsize))
+  (caffe::db-set-id 0)
+  (if (not (zerop (caffe::db-open :dtype "lmdb" :path target-path :mode #\n)))
+      (return-from gen-linear-equation-db (print 'db-open-failed)))
+  (caffe::db-set-id 1)
+  (if (not (zerop (caffe::db-open :dtype "lmdb" :path input-path :mode #\n)))
+      (return-from gen-linear-equation-db (print 'db-open-failed)))
+  ;;
+  (let* ((dbuf (instantiate float-vector dscale))
+	 (ibuf (instantiate float-vector iscale)))
     (dotimes (i size)
       (let* ((x (* 10 (- (random 2.0) 1.0)))
 	     (y (* 10 (- (random 2.0) 1.0))))
-	(setf (aref idata (* i 2)) x)
-	(setf (aref idata (+ 1 (* i 2))) y)
-	(setf (aref ddata i) (+ (* 3 x) (* -2 y) 4))
-	))))
-  ;; gen target data
-  (if (not (zerop (caffe::db-open :dtype "lmdb" :path target-path :mode #\n)))
-      (return-from gen-linear-equation-db (print 'db-open-failed)))
-  (let* ((buf (instantiate float-vector dscale)))
-    (dotimes (i size)
-      (dotimes (j dscale) (setf (aref buf j) (aref ddata (+ j (* i dscale)))))
-      (caffe::db-put-double
-       :channels dscale :width 1 :height 1 :label 0
-       :id_str (zero-string i) :data buf)))
-  (caffe::db-close)
-  ;;
-  (if (not (zerop (caffe::db-open :dtype "lmdb" :path input-path :mode #\n)))
-      (return-from gen-linear-equation-db (print 'db-open-failed)))
-  (let* ((buf (instantiate float-vector iscale)))
-    (dotimes (i size)
-      (dotimes (j iscale) (setf (aref buf j) (aref idata (+ j (* i iscale)))))
-      (caffe::db-put-double
-       :channels iscale :width 1 :height 1 :label 0
-       :id_str (zero-string i) :data buf)))
-  (caffe::db-close)
-  ;;
+	(setf (aref ibuf 0) x)
+	(setf (aref ibuf 1) y)
+	(setf (aref dbuf 0) (+ (* 3 x) (* -2 y) 4))
+	;;
+	(caffe::db-set-id 0)
+	(caffe::db-put-double
+	 :channels dscale :width 1 :height 1 :label 0
+	 :id_str (zero-string i) :data dbuf)
+	;;
+	(caffe::db-set-id 1)
+	(caffe::db-put-double
+	 :channels iscale :width 1 :height 1 :label 0
+	 :id_str (zero-string i) :data ibuf)
+	)))
+  (caffe::db-set-id 0) (caffe::db-close)
+  (caffe::db-set-id 1) (caffe::db-close)
   )
 
 (defun db-learn
