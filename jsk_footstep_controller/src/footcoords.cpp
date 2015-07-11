@@ -48,18 +48,16 @@ namespace jsk_footstep_controller
     diagnostic_updater_(new diagnostic_updater::Updater)
   {
     ros::NodeHandle nh, pnh("~");
-    lforce_list_.resize(0);
-    rforce_list_.resize(0);
     tf_listener_.reset(new tf::TransformListener());
     odom_pose_ = Eigen::Affine3d::Identity();
     ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
     root_link_pose_.setIdentity();
     midcoords_.setRotation(tf::Quaternion(0, 0, 0, 1));
     diagnostic_updater_->setHardwareID("none");
-    diagnostic_updater_->add("Support Leg Status", this, 
+    diagnostic_updater_->add("Support Leg Status", this,
                              &Footcoords::updateLegDiagnostics);
     // read parameter
-    pnh.param("alpha", alpha_, 0.5);
+    pnh.param("alpha", alpha_, 0.1);
     pnh.param("sampling_time_", sampling_time_, 0.2);
     pnh.param("output_frame_id", output_frame_id_,
               std::string("odom_on_ground"));
@@ -75,20 +73,25 @@ namespace jsk_footstep_controller
     pnh.param("rfoot_sensor_frame", rfoot_sensor_frame_, std::string("rleg_end_coords"));
     // pnh.param("lfoot_sensor_frame", lfoot_sensor_frame_, std::string("lfsensor"));
     // pnh.param("rfoot_sensor_frame", rfoot_sensor_frame_, std::string("rfsensor"));
-    pnh.param("force_threshold", force_thr_, 100.0);
+    pnh.param("force_threshold", force_thr_, 200.0);
     support_status_ = AIR;
+    pub_low_level_ = pnh.advertise<jsk_footstep_controller::FootCoordsLowLevelInfo>("low_level_info", 1);
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
     pub_contact_state_ = pnh.advertise<jsk_footstep_controller::GroundContactState>("contact_state", 1);
+    pub_synchronized_forces_ = pnh.advertise<jsk_footstep_controller::SynchronizedForces>("synchronized_forces", 1);
     before_on_the_air_ = true;
-    odom_sub_ = pnh.subscribe<nav_msgs::Odometry>("/odom", 1, 
+    odom_sub_ = pnh.subscribe<nav_msgs::Odometry>("/odom", 1,
                                                  &Footcoords::odomCallback, this);
-    sub_lfoot_force_.subscribe(nh, "lfsensor", 1);
-    sub_rfoot_force_.subscribe(nh, "rfsensor", 1);
     periodic_update_timer_ = pnh.createTimer(ros::Duration(1.0 / 25),
                                              boost::bind(&Footcoords::periodicTimerCallback, this, _1));
+    sub_lfoot_force_.subscribe(nh, "lfsensor", 10);
+    sub_rfoot_force_.subscribe(nh, "rfsensor", 10);
+
     sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
     sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_);
-    sync_->registerCallback(boost::bind(&Footcoords::filter, this, _1, _2));
+    sync_->registerCallback(boost::bind(&Footcoords::synchronizeForces, this, _1, _2));
+    synchronized_forces_sub_ = pnh.subscribe("synchronized_forces", 10,
+                                             &Footcoords::filter, this);
   }
 
   Footcoords::~Footcoords()
@@ -143,28 +146,28 @@ namespace jsk_footstep_controller
     return true;
   }
 
-  bool Footcoords::resolveForceTf(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                                  const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
+  bool Footcoords::resolveForceTf(const geometry_msgs::WrenchStamped& lfoot,
+                                  const geometry_msgs::WrenchStamped& rfoot,
                                   tf::Vector3& lfoot_force,
                                   tf::Vector3& rfoot_force)
   {
     try {
-      if (!waitForEndEffectorTrasnformation(lfoot->header.stamp)) {
+      if (!waitForEndEffectorTrasnformation(lfoot.header.stamp)) {
         ROS_ERROR("[Footcoords::resolveForceTf] failed to lookup transformation for sensor value");
         return false;
       }
       tf::StampedTransform lfoot_transform, rfoot_transform;
       tf_listener_->lookupTransform(
-        lfoot->header.frame_id, lfoot_sensor_frame_, lfoot->header.stamp, lfoot_transform);
+        lfoot.header.frame_id, lfoot_sensor_frame_, lfoot.header.stamp, lfoot_transform);
       tf_listener_->lookupTransform(
-        rfoot->header.frame_id, rfoot_sensor_frame_, rfoot->header.stamp, rfoot_transform);
+        rfoot.header.frame_id, rfoot_sensor_frame_, rfoot.header.stamp, rfoot_transform);
       // cancel translation
       lfoot_transform.setOrigin(tf::Vector3(0, 0, 0));
       rfoot_transform.setOrigin(tf::Vector3(0, 0, 0));
 
       tf::Vector3 lfoot_local, rfoot_local;
-      tf::vector3MsgToTF(lfoot->wrench.force, lfoot_local);
-      tf::vector3MsgToTF(rfoot->wrench.force, rfoot_local);
+      tf::vector3MsgToTF(lfoot.wrench.force, lfoot_local);
+      tf::vector3MsgToTF(rfoot.wrench.force, rfoot_local);
       lfoot_force = lfoot_transform * lfoot_local;
       rfoot_force = rfoot_transform * rfoot_local;
       // lfoot_force = lfoot_rotation * lfoot_local;
@@ -238,10 +241,21 @@ namespace jsk_footstep_controller
       publishContactState(event.current_real);
   }
 
-  void Footcoords::filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                          const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
+  void Footcoords::synchronizeForces(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
+                                     const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
+  {
+    jsk_footstep_controller::SynchronizedForces forces;
+    forces.header = lfoot->header;
+    forces.lleg_force = *lfoot;
+    forces.rleg_force = *rfoot;
+    pub_synchronized_forces_.publish(forces);
+  }
+
+  void Footcoords::filter(const jsk_footstep_controller::SynchronizedForces::ConstPtr& msg)
   {
     boost::mutex::scoped_lock lock(mutex_);
+    geometry_msgs::WrenchStamped lfoot = msg->lleg_force;
+    geometry_msgs::WrenchStamped rfoot = msg->rleg_force;
     // lowpass filter
     tf::Vector3 lfoot_force_vector, rfoot_force_vector;
     if (!resolveForceTf(lfoot, rfoot, lfoot_force_vector, rfoot_force_vector)) {
@@ -251,14 +265,20 @@ namespace jsk_footstep_controller
     // resolve tf
     double lfoot_force = applyLowPassFilter(lfoot_force_vector[2], prev_lforce_);
     double rfoot_force = applyLowPassFilter(rfoot_force_vector[2], prev_rforce_);
-    lforce_list_.push_back(ValueStamped::Ptr(new ValueStamped(lfoot->header, lfoot_force)));
-    rforce_list_.push_back(ValueStamped::Ptr(new ValueStamped(rfoot->header, rfoot_force)));
 
+    // publish lowlevel info
+    FootCoordsLowLevelInfo info;
+    info.header = lfoot.header;
+    info.raw_lleg_force = lfoot_force_vector[2];
+    info.raw_rleg_force = rfoot_force_vector[2];
+    info.filtered_lleg_force = lfoot_force;
+    info.filtered_rleg_force = rfoot_force;
+    info.threshold = force_thr_;
+    pub_low_level_.publish(info);
     prev_lforce_ = lfoot_force;
     prev_rforce_ = rfoot_force;
 
-    if (allValueLargerThan(lforce_list_, force_thr_) &&
-        allValueLargerThan(rforce_list_, force_thr_)) {
+    if (lfoot_force >= force_thr_ && rfoot_force >= force_thr_) {
       // on ground
       if (support_status_ != BOTH_GROUND) {
         // save transformation from midcoords to odom_on_ground
@@ -266,16 +286,15 @@ namespace jsk_footstep_controller
       }
       support_status_ = BOTH_GROUND;
     }
-    else if (allValueSmallerThan(lforce_list_, force_thr_) &&
-             allValueSmallerThan(rforce_list_, force_thr_)) {
+    else if (lfoot_force < force_thr_ && rfoot_force < force_thr_) {
       before_on_the_air_ = true;
       support_status_ = AIR;
     }
-    else if (allValueLargerThan(lforce_list_, force_thr_)) {
+    else if (lfoot_force >= force_thr_) {
       // only left
       support_status_ = LLEG_GROUND;
     }
-    else if (allValueLargerThan(rforce_list_, force_thr_)) {
+    else if (rfoot_force >= force_thr_) {
       // only right
       support_status_ = RLEG_GROUND;
     }
@@ -284,8 +303,6 @@ namespace jsk_footstep_controller
       support_status_ = UNSTABLE;
       publishState("unstable");
     }
-    lforce_list_.removeBefore(lfoot->header.stamp - ros::Duration(sampling_time_));
-    rforce_list_.removeBefore(rfoot->header.stamp - ros::Duration(sampling_time_));
   }
   
   void Footcoords::publishState(const std::string& state)
