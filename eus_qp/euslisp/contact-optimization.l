@@ -16,6 +16,7 @@
                      (send-all contact-coords-list :worldpos) :total-wrench total-wrench)))
         (wrench-optimize-weight-vector
          (fill (instantiate float-vector (* 6 (length contact-coords-list))) 1))
+        (contact-constraint-vector-list)
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
         (qp-solver #'solve-qpoases)
@@ -23,7 +24,12 @@
   "Wrench distribution function."
   (let* (;; inequality
          (inequality-matrix (apply #'concatenate-matrix-diagonal contact-constraint-matrix-list))
-         (inequality-min-vector (if inequality-matrix (instantiate float-vector (array-dimension inequality-matrix 0))))
+         (inequality-min-vector
+          (cond
+           (contact-constraint-vector-list
+            (apply #'concatenate float-vector contact-constraint-vector-list))
+           (inequality-matrix
+            (instantiate float-vector (array-dimension inequality-matrix 0)))))
          ;; equality
          (equality-matrix (send robot :calc-grasp-matrix (send-all contact-coords-list :worldpos)))
          (equality-vector total-wrench) ;; convert to total ext wrench
@@ -46,6 +52,7 @@
           (list :wrench-list (send robot :wrench-vector->wrench-list ret)))
       )))
 
+#|
 (defun wrench-torque-distribute-from-total-wrench-inertial-torque-old
   (contact-coords-list contact-constraint-matrix-list
    &key (robot)
@@ -132,6 +139,7 @@
                                    (subseq ret 0 wrench-dim))
                 :torque-vector (subseq ret wrench-dim)))
       )))
+|#
 
 (defun wrench-torque-distribute-from-total-wrench-inertial-torque
   (contact-coords-list contact-constraint-matrix-list
@@ -150,6 +158,7 @@
          (send robot :wrench-list->wrench-vector
                (send robot :calc-contact-wrenches-from-total-wrench
                      (send-all contact-coords-list :worldpos) :total-wrench total-wrench)))
+        (contact-constraint-vector-list)
         (debug)
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
@@ -185,7 +194,11 @@
          (inequality-min-vector
           (concatenate float-vector
                        ;; 0
-                       (instantiate float-vector (array-dimension contact-matrix 0))
+                       (cond
+                        (contact-constraint-vector-list
+                         (apply #'concatenate float-vector contact-constraint-vector-list))
+                        (contact-matrix
+                         (instantiate float-vector (array-dimension contact-matrix 0))))
                        ;; tau_min - \bar{tau}
                        (v- (v- max-torque-vector) inertial-torque) ;; min
                        ;; tau_max + \bar{tau}

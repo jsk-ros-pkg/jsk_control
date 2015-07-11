@@ -9,7 +9,8 @@
   ;;   (setq *robot* (hrp2jsk)))
   (unless (boundp '*robot*)
     (load "irteus/demo/sample-robot-model.l")
-    (setq *robot* (instance sample-robot :init)))
+    (setq *robot* (instance sample-robot :init))
+    (send-all (send *robot* :joint-list) :max-joint-torque 15.0))
   (unless (boundp '*cbox*)
     (load "models/cardboard-box-object.l")
     (setq *cbox* (cardboard-box))
@@ -110,7 +111,8 @@
   (let ((ret
          (wrench-distribute-from-total-wrench
           contact-coords-list contact-constraint-matrix-list
-          :robot *robot*)))
+          :robot *robot*
+          :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector))))
     (draw-force-value ret)
     (send *irtviewer* :viewer :viewsurface :flush)
     ret))
@@ -131,7 +133,9 @@
          (union-link-list (send *robot* :calc-union-link-list link-list))
          (ret (funcall func
                        contact-coords-list contact-constraint-matrix-list
-                       :robot *robot*)))
+                       :robot *robot*
+                       :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector)
+                       )))
     (draw-force-value ret :union-link-list union-link-list)
     (send *irtviewer* :viewer :viewsurface :flush)
     ret))
@@ -170,7 +174,7 @@
     (send *robot* :move-centroid-on-foot :both '(:rleg :lleg))
     (send *irtviewer* :draw-objects)
     (push (funcall func) ret)
-    (reverse ret)))
+    (every #'identity (reverse ret))))
 
 (warn ";; (setup)~%")
 (warn ";; (test-distribute-all :func #'test-wrench-torque-distribute-by-qp)~%")
