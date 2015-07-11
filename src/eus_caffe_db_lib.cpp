@@ -73,19 +73,19 @@ public:
   }
 
   int close(){
-    std::cout << " -- transaction close" << std::endl;
     if ( this->txn_ ) {
+      std::cout << " -- transaction close" << std::endl;
       this->txn_->Commit();
       this->txn_.reset();
       this->txn_ = NULL;
     }
-    std::cout << " -- cursor close" << std::endl;
     if ( this->cursor_ ) {
+      std::cout << " -- cursor close" << std::endl;
       this->cursor_.reset();
       this->cursor_ = NULL;
     }
-    std::cout << " -- db close" << std::endl;
     if ( this->db_ ) {
+      std::cout << " -- db close" << std::endl;
       this->db_->Close();
       this->db_.reset();
       this->db_ = NULL;
@@ -198,7 +198,24 @@ public:
 
 };
 
-std::shared_ptr<eus_caffe_db> ecd(new eus_caffe_db);
+// for euslisp
+
+int ecdv_id=0;
+std::vector<std::shared_ptr<eus_caffe_db> > ecdv(1, std::shared_ptr<eus_caffe_db>(new eus_caffe_db));
+std::shared_ptr<eus_caffe_db> ecd = ecdv[0];
+
+extern "C" {
+  int eus_caffe_db_set_id(int id){
+    ecdv_id = id;
+    for (  int i=ecdv.size() ; i<=id ; i++ ) {
+      std::cout << "eus_caffe expand db size -> " << (i+1) << std::endl;
+      ecdv.push_back(std::shared_ptr<eus_caffe_db>(new eus_caffe_db));
+    }
+    ecd = ecdv[ecdv_id];
+    // std::cout << "eus_caffe db_set_id " << id << std::endl;
+    return 0;
+  }
+}
 
 extern "C" {
   int eus_caffe_db_open(char* db_type, char* path, int mode){ return ecd->open(db_type, path, mode); }
