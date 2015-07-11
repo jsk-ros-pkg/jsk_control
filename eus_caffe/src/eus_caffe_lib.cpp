@@ -121,9 +121,11 @@ public:
   int memory_calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){
     if ( ! this->_check(this->solver, "solver") ) return 1 ;
     boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
+    const boost::shared_ptr<caffe::Layer<double>> layer_org = net->layer_by_name("input");
+    if ( ! this->_check(layer_org, "input_layer") ) return 1;
+    if ( ! (std::string(layer_org->type()) == "MemoryData") ) return 1;
     boost::shared_ptr<caffe::MemoryDataLayer<double>> input_layer =
-      boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(net->layer_by_name("input"));
-    if ( ! this->_check(input_layer, "input_layer") ) return 1 ;
+      boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(layer_org);
     //
     input_layer->Reset(input, idummy, inputsize);
     net->ForwardPrefilled(nullptr);
