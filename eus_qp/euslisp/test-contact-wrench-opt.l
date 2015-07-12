@@ -233,7 +233,8 @@
 
 (defun demo-cbox-wrench-calc-comon
   (contact-constraint-list
-   contact-coords-list)
+   contact-coords-list
+   &key (min-inequality-violation-weight))
   (send *cbox* :put :contact-constraint-list contact-constraint-list)
   ;; calc total static wrench
   (send *cbox* :calc-torque :calc-statics-p t)
@@ -244,6 +245,7 @@
                       (send c-constraint :calc-constraint-matrix c-coords))
                   contact-constraint-list contact-coords-list)
           :robot *cbox*
+          :min-inequality-violation-weight min-inequality-violation-weight
           :contact-constraint-vector-list (send-all contact-constraint-list :get-constraint-vector))))
     (draw-force-value
      ret :limbs nil :robot *cbox*
@@ -377,28 +379,39 @@
    ))
 
 (defun demo-cbox-wrench-calc-11
-  ()
+  (&key (min-inequality-violation-weight))
   "Demo for cbox wrench calculation by default-contact-constraint. cbox is tilting. Infeasible solution."
   (set-cbox-pose-tilting)
-  (not
-   (demo-cbox-wrench-calc-comon
-    ;; setup contact constraint
-    ;; box size 190, 215, 185
-    (list (instance default-contact-constraint
-                    :init
-                    :mu-trans 0.05 :mu-rot 0.05
-                    :l-min-x -50 :l-max-x 50
-                    :l-min-y -50 :l-max-y 50)
-          (instance default-contact-constraint
-                    :init
-                    :mu-trans 0.05 :mu-rot 0.05
-                    :l-min-x -50 :l-max-x 50
-                    :l-min-y -50 :l-max-y 50)
-          )
-    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
-    )))
+  (let ((ret
+         (demo-cbox-wrench-calc-comon
+          ;; setup contact constraint
+          ;; box size 190, 215, 185
+          (list (instance default-contact-constraint
+                          :init
+                          :mu-trans 0.05 :mu-rot 0.05
+                          :l-min-x -50 :l-max-x 50
+                          :l-min-y -50 :l-max-y 50)
+                (instance default-contact-constraint
+                          :init
+                          :mu-trans 0.05 :mu-rot 0.05
+                          :l-min-x -50 :l-max-x 50
+                          :l-min-y -50 :l-max-y 50)
+                )
+          (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+          :min-inequality-violation-weight min-inequality-violation-weight
+          )))
+    (if min-inequality-violation-weight
+        ret
+      (not ret))
+    ))
 
 (defun demo-cbox-wrench-calc-12
+  ()
+  "Demo for cbox wrench calculation by default-contact-constraint. cbox is tilting. Originally infeasible solution, but obtain solution by allowing min inequality boundary violation."
+  (demo-cbox-wrench-calc-11 :min-inequality-violation-weight 1e5)
+  )
+
+(defun demo-cbox-wrench-calc-13
   ()
   "Demo for cbox wrench calculation by min-max-contact-constraint. cbox is tilting."
   (set-cbox-pose-tilting)
@@ -410,17 +423,27 @@
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
    ))
 
-(defun demo-cbox-wrench-calc-13
-  ()
+(defun demo-cbox-wrench-calc-14
+  (&key (min-inequality-violation-weight))
   "Demo for cbox wrench calculation by 2D-translational-sliding-contact-constraint. cbox is neutral pos rot. This sample is infeasible but it's correct."
   (set-cbox-pose-neutral)
-  (not
-   (demo-cbox-wrench-calc-comon
-    (list (instance 2D-translational-sliding-contact-constraint :init 0.5 :slide-axis :x))
-    (list (send *cbox* :worldcoords))
-    )))
+  (let ((ret
+         (demo-cbox-wrench-calc-comon
+          (list (instance 2D-translational-sliding-contact-constraint :init 0.5 :slide-axis :x))
+          (list (send *cbox* :worldcoords))
+          :min-inequality-violation-weight min-inequality-violation-weight
+          )))
+    (if min-inequality-violation-weight
+        ret
+      (not ret))
+    ))
 
-(defun demo-cbox-wrench-calc-14
+(defun demo-cbox-wrench-calc-15
+  ()
+  "Demo for cbox wrench calculation by 2D-translational-sliding-contact-constraint. cbox is neutral pos rot. This sample is originally infeasible, but obtain solution by allowing min inequality boundary violation."
+  (demo-cbox-wrench-calc-14 :min-inequality-violation-weight 1e5))
+
+(defun demo-cbox-wrench-calc-16
   ()
   "Demo for cbox wrench calculation by default-contact-constraint. cbox is neutral pos rot. cbox is sliding in the -y direction."
   (set-cbox-pose-neutral)
@@ -442,7 +465,7 @@
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
   (let ((ret))
-    (dotimes (i 14)
+    (dotimes (i 16)
       (format t ";; demo-cbox-wrench-calc-~d~%" (1+ i))
       (push (funcall (eval (read-from-string (format nil "#'demo-cbox-wrench-calc-~d" (1+ i))))) ret)
       (when press-enter-p (format t ";; press enter~%") (read-line)))
@@ -451,7 +474,7 @@
 
 ;; Usage
 (warn ";; cbox demo functions~%")
-(dotimes (i 14)
+(dotimes (i 16)
   (warn ";;   (demo-cbox-wrench-calc-~d) ;; ~A~%" (1+ i)
         (documentation (read-from-string (format nil "demo-cbox-wrench-calc-~d" (1+ i))))))
 (warn ";;   (demo-cbox-wrench-calc-all) ;; for all tests~%")
