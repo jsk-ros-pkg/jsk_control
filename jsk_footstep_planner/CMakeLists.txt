@@ -1,35 +1,29 @@
-if(NOT USE_ROSBUILD)
-  include(catkin.cmake)
-  return()
-endif()
+cmake_minimum_required(VERSION 2.8.3)
+project(jsk_footstep_planner)
 
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_pcl_ros
+  message_generation jsk_topic_tools roscpp)
 
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+add_service_files(FILES
+  ChangeSuccessor.srv)
+generate_messages()
+#catkin_python_setup()
+catkin_package(
+  DEPENDS
+  CATKIN_DEPENDS  jsk_footstep_msgs jsk_pcl_ros
+  INCLUDE_DIRS # TODO include
+  LIBRARIES jsk_footstep_planner # TODO
+  )
 
-rosbuild_init()
+add_definitions("-g -O2")
+include_directories(include ${catkin_INCLUDE_DIRS})
+add_library(jsk_footstep_planner src/simple_neighbored_graph.cpp)
 
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+add_executable(sample_simple_graph src/sample_simple_graph.cpp)
+target_link_libraries(sample_simple_graph ${catkin_LIBRARIES} jsk_footstep_planner)
 
-#uncomment if you have defined messages
-#rosbuild_genmsg()
-#uncomment if you have defined services
-#rosbuild_gensrv()
-
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-#rosbuild_add_executable(example examples/example.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
+install(DIRECTORY euslisp launch scripts
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  USE_SOURCE_PERMISSIONS
+  PATTERN ".svn" EXCLUDE
+  )
