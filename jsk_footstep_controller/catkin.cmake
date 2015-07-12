@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 add_message_files(FILES
-  GroundContactState.msg)
+  GroundContactState.msg FootCoordsLowLevelInfo.msg SynchronizedForces.msg)
 
 add_service_files(FILES
   RequireLog.srv RequireMonitorStatus.srv)
@@ -23,7 +23,7 @@ add_action_files(
   FILES LookAroundGround.action
 )
 generate_messages(
-  DEPENDENCIES actionlib_msgs std_msgs)
+  DEPENDENCIES actionlib_msgs std_msgs geometry_msgs)
 
 catkin_package(
 #  INCLUDE_DIRS include

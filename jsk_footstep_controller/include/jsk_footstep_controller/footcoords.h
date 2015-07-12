@@ -46,6 +46,8 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <jsk_footstep_controller/GroundContactState.h>
+#include <jsk_footstep_controller/FootCoordsLowLevelInfo.h>
+#include <jsk_footstep_controller/SynchronizedForces.h>
 #include <nav_msgs/Odometry.h>
 
 namespace jsk_footstep_controller
@@ -103,8 +105,11 @@ namespace jsk_footstep_controller
     
     // methods
 
-    virtual void filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                        const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
+    /* 
+     * virtual void filter(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
+     *                     const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
+     */
+    virtual void filter(const jsk_footstep_controller::SynchronizedForces::ConstPtr& msg);
     virtual bool computeMidCoords(const ros::Time& stamp);
     virtual bool computeMidCoordsFromSingleLeg(const ros::Time& stamp,
                                                bool use_left_leg);
@@ -122,21 +127,27 @@ namespace jsk_footstep_controller
                                     double threshold);
     virtual bool allValueSmallerThan(TimeStampedVector<ValueStamped::Ptr>& values,
                                      double threshold);
-    virtual bool resolveForceTf(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                                const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
+    virtual bool resolveForceTf(const geometry_msgs::WrenchStamped& lfoot,
+                                const geometry_msgs::WrenchStamped& rfoot,
                                 tf::Vector3& lfoot_force, tf::Vector3& rfoot_force);
     virtual void periodicTimerCallback(const ros::TimerEvent& event);
     virtual void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
+    virtual void synchronizeForces(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
+                                   const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
     // ros variables
     boost::mutex mutex_;
     Eigen::Affine3d odom_pose_;
     ros::Timer periodic_update_timer_;
     ros::Subscriber odom_sub_;
+    ros::Subscriber synchronized_forces_sub_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
+    
     ros::Publisher pub_state_;
     ros::Publisher pub_contact_state_;
+    ros::Publisher pub_low_level_;
+    ros::Publisher pub_synchronized_forces_;
     boost::shared_ptr<tf::TransformListener> tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
     // parameters
@@ -161,8 +172,6 @@ namespace jsk_footstep_controller
     double prev_rforce_;
     double alpha_;
     double sampling_time_;
-    TimeStampedVector<ValueStamped::Ptr> lforce_list_;
-    TimeStampedVector<ValueStamped::Ptr> rforce_list_;
   private:
   };
 }
