@@ -49,6 +49,10 @@
 #include <jsk_footstep_controller/FootCoordsLowLevelInfo.h>
 #include <jsk_footstep_controller/SynchronizedForces.h>
 #include <nav_msgs/Odometry.h>
+#include <urdf/model.h>
+#include <kdl/tree.hpp>
+#include <kdl/chainjnttojacsolver.hpp>
+#include <kdl_parser/kdl_parser.hpp>
 
 namespace jsk_footstep_controller
 {
@@ -91,14 +95,21 @@ namespace jsk_footstep_controller
   public:
     typedef message_filters::sync_policies::ExactTime<
     geometry_msgs::WrenchStamped,
-    geometry_msgs::WrenchStamped> SyncPolicy;
+    geometry_msgs::WrenchStamped,
+    sensor_msgs::JointState,
+    geometry_msgs::PointStamped> SyncPolicy;
 
     Footcoords();
     virtual ~Footcoords();
 
     enum SupportLegStatus
     {
-      LLEG_GROUND, RLEG_GROUND, AIR, BOTH_GROUND, UNSTABLE
+      LLEG_GROUND, RLEG_GROUND, AIR, BOTH_GROUND
+    };
+
+    enum OdomStatus
+    {
+      UNINITIALIZED, INITIALIZING, LLEG_SUPPORT, RLEG_SUPPORT
     };
 
   protected:
@@ -133,7 +144,22 @@ namespace jsk_footstep_controller
     virtual void periodicTimerCallback(const ros::TimerEvent& event);
     virtual void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
     virtual void synchronizeForces(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                                   const geometry_msgs::WrenchStamped::ConstPtr& rfoot);
+                                   const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
+                                   const sensor_msgs::JointState::ConstPtr& joint_states,
+                                   const geometry_msgs::PointStamped::ConstPtr& zmp);
+    virtual void estimateOdometry();
+    virtual void estimateOdometryNaive();
+    virtual void estimateOdometryMainSupportLeg();
+    virtual void estimateOdometryZMPSupportLeg();
+    virtual void updateRobotModel(std::map<std::string, double>& joint_angles);
+    virtual void updateChain(std::map<std::string, double>& joint_angles,
+                             KDL::Chain& chain,
+                             tf::Pose& output_pose);
+    virtual void estimateVelocity(const ros::Time& stamp, std::map<std::string, double>& joint_angles);
+    virtual void computeVelicity(double dt,
+                                 std::map<std::string, double>& joint_angles,
+                                 KDL::Chain& chain,
+                                 geometry_msgs::Twist& output);
     // ros variables
     boost::mutex mutex_;
     Eigen::Affine3d odom_pose_;
@@ -142,12 +168,24 @@ namespace jsk_footstep_controller
     ros::Subscriber synchronized_forces_sub_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
+    message_filters::Subscriber<sensor_msgs::JointState> sub_joint_states_;
+    message_filters::Subscriber<geometry_msgs::PointStamped> sub_zmp_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
-    
+    KDL::Chain lfoot_chain_;
+    KDL::Chain rfoot_chain_;
+    tf::Pose lfoot_pose_;
+    tf::Pose rfoot_pose_;
+    tf::Pose lfoot_to_origin_pose_;
+    tf::Pose rfoot_to_origin_pose_;
+    tf::Pose estimated_odom_pose_;
     ros::Publisher pub_state_;
     ros::Publisher pub_contact_state_;
     ros::Publisher pub_low_level_;
     ros::Publisher pub_synchronized_forces_;
+    ros::Publisher pub_debug_lfoot_pos_;
+    ros::Publisher pub_debug_rfoot_pos_;
+    ros::Publisher pub_leg_odometory_;
+    ros::Publisher pub_twist_;
     boost::shared_ptr<tf::TransformListener> tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
     // parameters
@@ -155,8 +193,12 @@ namespace jsk_footstep_controller
     std::string parent_frame_id_;
     std::string midcoords_frame_id_;
     SupportLegStatus support_status_;
+    OdomStatus odom_status_;
+    Eigen::Vector3f zmp_;
     double force_thr_;
     bool before_on_the_air_;
+    std::map<std::string, double> prev_joints_;
+    ros::Time last_time_;
     std::string lfoot_frame_id_;
     std::string rfoot_frame_id_;
     std::string lfoot_sensor_frame_;
@@ -172,6 +214,7 @@ namespace jsk_footstep_controller
     double prev_rforce_;
     double alpha_;
     double sampling_time_;
+    bool publish_odom_tf_;
   private:
   };
 }
