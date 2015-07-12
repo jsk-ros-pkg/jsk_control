@@ -20,19 +20,6 @@
       (send *cbox* :put :face-coords-2 ccoords2)))
   (unless (boundp '*irtviewer*)
     (make-irtviewer))
-  (send *robot* :put :contact-constraint-list
-        (mapcar #'(lambda (l)
-                    (instance* default-contact-constraint
-                              :init
-                              :mu-trans 0.5
-                              :mu-rot 0.05
-                              (let* ((vs (mapcar #'(lambda (v) (send *robot* l :end-coords :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
-                                (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
-                                      :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
-                                      :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
-                                      :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
-                                      ))))
-                '(:rleg :lleg)))
   (objects (list *robot*))
   )
 
@@ -101,7 +88,8 @@
 
 (defun test-wrench-distribute-by-qp
   (&key (contact-coords-list (mapcar #'(lambda (l) (send *robot* l :end-coords)) '(:rleg :lleg)))
-        (contact-constraint-matrix-list))
+        (contact-constraint-matrix-list)
+        (min-inequality-violation-weight))
   (unless contact-constraint-matrix-list
     (setq contact-constraint-matrix-list
           (mapcar #'(lambda (c-constraint c-coords)
@@ -112,6 +100,7 @@
          (wrench-distribute-from-total-wrench
           contact-coords-list contact-constraint-matrix-list
           :robot *robot*
+          :min-inequality-violation-weight min-inequality-violation-weight
           :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector))))
     (draw-force-value ret)
     (send *irtviewer* :viewer :viewsurface :flush)
@@ -120,6 +109,7 @@
 (defun test-wrench-torque-distribute-by-qp
   (&key (contact-coords-list (mapcar #'(lambda (l) (send *robot* l :end-coords)) '(:rleg :lleg)))
         (contact-constraint-matrix-list)
+        (min-inequality-violation-weight)
         (func #'wrench-torque-distribute-from-total-wrench-inertial-torque))
   (unless contact-constraint-matrix-list
     (setq contact-constraint-matrix-list
@@ -135,14 +125,28 @@
                        contact-coords-list contact-constraint-matrix-list
                        :robot *robot*
                        :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector)
+                       :min-inequality-violation-weight min-inequality-violation-weight
                        )))
     (draw-force-value ret :union-link-list union-link-list)
     (send *irtviewer* :viewer :viewsurface :flush)
     ret))
 
-(defun test-distribute-all
-  (&key (func #'test-wrench-distribute-by-qp) (press-enter-p t))
+(defun demo-robot-contact-wrench-distribution-common
+  (&key (func #'test-wrench-distribute-by-qp) (press-enter-p t) (mu-trans 0.5))
   (let ((ret))
+    (send *robot* :put :contact-constraint-list
+          (mapcar #'(lambda (l)
+                      (instance* default-contact-constraint
+                                 :init
+                                 :mu-trans mu-trans
+                                 :mu-rot 0.05
+                                 (let* ((vs (mapcar #'(lambda (v) (send *robot* l :end-coords :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
+                                   (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
+                                         :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
+                                         :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
+                                         :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
+                                         ))))
+                  '(:rleg :lleg)))
     (send *robot* :reset-pose)
     (send *robot* :fix-leg-to-coords (make-coords))
     (send *irtviewer* :draw-objects)
@@ -176,10 +180,48 @@
     (push (funcall func) ret)
     (every #'identity (reverse ret))))
 
+(defun demo-robot-contact-wrench-distribution-1
+  (&key (press-enter-p t))
+  "Demo for robot contact wrench distribution by pseudo-inverse."
+  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-pseudo-inverse :press-enter-p press-enter-p))
+
+(defun demo-robot-contact-wrench-distribution-2
+  (&key (press-enter-p t))
+  "Demo for robot contact wrench distribution by QP."
+  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-qp :press-enter-p press-enter-p))
+
+(defun demo-robot-contact-wrench-distribution-3
+  (&key (press-enter-p t))
+  "Demo for robot contact wrench and joint torque distribution by QP."
+  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :press-enter-p press-enter-p))
+
+(defun demo-robot-contact-wrench-distribution-4
+  (&key (press-enter-p t))
+  "Demo for robot contact wrench and joint torque distribution by QP. Infeasible solution."
+  (not (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :mu-trans 0.01 :press-enter-p press-enter-p)))
+
+(defun demo-robot-contact-wrench-distribution-5
+  (&key (press-enter-p t))
+  "Demo for robot contact wrench and joint torque distribution by QP. Originally infeasible solution, but obtain solution by allowing min inequality boundary violation."
+  (demo-robot-contact-wrench-distribution-common :func #'(lambda (&rest args) (apply #'test-wrench-torque-distribute-by-qp :min-inequality-violation-weight 1 args))
+                                                 :mu-trans 0.01 :press-enter-p press-enter-p))
+
+(defun demo-robot-contact-wrench-distribution-all
+  (&key (press-enter-p t))
+  "for all test"
+  (let ((ret))
+    (dotimes (i (apply #'max (remove-if-not #'numberp (mapcar #'(lambda (x) (let ((str (string-left-trim "DEMO-ROBOT-CONTACT-WRENCH-DISTRIBUTION-" (string x)))) (unless (string= "" str) (read-from-string str)))) (apropos-list 'demo-robot-contact-wrench-distribution)))))  ;; Get max number of demo function
+      (format t ";; demo-robot-contact-wrench-distribution-~d~%" (1+ i))
+      (push (funcall (eval (read-from-string (format nil "#'demo-robot-contact-wrench-distribution-~d" (1+ i)))) :press-enter-p press-enter-p) ret)
+      (when press-enter-p (format t ";; press enter~%") (read-line)))
+    (every #'identity ret)
+    ))
+
 (warn ";; (setup)~%")
-(warn ";; (test-distribute-all :func #'test-wrench-torque-distribute-by-qp)~%")
-(warn ";; (test-distribute-all :func #'test-wrench-distribute-by-qp)~%")
-(warn ";; (test-distribute-all :func #'test-wrench-distribute-by-pseudo-inverse)~%")
+(dotimes (i (apply #'max (remove-if-not #'numberp (mapcar #'(lambda (x) (let ((str (string-left-trim "DEMO-ROBOT-CONTACT-WRENCH-DISTRIBUTION-" (string x)))) (unless (string= "" str) (read-from-string str)))) (apropos-list 'demo-robot-contact-wrench-distribution))))) ;; Get max number of demo function
+  (warn ";;   (demo-robot-contact-wrench-distribution-~d) ;; ~A~%" (1+ i)
+        (documentation (read-from-string (format nil "demo-robot-contact-wrench-distribution-~d" (1+ i))))))
+(warn ";; (demo-robot-contact-wrench-distribution-all)~%")
 (warn ";; (test-compare-wrench-torque-calc)~%")
 
 (defun calc-diff-wrench
