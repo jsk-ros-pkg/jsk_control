@@ -410,10 +410,39 @@
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
    ))
 
+(defun demo-cbox-wrench-calc-13
+  ()
+  "Demo for cbox wrench calculation by 2D-translational-sliding-contact-constraint. cbox is neutral pos rot. This sample is infeasible but it's correct."
+  (set-cbox-pose-neutral)
+  (not
+   (demo-cbox-wrench-calc-comon
+    (list (instance 2D-translational-sliding-contact-constraint :init 0.5 :slide-axis :x))
+    (list (send *cbox* :worldcoords))
+    )))
+
+(defun demo-cbox-wrench-calc-14
+  ()
+  "Demo for cbox wrench calculation by default-contact-constraint. cbox is neutral pos rot. cbox is sliding in the -y direction."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance default-contact-constraint
+                   :init
+                   :mu-trans 0.5 :mu-rot 0.05
+                   :slide-axis :-y
+                   :l-min-x -150 :l-max-x 150
+                   :l-min-y -150 :l-max-y 150)
+         (instance default-contact-constraint
+                   :init
+                   :mu-trans 0.05 :mu-rot 0.05
+                   :l-min-x -50 :l-max-x 50
+                   :l-min-y -50 :l-max-y 50))
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
   (let ((ret))
-    (dotimes (i 12)
+    (dotimes (i 14)
       (format t ";; demo-cbox-wrench-calc-~d~%" (1+ i))
       (push (funcall (eval (read-from-string (format nil "#'demo-cbox-wrench-calc-~d" (1+ i))))) ret)
       (when press-enter-p (format t ";; press enter~%") (read-line)))
@@ -422,7 +451,7 @@
 
 ;; Usage
 (warn ";; cbox demo functions~%")
-(dotimes (i 12)
+(dotimes (i 14)
   (warn ";;   (demo-cbox-wrench-calc-~d) ;; ~A~%" (1+ i)
         (documentation (read-from-string (format nil "demo-cbox-wrench-calc-~d" (1+ i))))))
 (warn ";;   (demo-cbox-wrench-calc-all) ;; for all tests~%")
