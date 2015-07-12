@@ -47,7 +47,7 @@ public:
     }
     this->db_->Open(path, mode);
     //
-    if ( mode == caffe::db::NEW ){
+    if ( mode == caffe::db::NEW || mode == caffe::db::WRITE ){
       if ( this->txn_ ){
 	this->txn_.reset(this->db_->NewTransaction());
       } else {
@@ -143,8 +143,19 @@ public:
   }
 
   int dump_datum(){
-    std::cout << "[" << this->cursor_->key() << ", " << this->datum_.data() << "] ";
-    std::cout << this->datum_.channels() << " x "
+    std::cout << "key  : " << this->cursor_->key() << std::endl;
+    std::cout << "data : " << this->datum_.data() << std::endl;
+    std::cout << "fdata: " << "(";
+    for ( int i=0; i<this->datum_.float_data_size() ; i++ ){
+      std::cout << this->datum_.float_data(i) ;
+      if ( i < this->datum_.float_data_size()-1 ){
+	std::cout << ", " ;
+      }
+    }
+    std::cout << ")" << std::endl;
+    std::cout << "size :"
+      // << this->datum_.num() << " x "
+	      << this->datum_.channels() << " x "
 	      << this->datum_.width() << " x "
 	      << this->datum_.height() << std::endl;
     return 0;
@@ -180,7 +191,7 @@ public:
 	this->datum_.add_float_data((float)float_data[i]);
       }
     } else {
-      this->datum_.clear_data();
+      this->datum_.clear_float_data();
     }
     std::string datum_str;
     this->datum_.SerializeToString(&datum_str);
