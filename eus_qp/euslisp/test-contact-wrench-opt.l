@@ -465,7 +465,7 @@
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
   (let ((ret))
-    (dotimes (i 16)
+    (dotimes (i (apply #'max (remove-if-not #'numberp (mapcar #'(lambda (x) (let ((str (string-left-trim "DEMO-CBOX-WRENCH-CALC-" (string x)))) (unless (string= "" str) (read-from-string str)))) (apropos-list 'demo-cbox-wrench-calc))))) ;; Get max number of demo function
       (format t ";; demo-cbox-wrench-calc-~d~%" (1+ i))
       (push (funcall (eval (read-from-string (format nil "#'demo-cbox-wrench-calc-~d" (1+ i))))) ret)
       (when press-enter-p (format t ";; press enter~%") (read-line)))
@@ -474,7 +474,7 @@
 
 ;; Usage
 (warn ";; cbox demo functions~%")
-(dotimes (i 16)
+(dotimes (i (apply #'max (remove-if-not #'numberp (mapcar #'(lambda (x) (let ((str (string-left-trim "DEMO-CBOX-WRENCH-CALC-" (string x)))) (unless (string= "" str) (read-from-string str)))) (apropos-list 'demo-cbox-wrench-calc))))) ;; Get max number of demo function
   (warn ";;   (demo-cbox-wrench-calc-~d) ;; ~A~%" (1+ i)
         (documentation (read-from-string (format nil "demo-cbox-wrench-calc-~d" (1+ i))))))
 (warn ";;   (demo-cbox-wrench-calc-all) ;; for all tests~%")
