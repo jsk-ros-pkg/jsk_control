@@ -20,7 +20,8 @@
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
         (qp-solver #'solve-qpoases)
-        (check-status t))
+        (check-status t)
+        (min-inequality-violation-weight) (min-inequality-violation-weight-vector))
   "Wrench distribution function."
   (let* (;; inequality
          (inequality-matrix (apply #'concatenate-matrix-diagonal contact-constraint-matrix-list))
@@ -35,21 +36,42 @@
          (equality-vector total-wrench) ;; convert to total ext wrench
          ;; optimize function
          (eval-weight-matrix (diagonal wrench-optimize-weight-vector))
-         (eval-coeff-vector (instantiate float-vector (length wrench-optimize-weight-vector))))
+         (eval-coeff-vector (instantiate float-vector (length wrench-optimize-weight-vector)))
+         (state-dim (array-dimension inequality-matrix 1))
+         (use-min-inequality-violation-p (or min-inequality-violation-weight min-inequality-violation-weight-vector))
+         (state-min-vector))
+    (when use-min-inequality-violation-p
+      (let* ((ineq-dim (length inequality-min-vector))
+             (violation-state-weight-matrix
+              (if min-inequality-violation-weight-vector
+                  (diagonal min-inequality-violation-weight-vector)
+                (scale-matrix min-inequality-violation-weight (unit-matrix ineq-dim)))))
+        (setq equality-matrix (concatenate-matrix-row equality-matrix (make-matrix (length equality-vector) ineq-dim))
+              inequality-matrix (concatenate-matrix-row inequality-matrix (unit-matrix ineq-dim))
+              eval-weight-matrix (concatenate-matrix-diagonal eval-weight-matrix violation-state-weight-matrix)
+              eval-coeff-vector (if (float-vector-p eval-coeff-vector)
+                                    (concatenate float-vector eval-coeff-vector (instantiate float-vector ineq-dim))
+                                  (concatenate-matrix-row eval-coeff-vector (make-matrix 1 ineq-dim (list (instantiate float-vector ineq-dim)))))
+              state-min-vector (concatenate float-vector
+                                            (fill (instantiate float-vector state-dim) -1e35)
+                                            (instantiate float-vector ineq-dim)))))
     (let ((ret
-           (funcall qp-solver
-                    :initial-state initial-state
-                    :eval-weight-matrix eval-weight-matrix
-                    :eval-coeff-vector eval-coeff-vector
-                    :equality-matrix equality-matrix
-                    :equality-vector equality-vector
-                    :inequality-matrix inequality-matrix
-                    :inequality-min-vector inequality-min-vector
-                    :check-status check-status
-                    ;;:debug debug
-                    )))
+           (apply qp-solver
+                  :initial-state initial-state
+                  :eval-weight-matrix eval-weight-matrix
+                  :eval-coeff-vector eval-coeff-vector
+                  :equality-matrix equality-matrix
+                  :equality-vector equality-vector
+                  :inequality-matrix inequality-matrix
+                  :inequality-min-vector inequality-min-vector
+                  :check-status check-status
+                  (if use-min-inequality-violation-p
+                      (list :state-min-vector state-min-vector))
+                  ;;:debug debug
+                  )))
       (if ret
-          (list :wrench-list (send robot :wrench-vector->wrench-list ret)))
+          (list :wrench-list (send robot :wrench-vector->wrench-list
+                                   (if use-min-inequality-violation-p (subseq ret 0 state-dim) ret))))
       )))
 
 #|
@@ -159,6 +181,7 @@
                (send robot :calc-contact-wrenches-from-total-wrench
                      (send-all contact-coords-list :worldpos) :total-wrench total-wrench)))
         (contact-constraint-vector-list)
+        (min-inequality-violation-weight) (min-inequality-violation-weight-vector)
         (debug)
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
@@ -208,8 +231,26 @@
          (tq-weight-matrix (diagonal torque-optimize-weight-vector))
          (eval-weight-matrix (m+ (m* (m* jacobi tq-weight-matrix) jacobi^T) wr-weight-matrix))
          (eval-coeff-vector (m* (make-matrix 1 torque-dim (list (scale -1 inertial-torque)))
-                                (m* tq-weight-matrix jacobi^T))))
-    (let* ((ret (funcall
+                                (m* tq-weight-matrix jacobi^T)))
+         (state-dim (array-dimension contact-matrix 1))
+         (state-min-vector)
+         (use-min-inequality-violation-p (or min-inequality-violation-weight min-inequality-violation-weight-vector)))
+    (when use-min-inequality-violation-p
+      (let* ((ineq-dim (length inequality-min-vector))
+             (violation-state-weight-matrix
+              (if min-inequality-violation-weight-vector
+                  (diagonal min-inequality-violation-weight-vector)
+                (scale-matrix min-inequality-violation-weight (unit-matrix ineq-dim)))))
+        (setq equality-matrix (concatenate-matrix-row equality-matrix (make-matrix (length equality-vector) ineq-dim))
+              inequality-matrix (concatenate-matrix-row inequality-matrix (unit-matrix ineq-dim))
+              eval-weight-matrix (concatenate-matrix-diagonal eval-weight-matrix violation-state-weight-matrix)
+              eval-coeff-vector (if (float-vector-p eval-coeff-vector)
+                                    (concatenate float-vector eval-coeff-vector (instantiate float-vector ineq-dim))
+                                  (concatenate-matrix-row eval-coeff-vector (make-matrix 1 ineq-dim (list (instantiate float-vector ineq-dim)))))
+              state-min-vector (concatenate float-vector
+                                            (fill (instantiate float-vector state-dim) -1e35)
+                                            (instantiate float-vector ineq-dim)))))
+    (let* ((ret (apply
                  qp-solver
                  :initial-state initial-state
                  :eval-weight-matrix eval-weight-matrix
@@ -219,11 +260,14 @@
                  :equality-matrix equality-matrix
                  :equality-vector equality-vector
                  :check-status check-status
+                 (if use-min-inequality-violation-p
+                     (list :state-min-vector state-min-vector))
                  ;;:debug debug
                  )))
       (if ret
-          (list :wrench-list (send robot :wrench-vector->wrench-list ret)
-                :torque-vector (v- inertial-torque (transform jacobi^T ret))))
+          (let ((ret-wrench (if use-min-inequality-violation-p (subseq ret 0 state-dim) ret)))
+            (list :wrench-list (send robot :wrench-vector->wrench-list ret-wrench)
+                  :torque-vector (v- inertial-torque (transform jacobi^T ret-wrench)))))
       )))
 
 
