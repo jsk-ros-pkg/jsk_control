@@ -40,6 +40,11 @@
 #include <jsk_pcl_ros/pcl_conversion_util.h>
 #include <tf_conversions/tf_eigen.h>
 #include <jsk_pcl_ros/pcl_conversion_util.h>
+#include <kdl/chainfksolverpos_recursive.hpp>
+#include <kdl/chainfksolvervel_recursive.hpp>
+#include <tf_conversions/tf_kdl.h>
+#include <geometry_msgs/TwistStamped.h>
+#include <kdl_conversions/kdl_msg.h>
 
 namespace jsk_footstep_controller
 {
@@ -49,6 +54,7 @@ namespace jsk_footstep_controller
   {
     ros::NodeHandle nh, pnh("~");
     tf_listener_.reset(new tf::TransformListener());
+    odom_status_ = UNINITIALIZED;
     odom_pose_ = Eigen::Affine3d::Identity();
     ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
     root_link_pose_.setIdentity();
@@ -56,6 +62,7 @@ namespace jsk_footstep_controller
     diagnostic_updater_->setHardwareID("none");
     diagnostic_updater_->add("Support Leg Status", this,
                              &Footcoords::updateLegDiagnostics);
+
     // read parameter
     pnh.param("alpha", alpha_, 0.1);
     pnh.param("sampling_time_", sampling_time_, 0.2);
@@ -69,6 +76,25 @@ namespace jsk_footstep_controller
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
               std::string("rleg_end_coords"));
+    pnh.param("publish_odom_tf", publish_odom_tf_, true);
+    urdf::Model robot_model;
+    KDL::Tree tree;
+    robot_model.initParam("robot_description");
+    if (!kdl_parser::treeFromUrdfModel(robot_model, tree)) {
+      ROS_FATAL("Failed to load robot_description");
+      return;
+    }
+
+    tree.getChain(root_frame_id_, lfoot_frame_id_, lfoot_chain_);
+    tree.getChain(root_frame_id_, rfoot_frame_id_, rfoot_chain_);
+    for (size_t i=0; i < lfoot_chain_.getNrOfSegments(); i++){
+      ROS_INFO_STREAM("kdl_chain(" << i << ") "
+                      << lfoot_chain_.getSegment(i).getJoint().getName().c_str());
+    }
+    for (size_t i=0; i < rfoot_chain_.getNrOfSegments(); i++){
+      ROS_INFO_STREAM("kdl_chain(" << i << ") "
+                      << rfoot_chain_.getSegment(i).getJoint().getName().c_str());
+    }
     pnh.param("lfoot_sensor_frame", lfoot_sensor_frame_, std::string("lleg_end_coords"));
     pnh.param("rfoot_sensor_frame", rfoot_sensor_frame_, std::string("rleg_end_coords"));
     // pnh.param("lfoot_sensor_frame", lfoot_sensor_frame_, std::string("lfsensor"));
@@ -79,18 +105,25 @@ namespace jsk_footstep_controller
     pub_state_ = pnh.advertise<std_msgs::String>("state", 1);
     pub_contact_state_ = pnh.advertise<jsk_footstep_controller::GroundContactState>("contact_state", 1);
     pub_synchronized_forces_ = pnh.advertise<jsk_footstep_controller::SynchronizedForces>("synchronized_forces", 1);
+    pub_debug_lfoot_pos_ = pnh.advertise<geometry_msgs::Pose>("debug/lfoot_pose", 1);
+    pub_debug_rfoot_pos_ = pnh.advertise<geometry_msgs::Pose>("debug/rfoot_pose", 1);
+    pub_leg_odometory_ = pnh.advertise<geometry_msgs::PoseStamped>("leg_odometry", 1);
+    pub_twist_ = pnh.advertise<geometry_msgs::TwistStamped>("base_vel", 1);
     before_on_the_air_ = true;
-    odom_sub_ = pnh.subscribe<nav_msgs::Odometry>("/odom", 1,
-                                                 &Footcoords::odomCallback, this);
+    if (publish_odom_tf_) {
+      odom_sub_ = pnh.subscribe("/odom", 1,
+                                &Footcoords::odomCallback, this);
+    }
     periodic_update_timer_ = pnh.createTimer(ros::Duration(1.0 / 25),
                                              boost::bind(&Footcoords::periodicTimerCallback, this, _1));
-    sub_lfoot_force_.subscribe(nh, "lfsensor", 10);
-    sub_rfoot_force_.subscribe(nh, "rfsensor", 10);
-
+    sub_lfoot_force_.subscribe(nh, "off_lfsensor", 50);
+    sub_rfoot_force_.subscribe(nh, "off_rfsensor", 50);
+    sub_joint_states_.subscribe(nh, "joint_states",50);
+    sub_zmp_.subscribe(nh, "zmp", 50);
     sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
-    sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_);
-    sync_->registerCallback(boost::bind(&Footcoords::synchronizeForces, this, _1, _2));
-    synchronized_forces_sub_ = pnh.subscribe("synchronized_forces", 10,
+    sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_, sub_joint_states_, sub_zmp_);
+    sync_->registerCallback(boost::bind(&Footcoords::synchronizeForces, this, _1, _2, _3, _4));
+    synchronized_forces_sub_ = pnh.subscribe("synchronized_forces", 20,
                                              &Footcoords::filter, this);
   }
 
@@ -242,13 +275,94 @@ namespace jsk_footstep_controller
   }
 
   void Footcoords::synchronizeForces(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
-                                     const geometry_msgs::WrenchStamped::ConstPtr& rfoot)
+                                     const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
+                                     const sensor_msgs::JointState::ConstPtr& joint_states,
+                                     const geometry_msgs::PointStamped::ConstPtr& zmp)
   {
     jsk_footstep_controller::SynchronizedForces forces;
     forces.header = lfoot->header;
     forces.lleg_force = *lfoot;
     forces.rleg_force = *rfoot;
+    forces.joint_angles = *joint_states;
+    forces.zmp = *zmp;
     pub_synchronized_forces_.publish(forces);
+  }
+
+  void Footcoords::updateChain(std::map<std::string, double>& joint_angles,
+                               KDL::Chain& chain,
+                               tf::Pose& output_pose)
+  {
+    KDL::JntArray jnt_pos(chain.getNrOfJoints());
+    for (int i = 0, j = 0; i < chain.getNrOfSegments(); i++) {
+      /*
+       * if (chain.getSegment(i).getJoint().getType() == KDL::Joint::None)
+       *   continue;
+       */
+      std::string joint_name = chain.getSegment(i).getJoint().getName();
+      if (joint_angles.find(joint_name) != joint_angles.end()) {
+        jnt_pos(j++) = joint_angles[joint_name];
+      }
+    }
+    KDL::ChainFkSolverPos_recursive fk_solver(chain);
+    KDL::Frame pose;
+    if (fk_solver.JntToCart(jnt_pos, pose) < 0) {
+      ROS_FATAL("Failed to compute FK");
+    }
+    tf::poseKDLToTF(pose, output_pose);
+  }
+
+  void Footcoords::updateRobotModel(std::map<std::string, double>& joint_angles)
+  {
+
+    updateChain(joint_angles, lfoot_chain_, lfoot_pose_);
+    updateChain(joint_angles, rfoot_chain_, rfoot_pose_);
+    geometry_msgs::Pose ros_lfoot_pose, ros_rfoot_pose;
+    tf::poseTFToMsg(lfoot_pose_, ros_lfoot_pose);
+    tf::poseTFToMsg(rfoot_pose_, ros_rfoot_pose);
+    pub_debug_lfoot_pos_.publish(ros_lfoot_pose);
+    pub_debug_rfoot_pos_.publish(ros_rfoot_pose);
+  }
+
+  void Footcoords::computeVelicity(double dt,
+                                   std::map<std::string, double>& joint_angles,
+                                   KDL::Chain& chain,
+                                   geometry_msgs::Twist& output)
+  {
+    KDL::ChainFkSolverVel_recursive fk_solver(chain);
+    KDL::JntArrayVel jnt_pos(chain.getNrOfJoints());
+    KDL::JntArray q(chain.getNrOfJoints()), qdot(chain.getNrOfJoints());
+    for (int i = 0, j = 0; i < chain.getNrOfSegments(); i++) {
+      std::string joint_name = chain.getSegment(i).getJoint().getName();
+      if (joint_angles.find(joint_name) != joint_angles.end()) {
+        qdot(j) = (joint_angles[joint_name] - prev_joints_[joint_name]) / dt;
+        q(j++) = joint_angles[joint_name];
+      }
+    }
+    jnt_pos.q = q;
+    jnt_pos.qdot = qdot;
+    KDL::FrameVel vel;
+    if (fk_solver.JntToCart(jnt_pos, vel) < 0) {
+      ROS_FATAL("Failed to compute velocity");
+    }
+    KDL::Twist twist = vel.GetTwist();
+    tf::twistKDLToMsg(twist, output);
+  }
+
+  void Footcoords::estimateVelocity(const ros::Time& stamp, std::map<std::string, double>& joint_angles)
+  {
+    geometry_msgs::TwistStamped twist_stamped;
+    if (!prev_joints_.empty()) {
+      double dt = (stamp - last_time_).toSec();
+      if (odom_status_ == LLEG_SUPPORT || odom_status_ == INITIALIZING) {
+        computeVelicity(dt, joint_angles, lfoot_chain_, twist_stamped.twist);
+      }
+      else if (odom_status_ == RLEG_SUPPORT) {
+        computeVelicity(dt, joint_angles, rfoot_chain_, twist_stamped.twist);
+      }
+      twist_stamped.header.stamp = stamp;
+      twist_stamped.header.frame_id = root_frame_id_;
+      pub_twist_.publish(twist_stamped);
+    }
   }
 
   void Footcoords::filter(const jsk_footstep_controller::SynchronizedForces::ConstPtr& msg)
@@ -256,6 +370,15 @@ namespace jsk_footstep_controller
     boost::mutex::scoped_lock lock(mutex_);
     geometry_msgs::WrenchStamped lfoot = msg->lleg_force;
     geometry_msgs::WrenchStamped rfoot = msg->rleg_force;
+    zmp_ = Eigen::Vector3f(msg->zmp.point.x, msg->zmp.point.y, msg->zmp.point.z);
+    sensor_msgs::JointState joint_angles = msg->joint_angles;
+    std::map<std::string, double> angles;
+    for (size_t i = 0; i < joint_angles.name.size(); i++) {
+      angles[joint_angles.name[i]] = joint_angles.position[i];
+    }
+
+    updateRobotModel(angles);
+
     // lowpass filter
     tf::Vector3 lfoot_force_vector, rfoot_force_vector;
     if (!resolveForceTf(lfoot, rfoot, lfoot_force_vector, rfoot_force_vector)) {
@@ -279,15 +402,9 @@ namespace jsk_footstep_controller
     prev_rforce_ = rfoot_force;
 
     if (lfoot_force >= force_thr_ && rfoot_force >= force_thr_) {
-      // on ground
-      if (support_status_ != BOTH_GROUND) {
-        // save transformation from midcoords to odom_on_ground
-        locked_midcoords_to_odom_on_ground_ = midcoords_.inverse() * ground_transform_;
-      }
       support_status_ = BOTH_GROUND;
     }
     else if (lfoot_force < force_thr_ && rfoot_force < force_thr_) {
-      before_on_the_air_ = true;
       support_status_ = AIR;
     }
     else if (lfoot_force >= force_thr_) {
@@ -298,13 +415,253 @@ namespace jsk_footstep_controller
       // only right
       support_status_ = RLEG_GROUND;
     }
-    else {
-      // unstable
-      support_status_ = UNSTABLE;
-      publishState("unstable");
+    estimateOdometry();
+    estimateVelocity(msg->header.stamp, angles);
+    geometry_msgs::PoseStamped leg_odometory;
+    leg_odometory.header.stamp = msg->header.stamp;
+    leg_odometory.header.frame_id = root_frame_id_;
+    tf::poseTFToMsg(estimated_odom_pose_, leg_odometory.pose);
+    pub_leg_odometory_.publish(leg_odometory);
+    /* tf for debug*/
+    std::vector<geometry_msgs::TransformStamped> tf_transforms;
+    geometry_msgs::TransformStamped odom_transform;
+    tf::transformTFToMsg(estimated_odom_pose_, odom_transform.transform);
+    odom_transform.header = leg_odometory.header;
+    odom_transform.child_frame_id = "leg_odom";
+    tf_transforms.push_back(odom_transform);
+    tf_broadcaster_.sendTransform(tf_transforms);
+    prev_joints_ = angles;
+    last_time_ = msg->header.stamp;
+  }
+
+  void Footcoords::estimateOdometry()
+  {
+    //estimateOdometryMainSupportLeg();
+    estimateOdometryZMPSupportLeg();
+  }
+
+  void Footcoords::estimateOdometryNaive()
+  {
+    if (odom_status_ == UNINITIALIZED && support_status_ == BOTH_GROUND) {
+      ROS_INFO("changed to INITIALIZING");
+      odom_status_ = INITIALIZING;
+    }
+    if (odom_status_ == INITIALIZING && support_status_ == BOTH_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "INITIALIZING");
+      /* Update odom origin */
+      tf::Quaternion midcoords_rot = lfoot_pose_.getRotation().slerp(rfoot_pose_.getRotation(), 0.5);
+      tf::Vector3 midcoords_pos = lfoot_pose_.getOrigin().lerp(rfoot_pose_.getOrigin(), 0.5);
+      tf::Pose midcoords;
+      midcoords.setOrigin(midcoords_pos);
+      midcoords.setRotation(midcoords_rot);
+      lfoot_to_origin_pose_ = lfoot_pose_.inverse() * midcoords;
+      rfoot_to_origin_pose_ = rfoot_pose_.inverse() * midcoords;
+      estimated_odom_pose_ = midcoords;
+    }
+    if (odom_status_ == INITIALIZING && support_status_ ==RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect RLEG support phase");
+      odom_status_ = RLEG_SUPPORT;
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == INITIALIZING && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect LLEG support phase");
+      odom_status_ = LLEG_SUPPORT;
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ == RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "keep RLEG support phase");
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ == BOTH_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "dual leg support phase but use RLEG");
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+      lfoot_to_origin_pose_ = lfoot_pose_.inverse() * rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect LLEG support phase");
+      odom_status_ = LLEG_SUPPORT;
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "keep LLEG support phase");
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;;
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == BOTH_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "dual leg support phase but use LLEG");
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;;
+      rfoot_to_origin_pose_ = rfoot_pose_.inverse() * lfoot_pose_ * lfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect RLEG support phase");
+      odom_status_ = RLEG_SUPPORT;
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    if (support_status_ == AIR) {
+      ROS_INFO_THROTTLE(1.0, "resetting");
+      odom_status_ = UNINITIALIZED;
     }
   }
-  
+
+  void Footcoords::estimateOdometryMainSupportLeg()
+  {
+    if (odom_status_ == UNINITIALIZED && support_status_ == BOTH_GROUND) {
+      ROS_INFO("changed to INITIALIZING");
+      odom_status_ = INITIALIZING;
+    }
+    if (odom_status_ == INITIALIZING && support_status_ == BOTH_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "INITIALIZING");
+      /* Update odom origin */
+      tf::Quaternion midcoords_rot = lfoot_pose_.getRotation().slerp(rfoot_pose_.getRotation(), 0.5);
+      tf::Vector3 midcoords_pos = lfoot_pose_.getOrigin().lerp(rfoot_pose_.getOrigin(), 0.5);
+      tf::Pose midcoords;
+      midcoords.setOrigin(midcoords_pos);
+      midcoords.setRotation(midcoords_rot);
+      lfoot_to_origin_pose_ = lfoot_pose_.inverse() * midcoords;
+      rfoot_to_origin_pose_ = rfoot_pose_.inverse() * midcoords;
+      estimated_odom_pose_ = midcoords;
+    }
+    if (odom_status_ == INITIALIZING && support_status_ == RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect RLEG support phase");
+      odom_status_ = RLEG_SUPPORT;
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == INITIALIZING && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect LLEG support phase");
+      odom_status_ = LLEG_SUPPORT;
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ ==RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "keep RLEG support phase");
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ == BOTH_GROUND) {
+      if (prev_lforce_ > prev_rforce_) {
+        /* switch to lleg */
+        odom_status_ = LLEG_SUPPORT;
+        ROS_INFO_THROTTLE(1.0, "dual leg support phase, switch to lleg");
+        estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;
+        rfoot_to_origin_pose_ = rfoot_pose_.inverse() * lfoot_pose_ * lfoot_to_origin_pose_;
+      }
+      else {
+        ROS_INFO_THROTTLE(1.0, "dual leg support phase but use RLEG");
+        estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+        lfoot_to_origin_pose_ = lfoot_pose_.inverse() * rfoot_pose_ * rfoot_to_origin_pose_;
+      }
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect LLEG support phase");
+      odom_status_ = LLEG_SUPPORT;
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "keep LLEG support phase");
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;;
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == BOTH_GROUND) {
+      if (prev_rforce_ > prev_lforce_) {
+        odom_status_ = RLEG_SUPPORT;
+        ROS_INFO_THROTTLE(1.0, "dual leg support phase, switch to rleg");
+        estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+        lfoot_to_origin_pose_ = lfoot_pose_.inverse() * rfoot_pose_ * rfoot_to_origin_pose_;
+      }
+      else {
+        ROS_INFO_THROTTLE(1.0, "dual leg support phase but use LLEG");
+        estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;;
+        rfoot_to_origin_pose_ = rfoot_pose_.inverse() * lfoot_pose_ * lfoot_to_origin_pose_;
+      }
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect RLEG support phase");
+      odom_status_ = RLEG_SUPPORT;
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    if (support_status_ == AIR) {
+      ROS_INFO_THROTTLE(1.0, "resetting");
+      odom_status_ = UNINITIALIZED;
+    }
+  }
+
+    void Footcoords::estimateOdometryZMPSupportLeg()
+  {
+    if (odom_status_ == UNINITIALIZED && support_status_ == BOTH_GROUND) {
+      ROS_INFO("changed to INITIALIZING");
+      odom_status_ = INITIALIZING;
+    }
+    if (odom_status_ == INITIALIZING && support_status_ == BOTH_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "INITIALIZING");
+      /* Update odom origin */
+      tf::Quaternion midcoords_rot = lfoot_pose_.getRotation().slerp(rfoot_pose_.getRotation(), 0.5);
+      tf::Vector3 midcoords_pos = lfoot_pose_.getOrigin().lerp(rfoot_pose_.getOrigin(), 0.5);
+      tf::Pose midcoords;
+      midcoords.setOrigin(midcoords_pos);
+      midcoords.setRotation(midcoords_rot);
+      lfoot_to_origin_pose_ = lfoot_pose_.inverse() * midcoords;
+      rfoot_to_origin_pose_ = rfoot_pose_.inverse() * midcoords;
+      estimated_odom_pose_ = midcoords;
+    }
+    if (odom_status_ == INITIALIZING && support_status_ == RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect RLEG support phase");
+      odom_status_ = RLEG_SUPPORT;
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == INITIALIZING && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect LLEG support phase");
+      odom_status_ = LLEG_SUPPORT;
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ ==RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "keep RLEG support phase");
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ == BOTH_GROUND) {
+      if (zmp_[1] > 0) {
+        /* switch to lleg */
+        odom_status_ = LLEG_SUPPORT;
+        ROS_INFO_THROTTLE(1.0, "dual leg support phase, switch to lleg");
+        estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;
+        rfoot_to_origin_pose_ = rfoot_pose_.inverse() * lfoot_pose_ * lfoot_to_origin_pose_;
+      }
+      else {
+        ROS_INFO_THROTTLE(1.0, "dual leg support phase but use RLEG");
+        estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+        lfoot_to_origin_pose_ = lfoot_pose_.inverse() * rfoot_pose_ * rfoot_to_origin_pose_;
+      }
+    }
+    else if (odom_status_ == RLEG_SUPPORT && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect LLEG support phase");
+      odom_status_ = LLEG_SUPPORT;
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == LLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "keep LLEG support phase");
+      estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;;
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == BOTH_GROUND) {
+      if (zmp_[1] < 0) {
+        odom_status_ = RLEG_SUPPORT;
+        ROS_INFO_THROTTLE(1.0, "dual leg support phase, switch to rleg");
+        estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+        lfoot_to_origin_pose_ = lfoot_pose_.inverse() * rfoot_pose_ * rfoot_to_origin_pose_;
+      }
+      else {
+        ROS_INFO_THROTTLE(1.0, "dual leg support phase but use LLEG");
+        estimated_odom_pose_ = lfoot_pose_ * lfoot_to_origin_pose_;;
+        rfoot_to_origin_pose_ = rfoot_pose_.inverse() * lfoot_pose_ * lfoot_to_origin_pose_;
+      }
+    }
+    else if (odom_status_ == LLEG_SUPPORT && support_status_ == RLEG_GROUND) {
+      ROS_INFO_THROTTLE(1.0, "detect RLEG support phase");
+      odom_status_ = RLEG_SUPPORT;
+      estimated_odom_pose_ = rfoot_pose_ * rfoot_to_origin_pose_;
+    }
+    if (support_status_ == AIR) {
+      ROS_INFO_THROTTLE(1.0, "resetting");
+      odom_status_ = UNINITIALIZED;
+    }
+  }
+
+
+
   void Footcoords::publishState(const std::string& state)
   {
     std_msgs::String state_msg;

@@ -10,6 +10,9 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation genmsg message_filters sensor_msgs geometry_msgs tf jsk_topic_tools
   eigen_conversions
+  kdl_parser
+  kdl_conversions
+  urdf
 )
 
 add_message_files(FILES
@@ -23,7 +26,7 @@ add_action_files(
   FILES LookAroundGround.action
 )
 generate_messages(
-  DEPENDENCIES actionlib_msgs std_msgs geometry_msgs)
+  DEPENDENCIES actionlib_msgs std_msgs geometry_msgs sensor_msgs)
 
 catkin_package(
 #  INCLUDE_DIRS include
