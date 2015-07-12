@@ -1,15 +1,50 @@
-if(NOT USE_ROSBUILD)
-  include(catkin.cmake)
-  return()
-endif()
+cmake_minimum_required(VERSION 2.8.3)
+project(jsk_footstep_controller)
 
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+find_package(catkin REQUIRED COMPONENTS
+  jsk_footstep_msgs
+  jsk_footstep_planner
+  actionlib_msgs
+  jsk_pcl_ros
+  tf_conversions
+  std_msgs
+  message_generation genmsg message_filters sensor_msgs geometry_msgs tf jsk_topic_tools
+  eigen_conversions
+)
+
+add_message_files(FILES
+  GroundContactState.msg FootCoordsLowLevelInfo.msg SynchronizedForces.msg)
+
+add_service_files(FILES
+  RequireLog.srv RequireMonitorStatus.srv)
+
+add_action_files(
+  DIRECTORY action
+  FILES LookAroundGround.action
+)
+generate_messages(
+  DEPENDENCIES actionlib_msgs std_msgs geometry_msgs)
+
+catkin_package(
+#  INCLUDE_DIRS include
+#  LIBRARIES jsk_footstep_controller
+ CATKIN_DEPENDS jsk_footstep_msgs jsk_footstep_planner message_filters sensor_msgs geometry_msgs tf jsk_topic_tools
+#  DEPENDS system_lib
+)
+include_directories(include ${catkin_INCLUDE_DIRS})
+add_executable(footcoords src/footcoords.cpp)
+target_link_libraries(footcoords ${catkin_LIBRARIES})
+add_dependencies(footcoords ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_gencpp)
+
+install(TARGETS footcoords
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 
-rosbuild_init()
-
-rosbuild_add(footcoords src/footcoords.cpp)
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+install(DIRECTORY euslisp launch
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  USE_SOURCE_PERMISSIONS
+  PATTERN ".svn" EXCLUDE
+)
