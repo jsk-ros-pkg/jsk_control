@@ -437,11 +437,14 @@
    e.g. When slide-axis is :x, this cnstarint consists of sliding constraint of x and friction constraint of y."
    (setq mu-trans tmp-mu-trans norm-axis tmp-norm-axis slide-axis tmp-slide-axis)
    (setq constraint-param-list
-         (append (calc-constraint-param-list-for-translational-sliding
-                  mu-trans norm-axis slide-axis)
-                 (calc-constraint-param-list-for-translational-friction
-                  mu-trans norm-axis (sliding-axis->no-sliding-axis slide-axis))
-                 ))
+         (let ((ret
+                (list (calc-constraint-param-list-for-translational-sliding
+                       mu-trans norm-axis slide-axis)
+                      (calc-constraint-param-list-for-translational-friction
+                       mu-trans norm-axis (sliding-axis->no-sliding-axis slide-axis)))))
+           (list :matrix (apply #'append (mapcar #'(lambda (x) (cadr (memq :matrix x))) ret))
+                 :vector (apply #'append (mapcar #'(lambda (x) (cadr (memq :vector x))) ret)))
+           ))
    (send-super :init))
   (:gen-drawing-object
    (&key (z-length 200))
@@ -451,17 +454,17 @@
            ((or (equal slide-axis :x) (equal slide-axis :-x))
             (list
              (float-vector 0 0 0)
-             (float-vector (* (axis->sgn slide-axis) mu-trans z-length) (* 1 mu-trans z-length) z-length)
-             (float-vector (* (axis->sgn slide-axis) mu-trans z-length) (* -1 mu-trans z-length) z-length))
+             (float-vector (* -1 (axis->sgn slide-axis) mu-trans z-length) (* 1 mu-trans z-length) z-length)
+             (float-vector (* -1 (axis->sgn slide-axis) mu-trans z-length) (* -1 mu-trans z-length) z-length))
             )
            ((or (equal slide-axis :y) (equal slide-axis :-y))
             (list
              (float-vector 0 0 0)
-             (float-vector (* 1 mu-trans z-length) (* (axis->sgn slide-axis) mu-trans z-length) z-length)
-             (float-vector (* -1 mu-trans z-length) (* (axis->sgn slide-axis) mu-trans z-length) z-length))
+             (float-vector (* 1 mu-trans z-length) (* -1 (axis->sgn slide-axis) mu-trans z-length) z-length)
+             (float-vector (* -1 mu-trans z-length) (* -1 (axis->sgn slide-axis) mu-trans z-length) z-length))
             ))
           1))
-   (send drawing-object :put :draw-on-args (list :color #f(1 1 0) :width 3))
+   (send drawing-object :put :draw-on-args (list :color #f(1 1 1) :width 3))
    )
   )
 
@@ -472,7 +475,7 @@
 
 (defmethod default-contact-constraint
   (:init
-   (&key (mu-trans) (mu-rot)
+   (&key (mu-trans) (mu-rot) (slide-axis)
          (l-max-x) (l-max-y) (l-min-x) (l-min-y)
          (name))
    "Calc default constraint matrix.
@@ -481,7 +484,9 @@
    (setq contact-constraint-list
          (list
            ;; friction
-           (instance 2D-translational-friction-contact-constraint :init mu-trans)
+          (if slide-axis
+              (instance 2D-translational-sliding-contact-constraint :init mu-trans :slide-axis slide-axis)
+              (instance 2D-translational-friction-contact-constraint :init mu-trans))
            (instance rotational-friction-contact-constraint :init mu-rot :fz)
            ;; cop
            (instance 2D-cop-contact-constraint :init l-max-x l-min-x l-max-y l-min-y)
@@ -644,7 +649,7 @@
 
 (defun calc-constraint-param-list-for-translational-sliding
   (mu-trans norm-axis slide-axis)
-   "Calc conatraint param list for translational sliding.
+  "Calc conatraint param list for translational sliding.
    mu-trans is friction coefficient.
    norm-axis is axis of normal (such as fz).
    slide-axis is axis of sliding direction (such as fx or fy)."
@@ -661,7 +666,8 @@
           ((< slide-sgn 0)
            (setf (elt (car ret) slide-idx) -1)
            (setf (elt (cadr ret) slide-idx) 1)))
-    ret))
+    (list :matrix ret :vector (list 0 0))
+    ))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
