@@ -38,7 +38,8 @@
 (defforeign _reset_memory_layer *eus-caffe-plugin* "eus_caffe_reset_memory_layer" (:string :integer :string :string) :integer)
 (defforeign _initialize_solver *eus-caffe-plugin* "eus_caffe_initialize_solver" (:integer :integer :string :string :string :string) :integer)
 (defforeign _learn *eus-caffe-plugin* "eus_caffe_learn" () :float)
-(defforeign _calc_forward *eus-caffe-plugin* "eus_caffe_calc_forward" (:integer :integer :string :string) :integer)
+(defforeign _calc_forward *eus-caffe-plugin* "eus_caffe_calc_forward" (:integer :integer :integer :integer :integer :string :integer :string) :integer)
+(defforeign _calc_forward_double *eus-caffe-plugin* "eus_caffe_calc_forward_double" (:integer :integer :integer :integer :integer :string :integer :string) :integer)
 (defforeign _memory_calc_forward *eus-caffe-plugin* "eus_caffe_memory_calc_forward" (:integer :integer :string :string :string) :integer)
 (defforeign _gen_test_net *eus-caffe-plugin* "eus_caffe_gen_test_net" (:string :string) :integer)
 
@@ -84,9 +85,29 @@
   (&key
    (isize 2)
    (osize 1)
+   (num 1)
+   (channels isize)
+   (width 1)
+   (height 1)
+   (input (instantiate string isize))
+   (output (instantiate float-vector osize)))
+  (_calc_forward num channels width height
+		 (length input) input (length output) output)
+  output)
+
+(defun calc-forward-double
+  (&key
+   (isize 2)
+   (osize 1)
+   (num 1)
+   (channels isize)
+   (width 1)
+   (height 1)
    (input (instantiate float-vector isize))
    (output (instantiate float-vector osize)))
-  (_calc_forward (length input) (length output) input output)
+  (_calc_forward_double
+   num channels width height
+   (length input) input (length output) output)
   output)
 
 (defun memory-calc-forward
