@@ -116,8 +116,8 @@ namespace jsk_footstep_controller
     }
     periodic_update_timer_ = pnh.createTimer(ros::Duration(1.0 / 25),
                                              boost::bind(&Footcoords::periodicTimerCallback, this, _1));
-    sub_lfoot_force_.subscribe(nh, "off_lfsensor", 50);
-    sub_rfoot_force_.subscribe(nh, "off_rfsensor", 50);
+    sub_lfoot_force_.subscribe(nh, "lfsensor", 50);
+    sub_rfoot_force_.subscribe(nh, "rfsensor", 50);
     sub_joint_states_.subscribe(nh, "joint_states",50);
     sub_zmp_.subscribe(nh, "zmp", 50);
     sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
