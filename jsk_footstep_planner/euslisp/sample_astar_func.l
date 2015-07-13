@@ -1,0 +1,97 @@
+#!/usr/bin/env roseus
+(load "~/ros/hydro_parent/src/jskeus/irteus/irtgraph.l")
+(defclass 2d-node
+  :super node
+  :slots (x y occupiedp))
+
+(defmethod 2d-node
+  (:init (ax ay aoccupiedp)
+    (setq x ax
+          y ay
+          occupiedp aoccupiedp))
+  (:x () x)
+  (:y () y)
+  (:occupiedp () occupiedp)
+  )
+
+(defclass 2d-graph
+  :super graph
+  :slots (graph-array))
+
+(defmethod 2d-graph
+  (:init ()
+    (send-super :init)
+    (setq graph-array (make-array '(1024 1024)))
+    )
+  (:add-node (n &rest args)
+    (send-super :add-node n)
+    (setf (aref graph-array (send n :x) (send n :y)) n))
+  (:path-cost (from arc to)
+    1)
+  (:successors (n &rest args)
+    (let* ((x (send n :x))
+           (y (send n :y))
+           (x+1 (1+ x))
+           (x-1 (1- x))
+           (y+1 (1+ y))
+           (y-1 (1- y))
+           (successors nil))
+      (if (and (>= x-1 0) (not (send (aref graph-array x-1 y) :occupiedp)))
+          (push (aref graph-array x-1 y) successors))
+      (if (and (< x+1 1024) (not (send (aref graph-array x+1 y) :occupiedp)))
+          (push (aref graph-array x+1 y) successors))
+      (if (and (>= y-1 0) (not (send (aref graph-array x y-1) :occupiedp)))
+          (push (aref graph-array x y-1) successors))
+      (if (and (< y+1 1024) (not (send (aref graph-array x y+1) :occupiedp)))
+          (push (aref graph-array x y+1) successors))
+      (mapcar #'(lambda (x) (cons x x)) successors)))
+  (:find (x y)
+    (aref graph-array x y))
+  (:hn (n p)
+    0)
+  )
+(defmethod a*-graph-search-solver
+  (:hn (n p) (send p :hn n p)))
+
+(ros::roseus "sample_astar")
+(defun run ()
+  (setq gr (instance 2d-graph :init))
+  (with-open-file (f (ros::resolve-ros-path (ros::get-param "~map" "package://jsk_footstep_planner/config/map.txt")))
+    (let ((line nil)
+          (j 0))
+      (while (setq line (read-line f nil nil))
+        (dotimes (i (length line))
+          (let ((c (elt line i)))
+            (let ((n (instance 2d-node :init i j (= #\x c))))
+              (send gr :add-node n))))
+        (incf j)
+        ))
+    )
+  (send gr :start-state (send gr :find 1 1))
+  (send gr :goal-state (send gr :find 61 28))
+  (setq sv (instance a*-graph-search-solver :init gr))
+  (let* ((path (bench (send sv :solve gr)))
+         (states (send-all path :state)))
+    ;; print path
+    (dotimes (j 1024)
+      (let ((foundp nil))
+        (dotimes (i 1024)
+          (let ((n (send gr :find i j)))
+            (when n
+              (setq foundp t)
+              (cond ((find-if #'(lambda (s)
+                                  (and (= (send s :x) (send n :x))
+                                       (= (send s :y) (send n :y))))
+                              states)
+                     (format t "o"))
+                    ((and (send gr :find (send n :x) (send n :y)) (send (send gr :find (send n :x) (send n :y)) :occupiedp))
+                     (format t "x"))
+                    ((send gr :find (send n :x) (send n :y))
+                     (format t " "))
+                    (t
+                     )))))
+        (if foundp (format t "~%"))
+        )
+        ))
+    )
+

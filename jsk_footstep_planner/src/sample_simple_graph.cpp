@@ -38,6 +38,7 @@
 #include "jsk_footstep_planner/breadth_first_search_solver.h"
 #include "jsk_footstep_planner/depth_first_search_solver.h"
 #include "jsk_footstep_planner/best_first_search_solver.h"
+#include "jsk_footstep_planner/astar_solver.h"
 #include <iostream>
 #include <boost/format.hpp>
 #include <jsk_topic_tools/time_accumulator.h>
@@ -47,6 +48,7 @@ using namespace jsk_footstep_planner;
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "sample_simple_graph");
+  std::cout << "usage: rosrun jsk_footstep_planner sample_astar config/map.txt" << std::endl;
   SimpleNeighboredGraph::Ptr graph (new SimpleNeighboredGraph);
 
   // node name: depth_num
