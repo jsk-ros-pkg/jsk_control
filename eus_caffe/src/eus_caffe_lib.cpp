@@ -134,7 +134,22 @@ public:
     return 0;
   }
 
-  int calc_forward (int inputsize, int outputsize, double* input, double* output){
+  int calc_forward (int num, int channels, int width, int height,
+		    int inputsize, char* input,
+		    int outputsize, double* output){
+    return _calc_forward(num,channels,width,height,inputsize,input,0,NULL,outputsize,output);
+  }
+
+  int calc_forward_double (int num, int channels, int width, int height,
+			   int inputsize, double* input,
+			   int outputsize, double* output){
+    return _calc_forward(num,channels,width,height,0,NULL,inputsize,input,outputsize,output);
+  }
+
+  int _calc_forward (int num, int channels, int width, int height,
+		     int inputsize, char* input,
+		     int finputsize, double* finput,
+		     int outputsize, double* output){
     if ( ! this->_check(this->test_net, "test_net") ) return -1 ;
     //
     // std::cout << "calc_forward" << std::endl;
@@ -142,11 +157,20 @@ public:
     caffe::Blob<double>* blob = new caffe::Blob<double>();
     std::vector<caffe::Blob<double>*> bottom;
     caffe::BlobProto blob_proto;
-    blob_proto.set_num(1);
-    blob_proto.set_channels(inputsize/outputsize);
-    blob_proto.set_height(1);
-    blob_proto.set_width(1);
-    for ( int i=0 ; i<inputsize ; i++ ) blob_proto.add_data(input[i]);
+    blob_proto.set_num(num);
+    blob_proto.set_channels(channels);
+    blob_proto.set_height(height);
+    blob_proto.set_width(width);
+    if ( inputsize > 0 && input ){ // set data, char input precede
+      for ( int i=0 ; i<inputsize ; i++ ) {
+	blob_proto.add_data(input[i]);
+      }
+    } else if ( finputsize > 0 && finput ){
+      for ( int i=0 ; i<finputsize ; i++ ) {
+	blob_proto.add_data(finput[i]);
+      }
+    }
+    //
     blob->FromProto(blob_proto);
     bottom.push_back(blob);
     // double ret[10]; this->_get_blob_data(boost::shared_ptr<caffe::Blob<double>>(blob), ret, 10);
@@ -196,7 +220,8 @@ extern "C" {
   int eus_caffe_reset_memory_layer (char* name, int size, double* data, double* label){ return ec->reset_memory_layer(name,size,data,label); }
   int eus_caffe_initialize_solver (int isize, int dsize, double* idata, double* ddata, double* idummy, double* ddummy){ return ec->initialize_solver(isize,dsize,idata,ddata,idummy,ddummy); }
   double eus_caffe_learn () { return ec->caffe_learn(); }
-  int eus_caffe_calc_forward (int inputsize, int outputsize, double* input, double* output){ return ec->calc_forward(inputsize,outputsize,input,output);}
+  int eus_caffe_calc_forward (int num, int channels, int width, int height, int inputsize, char* input, int outputsize, double* output){ return ec->calc_forward(num,channels,width,height,inputsize,input,outputsize,output);}
+  int eus_caffe_calc_forward_double (int num, int channels, int width, int height, int inputsize, double* input, int outputsize, double* output){ return ec->calc_forward_double(num,channels,width,height,inputsize,input,outputsize,output);}
   int eus_caffe_memory_calc_forward (int inputsize, int outputsize, double* input, double* output, double* idummy){ return ec->memory_calc_forward(inputsize,outputsize,input,output,idummy);}
   int eus_caffe_gen_test_net (char* net_path, char* train_file){ return ec->gen_test_net(net_path, train_file); }
 }
