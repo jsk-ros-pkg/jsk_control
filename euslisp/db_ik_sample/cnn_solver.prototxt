@@ -1,6 +1,6 @@
 net: "cnn.prototxt"
 solver_type: SGD
-base_lr: 0.01
+base_lr: 0.001
 lr_policy: "step"
 gamma: 0.9
 stepsize: 500 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration

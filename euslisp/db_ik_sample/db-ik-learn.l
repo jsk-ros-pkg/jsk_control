@@ -41,7 +41,7 @@
 
 (defun gen-random-ik-learning-data
   (&key
-   (sample-points 5000)
+   (sample-points 1000)
    (joint-list (send *robot* :joint-list))
    ;;
    (target-path "target_lmdb_joint_angle")
@@ -113,6 +113,12 @@
 	      (progn (caffe::db-read 1) (caffe::db-get-float-data))))
 (caffe::db-close)
 
+(caffe::db-open :path "input_lmdb_robot_image")
+(setq b_ (list (caffe::db-get-data)
+	       (progn (caffe::db-read 1) (caffe::db-get-data))
+	       (progn (caffe::db-read 1) (caffe::db-get-data))))
+(caffe::db-close)
+
 (setq b
       (mapcar
        #'(lambda (av)
@@ -120,10 +126,12 @@
 	   (send *viewer* :draw-objects)
 	   (let* ((img (get-gl-mono-image :width 32 :height 32))
 		  (ret
-		   (caffe::calc-forward
+		   (caffe::calc-forward-double
 		    :isize (* 32 32) :osize 30
 		    :num 1 :channels 1 :width 32 :height 32
-		    :input (send img :entity))))
+		    :input
+		    (map float-vector '(lambda (v) (/ v 255.0)) (send img :entity))
+		    )))
 	     (setq ret (map float-vector 'rad2deg ret))
 	     (format t "vs ---------~%~A~%~A~%" av ret)
 	     (read-line)
