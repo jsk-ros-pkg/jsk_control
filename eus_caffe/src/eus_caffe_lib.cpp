@@ -28,7 +28,7 @@ public:
     if ( osize < 0 || osize > blob->count() ) osize = blob->count();
     for ( int i=0; i<osize; i++ ){
       ret[i] = blob->cpu_data()[i];
-      std::cout << ret[i] << " ";
+      // std::cout << ret[i] << " ";
     }
     std::cout << ")" << std::endl;
     return 0;
