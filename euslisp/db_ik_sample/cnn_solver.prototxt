@@ -4,9 +4,9 @@ base_lr: 0.03
 lr_policy: "step"
 gamma: 0.9
 stepsize: 500 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
-max_iter: 3000
+max_iter: 5000
 momentum: 0.9
-display: 100
+display: 1
 snapshot_prefix: "cnn"
 ## base_lr: 0.001
 ## momentum: 0.9

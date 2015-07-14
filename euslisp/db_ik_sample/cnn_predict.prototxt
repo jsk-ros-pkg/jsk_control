@@ -1,21 +1,9 @@
 name: "cnn_test"
-layer {
-  name: "input"
-  type: "Data"
-  top: "input"
-  top: "label"
-  include {
-    phase: TRAIN
-  }
-  transform_param {
-    scale: 0.003922
-  }
-  data_param {
-    source: "input_lmdb_robot_image"
-    batch_size: 32 ## must be same as target one
-    backend: LMDB
-  }
-}
+input: "input"
+input_dim: 1 ## num
+input_dim: 1 ## channel
+input_dim: 32 ## w
+input_dim: 32 ## h
 layer {
   name: "conv1"
   type: "Convolution"
@@ -183,27 +171,4 @@ layer {
       type: "constant"
     }
   }
-}
-layer {
-  name: "target"
-  type: "Data"
-  top: "target"
-  transform_param {
-    scale: 0.017453
-  }
-  include {
-    phase: TRAIN
-  }
-  data_param {
-    source: "target_lmdb_joint_angle"
-    batch_size: 32
-    backend: LMDB
-  }
-}
-layer {
-  name: "loss"
-  type: "EuclideanLoss"
-  bottom: "output"
-  bottom: "target"
-  top: "loss"
 }
