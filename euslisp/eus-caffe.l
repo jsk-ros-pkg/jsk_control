@@ -31,8 +31,10 @@
 			    (read-line (piped-fork "rospack find eus_caffe"))))))
 
 (defforeign _get_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_layer_blob_data" (:string :integer :string :integer) :integer)
-(defforeign _get_input_blob_data *eus-caffe-plugin* "eus_caffe_get_input_blob_data" (:integer :string :integer) :integer)
+(defforeign _get_train_net_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_train_net_layer_blob_data" (:string :integer :string :integer) :integer)
 (defforeign _get_blob_data *eus-caffe-plugin* "eus_caffe_get_blob_data" (:string :string :integer) :integer)
+(defforeign _get_train_net_blob_data *eus-caffe-plugin* "eus_caffe_get_train_net_blob_data" (:string :string :integer) :integer)
+(defforeign _get_input_blob_data *eus-caffe-plugin* "eus_caffe_get_input_blob_data" (:integer :string :integer) :integer)
 ;;
 (defforeign _create_solver *eus-caffe-plugin* "eus_caffe_create_solver" (:string :string) :integer)
 (defforeign _reset_memory_layer *eus-caffe-plugin* "eus_caffe_reset_memory_layer" (:string :integer :string :string) :integer)
@@ -59,6 +61,20 @@
       (unix:system (format nil "eog ~A &" out-path)))
   out-path)
 
+(defun get-blob-data
+  (&key
+   (name "ip")
+   (ret (instantiate float-vector 32)))
+  (_get_blob_data name ret (length ret))
+  ret)
+
+(defun get-train-net-blob-data
+  (&key
+   (name "ip")
+   (ret (instantiate float-vector 32)))
+  (_get_train_net_blob_data name ret (length ret))
+  ret)
+
 (defun get-layer-blob-data
   (&key
    (name "ip")
@@ -67,18 +83,19 @@
   (_get_layer_blob_data name blob_id ret (length ret))
   ret)
 
+(defun get-train-net-layer-blob-data
+  (&key
+   (name "ip")
+   (blob_id 0)
+   (ret (instantiate float-vector 32)))
+  (_get_train_net_layer_blob_data name blob_id ret (length ret))
+  ret)
+
 (defun get-input-blob-data
   (&key
    (id 0)
    (ret (instantiate float-vector 32)))
   (_get_input_blob_data id ret (length ret))
-  ret)
-
-(defun get-blob-data
-  (&key
-   (name "ip")
-   (ret (instantiate float-vector 32)))
-  (_get_layer_blob_data name ret (length ret))
   ret)
 
 (defun calc-forward
