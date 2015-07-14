@@ -41,7 +41,7 @@
 
 (defun gen-random-ik-learning-data
   (&key
-   (sample-points 5000)
+   (sample-points 3)
    (joint-list (send *robot* :joint-list))
    ;;
    (target-path "target_lmdb_joint_angle")
@@ -105,205 +105,47 @@
 
 #|
 
-(defvar *rarm-links* (send *robot* :rarm :links))
-(defvar *rarm-joints*
-  (remove (send *robot* :rarm :wrist-y)
-	  (send-all (butlast *rarm-links*) :joint)))
+(caffe::gen-test-net :netproto "cnn_predict.prototxt" :caffemodel "cnn_iter_5000.caffemodel")
 
-(objects (append
-	  *rarm-links*
-	  (send *robot* :hand :rarm :links)))
+(caffe::db-open :path "target_lmdb_joint_angle")
+(setq a (list (caffe::db-get-float-data)
+	      (progn (caffe::db-read 1) (caffe::db-get-float-data))
+	      (progn (caffe::db-read 1) (caffe::db-get-float-data))))
+(caffe::db-close)
 
-(defvar *sample-points* (expt 6 6))
-(defvar *angle-vector-map*)
-(defvar *ef-coords-map*)
+(setq b
+      (mapcar
+       #'(lambda (av)
+	   (send *robot* :angle-vector (copy-seq av))
+	   (send *viewer* :draw-objects)
+	   (let* ((img (get-gl-mono-image :width 32 :height 32))
+		  (ret
+		   (caffe::calc-forward
+		    :isize (* 32 32) :osize 30
+		    :num 1 :channels 1 :width 32 :height 32
+		    :input (send img :entity))))
+	     (setq ret (map float-vector 'rad2deg ret))
+	     (format t "vs ---------~%~A~%~A~%" av ret)
+	     (read-line)
+	     ret))
+       a))
 
-(defun shuffle-random-vector-map
-  nil
-  (labels ((swap (a i j)
-		 (let* ((c (aref a i)))
-		   (setf (aref a i) (aref a j))
-		   (setf (aref a j) c))))
-    (dotimes (i *sample-points*)
-      (let* ((r (random *sample-points*)))
-	(dotimes (j (length *rarm-joints*))
-	  (swap *angle-vector-map*
-		(+ j (* (length *rarm-joints*) i))
-		(+ j (* (length *rarm-joints*) r))))
-	(dotimes (j 6)
-	  (swap *ef-coords-map*
-		(+ j (* 6 i)) (+ j (* 6 r))))))))
+(caffe::get-blob-data :name "conv1" :ret (instantiate float-vector (* 32 32)))
 
-(defun gen-ik-learning-data
-  (&key (sep 6)
-	(sample-points (expt sep (length *rarm-joints*)))
-	(i 0)
-	(draw? nil))
-  (setq *sample-points* sample-points)
-  (if (not (eq (length *angle-vector-map*)
-	       (* (length *rarm-joints*) sample-points)))
-      (setq *angle-vector-map*
-	    (instantiate float-vector (* (length *rarm-joints*) sample-points))))
-  (if (not (eq (length *ef-coords-map*) (* 6 sample-points)))
-      (setq *ef-coords-map*
-	    (instantiate float-vector (* 6 sample-points))))
-  (labels ((itter
-	    (jlist)
-	    (cond
-	     ((null jlist)
-	      (let* (pos rot)
-		(send-all *rarm-links* :worldcoords)
-		(send *robot* :rarm :end-coords :worldcoords)
-		(cond
-		 (draw?
-		  (send *viewer* :draw-objects :flush nil)
-		  (send (send *robot* :rarm :end-coords :worldcoords) :draw-on :flush nil
-			:color (float-vector 1 0 0) :size 100)
-		  (send *viewer* :viewsurface :flush)))
-		(setq pos (send (send (car (send *robot* :links)) :worldcoords)
-		      :difference-position
-		      (send *robot* :rarm :end-coords)))
-		(setq rot (send (send (car (send *robot* :links)) :worldcoords)
-				:difference-rotation
-				(send *robot* :rarm :end-coords)))
-		(dotimes (j (length *rarm-joints*))
-		  (setf (aref *angle-vector-map* (+ j (* i (length *rarm-joints*))))
-			(deg2rad (send (nth j *rarm-joints*) :joint-angle))))
-		(dotimes (j 3)
-		  (setf (aref *ef-coords-map* (+ j (* i 6))) (* 1e-3 (aref pos j))))
-		(dotimes (j 3)
-		  (setf (aref *ef-coords-map* (+ 3 j (* i 6))) (aref rot j)))
-		(setq i (+ i 1))))
-	     (t
-	      (dotimes (j sep)
-		(send (car jlist) :joint-angle
-		      (+ (send (car jlist) :min-angle)
-			 (* (/ j (- sep 1.0))
-			    (- (send (car jlist) :max-angle)
-			       (send (car jlist) :min-angle)))))
-		(itter (cdr jlist))))
-	     )))
-    (itter *rarm-joints*)
-    (shuffle-random-vector-map)
-    (dump-ik-learning-data)
+(defun gen-blob-image
+  (&key
+   (name "conv1")
+   (width 32)
+   (height 32)
+   (count 32)
+   (data (caffe::get-blob-data :name name
+			       :ret (instantiate float-vector (* width height count))))
+   (sdata (map string '(lambda (v) (round (* v 255))) data)))
+  (unix:system "mkdir /tmp/caffe")
+  (dotimes (i count)
+    (setq img (instance image::grayscale-image :init width height
+			(subseq sdata (* i width height) (* (+ 1 i) width height))))
+    (img::write-image-file (format nil "/tmp/caffe/~A~A.jpg" name (caffe::zero-string i)) img)
     ))
 
-(defun load-ik-learning-data
-  nil
-  (if (probe-file "ik_learning.dat")
-      (let* ((op (open "ik_learning.dat" :direction :input)) buf)
-	(if (not (setq buf (read-line op nil))) (throw :load-ik-learning-data-error nil))
-	(setq buf (read-from-string buf))
-	(if (not (eq (length *angle-vector-map*) buf))
-	    (setq *angle-vector-map* (instantiate float-vector buf)))
-	(dotimes (i (length *angle-vector-map*))
-	  (setq buf (read-from-string (read-line op nil)))
-	  (setf (aref *angle-vector-map* i) buf))
-	;;
-	(if (not (setq buf (read-line op nil))) (throw :load-ik-learning-data-error nil))
-	(setq buf (read-from-string buf))
-	(if (not (eq (length *ef-coords-map*) buf))
-	    (setq *ef-coords-map* (instantiate float-vector buf)))
-	(dotimes (i (length *ef-coords-map*))
-	  (setq buf (read-from-string (read-line op nil)))
-	  (setf (aref *ef-coords-map* i) buf))
-	(close op))))
-
-(defun dump-ik-learning-data
-  nil
-  (let* ((op (open "ik_learning.dat" :direction :output)))
-    (format op "~A~%" (length *angle-vector-map*))
-    (dotimes (i (length *angle-vector-map*))
-      (format op "~A~%" (aref *angle-vector-map* i)))
-    (format op "~A~%" (length *ef-coords-map*))
-    (dotimes (i (length *ef-coords-map*))
-      (format op "~A~%" (aref *ef-coords-map* i)))
-    (close op)))
-
-;; (load-ik-learning-data)
-
-(defun ik-learn
-  nil
-  (if (or (zerop (length *ef-coords-map*))
-	  (zerop (length *angle-vector-map*)))
-      (load-ik-learning-data))
-  (caffe::learn
-   :solver "ik_solver.prototxt"
-   :size *sample-points*
-   :idata *ef-coords-map*
-   :ddata *angle-vector-map*
-   ))
-
-(defun check-test-data
-  (&optional
-   (i 0)
-   (input (instantiate float-vector 6))
-   (output (instantiate float-vector 6))
-   c
-   )
-  (dotimes (j 6) (setf (aref input j) (aref *ef-coords-map* (+ (* i 6) j))))
-  (dotimes (j (length *rarm-joints*))
-    (setf (aref output j)
-	  (aref *angle-vector-map* (+ (* i (length *rarm-joints*)) j))))
-  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
-		       :rot (matrix-exponent (subseq input 3 6))))
-  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
-		:transform c :local))
-  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
-       *rarm-joints* output)
-  (send *viewer* :draw-objects :flush nil)
-  (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
-  (send *viewer* :viewsurface :flush)
-  (print (concatenate
-	  float-vector
-	  (send c :difference-position (send *robot* :rarm :end-coords))
-	  (send c :difference-rotation (send *robot* :rarm :end-coords))))
-  )
-
-(defun ik-test
-  (&optional
-   (i 0)
-   (input (instantiate float-vector 6))
-   (output (instantiate float-vector 6))
-   c
-   )
-  (dotimes (j 6) (setf (aref input j) (aref *ef-coords-map* (+ (* i 6) j))))
-  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
-		       :rot (matrix-exponent (subseq input 3 6))))
-  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
-		:transform c :local))
-  (caffe::memory-calc-forward
-   :input input :osize (length output) :output output)
-  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
-       *rarm-joints* output)
-  (send *viewer* :draw-objects :flush nil)
-  (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
-  (send *viewer* :viewsurface :flush)
-  (print (concatenate
-	  float-vector
-	  (send c :difference-position (send *robot* :rarm :end-coords))
-	  (send c :difference-rotation (send *robot* :rarm :end-coords))))
-  )
-
-(defun ik-random-test
-  nil
-  (let* ((c (make-coords :pos (v+ (float-vector 436.244 -210.8 766.991)
-				  (random-vector 500.0))
-			 :rpy (random-vector 3.14)))
-	 (b (send (car (send *robot* :links)) :copy-worldcoords))
-	 (av (instantiate float-vector (length *rarm-joints*))))
-    (caffe::memory-calc-forward
-     :input (concatenate float-vector
-			 (scale 1e-3 (send b :difference-position c))
-			 (send b :difference-rotation c))
-     :osize (length av)
-     :output av)
-    (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
-    (send *viewer* :draw-objects :flush nil)
-    (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
-    (send *viewer* :viewsurface :flush)
-    (print (concatenate float-vector
-			(send c :difference-position (send *robot* :rarm :end-coords))
-			(send c :difference-rotation (send *robot* :rarm :end-coords))))
-    ))
-
+(caffe::get-blob-data :name "pool3" :ret (instantiate float-vector 32))
