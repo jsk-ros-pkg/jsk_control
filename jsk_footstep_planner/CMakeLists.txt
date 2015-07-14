@@ -21,6 +21,8 @@ add_library(jsk_footstep_planner src/simple_neighbored_graph.cpp)
 
 add_executable(sample_simple_graph src/sample_simple_graph.cpp)
 target_link_libraries(sample_simple_graph ${catkin_LIBRARIES} jsk_footstep_planner)
+add_executable(sample_astar src/sample_astar.cpp)
+target_link_libraries(sample_astar ${catkin_LIBRARIES} jsk_footstep_planner)
 
 install(DIRECTORY euslisp launch scripts
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
