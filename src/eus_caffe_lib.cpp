@@ -34,15 +34,42 @@ public:
     return 0;
   }
 
-  int get_blob_data (char* name, double* ret, int osize) {
+  int get_blob_data (boost::shared_ptr<caffe::Net<double>> net, char* name, double* ret, int osize) {
+    if ( ! this->_check(net, "net") ) return -1 ;
+    return this->get_blob_data( net->blob_by_name(name), ret, osize);
+  }
+
+  int get_train_net_blob_data (char* name, double* ret, int osize) {
     if ( ! this->_check(this->solver, "solver") ) return -1 ;
     boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
     return this->get_blob_data( net, name, ret, osize);
   }
 
-  int get_blob_data (boost::shared_ptr<caffe::Net<double>> net, char* name, double* ret, int osize) {
+  int get_blob_data (char* name, double* ret, int osize) {
+    return this->get_blob_data( this->test_net, name, ret, osize);
+  }
+
+  int get_layer_blob_data (boost::shared_ptr<caffe::Net<double>> net, char* name, int blob_id, double* ret, int osize) {
     if ( ! this->_check(net, "net") ) return -1 ;
-    return this->get_blob_data( net->blob_by_name(name), ret, osize);
+    const boost::shared_ptr<caffe::Layer<double>> layer = net->layer_by_name(name);
+    std::vector<boost::shared_ptr<caffe::Blob<double>>> ip_blobs = layer->blobs();
+    std::cout << "<" << layer->type() << ">" << name << "[" << blob_id << "<" << ip_blobs.size() << "]" ;
+    if ( ip_blobs.size() <= blob_id ){
+      std::cout << std::endl;
+      std::cout << " --- too large blob_id" << std::endl;
+      return -1;
+    }
+    return this->get_blob_data(ip_blobs[blob_id], ret, osize);
+  }
+
+  int get_layer_blob_data (char* name, int blob_id, double* ret, int osize) {
+    this->get_layer_blob_data(this->test_net,name,blob_id,ret,osize);
+  }
+
+  int get_train_net_layer_blob_data (char* name, int blob_id, double* ret, int osize) {
+    if ( ! this->_check(this->solver, "solver") ) return -1 ;
+    boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
+    this->get_layer_blob_data(net,name,blob_id,ret,osize);
   }
 
   int get_input_blob_data(int id, double* ret, int osize){
@@ -54,20 +81,6 @@ public:
       return 1;
     }
     return this->get_blob_data( boost::shared_ptr<caffe::Blob<double> >(this->solver->net()->input_blobs()[id]), ret ,osize);
-  }
-
-  int get_layer_blob_data (char* name, int blob_id, double* ret, int osize) {
-    if ( ! this->_check(this->solver, "solver") ) return -1 ;
-    boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
-    const boost::shared_ptr<caffe::Layer<double>> layer = net->layer_by_name(name);
-    std::vector<boost::shared_ptr<caffe::Blob<double>>> ip_blobs = layer->blobs();
-    std::cout << "<" << layer->type() << ">" << name << "[" << blob_id << "<" << ip_blobs.size() << "]" ;
-    if ( ip_blobs.size() <= blob_id ){
-      std::cout << std::endl;
-      std::cout << " --- too large blob_id" << std::endl;
-      return -1;
-    }
-    return this->get_blob_data(ip_blobs[blob_id], ret, osize);
   }
 
   int create_solver (char* solver_path, char* solverstate){
@@ -213,8 +226,10 @@ boost::shared_ptr<eus_caffe> ec(new eus_caffe);
 
 extern "C" {
   int eus_caffe_get_blob_data (char* name, double* ret, int osize){ return ec->get_blob_data(name,ret,osize); }
-  int eus_caffe_get_input_blob_data (int id, double* ret, int osize){ return ec->get_input_blob_data(id,ret,osize); }
+  int eus_caffe_get_train_net_blob_data (char* name, double* ret, int osize){ return ec->get_train_net_blob_data(name,ret,osize); }
   int eus_caffe_get_layer_blob_data (char* name, int blob_id, double* ret, int osize) { return ec->get_layer_blob_data(name,blob_id,ret,osize); }
+  int eus_caffe_get_train_net_layer_blob_data (char* name, int blob_id, double* ret, int osize) { return ec->get_train_net_layer_blob_data(name,blob_id,ret,osize); }
+  int eus_caffe_get_input_blob_data (int id, double* ret, int osize){ return ec->get_input_blob_data(id,ret,osize); }
   //
   int eus_caffe_create_solver (char* solver_path, char* solverstate){ return ec->create_solver(solver_path,solverstate); }
   int eus_caffe_reset_memory_layer (char* name, int size, double* data, double* label){ return ec->reset_memory_layer(name,size,data,label); }
