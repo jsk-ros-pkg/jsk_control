@@ -41,7 +41,7 @@
 
 (defun gen-random-ik-learning-data
   (&key
-   (sample-points 3)
+   (sample-points 5000)
    (joint-list (send *robot* :joint-list))
    ;;
    (target-path "target_lmdb_joint_angle")
