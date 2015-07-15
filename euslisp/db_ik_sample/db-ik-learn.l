@@ -1,9 +1,16 @@
 (require "../eus-caffe.l")
 (require "../eus-caffe-db.l")
 
-(require "irteus/demo/sample-robot-model.l")
+(defvar *robot*
+  (cond
+   ((probe-file (ros::resolve-ros-path "package://peppereus/pepper.l"))
+    (require :hrp2jsk-utils "package://peppereus/pepper.l")
+    (pepper))
+   ((probe-file (ros::resolve-ros-path "package://euslisp/jskeus/irteus/demo/sample-robot-model.l"))
+    (require "package://euslisp/jskeus/irteus/demo/sample-robot-model.l")
+    (instance sample-robot :init))
+   (t (throw :robot-not-found nil))))
 
-(defvar *robot* (instance sample-robot :init))
 (objects (list *robot*))
 (send *irtviewer* :change-background (float-vector 1 1 1))
 (send *viewer* :draw-objects)
