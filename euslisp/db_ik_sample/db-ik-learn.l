@@ -41,7 +41,7 @@
 
 (defun gen-random-ik-learning-data
   (&key
-   (sample-points 1000)
+   (sample-points 100)
    (joint-list (send *robot* :joint-list))
    ;;
    (target-path "target_lmdb_joint_angle")
@@ -157,3 +157,4 @@
     ))
 
 (caffe::get-blob-data :name "pool3" :ret (instantiate float-vector 32))
+(caffe::gen-net-image :net-path "cnn.prototxt")
