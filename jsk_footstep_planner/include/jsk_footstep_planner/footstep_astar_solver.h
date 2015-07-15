@@ -34,82 +34,44 @@
  *********************************************************************/
 
 
-#ifndef JSK_FOOTSTEP_PLANNER_SOLVER_H_
-#define JSK_FOOTSTEP_PLANNER_SOLVER_H_
+#ifndef JSK_FOOTSTEP_PLANNER_FOOTSTEP_SOLVER_H_
+#define JSK_FOOTSTEP_PLANNER_FOOTSTEP_SOLVER_H_
 
-#include "jsk_footstep_planner/graph.h"
-#include "jsk_footstep_planner/solver_node.h"
-#include <boost/unordered/unordered_set.hpp>
+#include "jsk_footstep_planner/astar_solver.h"
+#include "jsk_footstep_planner/footstep_state_discrete_close_list.h"
+
 namespace jsk_footstep_planner
 {
+  // Only available for FootstepState and FootstepGraph
+  // because close list behavior is specialized for the purpose
   template <class GraphT, class CloseListT = boost::unordered_set<typename GraphT::StateT::Ptr> >
-  class Solver
+  class FootstepAStarSolver: public AStarSolver<GraphT, CloseListT>
   {
   public:
-    typedef boost::shared_ptr<Solver> Ptr;
+    typedef boost::shared_ptr<FootstepAStarSolver> Ptr;
     typedef typename GraphT::StateT State;
     typedef typename GraphT::StateT::Ptr StatePtr;
     typedef typename GraphT::Ptr GraphPtr;
     typedef typename SolverNode<State, GraphT>::Ptr SolverNodePtr;
-    Solver(): verbose_(false) {};
-    Solver(GraphPtr graph): graph_(graph), verbose_(false) {}
-
-    virtual void setVerbose(bool v) { verbose_ = v; }
-    
-    virtual
-    std::vector<typename SolverNode<State, GraphT>::Ptr>
-    solve()
+    FootstepAStarSolver(
+      GraphPtr graph, size_t x_num, size_t y_num, size_t theta_num):
+      footstep_close_list_(x_num, y_num, theta_num),
+      AStarSolver<GraphT, CloseListT>(graph)
     {
-      SolverNodePtr start_state(new SolverNode<State, GraphT>(
-                                  graph_->getStartState(),
-                                  0, graph_));
-      addToOpenList(start_state);
-      while (!isOpenListEmpty()) {
-        SolverNodePtr target_node = popFromOpenList();
-        if (graph_->isGoal(target_node->getState())) {
-          std::vector<SolverNodePtr> result_path = target_node->getPathWithoutThis();
-          result_path.push_back(target_node);
-          return result_path;
-        }
-        else if (!findInCloseList(target_node->getState())) {
-          //close_list_.push_back(target_node->getState());
-          addToCloseList(target_node->getState());
-          addToOpenList(target_node->expand(target_node, verbose_));
-        }
-      }
-      // Failed to search
-      return std::vector<SolverNodePtr>();
+      
     }
 
-    virtual bool isOpenListEmpty() = 0;
-    virtual void addToOpenList(SolverNodePtr node) = 0;
-    virtual SolverNodePtr popFromOpenList() = 0;
-    
-    virtual void addToOpenList(std::vector<SolverNodePtr> nodes)
+    // Overtake closelist behavior from solver class
+    virtual bool findInCloseList(StatePtr s)
     {
-      for (size_t i = 0; i < nodes.size(); i++) {
-        addToOpenList(nodes[i]);
-      }
+      return footstep_close_list_.find(s);
     }
-
-    virtual void addToCloseList(StatePtr state)
+    virtual void addToCloseList(StatePtr s)
     {
-      close_list_.insert(state);
+      footstep_close_list_.push_back(s);
     }
-    
-    virtual bool findInCloseList(StatePtr state)
-    {
-      // return std::find(close_list_.begin(), close_list_.end(), state)
-      //   != close_list_.end();
-      return close_list_.find(state) != close_list_.end();
-    }
-
   protected:
-    CloseListT close_list_;
-    GraphPtr graph_;
-    bool verbose_;
-  private:
-    
+    FootstepStateDiscreteCloseList footstep_close_list_;
   };
 }
 

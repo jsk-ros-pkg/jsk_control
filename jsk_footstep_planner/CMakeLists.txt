@@ -22,7 +22,8 @@ link_libraries(${pcl_ros_LIBRARIES} ${catkin_LIBRARIES})
 add_library(jsk_footstep_planner
   src/simple_neighbored_graph.cpp
   src/footstep_state.cpp
-  src/footstep_graph.cpp)
+  src/footstep_graph.cpp
+  src/footstep_state_discrete_close_list.cpp)
 
 add_executable(sample_simple_graph demo/sample_simple_graph.cpp)
 target_link_libraries(sample_simple_graph jsk_footstep_planner)

@@ -105,7 +105,8 @@ namespace jsk_footstep_planner
       Eigen::Affine3f transform = transformations[i];
       FootstepGraph::StatePtr next(new FootstepState(next_leg,
                                                      base_pose * transform,
-                                                     target_state->getDimensions()));
+                                                     target_state->getDimensions(),
+                                                     resolution_));
       ret.push_back(next);
     }
     return ret;

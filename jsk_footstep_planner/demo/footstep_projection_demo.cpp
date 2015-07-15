@@ -135,7 +135,8 @@ int main(int argc, char** argv)
   pub_cloud.publish(ros_cloud);
   original_footstep.reset(new FootstepState(jsk_footstep_msgs::Footstep::LEFT,
                                             Eigen::Affine3f::Identity(),
-                                            Eigen::Vector3f(0.2, 0.1, 0.00001)));
+                                            Eigen::Vector3f(0.2, 0.1, 0.00001),
+                                            Eigen::Vector3f(0.05, 0.05, 0.8)));
   jsk_footstep_msgs::FootstepArray msg = footstepToFootstepArray(*(original_footstep->toROSMsg()));
   pub_footstep.publish(msg);
   interactive_markers::InteractiveMarkerServer server("footstep_projection_demo");

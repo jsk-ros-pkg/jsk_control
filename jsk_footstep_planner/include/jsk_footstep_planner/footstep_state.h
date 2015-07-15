@@ -63,9 +63,31 @@ namespace jsk_footstep_planner
     typedef boost::shared_ptr<FootstepState> Ptr;
     FootstepState(int leg,
                   const Eigen::Affine3f& pose,
-                  const Eigen::Vector3f& dimensions):
-      leg_(leg), pose_(pose), dimensions_(dimensions)
-      {}
+                  const Eigen::Vector3f& dimensions,
+                  const Eigen::Vector3f& resolution):
+      leg_(leg), pose_(pose), dimensions_(dimensions), resolution_(resolution)
+      {
+        float x = pose_.translation()[0];
+        float y = pose_.translation()[1];
+        float roll, pitch, yaw;
+        pcl::getEulerAngles(pose_, roll, pitch, yaw);
+        index_x_ = x / resolution_[0];
+        index_y_ = y / resolution_[1];
+        index_yaw_ = yaw / resolution_[2];
+      }
+
+    FootstepState(int leg,
+                  const Eigen::Affine3f& pose,
+                  const Eigen::Vector3f& dimensions,
+                  const Eigen::Vector3f& resolution,
+                  int index_x,
+                  int index_y,
+                  int index_yaw):
+      leg_(leg), pose_(pose), dimensions_(dimensions), resolution_(resolution),
+      index_x_(index_x), index_y_(index_y), index_yaw_(index_yaw)
+      {
+      }
+    
     virtual jsk_footstep_msgs::Footstep::Ptr toROSMsg();
     virtual FootstepState::Ptr
     projectToCloud(pcl::KdTreeFLANN<pcl::PointNormal>& tree,
@@ -84,26 +106,33 @@ namespace jsk_footstep_planner
     virtual Eigen::Vector3f getDimensions() { return dimensions_; }
     bool operator==(FootstepState& other)
     {
-      // TODO: poor implementation
-      Eigen::Vector3f pos_diff(pose_.translation() - other.getPose().translation());
-      if (pos_diff.norm() < 0.1) {
-        Eigen::AngleAxisf rot_diff(pose_.rotation().inverse() * other.getPose().rotation());
-        if (std::abs(rot_diff.angle()) < 0.08) { // 5deg
-          return true;
-        }
-      }
-      return false;
+      return ((index_x_ == other.index_x_) &&
+              (index_y_ == other.index_y_) &&
+              (index_yaw_ == other.index_yaw_));
     }
+
+    inline virtual int indexX() { return index_x_; }
+    inline virtual int indexY() { return index_y_; }
+    inline virtual int indexT() { return index_yaw_; }
+    
   protected:
     Eigen::Affine3f pose_;
     const Eigen::Vector3f dimensions_;
+    const Eigen::Vector3f resolution_; // not memory efficient?
     const int leg_;
-    int hash_x_;
-    int hash_y_;
-    int hash_yaw_;
+    int index_x_;
+    int index_y_;
+    int index_yaw_;
   private:
     
   };
+
+  inline size_t hash_value(const FootstepState::Ptr& s)
+  {
+    return std::abs(s->indexX()) << (25 + 14) + std::abs(s->indexY()) << 14
+      + std::abs(s->indexT());
+  }
+  
 }
 
 #endif
