@@ -59,13 +59,19 @@ namespace jsk_footstep_planner
     virtual void addNode(StatePtr state) { nodes_.push_back(state); }
     virtual size_t numNodes() { return nodes_.size(); }
     virtual std::vector<StatePtr> successors(StatePtr target_state) = 0;
-    virtual double pathCost(StatePtr from, StatePtr to, double prev_cost) = 0;
+    virtual double pathCost(StatePtr from, StatePtr to, double prev_cost)
+    {
+      return prev_cost + 1;
+    }
+    
     virtual bool isGoal(StatePtr state) = 0;
 
   protected:
     StatePtr start_state_;
     StatePtr goal_state_;
     std::vector<StatePtr> nodes_;
+    double pos_goal_thr_;
+    double rot_goal_thr_;
   private:
     
   };
