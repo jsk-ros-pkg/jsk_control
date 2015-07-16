@@ -8,11 +8,11 @@ layer {
     phase: TRAIN
   }
   transform_param {
-    scale: 0.003922
+    scale: 1.0 ##0.003922
   }
   data_param {
     source: "input_lmdb_robot_image"
-    batch_size: 32 ## must be same as target one
+    batch_size: 10 ## must be same as target one
     backend: LMDB
   }
 }
@@ -138,7 +138,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 15
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -160,7 +160,7 @@ layer {
   }
   data_param {
     source: "target_lmdb_joint_angle"
-    batch_size: 32
+    batch_size: 10
     backend: LMDB
   }
 }

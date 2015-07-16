@@ -12,8 +12,24 @@
    (t (throw :robot-not-found nil))))
 
 (objects (list *robot*))
-(send *irtviewer* :change-background (float-vector 1 1 1))
+(send *robot* :transform (send (send *robot* :link "Tibia") :transformation (make-coords)) :local)
+(send *irtviewer* :change-background (float-vector 0 0 0))
+(send *irtviewer* :viewer :viewing :look #f(4000 -10 -80) #F(0 0 300))
 (send *viewer* :draw-objects)
+
+(defun read-mono-image
+  (path)
+  (let* ((img (img::read-image-file path))
+	 (buf (instantiate string (* (send img :width)
+				     (send img :height)))))
+    (dotimes (x (send img :width))
+      (dotimes (y (send img :height))
+	(setf (elt buf (+ x (* y (send img :width))))
+	      (elt (send img :entity)
+		   (* 3 (+ x (* y (send img :width)))))
+	      )))
+    (instance image::grayscale-image :init
+	      (send img :width) (send img :height) buf)))
 
 (defun get-gl-mono-image
   (&key (x 0) (y 0) z
@@ -46,6 +62,21 @@
     ))
 ;; (img::write-image-file "test.jpg" (get-gl-mono-image :width 320 :height 320))
 
+(defvar *mean-mono-image*
+  (if (probe-file "image/mean.jpg") (read-mono-image "image/mean.jpg")
+    (progn
+      (unix:system "mkdir image")
+      (img::write-image-file
+       "image/mean.jpg" (get-gl-mono-image :width 32 :height 32))
+      (read-mono-image "image/mean.jpg"))))
+
+(defun image-minus
+  (&optional
+   (img1 (get-gl-mono-image :width 32 :height 32))
+   (img2 *mean-mono-image*))
+  (scale (/ 1.0 255)
+	 (map float-vector '- (send img1 :entity) (send img2 :entity))))
+
 (defun gen-random-ik-learning-data
   (&key
    (sample-points 100)
@@ -72,6 +103,9 @@
 	    (+ (send j :min-angle)
 	       (* (random 1.0)
 		  (- (send j :max-angle) (send j :min-angle))))))
+    (send-all (send *robot* :links) :worldcoords)
+    (send *robot* :newcoords (make-coords))
+    (send *robot* :transform (send (send (send *robot* :link "Tibia") :worldcoords) :transformation (make-coords)) :local)
     (send *viewer* :draw-objects)
     (setq img (get-gl-mono-image :width width :height height))
     (img::write-image-file (format nil "~A/~A.jpg" image-path i) img)
@@ -83,9 +117,9 @@
      :data (coerce (send-all joint-list :joint-angle) float-vector))
     ;;
     (caffe::db-set-id 1)
-    (caffe::db-put
+    (caffe::db-put-double
      :channels 1 :width width :height height :label 0
-     :id_str (caffe::zero-string i) :data (send img :entity))
+     :id_str (caffe::zero-string i) :data (image-minus img *mean-mono-image*)) ;;(send img :entity))
     )
   ;;
   (caffe::db-set-id 0) (caffe::db-close)
@@ -112,7 +146,7 @@
 
 #|
 
-(caffe::gen-test-net :netproto "cnn_predict.prototxt" :caffemodel "cnn_iter_5000.caffemodel")
+(caffe::gen-test-net :netproto "cnn_predict.prototxt" :caffemodel "cnn_iter_3000.caffemodel")
 
 (caffe::db-open :path "target_lmdb_joint_angle")
 (setq a (list (caffe::db-get-float-data)
