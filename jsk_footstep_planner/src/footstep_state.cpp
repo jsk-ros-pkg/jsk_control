@@ -90,6 +90,10 @@ namespace jsk_footstep_planner
     // TODO: z is ignored
     // extract candidate points
     pcl::PointIndices::Ptr indices = cropPointCloud(cloud);
+    if (indices->indices.size() < min_inliers) {
+      error_state = projection_state::no_enough_inliers;
+      return FootstepState::Ptr();
+    }
     // estimate plane with ransac
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
