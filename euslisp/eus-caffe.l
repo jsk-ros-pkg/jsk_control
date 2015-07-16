@@ -174,10 +174,14 @@
    args
    &key
    (initialize? t)
+   (timer (instance user::mtimer :init))
+   ret
    &allow-other-keys
    )
   (if initialize? (apply 'initialize-solver args))
-  (_learn))
+  (setq ret (_learn))
+  (if timer (format t "time: ~A~%" (setq timer (send timer :stop))))
+  ret)
 
 (defun gen-test-net
   (&key (netproto "") (caffemodel ""))
