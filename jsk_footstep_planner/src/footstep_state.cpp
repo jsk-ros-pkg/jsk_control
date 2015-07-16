@@ -55,32 +55,54 @@ namespace jsk_footstep_planner
   }
 
   pcl::PointIndices::Ptr
-  FootstepState::cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud)
+  FootstepState::cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                pcl::search::Octree<pcl::PointNormal>& tree)
   {
-    pcl::CropBox<pcl::PointNormal> crop_box(false);
-    Eigen::Vector4f max_points(dimensions_[0]/2,
-                               dimensions_[1]/2,
-                               1000.0,
-                               0);
-    Eigen::Vector4f min_points(-dimensions_[0]/2,
-                               -dimensions_[1]/2,
-                               -1000.0,
-                               0);
-    crop_box.setInputCloud(cloud);
-    crop_box.setMax(max_points);
-    crop_box.setMin(min_points);
-    float roll, pitch, yaw;
-    pcl::getEulerAngles(pose_, roll, pitch, yaw);
-    crop_box.setTranslation(pose_.translation());
-    crop_box.setRotation(Eigen::Vector3f(roll, pitch, yaw));
-    pcl::PointIndices::Ptr indices (new pcl::PointIndices);
-    crop_box.filter(indices->indices);
-    return indices;
+    pcl::PointNormal center;
+    center.getVector3fMap() = Eigen::Vector3f(pose_.translation());
+    float r = 0.2;
+    pcl::PointIndices::Ptr near_indices(new pcl::PointIndices);
+    std::vector<float> distances;
+    tree.radiusSearch(center, r, near_indices->indices, distances);
+
+    // Project vertices into 2d
+    Eigen::Vector3f z(0, 0, 1);
+    Eigen::Vector3f a = pose_ * Eigen::Vector3f(dimensions_[0]/2, dimensions_[1]/2, 0);
+    Eigen::Vector3f b = pose_ * Eigen::Vector3f(-dimensions_[0]/2, dimensions_[1]/2, 0);
+    Eigen::Vector3f c = pose_ * Eigen::Vector3f(-dimensions_[0]/2, -dimensions_[1]/2, 0);
+    Eigen::Vector3f d = pose_ * Eigen::Vector3f(dimensions_[0]/2, -dimensions_[1]/2, 0);
+    Eigen::Vector3f a_2d = a + (- z.dot(a)) * z;
+    Eigen::Vector3f b_2d = b + (- z.dot(b)) * z;
+    Eigen::Vector3f c_2d = c + (- z.dot(c)) * z;
+    Eigen::Vector3f d_2d = d + (- z.dot(d)) * z;
+
+    Eigen::Vector2f a2d(a_2d[0], a_2d[1]);
+    Eigen::Vector2f b2d(b_2d[0], b_2d[1]);
+    Eigen::Vector2f c2d(c_2d[0], c_2d[1]);
+    Eigen::Vector2f d2d(d_2d[0], d_2d[1]);
+    std::set<int> set_indices;
+    for (size_t i = 0; i < near_indices->indices.size(); i++) {
+      size_t index = near_indices->indices[i];
+      pcl::PointNormal point = cloud->points[index];
+      Eigen::Vector3f point_2d = point.getVector3fMap() + (-z.dot(point.getVector3fMap())) * z;
+      Eigen::Vector2f p2d(point_2d[0], point_2d[1]);
+      if (cross2d((b2d - a2d), (p2d - a2d)) > 0 &&
+          cross2d((c2d - b2d), (p2d - b2d)) > 0 &&
+          cross2d((d2d - c2d), (p2d - c2d)) > 0 &&
+          cross2d((a2d - d2d), (p2d - d2d)) > 0) {
+        set_indices.insert(index);
+      }
+    }
+    pcl::PointIndices::Ptr ret(new pcl::PointIndices);
+    ret->indices = std::vector<int>(set_indices.begin(), set_indices.end());
+    return ret;
   }
   
   FootstepState::Ptr
   FootstepState::projectToCloud(pcl::KdTreeFLANN<pcl::PointNormal>& tree,
                                 pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                pcl::search::Octree<pcl::PointNormal>& tree_2d,
+                                pcl::PointCloud<pcl::PointNormal>::Ptr cloud_2d,
                                 const Eigen::Vector3f& z,
                                 unsigned int& error_state,
                                 double outlier_threshold,
@@ -89,7 +111,7 @@ namespace jsk_footstep_planner
   {
     // TODO: z is ignored
     // extract candidate points
-    pcl::PointIndices::Ptr indices = cropPointCloud(cloud);
+    pcl::PointIndices::Ptr indices = cropPointCloud(cloud_2d, tree_2d);
     if (indices->indices.size() < min_inliers) {
       error_state = projection_state::no_enough_inliers;
       return FootstepState::Ptr();

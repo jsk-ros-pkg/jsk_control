@@ -48,6 +48,8 @@ ros::Publisher pub_cloud;
 FootstepState::Ptr original_footstep;
 pcl::PointCloud<pcl::PointNormal>::Ptr cloud;
 pcl::KdTreeFLANN<pcl::PointNormal> tree;
+pcl::PointCloud<pcl::PointNormal>::Ptr cloud2d;
+pcl::search::Octree<pcl::PointNormal> tree2d(0.1);
 
 jsk_footstep_msgs::FootstepArray footstepToFootstepArray(
   jsk_footstep_msgs::Footstep msg)
@@ -71,6 +73,8 @@ void processFeedback(
   FootstepState::Ptr projected_footstep = original_footstep->projectToCloud(
     tree,
     cloud,
+    tree2d,
+    cloud2d,
     Eigen::Vector3f(0, 0, 1),
     error_state,
     0.05,
@@ -148,7 +152,16 @@ int main(int argc, char** argv)
   
   // generate pointcloud
   cloud = generateCloud();
+  cloud2d.reset(new pcl::PointCloud<pcl::PointNormal>);
   tree.setInputCloud(cloud);
+  pcl::ProjectInliers<pcl::PointNormal> proj;
+  pcl::ModelCoefficients::Ptr coef (new pcl::ModelCoefficients);
+  coef->values.resize(4);
+  coef->values[2] = 1.0;
+  proj.setInputCloud(cloud);
+  proj.setModelCoefficients(coef);
+  proj.filter(*cloud2d);
+  tree2d.setInputCloud(cloud2d);
   sensor_msgs::PointCloud2 ros_cloud;
   pcl::toROSMsg(*cloud, ros_cloud);
   ros_cloud.header.frame_id = "odom";

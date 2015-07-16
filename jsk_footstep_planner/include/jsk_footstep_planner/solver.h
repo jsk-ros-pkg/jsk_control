@@ -42,7 +42,7 @@
 #include <boost/unordered/unordered_set.hpp>
 namespace jsk_footstep_planner
 {
-  template <class GraphT, class CloseListT = boost::unordered_set<typename GraphT::StateT::Ptr> >
+  template <class GraphT>
   class Solver
   {
   public:
@@ -99,13 +99,11 @@ namespace jsk_footstep_planner
     
     virtual bool findInCloseList(StatePtr state)
     {
-      // return std::find(close_list_.begin(), close_list_.end(), state)
-      //   != close_list_.end();
       return close_list_.find(state) != close_list_.end();
     }
 
   protected:
-    CloseListT close_list_;
+    boost::unordered_set<StatePtr> close_list_;
     GraphPtr graph_;
     bool verbose_;
   private:

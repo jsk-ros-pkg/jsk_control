@@ -49,10 +49,17 @@ namespace jsk_footstep_planner
   {
   public:
     typedef boost::shared_ptr<FootstepGraph> Ptr;
-    FootstepGraph(const Eigen::Vector3f& resolution):
+    FootstepGraph(const Eigen::Vector3f& resolution,
+                  const bool use_pointcloud_model = false,
+                  const bool lazy_projection = true):
       max_successor_distance_(0.0), max_successor_rotation_(0.0),
       pos_goal_thr_(0.1), rot_goal_thr_(0.17), publish_progress_(false),
-      resolution_(resolution) {}
+      resolution_(resolution),
+      use_pointcloud_model_(use_pointcloud_model),
+      lazy_projection_(lazy_projection),
+      pointcloud_model_2d_(new pcl::PointCloud<pcl::PointNormal>),
+      tree_model_(new pcl::KdTreeFLANN<pcl::PointNormal>),
+      tree_model_2d_(new pcl::search::Octree<pcl::PointNormal>(0.2)){}
     virtual std::vector<StatePtr> successors(StatePtr target_state);
     virtual bool isGoal(StatePtr state);
     virtual void setBasicSuccessors(
@@ -92,8 +99,33 @@ namespace jsk_footstep_planner
       publish_progress_ = true;
       pub_progress_ = nh.advertise<jsk_footstep_msgs::FootstepArray>(topic, 1);
     }
-    
+
+    virtual void setPointCloudModel(pcl::PointCloud<pcl::PointNormal>::Ptr model)
+    {
+      pointcloud_model_ = model;
+      tree_model_->setInputCloud(pointcloud_model_);
+      // Project point_cloud_model_
+      pcl::ProjectInliers<pcl::PointNormal> proj;
+      proj.setModelType(pcl::SACMODEL_PLANE);
+      pcl::ModelCoefficients::Ptr
+        plane_coefficients (new pcl::ModelCoefficients);
+      plane_coefficients->values.resize(4.0);
+      plane_coefficients->values[2] = 1.0; // TODO: configurable
+      proj.setModelCoefficients(plane_coefficients);
+      proj.setInputCloud(pointcloud_model_);
+      proj.filter(*pointcloud_model_2d_);
+      tree_model_2d_->setInputCloud(pointcloud_model_2d_);
+    }
+    virtual void projectGoal();
+    virtual bool usePointCloudModel() { return use_pointcloud_model_; }
+    virtual bool lazyProjection() { return lazy_projection_; }
+    virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in);
   protected:
+    pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
+    pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_2d_;
+    pcl::KdTreeFLANN<pcl::PointNormal>::Ptr tree_model_;
+    //pcl::KdTreeFLANN<pcl::PointNormal>::Ptr tree_model_2d_;
+    pcl::search::Octree<pcl::PointNormal>::Ptr tree_model_2d_;
     std::vector<Eigen::Affine3f> successors_from_left_to_right_;
     std::vector<Eigen::Affine3f> successors_from_right_to_left_;
     FootstepState::Ptr left_goal_state_;
@@ -103,6 +135,8 @@ namespace jsk_footstep_planner
     double pos_goal_thr_;
     double rot_goal_thr_;
     bool publish_progress_;
+    const bool use_pointcloud_model_;
+    const bool lazy_projection_;
     ros::Publisher pub_progress_;
     const Eigen::Vector3f resolution_;
   private:

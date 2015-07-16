@@ -42,8 +42,8 @@
 
 namespace jsk_footstep_planner
 {
-  template <class GraphT, class CloseListT = boost::unordered_set<typename GraphT::StateT::Ptr> >
-  class BestFirstSearchSolver: public Solver<GraphT, CloseListT>
+  template <class GraphT>
+  class BestFirstSearchSolver: public Solver<GraphT>
   {
   public:
     typedef boost::shared_ptr<BestFirstSearchSolver> Ptr;
