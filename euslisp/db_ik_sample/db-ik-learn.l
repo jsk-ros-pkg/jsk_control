@@ -74,12 +74,22 @@
   (&optional
    (img1 (get-gl-mono-image :width 32 :height 32))
    (img2 *mean-mono-image*))
-  (scale (/ 1.0 255)
+  (scale 1 ;;(/ 1.0 255)
 	 (map float-vector '- (send img1 :entity) (send img2 :entity))))
+
+(defun float-vector2image-string
+  (data)
+  (let* ((min *inf*) (max *-inf*))
+    (dotimes (i (length data))
+      (if (< (aref data i) min) (setq min (aref data i)))
+      (if (> (aref data i) max) (setq max (aref data i))))
+    (map string
+	 #'(lambda (d) (round (/ (* 255.0 (- d min)) (- max min))))
+	 data)))
 
 (defun gen-random-ik-learning-data
   (&key
-   (sample-points 100)
+   (sample-points 1000)
    (joint-list (send *robot* :joint-list))
    ;;
    (target-path "target_lmdb_joint_angle")
@@ -146,7 +156,7 @@
 
 #|
 
-(caffe::gen-test-net :netproto "cnn_predict.prototxt" :caffemodel "cnn_iter_3000.caffemodel")
+(caffe::gen-test-net :netproto "cnn_predict.prototxt" :caffemodel "cnn_iter_1000.caffemodel")
 
 (caffe::db-open :path "target_lmdb_joint_angle")
 (setq a (list (caffe::db-get-float-data)
@@ -164,14 +174,15 @@
       (mapcar
        #'(lambda (av)
 	   (send *robot* :angle-vector (copy-seq av))
+	   (send *robot* :newcoords (make-coords))
+	   (send *robot* :transform (send (send (send *robot* :link "Tibia") :worldcoords) :transformation (make-coords)) :local)
 	   (send *viewer* :draw-objects)
 	   (let* ((img (get-gl-mono-image :width 32 :height 32))
 		  (ret
 		   (caffe::calc-forward-double
-		    :isize (* 32 32) :osize 30
+		    :isize (* 32 32) :osize 15
 		    :num 1 :channels 1 :width 32 :height 32
-		    :input
-		    (map float-vector '(lambda (v) (/ v 255.0)) (send img :entity))
+		    :input (map float-vector 'identity (send img :entity))  ;;(image-minus)
 		    )))
 	     (setq ret (map float-vector 'rad2deg ret))
 	     (format t "vs ---------~%~A~%~A~%" av ret)
@@ -186,10 +197,11 @@
    (name "conv1")
    (width 32)
    (height 32)
-   (count 32)
+   (count 64)
    (data (caffe::get-blob-data :name name
 			       :ret (instantiate float-vector (* width height count))))
-   (sdata (map string '(lambda (v) (round (* v 255))) data)))
+   (sdata ;;(map string '(lambda (v) (round (* v 255))) data)))
+    (float-vector2image-string data)))
   (unix:system "mkdir /tmp/caffe")
   (dotimes (i count)
     (setq img (instance image::grayscale-image :init width height
