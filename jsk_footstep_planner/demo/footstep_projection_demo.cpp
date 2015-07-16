@@ -110,6 +110,27 @@ generateCloud()
       p.z = 0.5;
       gen_cloud->points.push_back(p);
     }
+    for (double x = 1.5; x < 2.0; x = x + 0.01) {
+      pcl::PointNormal p;
+      p.x = x;
+      p.y = y;
+      p.z = -x + 2.0;
+      gen_cloud->points.push_back(p);
+    }
+    for (double x = 2.0; x < M_PI; x = x + 0.01) {
+      pcl::PointNormal p;
+      p.x = x;
+      p.y = y;
+      gen_cloud->points.push_back(p);
+    }
+    for (double x = M_PI; x < 2.0 * M_PI; x = x + 0.01) {
+      pcl::PointNormal p;
+      p.x = x;
+      p.y = y;
+      p.z = std::abs(sin(2.0 * x));
+      gen_cloud->points.push_back(p);
+    }
+
   }
   return gen_cloud;
 }
