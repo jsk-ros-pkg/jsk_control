@@ -125,7 +125,11 @@ namespace jsk_footstep_planner
       double alpha = (- plane.getD() - n.dot(p)) / (n.dot(z));
       Eigen::Vector3f q = p + alpha * z;
       Eigen::Affine3f new_pose = Eigen::Translation3f(q) * new_rot;
-      return FootstepState::Ptr(new FootstepState(leg_, new_pose, dimensions_));
+      return FootstepState::Ptr(new FootstepState(leg_, new_pose, dimensions_,
+                                                  resolution_,
+                                                  index_x_,
+                                                  index_y_,
+                                                  index_yaw_));
     }
   }
 }

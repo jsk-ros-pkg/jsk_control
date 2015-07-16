@@ -35,9 +35,13 @@
 #include <jsk_footstep_msgs/FootstepArray.h>
 #include "jsk_footstep_planner/footstep_graph.h"
 #include "jsk_footstep_planner/astar_solver.h"
+#include "jsk_footstep_planner/footstep_astar_solver.h"
 #include <time.h>
 #include <boost/random.hpp>
 using namespace jsk_footstep_planner;
+
+const Eigen::Vector3f footstep_size(0.2, 0.1, 0.000001);
+const Eigen::Vector3f resolution(0.05, 0.05, 0.08);
 
 Eigen::Affine3f affineFromXYYaw(double x, double y, double yaw)
 {
@@ -52,10 +56,12 @@ void plan(double x, double y, double yaw,
   Eigen::Affine3f goal_center = affineFromXYYaw(x, y, yaw);
   FootstepState::Ptr left_goal(new FootstepState(jsk_footstep_msgs::Footstep::LEFT,
                                                  goal_center * Eigen::Translation3f(0, 0.1, 0),
-                                                 footstep_size));
+                                                 footstep_size,
+                                                 resolution));
   FootstepState::Ptr right_goal(new FootstepState(jsk_footstep_msgs::Footstep::RIGHT,
                                                   goal_center * Eigen::Translation3f(0, -0.1, 0),
-                                                  footstep_size));
+                                                  footstep_size,
+                                                  resolution));
 
   jsk_footstep_msgs::FootstepArray ros_goal;
   ros_goal.header.frame_id = "odom";
@@ -65,7 +71,8 @@ void plan(double x, double y, double yaw,
   pub_goal.publish(ros_goal);
     
   graph->setGoalState(left_goal, right_goal);
-  AStarSolver<FootstepGraph> solver(graph);
+  //AStarSolver<FootstepGraph> solver(graph);
+  FootstepAStarSolver<FootstepGraph> solver(graph, 100, 100, 100);
   //solver.setHeuristic(&footstepHeuristicStraight);
   //solver.setHeuristic(&footstepHeuristicStraightRotation);
   solver.setHeuristic(&footstepHeuristicStepCost);
@@ -97,7 +104,7 @@ int main(int argc, char** argv)
   boost::uniform_real<> trange(-M_PI / 2.0, M_PI/ 2.0);
   boost::variate_generator< boost::mt19937, boost::uniform_real<> > rot_rand(rng, trange);
 
-  FootstepGraph::Ptr graph(new FootstepGraph);
+  FootstepGraph::Ptr graph(new FootstepGraph(resolution));
   //graph->setProgressPublisher(nh, "progress");
   // set successors
   std::vector<Eigen::Affine3f> successors;
@@ -118,10 +125,10 @@ int main(int argc, char** argv)
   successors.push_back(affineFromXYYaw(0.2, -0.2, -0.17));
   successors.push_back(affineFromXYYaw(0.25, -0.2, -0.17));
   successors.push_back(affineFromXYYaw(0.1, -0.2, -0.17));
-  const Eigen::Vector3f footstep_size(0.2, 0.1, 0.000001);
   FootstepState::Ptr start(new FootstepState(jsk_footstep_msgs::Footstep::LEFT,
                                              Eigen::Affine3f::Identity(),
-                                             footstep_size));
+                                             footstep_size,
+                                             resolution));
   graph->setStartState(start);
   graph->setBasicSuccessors(successors);
   jsk_footstep_msgs::FootstepArray ros_start;
@@ -141,7 +148,7 @@ int main(int argc, char** argv)
   plan(2, 0, 0, graph, pub_path, pub_goal, footstep_size);
   ros::Duration(1.0).sleep();
   plan(3, 0, 0, graph, pub_path, pub_goal, footstep_size);
-  // ros::Duration(1.0).sleep();
+  ros::Duration(1.0).sleep();
     
   while (ros::ok()) {
     plan(pos_rand(), pos_rand(), rot_rand(), graph, pub_path, pub_goal, footstep_size);

@@ -49,7 +49,10 @@ namespace jsk_footstep_planner
   {
   public:
     typedef boost::shared_ptr<FootstepGraph> Ptr;
-    FootstepGraph(): max_successor_distance_(0.0), max_successor_rotation_(0.0), pos_goal_thr_(0.1), rot_goal_thr_(0.17), publish_progress_(false) {}
+    FootstepGraph(const Eigen::Vector3f& resolution):
+      max_successor_distance_(0.0), max_successor_rotation_(0.0),
+      pos_goal_thr_(0.1), rot_goal_thr_(0.17), publish_progress_(false),
+      resolution_(resolution) {}
     virtual std::vector<StatePtr> successors(StatePtr target_state);
     virtual bool isGoal(StatePtr state);
     virtual void setBasicSuccessors(
@@ -101,6 +104,7 @@ namespace jsk_footstep_planner
     double rot_goal_thr_;
     bool publish_progress_;
     ros::Publisher pub_progress_;
+    const Eigen::Vector3f resolution_;
   private:
 
   };

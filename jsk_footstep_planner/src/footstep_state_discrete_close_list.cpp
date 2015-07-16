@@ -33,54 +33,34 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-
-#ifndef JSK_FOOTSTEP_PLANNER_BEST_FIRST_SEARCH_SOLVER_H_
-#define JSK_FOOTSTEP_PLANNER_BEST_FIRST_SEARCH_SOLVER_H_
-
-#include "jsk_footstep_planner/solver.h"
-#include <queue>
+#include "jsk_footstep_planner/footstep_state_discrete_close_list.h"
 
 namespace jsk_footstep_planner
 {
-  template <class GraphT, class CloseListT = boost::unordered_set<typename GraphT::StateT::Ptr> >
-  class BestFirstSearchSolver: public Solver<GraphT, CloseListT>
+  FootstepStateDiscreteCloseListLocal::FootstepStateDiscreteCloseListLocal(
+    int x_offset, int y_offset, int theta_offset,
+    size_t x_num, size_t y_num, size_t theta_num):
+    x_num_(x_num), y_num_(y_num), theta_num_(theta_num),
+    x_offset_(x_offset), y_offset_(y_offset), theta_offset_(theta_offset)
   {
-  public:
-    typedef boost::shared_ptr<BestFirstSearchSolver> Ptr;
-    typedef typename GraphT::StateT::Ptr StatePtr;
-    typedef typename GraphT::StateT State;
-    typedef typename GraphT::Ptr GraphPtr;
-    typedef typename SolverNode<State, GraphT>::Ptr SolverNodePtr;
-    
-    BestFirstSearchSolver(GraphPtr graph): Solver<GraphT>(graph) {}
-    
-    virtual void addToOpenList(SolverNodePtr node)
-    {
-      node->setSortValue(fn(node));
-      open_list_.push(node);
+    // initialize data_
+    data_ = std::vector<std::vector<std::vector<FootstepState::Ptr> > >(x_num_);
+    for (size_t xi = 0; xi < x_num_; xi++) {
+      data_[xi] = std::vector<std::vector<FootstepState::Ptr> >(y_num_);
+      for (size_t yi = 0; yi < y_num_; yi++) {
+        data_[xi][yi] = std::vector<FootstepState::Ptr>(theta_num_);
+      }
     }
-    virtual bool isOpenListEmpty()
-    {
-      return open_list_.empty();
-    }
+  }
 
-    virtual SolverNodePtr popFromOpenList()
-    {
-      SolverNodePtr ret = open_list_.top();
-      open_list_.pop();
-      return ret;
-    }
-
-    virtual double fn(SolverNodePtr n)
-    {
-      return n->getCost();
-    }
+  FootstepStateDiscreteCloseList::FootstepStateDiscreteCloseList(
+    const size_t local_x_num,
+    const size_t local_y_num,
+    const size_t local_theta_num):
+    local_x_num_(local_x_num),
+    local_y_num_(local_y_num),
+    local_theta_num_(local_theta_num)
+  {
+  }
     
-  protected:
-    std::priority_queue<SolverNodePtr, std::vector<SolverNodePtr>, std::greater<SolverNodePtr> > open_list_;
-  private:
-    
-  };
 }
-
-#endif
