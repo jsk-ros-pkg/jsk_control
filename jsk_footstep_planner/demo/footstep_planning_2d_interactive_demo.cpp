@@ -38,22 +38,28 @@
 #include "jsk_footstep_planner/footstep_astar_solver.h"
 #include <time.h>
 #include <boost/random.hpp>
+#include <interactive_markers/tools.h>
+#include <interactive_markers/interactive_marker_server.h>
+#include <jsk_pcl_ros/pcl_conversion_util.h>
+#include <jsk_rviz_plugins/OverlayText.h>
+#include <boost/format.hpp>
 using namespace jsk_footstep_planner;
 
 const Eigen::Vector3f footstep_size(0.2, 0.1, 0.000001);
 const Eigen::Vector3f resolution(0.05, 0.05, 0.08);
+ros::Publisher pub_goal, pub_path, pub_text;
+FootstepGraph::Ptr graph;
 
 Eigen::Affine3f affineFromXYYaw(double x, double y, double yaw)
 {
   return Eigen::Translation3f(x, y, 0) * Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ());
 }
 
-void plan(double x, double y, double yaw,
+void plan(const Eigen::Affine3f& goal_center,
           FootstepGraph::Ptr graph, ros::Publisher& pub_path,
           ros::Publisher& pub_goal,
           Eigen::Vector3f footstep_size)
 {
-  Eigen::Affine3f goal_center = affineFromXYYaw(x, y, yaw);
   FootstepState::Ptr left_goal(new FootstepState(jsk_footstep_msgs::Footstep::LEFT,
                                                  goal_center * Eigen::Translation3f(0, 0.1, 0),
                                                  footstep_size,
@@ -91,20 +97,46 @@ void plan(double x, double y, double yaw,
 
 }
 
+
+void processFeedback(
+    const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback )
+{
+  Eigen::Affine3f new_pose;
+  tf::poseMsgToEigen(feedback->pose, new_pose);
+  ros::WallTime start = ros::WallTime::now();
+  plan(new_pose, graph, pub_path, pub_goal, footstep_size);
+  ros::WallTime end = ros::WallTime::now();
+  jsk_rviz_plugins::OverlayText text;
+  text.bg_color.a = 0.0;
+  text.fg_color.a = 1.0;
+  text.fg_color.r = 25 / 255.0;
+  text.fg_color.g = 1.0;
+  text.fg_color.b = 250 / 255.0;
+  text.line_width = 2;
+  text.top = 10;
+  text.left = 10;
+  text.text_size = 24;
+  text.width = 600;
+  text.height = 100;
+  text.text = (boost::format("Planning took %f sec") % (end - start).toSec()).str();
+  pub_text.publish(text);
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "foootstep_planning_2d");
   ros::NodeHandle nh("~");
   ros::Publisher pub_start = nh.advertise<jsk_footstep_msgs::FootstepArray>("start", 1, true);
-  ros::Publisher pub_goal = nh.advertise<jsk_footstep_msgs::FootstepArray>("goal", 1, true);
-  ros::Publisher pub_path = nh.advertise<jsk_footstep_msgs::FootstepArray>("path", 1, true);
+  pub_goal = nh.advertise<jsk_footstep_msgs::FootstepArray>("goal", 1, true);
+  pub_path = nh.advertise<jsk_footstep_msgs::FootstepArray>("path", 1, true);
+  pub_text = nh.advertise<jsk_rviz_plugins::OverlayText>("text", 1, true);
   boost::mt19937 rng( static_cast<unsigned long>(time(0)) );
   boost::uniform_real<> xyrange(-3.0,3.0);
   boost::variate_generator< boost::mt19937, boost::uniform_real<> > pos_rand(rng, xyrange);
   boost::uniform_real<> trange(0, 2 * M_PI);
   boost::variate_generator< boost::mt19937, boost::uniform_real<> > rot_rand(rng, trange);
 
-  FootstepGraph::Ptr graph(new FootstepGraph(resolution));
+  graph.reset(new FootstepGraph(resolution));
   //graph->setProgressPublisher(nh, "progress");
   // set successors
   std::vector<Eigen::Affine3f> successors;
@@ -136,23 +168,44 @@ int main(int argc, char** argv)
   ros_start.header.stamp = ros::Time::now();
   ros_start.footsteps.push_back(*start->toROSMsg());
   pub_start.publish(ros_start);
+  interactive_markers::InteractiveMarkerServer server("footstep_projection_demo");
 
-  plan(1, 1, 0, graph, pub_path, pub_goal, footstep_size);
-  ros::Duration(1.0).sleep();
-  plan(1, 2, 0, graph, pub_path, pub_goal, footstep_size);
-  ros::Duration(1.0).sleep();
-  plan(1, 1, 0.2, graph, pub_path, pub_goal, footstep_size);
-  ros::Duration(1.0).sleep();
-  plan(1, 0, 0, graph, pub_path, pub_goal, footstep_size);
-  ros::Duration(1.0).sleep();
-  plan(2, 0, 0, graph, pub_path, pub_goal, footstep_size);
-  ros::Duration(1.0).sleep();
-  plan(3, 0, 0, graph, pub_path, pub_goal, footstep_size);
-  ros::Duration(1.0).sleep();
-    
-  while (ros::ok()) {
-    plan(pos_rand(), pos_rand(), rot_rand(), graph, pub_path, pub_goal, footstep_size);
-    ros::Duration(1.0).sleep();
-  }
+    visualization_msgs::InteractiveMarker int_marker;
+  int_marker.header.frame_id = "/odom";
+  int_marker.header.stamp=ros::Time::now();
+  int_marker.name = "footstep marker";
+
+  visualization_msgs::InteractiveMarkerControl control;
+
+  control.orientation.w = 1;
+  control.orientation.x = 1;
+  control.orientation.y = 0;
+  control.orientation.z = 0;
+  // control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+  // int_marker.controls.push_back(control);
+  control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+  int_marker.controls.push_back(control);
+
+  control.orientation.w = 1;
+  control.orientation.x = 0;
+  control.orientation.y = 1;
+  control.orientation.z = 0;
+  control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+  int_marker.controls.push_back(control);
+  // control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+  // int_marker.controls.push_back(control);
+
+  control.orientation.w = 1;
+  control.orientation.x = 0;
+  control.orientation.y = 0;
+  control.orientation.z = 1;
+  // control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+  // int_marker.controls.push_back(control);
+  control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+  int_marker.controls.push_back(control);
+  server.insert(int_marker, &processFeedback);
+  server.applyChanges();
+  
+  ros::spin();
   return 0;
 }
