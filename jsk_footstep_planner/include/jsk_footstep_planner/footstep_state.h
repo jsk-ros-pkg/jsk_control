@@ -80,6 +80,20 @@ namespace jsk_footstep_planner
         
     virtual Eigen::Affine3f getPose() { return pose_; }
     virtual void setPose(const Eigen::Affine3f& pose) { pose_ = pose; }
+    virtual int getLeg() { return leg_; }
+    virtual Eigen::Vector3f getDimensions() { return dimensions_; }
+    bool operator==(FootstepState& other)
+    {
+      // TODO: poor implementation
+      Eigen::Vector3f pos_diff(pose_.translation() - other.getPose().translation());
+      if (pos_diff.norm() < 0.1) {
+        Eigen::AngleAxisf rot_diff(pose_.rotation().inverse() * other.getPose().rotation());
+        if (std::abs(rot_diff.angle()) < 0.08) { // 5deg
+          return true;
+        }
+      }
+      return false;
+    }
   protected:
     Eigen::Affine3f pose_;
     const Eigen::Vector3f dimensions_;

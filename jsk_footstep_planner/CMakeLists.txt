@@ -21,12 +21,15 @@ include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 link_libraries(${pcl_ros_LIBRARIES} ${catkin_LIBRARIES})
 add_library(jsk_footstep_planner
   src/simple_neighbored_graph.cpp
-  src/footstep_state.cpp)
+  src/footstep_state.cpp
+  src/footstep_graph.cpp)
 
 add_executable(sample_simple_graph demo/sample_simple_graph.cpp)
 target_link_libraries(sample_simple_graph jsk_footstep_planner)
 add_executable(sample_astar demo/sample_astar.cpp)
 target_link_libraries(sample_astar jsk_footstep_planner)
+add_executable(footstep_planning_2d_demo demo/footstep_planning_2d_demo.cpp)
+target_link_libraries(footstep_planning_2d_demo jsk_footstep_planner)
 
 add_executable(footstep_projection_demo demo/footstep_projection_demo.cpp)
 target_link_libraries(footstep_projection_demo
