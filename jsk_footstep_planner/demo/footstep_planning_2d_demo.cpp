@@ -88,7 +88,6 @@ void plan(double x, double y, double yaw,
     ros_path.footsteps.push_back(*path[i]->getState()->toROSMsg());
   }
   pub_path.publish(ros_path);
-
 }
 
 int main(int argc, char** argv)

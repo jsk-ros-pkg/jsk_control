@@ -128,11 +128,12 @@ namespace jsk_footstep_planner
                               pointcloud_model_2d_,
                               Eigen::Vector3f(0, 0, 1),
                               error_state,
-                              0.05,
+                              0.02,
                               100,
-                              10);
+                              100);
   }
-  void FootstepGraph::projectGoal()
+  
+  bool FootstepGraph::projectGoal()
   {
     unsigned int error_state;
     FootstepState::Ptr left_projected = projectFootstep(left_goal_state_);
@@ -140,6 +141,10 @@ namespace jsk_footstep_planner
     if (left_projected && right_projected) {
       left_goal_state_ = left_projected;
       right_goal_state_ = right_projected;
+      return true;
+    }
+    else {
+      return false;
     }
   }
   
