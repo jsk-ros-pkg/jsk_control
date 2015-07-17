@@ -55,6 +55,12 @@ Eigen::Affine3f affineFromXYYaw(double x, double y, double yaw)
   return Eigen::Translation3f(x, y, 0) * Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ());
 }
 
+void profile(FootstepAStarSolver<FootstepGraph>& solver, FootstepGraph::Ptr graph)
+{
+  ROS_INFO("open list: %lu", solver.getOpenList().size());
+  ROS_INFO("close list: %lu", solver.getCloseList().size());
+}
+
 void plan(const Eigen::Affine3f& goal_center,
           FootstepGraph::Ptr graph, ros::Publisher& pub_path,
           ros::Publisher& pub_goal,
@@ -82,6 +88,7 @@ void plan(const Eigen::Affine3f& goal_center,
   //solver.setHeuristic(&footstepHeuristicStraight);
   //solver.setHeuristic(&footstepHeuristicStraightRotation);
   solver.setHeuristic(&footstepHeuristicStepCost);
+  solver.setProfileFunction(&profile);
   ros::WallTime start_time = ros::WallTime::now();
   std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve();
   ros::WallTime end_time = ros::WallTime::now();

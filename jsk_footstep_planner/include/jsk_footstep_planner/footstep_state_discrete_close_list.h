@@ -62,9 +62,15 @@ namespace jsk_footstep_planner
       int x = state->indexX();
       int y = state->indexY();
       int theta = state->indexT();
+      if (!data_[x - x_offset_][y - y_offset_][theta - theta_offset_]) {
+        size_++;
+      }
       data_[x - x_offset_][y - y_offset_][theta - theta_offset_] = state;
     }
+
+    inline size_t size() { return size_; }
   protected:
+    size_t size_;
     const size_t x_num_;
     const size_t y_num_;
     const size_t theta_num_;
@@ -108,6 +114,15 @@ namespace jsk_footstep_planner
       return boost::make_tuple(kx, ky, kt);
     }
 
+    inline size_t size()
+    {
+      std::map<VolumeKey, FootstepStateDiscreteCloseListLocal::Ptr>::iterator it;
+      size_t s = 0;
+      for (it = local_volumes_.begin(); it != local_volumes_.end(); ++it) {
+        s += it->second->size();
+      }
+      return s;
+    }
     
     inline void push_back(FootstepState::Ptr state)
     {

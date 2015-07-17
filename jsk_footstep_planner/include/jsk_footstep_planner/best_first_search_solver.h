@@ -51,7 +51,9 @@ namespace jsk_footstep_planner
     typedef typename GraphT::StateT State;
     typedef typename GraphT::Ptr GraphPtr;
     typedef typename SolverNode<State, GraphT>::Ptr SolverNodePtr;
-    
+    typedef typename std::priority_queue<SolverNodePtr,
+                                         std::vector<SolverNodePtr>,
+                                         std::greater<SolverNodePtr> > OpenList;
     BestFirstSearchSolver(GraphPtr graph): Solver<GraphT>(graph) {}
     
     virtual void addToOpenList(SolverNodePtr node)
@@ -77,7 +79,7 @@ namespace jsk_footstep_planner
     }
     
   protected:
-    std::priority_queue<SolverNodePtr, std::vector<SolverNodePtr>, std::greater<SolverNodePtr> > open_list_;
+    OpenList open_list_;
   private:
     
   };

@@ -53,14 +53,21 @@ namespace jsk_footstep_planner
     typedef typename GraphT::StateT::Ptr StatePtr;
     typedef typename GraphT::Ptr GraphPtr;
     typedef typename SolverNode<State, GraphT>::Ptr SolverNodePtr;
+    typedef typename boost::function<void(FootstepAStarSolver&, GraphPtr)> ProfileFunction;
+    typedef typename std::priority_queue<SolverNodePtr,
+                                         std::vector<SolverNodePtr>,
+                                         std::greater<SolverNodePtr> > OpenList;    
     FootstepAStarSolver(
-      GraphPtr graph, size_t x_num, size_t y_num, size_t theta_num):
+      GraphPtr graph, size_t x_num, size_t y_num, size_t theta_num,
+      unsigned int profile_period = 1024):
       footstep_close_list_(x_num, y_num, theta_num),
+      profile_period_(profile_period),
+      is_set_profile_function_(false),
       AStarSolver<GraphT>(graph)
     {
       
     }
-
+    
     virtual
     std::vector<typename SolverNode<State, GraphT>::Ptr>
     solve(const ros::WallDuration& timeout = ros::WallDuration(1000000000.0))
@@ -83,6 +90,9 @@ namespace jsk_footstep_planner
           }
         }
         if (graph_->isGoal(target_node->getState())) {
+          if (is_set_profile_function_) {
+            profile_function_(*this, graph_);
+          }
           std::vector<SolverNodePtr> result_path = target_node->getPathWithoutThis();
           result_path.push_back(target_node);
           return result_path;
@@ -110,19 +120,42 @@ namespace jsk_footstep_planner
     {
       return footstep_close_list_.find(s);
     }
+
     virtual void addToCloseList(StatePtr s)
     {
       footstep_close_list_.push_back(s);
     }
+
+    virtual OpenList getOpenList() { return open_list_; }
+    virtual FootstepStateDiscreteCloseList getCloseList() { return footstep_close_list_; }
+    virtual void setProfileFunction(ProfileFunction f)
+    {
+      profile_function_ = f;
+      is_set_profile_function_ = true;
+    }
+
+    virtual bool isOK(const ros::WallTime& start_time, const ros::WallDuration& timeout)
+    {
+      if (is_set_profile_function_ && ++loop_counter_ % profile_period_ == 0) {
+        profile_function_(*this, graph_);
+        loop_counter_ = 0;
+      }
+      return (ros::ok() && (ros::WallTime::now() - start_time) < timeout);
+    }
+    
     using Solver<GraphT>::isOpenListEmpty;
     using Solver<GraphT>::popFromOpenList;
     using Solver<GraphT>::addToOpenList;
-    using Solver<GraphT>::isOK;
+    
   protected:
+    unsigned int loop_counter_;
+    unsigned int profile_period_;
+    ProfileFunction profile_function_;
+    bool is_set_profile_function_;
     FootstepStateDiscreteCloseList footstep_close_list_;
     using Solver<GraphT>::graph_;
     using Solver<GraphT>::verbose_;
-
+    using BestFirstSearchSolver<GraphT>::open_list_;
     
   };
 }
