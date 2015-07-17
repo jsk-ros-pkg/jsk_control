@@ -39,7 +39,8 @@
 	  (caffe::calc-forward-double
 	   :isize (* 32 32) :osize 15
 	   :num 1 :channels 1 :width 32 :height 32
-	   :input (image-minus mimg)
+	   :input ;;(image-minus mimg)
+	   (map float-vector 'identity (send mimg :entity))
 	   )))
     (ros::publish "/mimic_pepper/input_image"
 		  (instance sensor_msgs::image :init :width 32 :height 32
@@ -74,3 +75,22 @@
 
 rosrun usb_cam usb_cam_node
 rosrun image_view image_viewimage:=/mimic_pepper/input_image
+
+(send *robot* :reset-pose)
+(send *robot* :newcoords (make-coords))
+(send *robot* :transform (send (send (send *robot* :link "Tibia") :worldcoords) :transformation (make-coords)) :local)
+
+(send *viewer* :draw-objects)
+(let* ((img (get-gl-mono-image :width 32 :height 32))
+       (ret
+	(caffe::calc-forward-double
+	 :isize (* 32 32) :osize 15
+	 :num 1 :channels 1 :width 32 :height 32
+	 :input ;; (map float-vector 'identity (send img :entity))
+	 (image-minus)
+	 )))
+  (send *robot* :angle-vector (setq ret (map float-vector 'rad2deg ret)))
+  (send *robot* :newcoords (make-coords))
+  (send *robot* :transform (send (send (send *robot* :link "Tibia") :worldcoords) :transformation (make-coords)) :local)
+  (send *viewer* :draw-objects)
+  ret)
