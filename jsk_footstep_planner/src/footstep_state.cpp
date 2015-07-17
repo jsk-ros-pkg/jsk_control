@@ -60,6 +60,7 @@ namespace jsk_footstep_planner
   {
     pcl::PointNormal center;
     center.getVector3fMap() = Eigen::Vector3f(pose_.translation());
+    center.z = 0.0;
     float r = 0.2;
     pcl::PointIndices::Ptr near_indices(new pcl::PointIndices);
     std::vector<float> distances;
@@ -145,7 +146,7 @@ namespace jsk_footstep_planner
       }
       Eigen::Vector3f n = plane.getNormal();
       Eigen::Quaternionf rot;
-      rot.setFromTwoVectors(Eigen::Vector3f::UnitZ(), n);
+      rot.setFromTwoVectors(pose_.rotation() * Eigen::Vector3f::UnitZ(), n);
       Eigen::Quaternionf new_rot(pose_.rotation() * rot);
       Eigen::Vector3f p(pose_.translation());
       double alpha = (- plane.getD() - n.dot(p)) / (n.dot(z));
