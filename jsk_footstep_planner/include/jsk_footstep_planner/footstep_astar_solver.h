@@ -74,7 +74,7 @@ namespace jsk_footstep_planner
         SolverNodePtr target_node = popFromOpenList();
         if (graph_->usePointCloudModel() && lazy_projection) {
           FootstepState::Ptr projected_state = graph_->projectFootstep(target_node->getState());
-          if (!target_node) {
+          if (!projected_state) {
             continue;
           }
           else {
