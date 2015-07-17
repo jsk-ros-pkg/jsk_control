@@ -17,6 +17,9 @@
 (send *irtviewer* :viewer :viewing :look #f(4000 -10 -80) #F(0 0 300))
 (send *viewer* :draw-objects)
 
+(send-all (send *robot* :torso :joint-list) :min-angle -10)
+(send-all (send *robot* :torso :joint-list) :max-angle +10)
+
 (defun read-mono-image
   (path)
   (let* ((img (img::read-image-file path))
@@ -25,8 +28,15 @@
     (dotimes (x (send img :width))
       (dotimes (y (send img :height))
 	(setf (elt buf (+ x (* y (send img :width))))
-	      (elt (send img :entity)
-		   (* 3 (+ x (* y (send img :width)))))
+	      (/
+	       (+
+		(elt (send img :entity)
+		     (+ 0 (* 3 (+ x (* y (send img :width))))))
+		(elt (send img :entity)
+		     (+ 1 (* 3 (+ x (* y (send img :width))))))
+		(elt (send img :entity)
+		     (+ 2 (* 3 (+ x (* y (send img :width)))))))
+	       3)
 	      )))
     (instance image::grayscale-image :init
 	      (send img :width) (send img :height) buf)))
@@ -89,7 +99,7 @@
 
 (defun gen-random-ik-learning-data
   (&key
-   (sample-points 1000)
+   (sample-points 100)
    (joint-list (send *robot* :joint-list))
    ;;
    (target-path "target_lmdb_joint_angle")
@@ -182,7 +192,8 @@
 		   (caffe::calc-forward-double
 		    :isize (* 32 32) :osize 15
 		    :num 1 :channels 1 :width 32 :height 32
-		    :input (map float-vector 'identity (send img :entity))  ;;(image-minus)
+		    :input ;; (map float-vector 'identity (send img :entity))
+		    (image-minus)
 		    )))
 	     (setq ret (map float-vector 'rad2deg ret))
 	     (format t "vs ---------~%~A~%~A~%" av ret)
