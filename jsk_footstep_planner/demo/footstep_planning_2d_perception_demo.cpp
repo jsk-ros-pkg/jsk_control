@@ -70,26 +70,35 @@ void plan(const Eigen::Affine3f& goal_center,
                                                   goal_center * Eigen::Translation3f(0, -0.1, 0),
                                                   footstep_size,
                                                   resolution));
+    
+  graph->setGoalState(left_goal, right_goal);
+  if (!graph->projectGoal()) {
+    ROS_ERROR("Failed to project goal");
+    return;
+  }
 
   jsk_footstep_msgs::FootstepArray ros_goal;
   ros_goal.header.frame_id = "odom";
   ros_goal.header.stamp = ros::Time::now();
-  ros_goal.footsteps.push_back(*left_goal->toROSMsg());
-  ros_goal.footsteps.push_back(*right_goal->toROSMsg());
+  ros_goal.footsteps.push_back(*graph->getGoal(jsk_footstep_msgs::Footstep::LEFT)->toROSMsg());
+  ros_goal.footsteps.push_back(*graph->getGoal(jsk_footstep_msgs::Footstep::RIGHT)->toROSMsg());
   pub_goal.publish(ros_goal);
-    
-  graph->setGoalState(left_goal, right_goal);
-  graph->projectGoal();
+
+  
   //AStarSolver<FootstepGraph> solver(graph);
   FootstepAStarSolver<FootstepGraph> solver(graph, 100, 100, 100);
   //solver.setHeuristic(&footstepHeuristicStraight);
   //solver.setHeuristic(&footstepHeuristicStraightRotation);
   solver.setHeuristic(&footstepHeuristicStepCost);
   ros::WallTime start_time = ros::WallTime::now();
-  std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve();
+  std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(ros::WallDuration(10.0));
   ros::WallTime end_time = ros::WallTime::now();
   std::cout << "took " << (end_time - start_time).toSec() << " sec" << std::endl;
   std::cout << "path: " << path.size() << std::endl;
+  if (path.size() == 0) {
+    ROS_ERROR("Failed to plan path");
+    return;
+  }
   jsk_footstep_msgs::FootstepArray ros_path;
   ros_path.header.frame_id = "odom";
   ros_path.header.stamp = ros::Time::now();
@@ -129,57 +138,29 @@ void processFeedback(
 }
 
 pcl::PointCloud<pcl::PointNormal>::Ptr
-generateCloud2()
+generateCloudSlope()
 {
   pcl::PointCloud<pcl::PointNormal>::Ptr gen_cloud(new pcl::PointCloud<pcl::PointNormal>);
   for (double y = -0.5; y < 0.5; y = y + 0.01) {
-    for (double x = 0.0; x < 0.5; x = x + 0.01) {
+    for (double x = -1.0; x < 0.5; x = x + 0.01) {
       pcl::PointNormal p;
       p.x = x;
       p.y = y;
       gen_cloud->points.push_back(p);
     }
-    for (double x = 0.5; x < 1.0; x = x + 0.01) {
+    for (double x = 0.5; x < 5.0; x = x + 0.01) {
       pcl::PointNormal p;
       p.x = x;
       p.y = y;
-      p.z = x - 0.5;
+      p.z = 0.2 * x - 0.5 * 0.2;
       gen_cloud->points.push_back(p);
     }
-    for (double x = 1.0; x < 1.5; x = x + 0.01) {
-      pcl::PointNormal p;
-      p.x = x;
-      p.y = y;
-      p.z = 0.5;
-      gen_cloud->points.push_back(p);
-    }
-    for (double x = 1.5; x < 2.0; x = x + 0.01) {
-      pcl::PointNormal p;
-      p.x = x;
-      p.y = y;
-      p.z = -x + 2.0;
-      gen_cloud->points.push_back(p);
-    }
-    for (double x = 2.0; x < M_PI; x = x + 0.01) {
-      pcl::PointNormal p;
-      p.x = x;
-      p.y = y;
-      gen_cloud->points.push_back(p);
-    }
-    for (double x = M_PI; x < 2.0 * M_PI; x = x + 0.01) {
-      pcl::PointNormal p;
-      p.x = x;
-      p.y = y;
-      p.z = std::abs(sin(2.0 * x));
-      gen_cloud->points.push_back(p);
-    }
-
   }
   return gen_cloud;
 }
 
 pcl::PointCloud<pcl::PointNormal>::Ptr
-generateCloud()
+generateCloudFlat()
 {
   pcl::PointCloud<pcl::PointNormal>::Ptr gen_cloud(new pcl::PointCloud<pcl::PointNormal>);
   for (double y = -2; y < 2; y = y + 0.01) {
@@ -187,6 +168,23 @@ generateCloud()
       pcl::PointNormal p;
       p.x = x;
       p.y = y;
+      gen_cloud->points.push_back(p);
+    }
+  }
+  return gen_cloud;
+}
+
+pcl::PointCloud<pcl::PointNormal>::Ptr
+generateCloudHills()
+{
+  const double height = 0.3;
+  pcl::PointCloud<pcl::PointNormal>::Ptr gen_cloud(new pcl::PointCloud<pcl::PointNormal>);
+  for (double y = -2; y < 2; y = y + 0.01) {
+    for (double x = -2; x < 2; x = x + 0.01) {
+      pcl::PointNormal p;
+      p.x = x;
+      p.y = y;
+      p.z = height * sin(x * 2) * sin(y * 2);
       gen_cloud->points.push_back(p);
     }
   }
@@ -210,8 +208,19 @@ int main(int argc, char** argv)
   boost::variate_generator< boost::mt19937, boost::uniform_real<> > pos_rand(rng, xyrange);
   boost::uniform_real<> trange(0, 2 * M_PI);
   boost::variate_generator< boost::mt19937, boost::uniform_real<> > rot_rand(rng, trange);
-  pcl::PointCloud<pcl::PointNormal>::Ptr cloud = generateCloud();
-  graph.reset(new FootstepGraph(resolution, true));
+  pcl::PointCloud<pcl::PointNormal>::Ptr cloud;
+  std::string model;
+  nh.param("model", model, std::string("flat"));
+  if (model == "flat") {
+    cloud = generateCloudFlat();
+  }
+  else if (model == "slope") {
+    cloud = generateCloudSlope();
+  }
+  else if (model == "hills") {
+    cloud = generateCloudHills();
+  }
+  graph.reset(new FootstepGraph(resolution, true, true));
   sensor_msgs::PointCloud2 ros_cloud;
   pcl::toROSMsg(*cloud, ros_cloud);
   ros_cloud.header.frame_id = "odom";
