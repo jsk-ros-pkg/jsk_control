@@ -63,14 +63,15 @@ namespace jsk_footstep_planner
 
     virtual
     std::vector<typename SolverNode<State, GraphT>::Ptr>
-    solve()
+    solve(const ros::WallDuration& timeout = ros::WallDuration(1000000000.0))
     {
+      ros::WallTime start_time = ros::WallTime::now();
       SolverNodePtr start_state(new SolverNode<State, GraphT>(
                                   graph_->getStartState(),
                                   0, graph_));
       bool lazy_projection = graph_->lazyProjection();
       addToOpenList(start_state);
-      while (!isOpenListEmpty()) {
+      while (!isOpenListEmpty()  && isOK(start_time, timeout)) {
         SolverNodePtr target_node = popFromOpenList();
         if (graph_->usePointCloudModel() && lazy_projection) {
           FootstepState::Ptr projected_state = graph_->projectFootstep(target_node->getState());
@@ -116,6 +117,7 @@ namespace jsk_footstep_planner
     using Solver<GraphT>::isOpenListEmpty;
     using Solver<GraphT>::popFromOpenList;
     using Solver<GraphT>::addToOpenList;
+    using Solver<GraphT>::isOK;
   protected:
     FootstepStateDiscreteCloseList footstep_close_list_;
     using Solver<GraphT>::graph_;

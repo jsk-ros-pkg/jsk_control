@@ -40,6 +40,7 @@
 #include "jsk_footstep_planner/graph.h"
 #include "jsk_footstep_planner/solver_node.h"
 #include <boost/unordered/unordered_set.hpp>
+
 namespace jsk_footstep_planner
 {
   template <class GraphT>
@@ -58,13 +59,14 @@ namespace jsk_footstep_planner
     
     virtual
     std::vector<typename SolverNode<State, GraphT>::Ptr>
-    solve()
+    solve(const ros::WallDuration& timeout = ros::WallDuration(1000000000.0))
     {
+      ros::WallTime start_time = ros::WallTime::now();
       SolverNodePtr start_state(new SolverNode<State, GraphT>(
                                   graph_->getStartState(),
                                   0, graph_));
       addToOpenList(start_state);
-      while (!isOpenListEmpty()) {
+      while (!isOpenListEmpty() && isOK(start_time, timeout)) {
         SolverNodePtr target_node = popFromOpenList();
         if (graph_->isGoal(target_node->getState())) {
           std::vector<SolverNodePtr> result_path = target_node->getPathWithoutThis();
@@ -72,7 +74,7 @@ namespace jsk_footstep_planner
           return result_path;
         }
         else if (!findInCloseList(target_node->getState())) {
-          //close_list_.push_back(target_node->getState());
+          //close_list_.push_back(target_node->getStnate());
           addToCloseList(target_node->getState());
           addToOpenList(target_node->expand(target_node, verbose_));
         }
@@ -80,7 +82,11 @@ namespace jsk_footstep_planner
       // Failed to search
       return std::vector<SolverNodePtr>();
     }
-
+    
+    virtual bool isOK(const ros::WallTime& start_time, const ros::WallDuration& timeout)
+    {
+      return (ros::ok() && (ros::WallTime::now() - start_time) < timeout);
+    }
     virtual bool isOpenListEmpty() = 0;
     virtual void addToOpenList(SolverNodePtr node) = 0;
     virtual SolverNodePtr popFromOpenList() = 0;
