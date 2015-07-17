@@ -44,6 +44,9 @@
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/filters/project_inliers.h>
+#include <pcl/search/octree.h>
 
 namespace jsk_footstep_planner
 {
@@ -88,17 +91,24 @@ namespace jsk_footstep_planner
       {
       }
     
+    inline float cross2d(const Eigen::Vector2f& a, const Eigen::Vector2f& b)
+    {
+      return a[0] * b[1] - a[1] * b[0];
+    }
     virtual jsk_footstep_msgs::Footstep::Ptr toROSMsg();
     virtual FootstepState::Ptr
     projectToCloud(pcl::KdTreeFLANN<pcl::PointNormal>& tree,
                    pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                   pcl::search::Octree<pcl::PointNormal>& tree_2d,
+                   pcl::PointCloud<pcl::PointNormal>::Ptr cloud_2d,
                    const Eigen::Vector3f& z,
                    unsigned int& error_state,
                    double outlier_threshold,
                    int max_iterations,
                    int min_inliers);
     pcl::PointIndices::Ptr
-    cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
+    cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                   pcl::search::Octree<pcl::PointNormal>& tree);
         
     virtual Eigen::Affine3f getPose() { return pose_; }
     virtual void setPose(const Eigen::Affine3f& pose) { pose_ = pose; }

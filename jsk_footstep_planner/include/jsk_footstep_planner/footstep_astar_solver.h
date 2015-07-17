@@ -44,8 +44,8 @@ namespace jsk_footstep_planner
 {
   // Only available for FootstepState and FootstepGraph
   // because close list behavior is specialized for the purpose
-  template <class GraphT, class CloseListT = boost::unordered_set<typename GraphT::StateT::Ptr> >
-  class FootstepAStarSolver: public AStarSolver<GraphT, CloseListT>
+  template <class GraphT>
+  class FootstepAStarSolver: public AStarSolver<GraphT>
   {
   public:
     typedef boost::shared_ptr<FootstepAStarSolver> Ptr;
@@ -56,11 +56,54 @@ namespace jsk_footstep_planner
     FootstepAStarSolver(
       GraphPtr graph, size_t x_num, size_t y_num, size_t theta_num):
       footstep_close_list_(x_num, y_num, theta_num),
-      AStarSolver<GraphT, CloseListT>(graph)
+      AStarSolver<GraphT>(graph)
     {
       
     }
 
+    virtual
+    std::vector<typename SolverNode<State, GraphT>::Ptr>
+    solve()
+    {
+      SolverNodePtr start_state(new SolverNode<State, GraphT>(
+                                  graph_->getStartState(),
+                                  0, graph_));
+      bool lazy_projection = graph_->lazyProjection();
+      addToOpenList(start_state);
+      while (!isOpenListEmpty()) {
+        SolverNodePtr target_node = popFromOpenList();
+        if (graph_->usePointCloudModel() && lazy_projection) {
+          FootstepState::Ptr projected_state = graph_->projectFootstep(target_node->getState());
+          if (!target_node) {
+            continue;
+          }
+          else {
+            target_node->setState(projected_state);
+          }
+        }
+        if (graph_->isGoal(target_node->getState())) {
+          std::vector<SolverNodePtr> result_path = target_node->getPathWithoutThis();
+          result_path.push_back(target_node);
+          return result_path;
+        }
+        else if (!findInCloseList(target_node->getState())) {
+          //close_list_.push_back(target_node->getState());
+          addToCloseList(target_node->getState());
+          std::vector<SolverNodePtr> next_nodes = target_node->expand(target_node, verbose_);
+          // Add to open list only if next_nodes is not in close list.
+          // We can do it thanks to FootstepStateDiscreteCloseList
+          for (size_t i = 0; i < next_nodes.size(); i++) {
+            SolverNodePtr next_node = next_nodes[i];
+            if (!findInCloseList(next_node->getState())) {
+              addToOpenList(next_node);
+            }
+          }
+        }
+      }
+      // Failed to search
+      return std::vector<SolverNodePtr>();
+    }
+    
     // Overtake closelist behavior from solver class
     virtual bool findInCloseList(StatePtr s)
     {
@@ -70,8 +113,15 @@ namespace jsk_footstep_planner
     {
       footstep_close_list_.push_back(s);
     }
+    using Solver<GraphT>::isOpenListEmpty;
+    using Solver<GraphT>::popFromOpenList;
+    using Solver<GraphT>::addToOpenList;
   protected:
     FootstepStateDiscreteCloseList footstep_close_list_;
+    using Solver<GraphT>::graph_;
+    using Solver<GraphT>::verbose_;
+
+    
   };
 }
 

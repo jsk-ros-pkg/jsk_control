@@ -107,11 +107,42 @@ namespace jsk_footstep_planner
                                                      base_pose * transform,
                                                      target_state->getDimensions(),
                                                      resolution_));
-      ret.push_back(next);
+      if (use_pointcloud_model_ && !lazy_projection_) {
+        // Update footstep position by projection
+        unsigned int error_state;
+        next = projectFootstep(next);
+      }
+      if (next) {
+        ret.push_back(next);
+      }
     }
     return ret;
   }
-
+  
+  FootstepState::Ptr FootstepGraph::projectFootstep(FootstepState::Ptr in)
+  {
+    unsigned int error_state;
+    return in->projectToCloud(*tree_model_,
+                              pointcloud_model_,
+                              *tree_model_2d_,
+                              pointcloud_model_2d_,
+                              Eigen::Vector3f(0, 0, 1),
+                              error_state,
+                              0.05,
+                              100,
+                              10);
+  }
+  void FootstepGraph::projectGoal()
+  {
+    unsigned int error_state;
+    FootstepState::Ptr left_projected = projectFootstep(left_goal_state_);
+    FootstepState::Ptr right_projected = projectFootstep(right_goal_state_);
+    if (left_projected && right_projected) {
+      left_goal_state_ = left_projected;
+      right_goal_state_ = right_projected;
+    }
+  }
+  
   double footstepHeuristicZero(
     SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
   {

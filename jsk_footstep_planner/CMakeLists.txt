@@ -33,6 +33,8 @@ add_executable(footstep_planning_2d_demo demo/footstep_planning_2d_demo.cpp)
 target_link_libraries(footstep_planning_2d_demo jsk_footstep_planner)
 add_executable(footstep_planning_2d_interactive_demo demo/footstep_planning_2d_interactive_demo.cpp)
 target_link_libraries(footstep_planning_2d_interactive_demo jsk_footstep_planner)
+add_executable(footstep_planning_2d_perception_demo demo/footstep_planning_2d_perception_demo.cpp)
+target_link_libraries(footstep_planning_2d_perception_demo jsk_footstep_planner)
 
 add_executable(footstep_projection_demo demo/footstep_projection_demo.cpp)
 target_link_libraries(footstep_projection_demo jsk_footstep_planner)
@@ -44,6 +46,7 @@ install(DIRECTORY euslisp launch scripts
   )
 install(TARGETS jsk_footstep_planner sample_astar sample_simple_graph
   footstep_planning_2d_demo footstep_planning_2d_interactive_demo
+  footstep_planning_2d_perception_demo
   footstep_projection_demo
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

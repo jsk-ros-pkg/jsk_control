@@ -117,6 +117,8 @@ namespace jsk_footstep_planner
       }
     }
 
+    virtual void setState(StatePtr state) { state_ = state; }
+    
     friend bool operator<(const SolverNode<StateT, GraphT>::Ptr a,
                           const SolverNode<StateT, GraphT>::Ptr b)
     {

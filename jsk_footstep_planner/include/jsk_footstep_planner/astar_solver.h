@@ -41,8 +41,8 @@
 #include <boost/function.hpp>
 namespace jsk_footstep_planner
 {
-  template <class GraphT, class CloseListT = boost::unordered_set<typename GraphT::StateT::Ptr> >
-  class AStarSolver: public BestFirstSearchSolver<GraphT, CloseListT>
+  template <class GraphT>
+  class AStarSolver: public BestFirstSearchSolver<GraphT>
   {
   public:
     typedef boost::shared_ptr<AStarSolver> Ptr;
@@ -52,7 +52,7 @@ namespace jsk_footstep_planner
     typedef typename SolverNode<State, GraphT>::Ptr SolverNodePtr;
     typedef typename boost::function<double(SolverNodePtr, GraphPtr)> HeuristicFunction;
     
-    AStarSolver(GraphPtr graph): BestFirstSearchSolver<GraphT, CloseListT>(graph) {}
+    AStarSolver(GraphPtr graph): BestFirstSearchSolver<GraphT>(graph) {}
     virtual double fn(SolverNodePtr n)
     {
       return gn(n) + hn(n);
