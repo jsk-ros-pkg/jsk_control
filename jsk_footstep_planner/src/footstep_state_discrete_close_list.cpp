@@ -41,7 +41,8 @@ namespace jsk_footstep_planner
     int x_offset, int y_offset, int theta_offset,
     size_t x_num, size_t y_num, size_t theta_num):
     x_num_(x_num), y_num_(y_num), theta_num_(theta_num),
-    x_offset_(x_offset), y_offset_(y_offset), theta_offset_(theta_offset)
+    x_offset_(x_offset), y_offset_(y_offset), theta_offset_(theta_offset),
+    size_(0)
   {
     // initialize data_
     data_ = std::vector<std::vector<std::vector<FootstepState::Ptr> > >(x_num_);
