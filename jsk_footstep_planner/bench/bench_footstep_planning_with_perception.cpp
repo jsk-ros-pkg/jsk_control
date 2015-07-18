@@ -37,9 +37,26 @@
 #include <time.h>
 #include <boost/random.hpp>
 #include <fstream>
+
 using namespace jsk_footstep_planner;
 
 const Eigen::Vector3f footstep_size(0.2, 0.1, 0.000001);
+pcl::PointCloud<pcl::PointNormal>::Ptr
+generateCloudFlat()
+{
+  pcl::PointCloud<pcl::PointNormal>::Ptr gen_cloud(new pcl::PointCloud<pcl::PointNormal>);
+  for (double y = -5; y < 5; y = y + 0.01) {
+    for (double x = -5; x < 5; x = x + 0.01) {
+      pcl::PointNormal p;
+      p.x = x;
+      p.y = y;
+      gen_cloud->points.push_back(p);
+    }
+  }
+  return gen_cloud;
+}
+
+
 
 void setupGraph(FootstepGraph::Ptr graph)
 {
@@ -71,17 +88,21 @@ void setupGraph(FootstepGraph::Ptr graph)
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "bench_footstep_planning_without_perception");
+  ros::init(argc, argv, "bench_footstep_planning_with_perception");
   ros::NodeHandle nh("~");
+  //graph->setProgressPublisher(nh, "progress");
+  // set successors
   const size_t trials = 10;
   const double dx = 0.2;
   for (size_t ti = 0; ti < 8; ti++) {
-    FootstepGraph::Ptr graph(new FootstepGraph(resolution));
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud = generateCloudFlat();
+    FootstepGraph::Ptr graph(new FootstepGraph(resolution, true, true));
+    graph->setPointCloudModel(cloud);
     setupGraph(graph);
     double theta = 2.0 * M_PI / 8 * ti ;
-    std::ofstream ofs((boost::format("footstep_planning_without_perception-%f.csv") % theta).str().c_str());
-    for (double x = -3; x <= 3.0; x += 0.2) {
-      for (double y = -3; y <= 3.0; y += 0.2) {
+    std::ofstream ofs((boost::format("footstep_planning_with_perception-%f.csv") % theta).str().c_str());
+    for (double x = -3; x <= 3.0; x += dx) {
+      for (double y = -3; y <= 3.0; y += dx) {
         std::cout << x << ", " << y << ", " << theta << std::endl;
         ros::WallTime start = ros::WallTime::now();
         for (size_t i = 0; i < trials; i++) {

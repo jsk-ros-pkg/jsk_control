@@ -17,6 +17,10 @@ catkin_package(
   )
 
 add_definitions("-g -O2")
+find_package(OpenMP)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 link_libraries(${pcl_ros_LIBRARIES} ${catkin_LIBRARIES})
@@ -38,6 +42,8 @@ add_executable(footstep_planning_2d_perception_demo demo/footstep_planning_2d_pe
 target_link_libraries(footstep_planning_2d_perception_demo jsk_footstep_planner)
 add_executable(bench_footstep_planning_without_perception bench/bench_footstep_planning_without_perception.cpp)
 target_link_libraries(bench_footstep_planning_without_perception jsk_footstep_planner)
+add_executable(bench_footstep_planning_with_perception bench/bench_footstep_planning_with_perception.cpp)
+target_link_libraries(bench_footstep_planning_with_perception jsk_footstep_planner)
 
 add_executable(footstep_projection_demo demo/footstep_projection_demo.cpp)
 target_link_libraries(footstep_projection_demo jsk_footstep_planner)
