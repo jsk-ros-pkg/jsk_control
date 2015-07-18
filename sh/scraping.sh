@@ -60,19 +60,57 @@ function dl_images(){
 
     mkdir img;
     mkdir img/$QUERY;
+    WC=`ls img/$QUERY | wc -l`;
     get_tag_value tmp.html img src | grep "gstatic.com" | while read url;
     do
 	eval "wget $url -P img/$QUERY";
+	_WC=`ls img/$QUERY | wc -l`;
+	if [ "$WC" -eq "$_WC" ];
+	then
+	    echo dl fialed, abort;
+	    return -1;
+	fi
+	WC=$_WC;
     done
+    return 0;
 }
 
-function gokiburi_get(){
-    MAX=1000;
+function dl_images_loop (){
+    MAX=$2;
     STEP=20;
     while [ "$MAX" -gt 0 ];
     do
 	MAX=`expr $MAX - $STEP`;
-	echo "dl_images ゴキブリ $MAX;"
-	dl_images ゴキブリ $MAX;
+	echo "dl_images $1 $MAX;"
+	if [ "`dl_images $1 $MAX;`" -lt 0 ];
+	then
+	    return -1;
+	fi
+    done
+    return 0;
+}
+
+function gokiburi_get(){
+    dl_images_loop "cockroach" 1000;
+}
+
+function sonota_get(){
+    dl_images "wall" 50;
+    dl_images "grass" 50;
+    dl_images "human" 100;
+    dl_images "cat" 100;
+    dl_images "horse" 100;
+}
+
+function convert_to_jpg (){
+    TAG=$1;
+    ORG="img/$TAG";
+    OUT="jpg/$TAG";
+    ID=0;
+    mkdir -p $OUT;
+    for p in `ls $ORG`;
+    do
+	convert $ORG/$p $OUT/$ID.jpg;
+	ID=`expr $ID + 1`;
     done
 }
