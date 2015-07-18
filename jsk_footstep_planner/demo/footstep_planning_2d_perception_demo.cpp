@@ -177,7 +177,7 @@ generateCloudFlat()
 pcl::PointCloud<pcl::PointNormal>::Ptr
 generateCloudHills()
 {
-  const double height = 0.3;
+  const double height = 0.1;
   pcl::PointCloud<pcl::PointNormal>::Ptr gen_cloud(new pcl::PointCloud<pcl::PointNormal>);
   for (double y = -2; y < 2; y = y + 0.01) {
     for (double x = -2; x < 2; x = x + 0.01) {
