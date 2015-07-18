@@ -181,13 +181,25 @@ namespace jsk_footstep_planner
     FootstepState::Ptr goal = graph->getGoal(state->getLeg());
     Eigen::Vector3f diff_pos(goal->getPose().translation() - state->getPose().translation());
     Eigen::Quaternionf first_rot;
-    first_rot.setFromTwoVectors(state->getPose().rotation() * Eigen::Vector3f::UnitX(),
+    // Eigen::Affine3f::rotation is too slow because it calls SVD decomposition
+    first_rot.setFromTwoVectors(state->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX(),
                                 diff_pos);
+
     Eigen::Quaternionf second_rot;
     second_rot.setFromTwoVectors(diff_pos,
-                                 goal->getPose().rotation() * Eigen::Vector3f::UnitX());
+                                 goal->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX());
+    // is it correct??
+    double first_theta = acos(first_rot.w()) * 2;
+    double second_theta = acos(second_rot.w()) * 2;
+    if (isnan(first_theta)) {
+      first_theta = 0;
+    }
+    if (isnan(second_theta)) {
+      second_theta = 0;
+    }
+    
     return (diff_pos.norm() / graph->maxSuccessorDistance()) +
-      (Eigen::AngleAxisf(first_rot).angle() + Eigen::AngleAxisf(second_rot).angle()) / graph->maxSuccessorRotation();
+      (first_theta + second_theta) / graph->maxSuccessorRotation();
   }
 
 }
