@@ -25,6 +25,7 @@ function dl_images(){
     UA=Mozilla/5
     QUERY=$1;
     START=$2;
+    OUTPUT=$3;
     if [ ! "$QUERY" ];
     then
 	echo no query detected;
@@ -33,6 +34,10 @@ function dl_images(){
     if [ ! "$START" ];
     then
 	START=0;
+    fi
+    if [ ! "$OUTPUT" ];
+    then
+        OUTPUT=img/$QUERY;
     fi
     URL="http://www.google.com/search?q=${QUERY}&tbm=isch&start=${START}";
 
@@ -58,15 +63,18 @@ function dl_images(){
 	fi
     done
 
-    mkdir img;
-    mkdir img/$QUERY;
-    WC=`ls img/$QUERY | wc -l`;
+    if [ ! -e "$OUTPUT" ];
+    then
+        mkdir -p "$OUTPUT";
+    fi
+    ## WC=`ls img/$QUERY | wc -l`;
     get_tag_value tmp.html img src | grep "gstatic.com" | while read url;
     do
-	if [ ! -e "img/$QUERY/`basename $url`" ];
+        echo "$url -> `basename $url`";
+	if [ ! -e "\"$OUTPUT/`basename $url`" ];
 	then
-	    echo "wget $url -O \"img/$QUERY/`basename $url`";
-	    eval "wget $url -O \"img/$QUERY/`basename $url`";
+	    echo "wget $url -O \"$OUTPUT/`basename $url`";
+	    eval "wget $url -O \"$OUTPUT/`basename $url`";
 	    # _WC=`ls img/$QUERY | wc -l`;
 	    # if [ "$WC" -eq "$_WC" ];
 	    # then
@@ -83,12 +91,12 @@ function dl_images(){
 
 function dl_images_loop (){
     MAX=$2;
-    STEP=10;
+    STEP=20;
     while [ "$MAX" -gt 0 ];
     do
 	MAX=`expr $MAX - $STEP`;
-	echo "dl_images $1 $MAX;"
-	if [ "`dl_images $1 $MAX;`" -lt 0 ];
+	echo "dl_images $1 $MAX $3;"
+	if [ "`dl_images $1 $MAX $3;`" -lt 0 ];
 	then
 	    return -1;
 	fi
@@ -97,7 +105,8 @@ function dl_images_loop (){
 }
 
 function gokiburi_get(){
-    dl_images_loop "cockroach" 1000;
+    dl_images_loop "blattella" 500 "img/cockroach";
+    dl_images_loop "periplaneta" 500 "img/cockroach";
 }
 
 function sonota_get(){
