@@ -1,9 +1,9 @@
 name: "cnn_test"
 input: "input"
 input_dim: 1 ## num
-input_dim: 1 ## channel
-input_dim: 32 ## w
-input_dim: 32 ## h
+input_dim: 3 ## channel
+input_dim: 128 ## w
+input_dim: 128 ## h
 layer {
   name: "conv1"
   type: "Convolution"
@@ -70,7 +70,7 @@ layer {
     lr_mult: 2
   }
   convolution_param {
-    num_output: 128
+    num_output: 64
     pad: 2
     kernel_size: 3
     stride: 1
@@ -113,9 +113,63 @@ layer {
   }
 }
 layer {
+  name: "conv3"
+  type: "Convolution"
+  bottom: "norm2"
+  top: "conv3"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
+  convolution_param {
+    num_output: 64
+    pad: 2
+    kernel_size: 3
+    stride: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.0001
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "relu3"
+  type: "ReLU"
+  bottom: "conv3"
+  top: "relu3"
+}
+layer {
+  name: "pool3"
+  type: "Pooling"
+  bottom: "relu3"
+  top: "pool3"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+  }
+}
+layer {
+  name: "norm3"
+  type: "LRN"
+  bottom: "pool3"
+  top: "norm3"
+  lrn_param {
+    local_size: 3
+    alpha: 5e-05
+    beta: 0.75
+    norm_region: WITHIN_CHANNEL
+  }
+}
+layer {
   name: "ip1"
   type: "InnerProduct"
-  bottom: "norm2"
+  bottom: "norm3"
   top: "output"
   param {
     lr_mult: 1
@@ -126,7 +180,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 15
+    num_output: 1
     weight_filler {
       type: "gaussian"
       std: 0.01
