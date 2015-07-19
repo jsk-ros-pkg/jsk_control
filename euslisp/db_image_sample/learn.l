@@ -32,7 +32,7 @@
    (input-path "input_lmdb_image")
    (image-path "image")
    (width 128) (height 128)
-   (test-width 100)
+   (test-width 50)
    img
    ;;
    (class-id '(1 2 3))
@@ -64,9 +64,13 @@
    #'(lambda (id pl root)
        (dolist (p pl)
 	 (setq img (image::read-image-file (format nil "~A/~A" root p)))
+	 (format t "~A ~A x ~A x ~A (~A)~%"
+		 (format nil "~A/~A" root p)
+		 3 (send img :width) (send img :height)
+		 id)
 	 (caffe::db-set-id 0)
 	 (caffe::db-put-double
-	  :channels 1 :width 1 :height 1 :label 0
+	  :channels 1 :width 1 :height 1 :label id
 	  :id_str (caffe::zero-string i)
 	  :data (float-vector id))
 	 ;;
@@ -85,7 +89,7 @@
 
 (defun db-image-learn
   (&key
-   (test-width 100)
+   (test-width 50)
    (class-id '(1 2 3))
    (root-path (list "image/else" "image/cockroach" "image/spider"))
    (train-path
