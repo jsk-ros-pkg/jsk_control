@@ -107,8 +107,8 @@ function dl_images_loop (){
 function gokiburi_get(){
     dl_images_loop "blattella" 500 "img/cockroach";
     dl_images_loop "periplaneta" 500 "img/cockroach";
+    dl_images_loop "spider" 500 "img/spider";
 }
-
 function sonota_get(){
     dl_images_loop "wall" 100 "img/else";
     dl_images_loop "grass" 100 "img/else";
