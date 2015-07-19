@@ -110,11 +110,11 @@ function gokiburi_get(){
 }
 
 function sonota_get(){
-    dl_images "wall" 50 "img/else";
-    dl_images "grass" 50 "img/else";
-    dl_images "human" 100 "img/else";
-    dl_images "cat" 100 "img/else";
-    dl_images "horse" 100 "img/else";
+    dl_images_loop "wall" 100 "img/else";
+    dl_images_loop "grass" 100 "img/else";
+    dl_images_loop "human" 200 "img/else";
+    dl_images_loop "cat" 200 "img/else";
+    dl_images_loop "horse" 200 "img/else";
 }
 
 function convert_to_jpg (){
@@ -125,7 +125,7 @@ function convert_to_jpg (){
     mkdir -p $OUT;
     for p in `ls $ORG`;
     do
-	convert $ORG/$p $OUT/$ID.jpg -resize 128x128!;
+	convert -resize 128x128! $ORG/$p $OUT/$ID.jpg;
 	ID=`expr $ID + 1`;
     done
 }
