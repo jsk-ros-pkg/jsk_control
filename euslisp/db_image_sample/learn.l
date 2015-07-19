@@ -113,14 +113,14 @@
    (mapcar
     #'(lambda (id pl root)
 	(mapcar #'(lambda (p) (format t "~A/~A(~A): " root p id)
-		    (print (predict :path (format nil "~A/~A" root p) :init-net? nil))) pl))
+		    (print (aref (predict :path (format nil "~A/~A" root p) :init-net? nil) 0))) pl))
     class-id test-path root-path))
   (setq
    train-ret
    (mapcar
     #'(lambda (id pl root)
 	(mapcar #'(lambda (p) (format t "~A/~A(~A): " root p id)
-		    (print (predict :path (format nil "~A/~A" root p) :init-net? nil))) pl))
+		    (print (aref (predict :path (format nil "~A/~A" root p) :init-net? nil) 0))) pl))
     class-id train-path root-path))
   ;;
   (format t ":train hit rate: ~A/~A~%"
