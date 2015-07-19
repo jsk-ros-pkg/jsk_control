@@ -146,8 +146,8 @@ namespace jsk_footstep_planner
       }
       Eigen::Vector3f n = plane.getNormal();
       Eigen::Quaternionf rot;
-      rot.setFromTwoVectors(pose_.rotation() * Eigen::Vector3f::UnitZ(), n);
-      Eigen::Quaternionf new_rot(pose_.rotation() * rot);
+      rot.setFromTwoVectors(pose_.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitZ(), n);
+      Eigen::Quaternionf new_rot(pose_.matrix().block<3, 3>(0, 0) * rot);
       Eigen::Vector3f p(pose_.translation());
       double alpha = (- plane.getD() - n.dot(p)) / (n.dot(z));
       Eigen::Vector3f q = p + alpha * z;
