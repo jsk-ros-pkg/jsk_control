@@ -5,7 +5,7 @@ layer {
   top: "input"
   top: "dummy_label1"
   memory_data_param {
-    batch_size: 32
+    batch_size: 10
     channels: 3
     height: 128
     width: 128
@@ -201,9 +201,9 @@ layer {
   name: "target"
   type: "MemoryData"
   top: "target"
-  top: "dummy_label1"
+  top: "dummy_label2"
   memory_data_param {
-    batch_size: 32
+    batch_size: 10
     channels: 1
     height: 1
     width: 1

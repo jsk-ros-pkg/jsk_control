@@ -79,7 +79,7 @@
 (defun mem-image-learn
   (&key
    (width 128) (height 128)
-   (size 1792)
+   (size 1800)
    (input-size (* size 3 width height))
    (output-size (* size 1))
    (input-data (instantiate float-vector input-size))
@@ -92,16 +92,16 @@
    )
   (mapcar
    #'(lambda (id path)
-       (if (< i size)
-	   (dolist (p (remove-if '(lambda (str) (not (substringp "jpg" str)))
-				 (directory path)))
-	     (setq img (image::read-image-file (format nil "~A/~A" path p)))
-	     (setf (aref output-data i) id)
-	     (dotimes (j (length (send img :entity)))
-	       (setf (aref input-data (+ j (* i width height 3)))
-		     (aref (send img :entity) j)))
-	     (incf i)))
-       )
+       (dolist (p (remove-if '(lambda (str) (not (substringp "jpg" str)))
+			     (directory path)))
+	 (cond
+	  ((< i size)
+	   (setq img (image::read-image-file (format nil "~A/~A" path p)))
+	   (setf (aref output-data i) id)
+	   (dotimes (j (length (send img :entity)))
+	     (setf (aref input-data (+ j (* i width height 3)))
+		   (aref (send img :entity) j)))
+	   (format t "~A/~A~%" (incf i) size)))))
    class-id root-path)
   ;;
   (caffe::learn :solver "cnn_mem_solver.prototxt"
