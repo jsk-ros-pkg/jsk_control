@@ -26,6 +26,20 @@
 	 #'(lambda (d) (round (/ (* 255.0 (- d min)) (- max min))))
 	 data)))
 
+(defun random-index-vector
+  (size
+   &key
+   (ret (instantiate integer-vector size))
+   (cnt (* 10 size)))
+  (dotimes (i size) (setf (aref ret i) i))
+  (dotimes (i cnt)
+    (let* ((x (random size))
+	   (y (random size))
+	   (buf (aref ret x)))
+      (setf (aref ret x) (aref ret y))
+      (setf (aref ret y) buf)))
+  ret)
+
 (defun gen-learning-data
   (&key
    (target-path "target_lmdb_class_id")
@@ -49,6 +63,7 @@
 	 (subseq (remove-if '(lambda (str) (not (substringp "jpg" str)))
 			    (directory r)) 0 test-width))
      root-path))
+   (random-index-vector (random-index-vector (length (flatten train-path))))
    (i 0)
    )
   (caffe::db-set-id 0)
@@ -64,20 +79,21 @@
    #'(lambda (id pl root)
        (dolist (p pl)
 	 (setq img (image::read-image-file (format nil "~A/~A" root p)))
-	 (format t "~A ~A x ~A x ~A (~A)~%"
+	 (format t "~A: ~A ~A x ~A x ~A (~A)~%"
+		 (caffe::zero-string (aref random-index-vector i))
 		 (format nil "~A/~A" root p)
 		 3 (send img :width) (send img :height)
 		 id)
 	 (caffe::db-set-id 0)
 	 (caffe::db-put-double
 	  :channels 1 :width 1 :height 1 :label id
-	  :id_str (caffe::zero-string i)
+	  :id_str (caffe::zero-string (aref random-index-vector i))
 	  :data (float-vector id))
 	 ;;
 	 (caffe::db-set-id 1)
 	 (caffe::db-put-double
 	  :channels 3 :width width :height height :label id
-	  :id_str (caffe::zero-string i)
+	  :id_str (caffe::zero-string (aref random-index-vector i))
 	  :data (image-minus img *mean-image*))
 	 (incf i)
 	 ))
