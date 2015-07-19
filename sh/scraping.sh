@@ -63,21 +63,27 @@ function dl_images(){
     WC=`ls img/$QUERY | wc -l`;
     get_tag_value tmp.html img src | grep "gstatic.com" | while read url;
     do
-	eval "wget $url -P img/$QUERY";
-	_WC=`ls img/$QUERY | wc -l`;
-	if [ "$WC" -eq "$_WC" ];
+	if [ ! -e "img/$QUERY/`basename $url`" ];
 	then
-	    echo dl fialed, abort;
-	    return -1;
+	    echo "wget $url -O \"img/$QUERY/`basename $url`";
+	    eval "wget $url -O \"img/$QUERY/`basename $url`";
+	    # _WC=`ls img/$QUERY | wc -l`;
+	    # if [ "$WC" -eq "$_WC" ];
+	    # then
+	    # 	echo dl fialed, abort;
+	    # 	return -1;
+	    # fi
+	    # WC=$_WC;
+	else
+	    echo deprecated $url skipped;
 	fi
-	WC=$_WC;
     done
     return 0;
 }
 
 function dl_images_loop (){
     MAX=$2;
-    STEP=20;
+    STEP=10;
     while [ "$MAX" -gt 0 ];
     do
 	MAX=`expr $MAX - $STEP`;
@@ -110,7 +116,7 @@ function convert_to_jpg (){
     mkdir -p $OUT;
     for p in `ls $ORG`;
     do
-	convert $ORG/$p $OUT/$ID.jpg;
+	convert $ORG/$p $OUT/$ID.jpg -resize 128x128!;
 	ID=`expr $ID + 1`;
     done
 }
