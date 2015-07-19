@@ -110,11 +110,11 @@ function gokiburi_get(){
 }
 
 function sonota_get(){
-    dl_images "wall" 50;
-    dl_images "grass" 50;
-    dl_images "human" 100;
-    dl_images "cat" 100;
-    dl_images "horse" 100;
+    dl_images "wall" 50 "img/else";
+    dl_images "grass" 50 "img/else";
+    dl_images "human" 100 "img/else";
+    dl_images "cat" 100 "img/else";
+    dl_images "horse" 100 "img/else";
 }
 
 function convert_to_jpg (){
