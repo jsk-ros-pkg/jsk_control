@@ -76,3 +76,36 @@
   (caffe::learn :solver "cnn_solver.prototxt" :size 0)
   )
 
+(defun mem-image-learn
+  (&key
+   (width 128) (height 128)
+   (size 1792)
+   (input-size (* size 3 width height))
+   (output-size (* size 1))
+   (input-data (instantiate float-vector input-size))
+   (output-data (instantiate float-vector output-size))
+   img
+   ;;
+   (class-id '(0 1))
+   (root-path (list "image/else" "image/cockroach"))
+   (i 0)
+   )
+  (mapcar
+   #'(lambda (id path)
+       (if (< i size)
+	   (dolist (p (remove-if '(lambda (str) (not (substringp "jpg" str)))
+				 (directory path)))
+	     (setq img (image::read-image-file (format nil "~A/~A" path p)))
+	     (setf (aref output-data i) id)
+	     (dotimes (j (length (send img :entity)))
+	       (setf (aref input-data (+ j (* i width height 3)))
+		     (aref (send img :entity) j)))
+	     (incf i)))
+       )
+   class-id root-path)
+  ;;
+  (caffe::learn :solver "cnn_mem_solver.prototxt"
+		:size size :isize input-size :dsize output-size
+		:idata input-data :ddata output-data)
+  )
+
