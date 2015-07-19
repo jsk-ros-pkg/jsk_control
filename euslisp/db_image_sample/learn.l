@@ -176,3 +176,21 @@
    :isize (* 3 (send img :width) (send img :height)) :osize 1
    :num 1 :channels 3 :width (send img :width) :height (send img :height)
    :input(image-minus img *mean-image*)))
+
+(defun gen-blob-image
+  (&key
+   (name "conv1")
+   (width 128)
+   (height 128)
+   (count 64)
+   (data (caffe::get-blob-data :name name
+                               :ret (instantiate float-vector (* 3 width height count))))
+   (sdata
+    (float-vector2image-string data)))
+  (unix:system "mkdir /tmp/caffe")
+  (dotimes (i count)
+    (setq img (instance image::color-image24 :init width height
+                        (subseq sdata (* 3 i width height) (* 3 (+ 1 i) width height))))
+    (img::write-image-file (format nil "/tmp/caffe/~A~A.jpg" name (caffe::zero-string i)) img)
+    ))
+
