@@ -7,7 +7,7 @@ stepsize: 1000 ## learning rate update: base_lr *= gamma,  in every stepsize cal
 max_iter: 5000
 momentum: 0.9
 display: 10
-snapshot_prefix: "cnn"
+snapshot_prefix: "cnn_mem"
 ## base_lr: 0.001
 ## momentum: 0.9
 ## lr_policy: "fixed"
