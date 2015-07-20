@@ -8,3 +8,4 @@ max_iter: 100000
 momentum: 0.9
 display: 10000
 snapshot_prefix: "sample"
+solver_mode: CPU

@@ -15,4 +15,4 @@ snapshot_prefix: "cnn"
 ## max_iter: 4000
 ## snapshot: 4000
 ## snapshot_prefix: "cnn"
-## solver_mode: CPU
+solver_mode: CPU
