@@ -94,6 +94,19 @@ public:
 	std::cout << "Restoring previous solver status from " << solverstate << std::endl;
 	this->solver->Restore(solverstate);
       }
+      //
+      int FLAGS_gpu = -1;
+      if (this->solver_param.solver_mode() == caffe::SolverParameter_SolverMode_GPU) {
+	FLAGS_gpu = solver_param.device_id();
+      }
+      if (FLAGS_gpu >= 0) {
+	LOG(INFO) << "Use GPU with device ID " << FLAGS_gpu;
+	caffe::Caffe::SetDevice(FLAGS_gpu);
+	caffe::Caffe::set_mode(caffe::Caffe::GPU);
+      } else {
+	LOG(INFO) << "Use CPU.";
+	caffe::Caffe::set_mode(caffe::Caffe::CPU);
+      }
     }
     return 0;
   }
