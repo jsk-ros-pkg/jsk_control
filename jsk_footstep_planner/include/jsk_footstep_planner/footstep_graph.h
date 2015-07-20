@@ -117,6 +117,7 @@ namespace jsk_footstep_planner
       tree_model_2d_->setInputCloud(pointcloud_model_2d_);
     }
     virtual bool projectGoal();
+    virtual bool projectStart();
     virtual bool usePointCloudModel() { return use_pointcloud_model_; }
     virtual bool lazyProjection() { return lazy_projection_; }
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in);

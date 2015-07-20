@@ -108,7 +108,10 @@ namespace jsk_footstep_planner
                                 unsigned int& error_state,
                                 double outlier_threshold,
                                 int max_iterations,
-                                int min_inliers)
+                                int min_inliers,
+                                int foot_x_sampling_num,
+                                int foot_y_sampling_num,
+                                double vertex_threshold)
   {
     // TODO: z is ignored
     // extract candidate points
@@ -139,11 +142,11 @@ namespace jsk_footstep_planner
       return FootstepState::Ptr();
     }
     else {
-      error_state = projection_state::success;
       jsk_pcl_ros::Plane plane(coefficients->values);
       if (!plane.isSameDirection(z)) {
         plane = plane.flip();
       }
+
       Eigen::Vector3f n = plane.getNormal();
       Eigen::Quaternionf rot;
       rot.setFromTwoVectors(pose_.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitZ(), n);
@@ -152,11 +155,86 @@ namespace jsk_footstep_planner
       double alpha = (- plane.getD() - n.dot(p)) / (n.dot(z));
       Eigen::Vector3f q = p + alpha * z;
       Eigen::Affine3f new_pose = Eigen::Translation3f(q) * new_rot;
+      // check is it enough points to support the footstep
+      if (!isSupportedByPointCloud(new_pose, cloud, tree, inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold)) {
+        error_state = projection_state::no_enough_support;
+        return FootstepState::Ptr();
+      }
+      error_state = projection_state::success;
       return FootstepState::Ptr(new FootstepState(leg_, new_pose, dimensions_,
                                                   resolution_,
                                                   index_x_,
                                                   index_y_,
                                                   index_yaw_));
+    }
+  }
+  bool FootstepState::isSupportedByPointCloud(const Eigen::Affine3f& pose,
+                                              pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                              pcl::KdTreeFLANN<pcl::PointNormal>& tree,
+                                              pcl::PointIndices::Ptr inliers,
+                                              const int foot_x_sampling_num,
+                                              const int foot_y_sampling_num,
+                                              const double vertex_threshold)
+  {
+    const double dx = dimensions_[0] / foot_x_sampling_num;
+    const double dy = dimensions_[1] / foot_y_sampling_num;
+    const Eigen::Vector3f ex = pose.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX();
+    const Eigen::Vector3f ey = pose.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitY();
+    const Eigen::Affine3f new_origin = pose *
+      Eigen::Translation3f(- ex * dimensions_[0] / 2.0) *
+      Eigen::Translation3f(- ey * dimensions_[1] / 2.0);
+    const Eigen::Affine3f inv_pose = new_origin.inverse();
+    
+    bool occupiedp[foot_x_sampling_num][foot_y_sampling_num];
+    // Initialize by false
+    for (size_t i = 0; i < foot_x_sampling_num; i++) {
+      for (size_t j = 0; j < foot_y_sampling_num; j++) {
+        occupiedp[i][j] = false;
+      }
+    }
+    
+    for (size_t i = 0; i < inliers->indices.size(); i++) {
+      pcl::PointNormal pp = cloud->points[inliers->indices[i]];
+      const Eigen::Vector3f p = pp.getVector3fMap();
+      const Eigen::Vector3f local_p = inv_pose * p;
+      const int nx = floor(local_p[0] / dx);
+      const int ny = floor(local_p[1] / dy);
+      
+      if (0 <= nx && nx < foot_x_sampling_num &&
+          0 <= ny && ny < foot_y_sampling_num) {
+        occupiedp[nx][ny] = true;
+      }
+    }
+    for (size_t i = 0; i < foot_x_sampling_num; i++) {
+      for (size_t j = 0; j < foot_y_sampling_num; j++) {
+        if (!occupiedp[i][j]) {
+          return false;
+        }
+      }
+    }
+
+    // vertices
+    const Eigen::Vector3f ux = Eigen::Vector3f::UnitX();
+    const Eigen::Vector3f uy = Eigen::Vector3f::UnitY();
+    Eigen::Vector3f a((pose * Eigen::Translation3f(ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
+    Eigen::Vector3f b((pose * Eigen::Translation3f(- ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
+    Eigen::Vector3f c((pose * Eigen::Translation3f(- ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
+    Eigen::Vector3f d((pose * Eigen::Translation3f(ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
+    pcl::PointNormal pa, pb, pc, pd;
+    pa.getVector3fMap() = a;
+    pb.getVector3fMap() = b;
+    pc.getVector3fMap() = c;
+    pd.getVector3fMap() = d;
+    std::vector<int> kdl_indices;
+    std::vector<float> kdl_distances;
+    if (tree.radiusSearch(pa, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
+        tree.radiusSearch(pb, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
+        tree.radiusSearch(pc, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
+        tree.radiusSearch(pd, vertex_threshold, kdl_indices, kdl_distances, 1) > 0) {
+      return true;
+    }
+    else {
+      return false;
     }
   }
 }

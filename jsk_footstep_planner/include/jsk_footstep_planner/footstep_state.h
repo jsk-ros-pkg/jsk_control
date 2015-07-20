@@ -69,15 +69,15 @@ namespace jsk_footstep_planner
                   const Eigen::Vector3f& dimensions,
                   const Eigen::Vector3f& resolution):
       leg_(leg), pose_(pose), dimensions_(dimensions), resolution_(resolution)
-      {
-        float x = pose_.translation()[0];
-        float y = pose_.translation()[1];
-        float roll, pitch, yaw;
-        pcl::getEulerAngles(pose_, roll, pitch, yaw);
-        index_x_ = x / resolution_[0];
-        index_y_ = y / resolution_[1];
-        index_yaw_ = yaw / resolution_[2];
-      }
+    {
+      float x = pose_.translation()[0];
+      float y = pose_.translation()[1];
+      float roll, pitch, yaw;
+      pcl::getEulerAngles(pose_, roll, pitch, yaw);
+      index_x_ = x / resolution_[0];
+      index_y_ = y / resolution_[1];
+      index_yaw_ = yaw / resolution_[2];
+    }
 
     FootstepState(int leg,
                   const Eigen::Affine3f& pose,
@@ -88,8 +88,8 @@ namespace jsk_footstep_planner
                   int index_yaw):
       leg_(leg), pose_(pose), dimensions_(dimensions), resolution_(resolution),
       index_x_(index_x), index_y_(index_y), index_yaw_(index_yaw)
-      {
-      }
+    {
+    }
     
     inline float cross2d(const Eigen::Vector2f& a, const Eigen::Vector2f& b)
     {
@@ -105,13 +105,20 @@ namespace jsk_footstep_planner
                    unsigned int& error_state,
                    double outlier_threshold,
                    int max_iterations,
-                   int min_inliers);
+                   int min_inliers,
+                   int foot_x_sampling_num = 3,
+                   int foot_y_sampling_num = 3,
+                   double vertex_threshold = 0.02);
     pcl::PointIndices::Ptr
     cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
                    pcl::search::Octree<pcl::PointNormal>& tree);
         
     virtual Eigen::Affine3f getPose() { return pose_; }
-    virtual void setPose(const Eigen::Affine3f& pose) { pose_ = pose; }
+    virtual void setPose(const Eigen::Affine3f& pose)
+    {
+      pose_ = pose;
+    }
+    
     virtual int getLeg() { return leg_; }
     virtual Eigen::Vector3f getDimensions() { return dimensions_; }
     bool operator==(FootstepState& other)
@@ -124,6 +131,15 @@ namespace jsk_footstep_planner
     inline virtual int indexX() { return index_x_; }
     inline virtual int indexY() { return index_y_; }
     inline virtual int indexT() { return index_yaw_; }
+
+
+    virtual bool isSupportedByPointCloud(const Eigen::Affine3f& pose,
+                                         pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                         pcl::KdTreeFLANN<pcl::PointNormal>& tree,
+                                         pcl::PointIndices::Ptr inliers,
+                                         const int foot_x_sampling_num,
+                                         const int foot_y_sampling_num,
+                                         const double vertex_threshold);
     
   protected:
     Eigen::Affine3f pose_;

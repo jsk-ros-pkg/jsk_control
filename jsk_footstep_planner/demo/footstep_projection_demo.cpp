@@ -85,7 +85,7 @@ void processFeedback(
     pub_projected_footstep.publish(msg2);
   }
   else {
-    ROS_ERROR("error state: %lu" , error_state);
+    ROS_ERROR("error state: %u" , error_state);
   }
 }
 

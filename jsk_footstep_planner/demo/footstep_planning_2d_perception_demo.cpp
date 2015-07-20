@@ -52,6 +52,14 @@ const Eigen::Vector3f resolution(0.05, 0.05, 0.08);
 ros::Publisher pub_goal, pub_path, pub_text;
 FootstepGraph::Ptr graph;
 
+void profile(FootstepAStarSolver<FootstepGraph>& solver, FootstepGraph::Ptr graph)
+{
+  ROS_INFO("open list: %lu", solver.getOpenList().size());
+  ROS_INFO("close list: %lu", solver.getCloseList().size());
+  FootstepAStarSolver<FootstepGraph>::OpenList open_list = solver.getOpenList();
+}
+
+
 Eigen::Affine3f affineFromXYYaw(double x, double y, double yaw)
 {
   return Eigen::Translation3f(x, y, 0) * Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ());
@@ -90,6 +98,7 @@ void plan(const Eigen::Affine3f& goal_center,
   //solver.setHeuristic(&footstepHeuristicStraight);
   //solver.setHeuristic(&footstepHeuristicStraightRotation);
   solver.setHeuristic(&footstepHeuristicStepCost);
+  solver.setProfileFunction(&profile);
   ros::WallTime start_time = ros::WallTime::now();
   std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(ros::WallDuration(10.0));
   ros::WallTime end_time = ros::WallTime::now();
@@ -191,6 +200,29 @@ generateCloudHills()
   return gen_cloud;
 }
 
+pcl::PointCloud<pcl::PointNormal>::Ptr
+generateCloudStairs()
+{
+  const double height = 0.1;
+  pcl::PointCloud<pcl::PointNormal>::Ptr gen_cloud(new pcl::PointCloud<pcl::PointNormal>);
+  for (double y = -2; y < 2; y = y + 0.01) {
+    for (double x = -1; x < 0; x = x + 0.01) {
+      pcl::PointNormal p;
+      p.x = x;
+      p.y = y;
+      p.z = 0;
+      gen_cloud->points.push_back(p);
+    }
+    for (double x = 0; x < 5; x = x + 0.01) {
+      pcl::PointNormal p;
+      p.x = x;
+      p.y = y;
+      p.z = floor(x);
+      gen_cloud->points.push_back(p);
+    }
+  }
+  return gen_cloud;
+}
 
 
 int main(int argc, char** argv)
@@ -220,6 +252,9 @@ int main(int argc, char** argv)
   else if (model == "hills") {
     cloud = generateCloudHills();
   }
+  else if (model == "stairs") {
+    cloud = generateCloudStairs();
+  }
   graph.reset(new FootstepGraph(resolution, true, true));
   sensor_msgs::PointCloud2 ros_cloud;
   pcl::toROSMsg(*cloud, ros_cloud);
@@ -235,6 +270,7 @@ int main(int argc, char** argv)
   successors.push_back(affineFromXYYaw(0, -0.15, 0));
   successors.push_back(affineFromXYYaw(0.2, -0.2, 0));
   successors.push_back(affineFromXYYaw(0.25, -0.2, 0));
+  successors.push_back(affineFromXYYaw(0.3, -0.2, 0));
   successors.push_back(affineFromXYYaw(0.1, -0.2, 0));
   successors.push_back(affineFromXYYaw(-0.1, -0.2, 0));
   successors.push_back(affineFromXYYaw(0, -0.2, 0.17));
@@ -295,8 +331,8 @@ int main(int argc, char** argv)
   int_marker.controls.push_back(control);
   server.insert(int_marker, &processFeedback);
   server.applyChanges();
-
-  plan(Eigen::Affine3f::Identity() * Eigen::Translation3f(0.7, 0, 0), graph, pub_path, pub_goal, footstep_size);
+  // std::cout << "-0.3 => " << int(-0.3) << ", " << int(floor(-0.3)) << std::endl;
+  // plan(Eigen::Affine3f::Identity() * Eigen::Translation3f(1.5, 1.5, 0), graph, pub_path, pub_goal, footstep_size);
   
   ros::spin();
   return 0;

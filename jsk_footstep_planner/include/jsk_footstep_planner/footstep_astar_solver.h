@@ -127,6 +127,7 @@ namespace jsk_footstep_planner
     }
 
     virtual OpenList getOpenList() { return open_list_; }
+    
     virtual FootstepStateDiscreteCloseList getCloseList() { return footstep_close_list_; }
     virtual void setProfileFunction(ProfileFunction f)
     {
