@@ -212,7 +212,7 @@ int main(int argc, char** argv)
   int_marker.controls.push_back(control);
   server.insert(int_marker, &processFeedback);
   server.applyChanges();
-  
+  //plan(Eigen::Affine3f::Identity() * Eigen::Translation3f(3, 3, 0), graph, pub_path, pub_goal, footstep_size);
   ros::spin();
   return 0;
 }

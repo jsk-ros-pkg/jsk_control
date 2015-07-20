@@ -148,6 +148,17 @@ namespace jsk_footstep_planner
     }
   }
   
+  bool FootstepGraph::projectStart()
+  {
+    unsigned int error_state;
+    FootstepState::Ptr projected = projectFootstep(start_state_);
+    if (projected) {
+      start_state_ = projected;
+      return true;
+    }
+    return false;
+  }
+
   double footstepHeuristicZero(
     SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
   {
