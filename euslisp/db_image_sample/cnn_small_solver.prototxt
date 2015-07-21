@@ -6,6 +6,6 @@ gamma: 0.9
 stepsize: 100 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
 max_iter: 1000
 momentum: 0.9
-display: 10
+display: 1
 snapshot_prefix: "cnn_small"
 solver_mode: CPU

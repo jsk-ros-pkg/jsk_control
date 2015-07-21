@@ -194,7 +194,7 @@
   (&key (path "image_small/cockroach/1.jpg")
 	(img (image::read-image-file path))
 	(init-net? t))
-  (if init-net? (caffe::gen-test-net :netproto "cnn_predict.prototxt"
+  (if init-net? (caffe::gen-test-net :netproto "cnn_small_predict.prototxt"
 				     :caffemodel "cnn_iter_1000.caffemodel"))
   (caffe::calc-forward-double
    :isize (* 3 (send img :width) (send img :height)) :osize 1
