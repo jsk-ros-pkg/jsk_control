@@ -170,7 +170,7 @@ layer {
   name: "ip1"
   type: "InnerProduct"
   bottom: "norm3"
-  top: "output"
+  top: "output_vector"
   param {
     lr_mult: 1
     decay_mult: 250
@@ -180,7 +180,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 1
+    num_output: 3
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -189,4 +189,10 @@ layer {
       type: "constant"
     }
   }
+}
+layer {
+  name: "prob"
+  type: "Softmax"
+  bottom: "output_vector"
+  top: "output"
 }

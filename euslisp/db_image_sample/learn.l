@@ -49,7 +49,7 @@
    (test-width 50)
    img
    ;;
-   (class-id '(1 2 3))
+   (class-id '(0 1 2))
    (root-path (list "image/else" "image/cockroach" "image/spider"))
    (train-path
     (mapcar
@@ -106,7 +106,7 @@
 (defun db-image-learn
   (&key
    (test-width 50)
-   (class-id '(1 2 3))
+   (class-id '(0 1 2))
    (root-path (list "image/else" "image/cockroach" "image/spider"))
    (train-path
     (mapcar
@@ -159,8 +159,8 @@
    (output-data (instantiate float-vector output-size))
    img
    ;;
-   (class-id '(0 1))
-   (root-path (list "image/else" "image/cockroach"))
+   (class-id '(0 1 2))
+   (root-path (list "image/else" "image/cockroach" "image/spider"))
    (i 0)
    )
   (mapcar
@@ -187,7 +187,7 @@
 	(img (image::read-image-file path))
 	(init-net? t))
   (if init-net? (caffe::gen-test-net :netproto "cnn_predict.prototxt"
-				     :caffemodel "cnn_iter_5000.caffemodel"))
+				     :caffemodel "cnn_iter_1000.caffemodel"))
   (caffe::calc-forward-double
    :isize (* 3 (send img :width) (send img :height)) :osize 1
    :num 1 :channels 3 :width (send img :width) :height (send img :height)
