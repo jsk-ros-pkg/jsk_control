@@ -16,7 +16,7 @@
   (&optional
    (img1) ;;  (get-gl-mono-image :width 32 :height 32))
    (img2 *mean-image*))
-  (scale (/ 1.0 255)
+  (scale 1 ;;(/ 1.0 255)
 	 (map float-vector '- (send img1 :entity) (send img2 :entity))))
 
 (defun float-vector2image-string
