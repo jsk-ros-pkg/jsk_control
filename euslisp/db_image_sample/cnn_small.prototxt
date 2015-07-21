@@ -1,9 +1,21 @@
 name: "cnn_test"
-input: "input"
-input_dim: 1 ## num
-input_dim: 3 ## channel
-input_dim: 128 ## w
-input_dim: 128 ## h
+layer {
+  name: "input"
+  type: "Data"
+  top: "input"
+  top: "label"
+  include {
+    phase: TRAIN
+  }
+  transform_param {
+    scale: 1.0 ##0.003922
+  }
+  data_param {
+    source: "input_lmdb_image_small"
+    batch_size: 10 ## must be same as target one
+    backend: LMDB
+  }
+}
 layer {
   name: "conv1"
   type: "Convolution"
@@ -170,7 +182,7 @@ layer {
   name: "ip1"
   type: "InnerProduct"
   bottom: "norm3"
-  top: "output_vector"
+  top: "output"
   param {
     lr_mult: 1
     decay_mult: 250
@@ -191,8 +203,25 @@ layer {
   }
 }
 layer {
-  name: "prob"
-  type: "Softmax"
-  bottom: "output_vector"
-  top: "output"
+  name: "target"
+  type: "Data"
+  top: "target"
+  transform_param {
+    scale: 1.0
+  }
+  include {
+    phase: TRAIN
+  }
+  data_param {
+    source: "target_lmdb_class_id_small"
+    batch_size: 10
+    backend: LMDB
+  }
+}
+layer {
+  name: "loss"
+  type: "SoftmaxWithLoss"
+  bottom: "output"
+  bottom: "target"
+  top: "loss"
 }

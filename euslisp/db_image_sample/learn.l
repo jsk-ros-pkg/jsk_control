@@ -1,18 +1,21 @@
 (require "../eus-caffe.l")
 (require "../eus-caffe-db.l")
 
+(defvar *image-root* "image_small")
 (defvar *mean-image*
-  (if (probe-file "image/mean.jpg") (image::read-image-file "image/mean.jpg")
+  (if (probe-file (format nil "~A/mean.jpg" *image-root*))
+      (image::read-image-file (format nil "~A/mean.jpg" *image-root*))
     (progn
-      (unix:system "mkdir image")
+      (unix:system (format nil "mkdir ~A" *image-root*))
       (img::write-image-file
-       "image/mean.jpg" (instance image::color-image24 :init 128 128))
-      (image::read-image-file "image/mean.jpg"))))
+       (format nil "~A/mean.jpg" *image-root*)
+       (instance image::color-image24 :init 64 64))
+      (image::read-image-file (format nil "~A/mean.jpg" *image-root*)))))
 
 (defun image-minus
   (&optional
    (img1) ;;  (get-gl-mono-image :width 32 :height 32))
-   (img2 *mean-mono-image*))
+   (img2 *mean-image*))
   (scale (/ 1.0 255)
 	 (map float-vector '- (send img1 :entity) (send img2 :entity))))
 
@@ -42,15 +45,17 @@
 
 (defun gen-learning-data
   (&key
-   (target-path "target_lmdb_class_id")
-   (input-path "input_lmdb_image")
+   (target-path "target_lmdb_class_id_small")
+   (input-path "input_lmdb_image_small")
    (image-path "image")
-   (width 128) (height 128)
+   (width (send *mean-image* :width))
+   (height (send *mean-image* :height))
    (test-width 50)
    img
    ;;
    (class-id '(0 1 2))
-   (root-path (list "image/else" "image/cockroach" "image/spider"))
+   (root-path (mapcar #'(lambda (str) (format nil str *image-root*))
+		      (list "~A/else" "~A/cockroach" "~A/spider")))
    (train-path
     (mapcar
      #'(lambda (r)
@@ -107,7 +112,8 @@
   (&key
    (test-width 50)
    (class-id '(0 1 2))
-   (root-path (list "image/else" "image/cockroach" "image/spider"))
+   (root-path (mapcar #'(lambda (str) (format nil str *image-root*))
+		      (list "~A/else" "~A/cockroach" "~A/spider")))
    (train-path
     (mapcar
      #'(lambda (r)
@@ -124,7 +130,7 @@
    )
   ;;
   ;; learn
-  (caffe::learn :solver "cnn_solver.prototxt" :size 0)
+  (caffe::learn :solver "cnn_small_solver.prototxt" :size 0)
   ;;
   ;; test
   (predict :init-net? t)
@@ -151,7 +157,8 @@
 
 (defun mem-image-learn
   (&key
-   (width 128) (height 128)
+   (width (send *mean-image* :width))
+   (height (send *mean-image* :height))
    (size 1800)
    (input-size (* size 3 width height))
    (output-size (* size 1))
@@ -160,7 +167,8 @@
    img
    ;;
    (class-id '(0 1 2))
-   (root-path (list "image/else" "image/cockroach" "image/spider"))
+   (root-path (mapcar #'(lambda (str) (format nil str *image-root*))
+		      (list "~A/else" "~A/cockroach" "~A/spider")))
    (i 0)
    )
   (mapcar
@@ -183,7 +191,7 @@
   )
 
 (defun predict
-  (&key (path "image/cockroach/1.jpg")
+  (&key (path "image_small/cockroach/1.jpg")
 	(img (image::read-image-file path))
 	(init-net? t))
   (if init-net? (caffe::gen-test-net :netproto "cnn_predict.prototxt"
@@ -196,8 +204,8 @@
 (defun gen-blob-image
   (&key
    (name "conv1")
-   (width 128)
-   (height 128)
+   (width (send *mean-image* :width))
+   (height (send *mean-image* :height))
    (count 64)
    (data (caffe::get-blob-data :name name
                                :ret (instantiate float-vector (* 3 width height count))))
