@@ -166,7 +166,7 @@
 
 #|
 
-(caffe::gen-test-net :netproto "cnn_predict.prototxt" :caffemodel "cnn_iter_1000.caffemodel")
+(caffe::gen-test-net :netproto "cnn_predict.prototxt" :caffemodel "cnn_iter_5000.caffemodel")
 
 (caffe::db-open :path "target_lmdb_joint_angle")
 (setq a (list (caffe::db-get-float-data)
