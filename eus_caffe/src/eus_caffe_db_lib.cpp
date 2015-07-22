@@ -144,6 +144,7 @@ public:
 
   int dump_datum(){
     std::cout << "key  : " << this->cursor_->key() << std::endl;
+    std::cout << "label: " << this->datum_.label() << std::endl;
     std::cout << "data : " << this->datum_.data() << std::endl;
     std::cout << "fdata: " << "(";
     for ( int i=0; i<this->datum_.float_data_size() ; i++ ){
