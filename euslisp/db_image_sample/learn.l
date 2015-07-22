@@ -15,32 +15,6 @@
        )
       (image::read-image-file (format nil "~A/mean.jpg" *image-root*)))))
 
-;; (defun image-minus
-;;   (&optional
-;;    (img1) ;;  (get-gl-mono-image :width 32 :height 32))
-;;    (img2 *mean-image*)
-;;    (width (send img1 :width))
-;;    (height (send img1 :height))
-;;    (channels (send img1 :byte-depth))
-;;    (channels1 (/ (length (send img1 :entity)) (* width height)))
-;;    (channels2 (/ (length (send img2 :entity)) (* width height)))
-;;    (ret (instantiate float-vector (* width height channels))))
-;;   ;;
-;;   (cond
-;;    ((or (not (eq channels1 channels))
-;; 	(not (eq channels2 channels)))
-;;     (format t "[image-minus] channels conflict ~A vs ~A, ~A~%"
-;; 	    channels channels1 channels2)
-;;     (format t " image: ~A~%" (send img1 :name))))
-;;   ;;
-;;   (let* ((did -1) (buf1 (send img1 :entity)) (buf2 (send img2 :entity)))
-;;     (dotimes (c channels)
-;;       (dotimes (i (* width height))
-;; 	(setf (aref ret (incf did))
-;; 	      (- (aref buf1 (+ (* i channels1) (mod c channels1)))
-;; 		 (aref buf2 (+ (* i channels2) (mod c channels2))))))))
-;;   ret)
-
 (defun image-minus
   (&optional
    (img1) ;;  (get-gl-mono-image :width 32 :height 32))
@@ -83,9 +57,15 @@
    (test-width 50)
    img
    ;;
-   (class-id '(0 1 2))
+   (class-id '(0 1 2 3 4 5))
+   (class-id-vector
+    (mapcar #'(lambda (id)
+		(let* ((v (instantiate float-vector (length class-id))))
+		  (setf (aref v id) 1) v))
+	    class-id))
    (root-path (mapcar #'(lambda (str) (format nil str *image-root*))
-		      (list "~A/else" "~A/cockroach" "~A/spider")))
+		      (list "~A/cockroach" "~A/spider" "~A/human"
+			    "~A/rat" "~A/mosquito" "~A/cat")))
    (train-path
     (mapcar
      #'(lambda (r)
@@ -111,7 +91,7 @@
       (unix::system (format nil "mkdir ~A" image-path)))
   ;;
   (mapcar
-   #'(lambda (id pl root)
+   #'(lambda (id idv pl root)
        (dolist (p pl)
 	 (setq img (image::read-image-file (format nil "~A/~A" root p)))
 	 (setq img (check-color-image24-size img))
@@ -124,9 +104,9 @@
 		 id)
 	 (caffe::db-set-id 0)
 	 (caffe::db-put-double
-	  :channels 1 :width 1 :height 1 :label id
+	  :channels (length idv) :width 1 :height 1 :label id
 	  :id_str (caffe::zero-string (aref random-index-vector i))
-	  :data (float-vector id))
+	  :data idv)
 	 ;;
 	 (caffe::db-set-id 1)
 	 (caffe::db-put-double
@@ -136,18 +116,76 @@
 	  )
 	 (incf i)
 	 ))
-   class-id train-path root-path)
+   class-id class-id-vector train-path root-path)
   ;;
   (caffe::db-set-id 0) (caffe::db-close)
   (caffe::db-set-id 1) (caffe::db-close)
   )
 
+(defun posision-min
+  (v vl
+     &key
+     (comp #'(lambda (v1 v2) (norm (v- v1 v2))))
+     (min-dist *inf*)
+     (ret 0) (id 0) buf)
+  (dolist (v? vl)
+    (cond
+     ((< (setq buf (funcall comp v v?)) min-dist)
+      (setq min-dist buf)
+      (setq ret id)))
+    (incf id))
+  ret)
+
+(defun calc-hit-rate
+  (&key
+   (class-id '(0 1 2 3 4 5))
+   (class-id-vector
+    (mapcar #'(lambda (id)
+		(let* ((v (instantiate float-vector (length class-id))))
+		  (setf (aref v id) 1) v))
+	    class-id))
+   (root-path (mapcar #'(lambda (str) (format nil str *image-root*))
+		      (list "~A/cockroach" "~A/spider" "~A/human"
+			    "~A/rat" "~A/mosquito" "~A/cat")))
+   (check-path
+    (mapcar
+     #'(lambda (r)
+	 (subseq (remove-if '(lambda (str) (not (substringp "jpg" str)))
+			    (directory r)) 0 100))
+     root-path))
+   (check-full-path
+    (mapcar
+     #'(lambda (pl root)
+	 (mapcar #'(lambda (p) (format nil "~A/~A" root p)) pl))
+     check-path root-path))
+   ;;
+   (ret
+    (mapcar
+     #'(lambda (pl id idv)
+	 (mapcar #'(lambda (p) (format t "~A (~A): " p id)
+		     (if (eq id
+			     (posision-min
+			      (print (predict :path p :init-net? nil))
+			      class-id-vector))
+			 1 0))
+		 pl))
+     check-full-path class-id class-id-vector))
+   ;;
+   )
+  (list (apply '+ (flatten ret)) (length (flatten ret))))
+
 (defun db-image-learn
   (&key
    (test-width 50)
-   (class-id '(0 1 2))
+   (class-id '(0 1 2 3 4 5))
+   (class-id-vector
+    (mapcar #'(lambda (id)
+		(let* ((v (instantiate float-vector (length class-id))))
+		  (setf (aref v id) 1) v))
+	    class-id))
    (root-path (mapcar #'(lambda (str) (format nil str *image-root*))
-		      (list "~A/else" "~A/cockroach" "~A/spider")))
+		      (list "~A/cockroach" "~A/spider" "~A/human"
+			    "~A/rat" "~A/mosquito" "~A/cat")))
    (train-path
     (mapcar
      #'(lambda (r)
@@ -168,25 +206,10 @@
   ;;
   ;; test
   (predict :init-net? t)
-  (setq
-   test-ret
-   (mapcar
-    #'(lambda (id pl root)
-	(mapcar #'(lambda (p) (format t "~A/~A(~A): " root p id)
-		    (print (predict :path (format nil "~A/~A" root p) :init-net? nil))) pl))
-    class-id test-path root-path))
-  (setq
-   train-ret
-   (mapcar
-    #'(lambda (id pl root)
-	(mapcar #'(lambda (p) (format t "~A/~A(~A): " root p id)
-		    (print (predict :path (format nil "~A/~A" root p) :init-net? nil))) pl))
-    class-id train-path root-path))
-  ;;
-  (format t ":train hit rate: ~A/~A~%"
-	  (apply '+ (mapcar '(lambda (id ret) (apply '+ (mapcar #'(lambda (id?) (if (< (abs (- id id?)) 0.5) 1 0)) ret))) class-id train-ret)) (length (flatten train-ret)))
-  (format t ":test hit rate: ~A/~A~%"
-	  (apply '+ (mapcar '(lambda (id ret) (apply '+ (mapcar #'(lambda (id?) (if (< (abs (- id id?)) 0.5) 1 0)) ret))) class-id test-ret)) (length (flatten test-ret)))
+  (let* ((test-rate (calc-hit-rate :class-id class-id :class-id-vector class-id-vector :root-path root-path :check-path test-path))
+	 (train-rate (calc-hit-rate :class-id class-id :class-id-vector class-id-vector :root-path root-path :check-path train-path)))
+    (format t ":train hit rate: ~A/~A~%" (car train-rate) (cadr train-rate))
+    (format t ":test hit rate: ~A/~A~%" (car test-rate) (cadr test-rate)))
   )
 
 (defun mem-image-learn
@@ -231,7 +254,7 @@
 	       (setq i (convert-to-caffe-image i))))
 	(init-net? t) ret)
   (if init-net? (caffe::gen-test-net :netproto "cnn_small_predict.prototxt"
-				     :caffemodel "cnn_small_iter_1000.caffemodel"))
+				     :caffemodel "cnn_small_iter_30000.caffemodel"))
   (print (subseq (image-minus img *mean-image*) 0 4))
   (setq ret
 	(caffe::calc-forward-double
@@ -239,14 +262,7 @@
 	 :num 1 :channels 3 :width (send img :width) :height (send img :height)
 	 :input (image-minus img *mean-image*))
 	)
-  (print ret)
-  (let* ((max (aref ret 0)) (pos 0))
-    (dotimes (i (- (length ret) 1))
-      (cond
-       ((> (aref ret (+ 1 i)) max)
-	(setq max (aref ret (+ 1 i)))
-	(setq pos (+ 1 i)))))
-    pos))
+  (print ret))
 
 (defun gen-blob-image
   (&key
