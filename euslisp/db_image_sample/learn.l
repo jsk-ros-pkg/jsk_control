@@ -1,5 +1,6 @@
 (require "../eus-caffe.l")
 (require "../eus-caffe-db.l")
+(require "../image-util.l")
 
 (defvar *image-root* "image_small")
 (defvar *mean-image*
@@ -9,13 +10,42 @@
       (unix:system (format nil "mkdir ~A" *image-root*))
       (img::write-image-file
        (format nil "~A/mean.jpg" *image-root*)
-       (instance image::color-image24 :init 64 64))
+       (instance image::color-image24 :init 64 64
+		 (coerce (make-list (* 3 64 64) :initial-element 122) string))
+       )
       (image::read-image-file (format nil "~A/mean.jpg" *image-root*)))))
+
+;; (defun image-minus
+;;   (&optional
+;;    (img1) ;;  (get-gl-mono-image :width 32 :height 32))
+;;    (img2 *mean-image*)
+;;    (width (send img1 :width))
+;;    (height (send img1 :height))
+;;    (channels (send img1 :byte-depth))
+;;    (channels1 (/ (length (send img1 :entity)) (* width height)))
+;;    (channels2 (/ (length (send img2 :entity)) (* width height)))
+;;    (ret (instantiate float-vector (* width height channels))))
+;;   ;;
+;;   (cond
+;;    ((or (not (eq channels1 channels))
+;; 	(not (eq channels2 channels)))
+;;     (format t "[image-minus] channels conflict ~A vs ~A, ~A~%"
+;; 	    channels channels1 channels2)
+;;     (format t " image: ~A~%" (send img1 :name))))
+;;   ;;
+;;   (let* ((did -1) (buf1 (send img1 :entity)) (buf2 (send img2 :entity)))
+;;     (dotimes (c channels)
+;;       (dotimes (i (* width height))
+;; 	(setf (aref ret (incf did))
+;; 	      (- (aref buf1 (+ (* i channels1) (mod c channels1)))
+;; 		 (aref buf2 (+ (* i channels2) (mod c channels2))))))))
+;;   ret)
 
 (defun image-minus
   (&optional
    (img1) ;;  (get-gl-mono-image :width 32 :height 32))
-   (img2 *mean-image*))
+   (img2 *mean-image*)
+   )
   (scale 1 ;;(/ 1.0 255)
 	 (map float-vector '- (send img1 :entity) (send img2 :entity))))
 
@@ -47,7 +77,7 @@
   (&key
    (target-path "target_lmdb_class_id_small")
    (input-path "input_lmdb_image_small")
-   (image-path "image")
+   (image-path "caffe_image")
    (width (send *mean-image* :width))
    (height (send *mean-image* :height))
    (test-width 50)
@@ -84,6 +114,9 @@
    #'(lambda (id pl root)
        (dolist (p pl)
 	 (setq img (image::read-image-file (format nil "~A/~A" root p)))
+	 (setq img (check-color-image24-size img))
+	 (setq img (convert-to-caffe-image img))
+	 (img::write-image-file (format nil "~A/~A.jpg" image-path (caffe::zero-string (aref random-index-vector i))) img)
 	 (format t "~A: ~A ~A x ~A x ~A (~A)~%"
 		 (caffe::zero-string (aref random-index-vector i))
 		 (format nil "~A/~A" root p)
@@ -99,7 +132,8 @@
 	 (caffe::db-put-double
 	  :channels 3 :width width :height height :label id
 	  :id_str (caffe::zero-string (aref random-index-vector i))
-	  :data (image-minus img *mean-image*))
+	  :data (image-minus img *mean-image*)
+	  )
 	 (incf i)
 	 ))
    class-id train-path root-path)
@@ -192,14 +226,27 @@
 
 (defun predict
   (&key (path "image_small/cockroach/1.jpg")
-	(img (image::read-image-file path))
-	(init-net? t))
+	(img (let* ((i (image::read-image-file path)))
+	       (setq i (check-color-image24-size i))
+	       (setq i (convert-to-caffe-image i))))
+	(init-net? t) ret)
   (if init-net? (caffe::gen-test-net :netproto "cnn_small_predict.prototxt"
-				     :caffemodel "cnn_iter_1000.caffemodel"))
-  (caffe::calc-forward-double
-   :isize (* 3 (send img :width) (send img :height)) :osize 1
-   :num 1 :channels 3 :width (send img :width) :height (send img :height)
-   :input(image-minus img *mean-image*)))
+				     :caffemodel "cnn_small_iter_1000.caffemodel"))
+  (print (subseq (image-minus img *mean-image*) 0 4))
+  (setq ret
+	(caffe::calc-forward-double
+	 :isize (* 3 (send img :width) (send img :height)) :osize 3
+	 :num 1 :channels 3 :width (send img :width) :height (send img :height)
+	 :input (image-minus img *mean-image*))
+	)
+  (print ret)
+  (let* ((max (aref ret 0)) (pos 0))
+    (dotimes (i (- (length ret) 1))
+      (cond
+       ((> (aref ret (+ 1 i)) max)
+	(setq max (aref ret (+ 1 i)))
+	(setq pos (+ 1 i)))))
+    pos))
 
 (defun gen-blob-image
   (&key
