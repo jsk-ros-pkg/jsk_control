@@ -163,11 +163,14 @@
     (mapcar
      #'(lambda (pl id idv)
 	 (mapcar #'(lambda (p) (format t "~A (~A): " p id)
-		     (if (eq id
-			     (posision-min
-			      (print (predict :path p :init-net? nil))
-			      class-id-vector))
-			 1 0))
+		     (cond
+		      ((eq id
+			   (posision-min
+			    (predict :path p :init-net? nil)
+			    class-id-vector))
+		       (print 'yes)
+		       1)
+		      (t (print 'no) 0)))
 		 pl))
      check-full-path class-id class-id-vector))
    ;;
@@ -258,7 +261,7 @@
   (print (subseq (image-minus img *mean-image*) 0 4))
   (setq ret
 	(caffe::calc-forward-double
-	 :isize (* 3 (send img :width) (send img :height)) :osize 3
+	 :isize (* 3 (send img :width) (send img :height)) :osize 6
 	 :num 1 :channels 3 :width (send img :width) :height (send img :height)
 	 :input (image-minus img *mean-image*))
 	)
