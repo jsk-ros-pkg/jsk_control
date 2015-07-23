@@ -163,6 +163,7 @@ namespace jsk_footstep_planner
   {
     return in->projectToCloud(*tree_model_,
                               pointcloud_model_,
+                              grid_search_,
                               *tree_model_2d_,
                               pointcloud_model_2d_,
                               Eigen::Vector3f(0, 0, 1),

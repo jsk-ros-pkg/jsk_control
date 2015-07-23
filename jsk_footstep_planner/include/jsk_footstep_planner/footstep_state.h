@@ -48,6 +48,8 @@
 #include <pcl/filters/project_inliers.h>
 #include <pcl/search/octree.h>
 
+#include "jsk_footstep_planner/ann_grid.h"
+
 namespace jsk_footstep_planner
 {
 
@@ -107,6 +109,7 @@ namespace jsk_footstep_planner
     virtual FootstepState::Ptr
     projectToCloud(pcl::KdTreeFLANN<pcl::PointNormal>& tree,
                    pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                   ANNGrid::Ptr grid_search,
                    pcl::search::Octree<pcl::PointNormal>& tree_2d,
                    pcl::PointCloud<pcl::PointNormal>::Ptr cloud_2d,
                    const Eigen::Vector3f& z,
@@ -117,10 +120,19 @@ namespace jsk_footstep_planner
                    int foot_x_sampling_num = 3,
                    int foot_y_sampling_num = 3,
                    double vertex_threshold = 0.02);
+    
     pcl::PointIndices::Ptr
     cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
                    pcl::search::Octree<pcl::PointNormal>& tree);
-        
+
+    pcl::PointIndices::Ptr
+    cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                   ANNGrid::Ptr grid_search);
+
+    pcl::PointIndices::Ptr
+    cropPointCloudExact(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                        pcl::PointIndices::Ptr near_indices);
+    
     virtual Eigen::Affine3f getPose() { return pose_; }
     virtual void setPose(const Eigen::Affine3f& pose)
     {
