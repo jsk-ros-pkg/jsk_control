@@ -83,7 +83,32 @@ namespace jsk_footstep_planner
       (rot_goal_thr_ > std::abs(Eigen::AngleAxisf(transformation.rotation()).angle()));
   }
 
-  std::vector<FootstepGraph::StatePtr> FootstepGraph::successors(StatePtr target_state)
+  std::vector<FootstepState::Ptr>
+  FootstepGraph::localMoveFootstepState(FootstepState::Ptr in)
+  {
+    std::vector<FootstepState::Ptr> moved_states;
+    moved_states.reserve(local_move_x_num_ * local_move_y_num_ * local_move_theta_num_ * 8);
+    for (size_t xi = - local_move_x_num_; xi <= local_move_x_num_; xi++) {
+      for (size_t yi = - local_move_y_num_; yi <= local_move_y_num_; yi++) {
+        for (size_t thetai = - local_move_theta_num_; thetai <= local_move_theta_num_; thetai++) {
+          Eigen::Affine3f trans(Eigen::Translation3f(local_move_x_ / local_move_x_num_ * xi,
+                                                     local_move_y_ / local_move_y_num_ * yi,
+                                                     0)
+                                * Eigen::AngleAxisf(local_move_theta_ / local_move_theta_num_ * thetai,
+                                                    Eigen::Vector3f::UnitZ()));
+          moved_states.push_back(
+            FootstepState::Ptr(new FootstepState(in->getLeg(),
+                                                 in->getPose() * trans,
+                                                 in->getDimensions(),
+                                                 in->getResolution())));
+        }
+      }
+    }
+    return moved_states;
+  }
+  
+  std::vector<FootstepGraph::StatePtr>
+  FootstepGraph::successors(StatePtr target_state)
   {
     std::vector<Eigen::Affine3f> transformations;
     int next_leg;
@@ -110,7 +135,14 @@ namespace jsk_footstep_planner
       if (use_pointcloud_model_ && !lazy_projection_) {
         // Update footstep position by projection
         unsigned int error_state;
-        next = projectFootstep(next);
+        next = projectFootstep(next, error_state);
+        if (!next && localMovement() && error_state == projection_state::close_to_success) {
+          std::vector<StatePtr> locally_moved_nodes
+            = localMoveFootstepState(next);
+          for (size_t j = 0; j < locally_moved_nodes.size(); j++) {
+            ret.push_back(locally_moved_nodes[j]);
+          }
+        }
       }
       if (next) {
         ret.push_back(next);
@@ -118,10 +150,17 @@ namespace jsk_footstep_planner
     }
     return ret;
   }
-  
+
+
   FootstepState::Ptr FootstepGraph::projectFootstep(FootstepState::Ptr in)
   {
     unsigned int error_state;
+    return projectFootstep(in, error_state);
+  }
+  
+  FootstepState::Ptr FootstepGraph::projectFootstep(FootstepState::Ptr in,
+                                                    unsigned int& error_state)
+  {
     return in->projectToCloud(*tree_model_,
                               pointcloud_model_,
                               *tree_model_2d_,

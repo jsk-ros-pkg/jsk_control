@@ -81,8 +81,17 @@ namespace jsk_footstep_planner
       while (!isOpenListEmpty()  && isOK(start_time, timeout)) {
         SolverNodePtr target_node = popFromOpenList();
         if (graph_->usePointCloudModel() && lazy_projection) {
-          FootstepState::Ptr projected_state = graph_->projectFootstep(target_node->getState());
+          unsigned int error_state;
+          FootstepState::Ptr projected_state = graph_->projectFootstep(target_node->getState(),
+                                                                       error_state);
           if (!projected_state) {
+            if (graph_->localMovement() && error_state == projection_state::close_to_success) {
+              std::vector<SolverNodePtr> locally_moved_nodes
+                = target_node->wrapWithSolverNodes(target_node->getParent(),
+                                                   graph_->localMoveFootstepState(projected_state));
+              // TODO: need to check if they are included in close list?
+              addToOpenList(locally_moved_nodes);
+            }
             continue;
           }
           else {
@@ -98,7 +107,6 @@ namespace jsk_footstep_planner
           return result_path;
         }
         else if (!findInCloseList(target_node->getState())) {
-          //close_list_.push_back(target_node->getState());
           addToCloseList(target_node->getState());
           std::vector<SolverNodePtr> next_nodes = target_node->expand(target_node, verbose_);
           // Add to open list only if next_nodes is not in close list.

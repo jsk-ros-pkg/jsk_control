@@ -155,26 +155,37 @@ namespace jsk_footstep_planner
       double alpha = (- plane.getD() - n.dot(p)) / (n.dot(z));
       Eigen::Vector3f q = p + alpha * z;
       Eigen::Affine3f new_pose = Eigen::Translation3f(q) * new_rot;
+      
       // check is it enough points to support the footstep
-      if (!isSupportedByPointCloud(new_pose, cloud, tree, inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold)) {
+      FootstepSupportState support_state
+        = isSupportedByPointCloud(new_pose, cloud, tree, inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+      if (support_state == NOT_SUPPORTED) {
         error_state = projection_state::no_enough_support;
         return FootstepState::Ptr();
       }
-      error_state = projection_state::success;
-      return FootstepState::Ptr(new FootstepState(leg_, new_pose, dimensions_,
-                                                  resolution_,
-                                                  index_x_,
-                                                  index_y_,
-                                                  index_yaw_));
+      else if (support_state == CLOSE_TO_SUPPORTED) {
+        error_state = projection_state::close_to_success;
+        return FootstepState::Ptr();
+      }
+      else {
+        error_state = projection_state::success;
+        return FootstepState::Ptr(new FootstepState(leg_, new_pose, dimensions_,
+                                                    resolution_,
+                                                    index_x_,
+                                                    index_y_,
+                                                    index_yaw_));
+      }
     }
   }
-  bool FootstepState::isSupportedByPointCloud(const Eigen::Affine3f& pose,
-                                              pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
-                                              pcl::KdTreeFLANN<pcl::PointNormal>& tree,
-                                              pcl::PointIndices::Ptr inliers,
-                                              const int foot_x_sampling_num,
-                                              const int foot_y_sampling_num,
-                                              const double vertex_threshold)
+  
+  FootstepSupportState
+  FootstepState::isSupportedByPointCloud(const Eigen::Affine3f& pose,
+                                         pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                         pcl::KdTreeFLANN<pcl::PointNormal>& tree,
+                                         pcl::PointIndices::Ptr inliers,
+                                         const int foot_x_sampling_num,
+                                         const int foot_y_sampling_num,
+                                         const double vertex_threshold)
   {
     const double dx = dimensions_[0] / foot_x_sampling_num;
     const double dy = dimensions_[1] / foot_y_sampling_num;
@@ -208,7 +219,7 @@ namespace jsk_footstep_planner
     for (size_t i = 0; i < foot_x_sampling_num; i++) {
       for (size_t j = 0; j < foot_y_sampling_num; j++) {
         if (!occupiedp[i][j]) {
-          return false;
+          return NOT_SUPPORTED;
         }
       }
     }
@@ -231,10 +242,10 @@ namespace jsk_footstep_planner
         tree.radiusSearch(pb, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
         tree.radiusSearch(pc, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
         tree.radiusSearch(pd, vertex_threshold, kdl_indices, kdl_distances, 1) > 0) {
-      return true;
+      return SUPPORTED;
     }
     else {
-      return false;
+      return CLOSE_TO_SUPPORTED;
     }
   }
 }
