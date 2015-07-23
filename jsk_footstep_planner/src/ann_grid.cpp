@@ -160,16 +160,21 @@ namespace jsk_footstep_planner
   {
     // clear by 0
     mat_ = cv::Scalar::all(0);
-    cv::Point pts[filled.size()];
+    std::vector<cv::Point> pts(filled.size());
     for (size_t i = 0; i < filled.size(); i++) {
       pts[i] = cv::Point(filled[i].x, filled[i].y);
     }
-    cv::fillConvexPoly(mat_, pts, filled.size(), 255);
+    cv::fillConvexPoly(mat_, pts, cv::Scalar(255));
+    // Compute bounding box
+    cv::Rect bbox = cv::boundingRect(cv::Mat(pts));
     IndexArray ret;
-    for (size_t j = 0; j < mat_.rows; j++) {
-      for (size_t i = 0; i < mat_.cols; i++) {
-        if (mat_.at<char>(j, i) == char(255)) {
-          ret.push_back(cv::Point(i, j));
+    ret.reserve(filled.size());
+    for (size_t j = 0; j <= bbox.height; j++) {
+      int y = bbox.y + j;
+      for (size_t i = 0; i <= bbox.width; i++) {
+        int x = bbox.x + i;
+        if (mat_.at<unsigned char>(y, x) == 255) {
+          ret.push_back(cv::Point(x, y));
         }
       }
     }

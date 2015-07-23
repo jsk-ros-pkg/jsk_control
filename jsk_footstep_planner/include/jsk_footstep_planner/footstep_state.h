@@ -63,6 +63,8 @@ namespace jsk_footstep_planner
     const unsigned int close_to_success = 32;
   }
 
+  std::string projectStateToString(unsigned int state);
+  
   enum FootstepSupportState
   {
     NOT_SUPPORTED,
