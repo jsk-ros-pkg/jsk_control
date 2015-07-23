@@ -50,6 +50,7 @@ pcl::PointCloud<pcl::PointNormal>::Ptr cloud;
 pcl::KdTreeFLANN<pcl::PointNormal> tree;
 pcl::PointCloud<pcl::PointNormal>::Ptr cloud2d;
 pcl::search::Octree<pcl::PointNormal> tree2d(0.1);
+ANNGrid::Ptr grid_search;
 
 jsk_footstep_msgs::FootstepArray footstepToFootstepArray(
   jsk_footstep_msgs::Footstep msg)
@@ -73,6 +74,7 @@ void processFeedback(
   FootstepState::Ptr projected_footstep = original_footstep->projectToCloud(
     tree,
     cloud,
+    grid_search,
     tree2d,
     cloud2d,
     Eigen::Vector3f(0, 0, 1),
@@ -154,8 +156,11 @@ int main(int argc, char** argv)
   cloud = generateCloud();
   cloud2d.reset(new pcl::PointCloud<pcl::PointNormal>);
   tree.setInputCloud(cloud);
+  grid_search.reset(new ANNGrid(0.1));
+  grid_search->build(*cloud);
   pcl::ProjectInliers<pcl::PointNormal> proj;
   pcl::ModelCoefficients::Ptr coef (new pcl::ModelCoefficients);
+  
   coef->values.resize(4);
   coef->values[2] = 1.0;
   proj.setInputCloud(cloud);

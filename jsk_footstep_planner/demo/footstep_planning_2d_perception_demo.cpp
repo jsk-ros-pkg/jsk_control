@@ -100,7 +100,7 @@ void plan(const Eigen::Affine3f& goal_center,
   solver.setHeuristic(&footstepHeuristicStepCost);
   solver.setProfileFunction(&profile);
   ros::WallTime start_time = ros::WallTime::now();
-  std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(ros::WallDuration(10.0));
+  std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(ros::WallDuration(2000.0));
   ros::WallTime end_time = ros::WallTime::now();
   std::cout << "took " << (end_time - start_time).toSec() << " sec" << std::endl;
   std::cout << "path: " << path.size() << std::endl;
@@ -255,7 +255,7 @@ int main(int argc, char** argv)
   else if (model == "stairs") {
     cloud = generateCloudStairs();
   }
-  graph.reset(new FootstepGraph(resolution, true, true));
+  graph.reset(new FootstepGraph(resolution, true, true, true));
   sensor_msgs::PointCloud2 ros_cloud;
   pcl::toROSMsg(*cloud, ros_cloud);
   ros_cloud.header.frame_id = "odom";
@@ -332,7 +332,7 @@ int main(int argc, char** argv)
   server.insert(int_marker, &processFeedback);
   server.applyChanges();
   // std::cout << "-0.3 => " << int(-0.3) << ", " << int(floor(-0.3)) << std::endl;
-  // plan(Eigen::Affine3f::Identity() * Eigen::Translation3f(1.5, 1.5, 0), graph, pub_path, pub_goal, footstep_size);
+  plan(Eigen::Affine3f::Identity() * Eigen::Translation3f(1.7, 0.0, 0), graph, pub_path, pub_goal, footstep_size);
   
   ros::spin();
   return 0;

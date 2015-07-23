@@ -55,17 +55,9 @@ namespace jsk_footstep_planner
   }
 
   pcl::PointIndices::Ptr
-  FootstepState::cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
-                                pcl::search::Octree<pcl::PointNormal>& tree)
+  FootstepState::cropPointCloudExact(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                     pcl::PointIndices::Ptr near_indices)
   {
-    pcl::PointNormal center;
-    center.getVector3fMap() = Eigen::Vector3f(pose_.translation());
-    center.z = 0.0;
-    float r = 0.2;
-    pcl::PointIndices::Ptr near_indices(new pcl::PointIndices);
-    std::vector<float> distances;
-    tree.radiusSearch(center, r, near_indices->indices, distances);
-
     // Project vertices into 2d
     Eigen::Vector3f z(0, 0, 1);
     Eigen::Vector3f a = pose_ * Eigen::Vector3f(dimensions_[0]/2, dimensions_[1]/2, 0);
@@ -81,7 +73,8 @@ namespace jsk_footstep_planner
     Eigen::Vector2f b2d(b_2d[0], b_2d[1]);
     Eigen::Vector2f c2d(c_2d[0], c_2d[1]);
     Eigen::Vector2f d2d(d_2d[0], d_2d[1]);
-    std::set<int> set_indices;
+    //std::set<int> set_indices;
+    pcl::PointIndices::Ptr ret(new pcl::PointIndices);
     for (size_t i = 0; i < near_indices->indices.size(); i++) {
       size_t index = near_indices->indices[i];
       pcl::PointNormal point = cloud->points[index];
@@ -91,17 +84,46 @@ namespace jsk_footstep_planner
           cross2d((c2d - b2d), (p2d - b2d)) > 0 &&
           cross2d((d2d - c2d), (p2d - c2d)) > 0 &&
           cross2d((a2d - d2d), (p2d - d2d)) > 0) {
-        set_indices.insert(index);
+        //set_indices.insert(index);
+        ret->indices.push_back(index);
       }
     }
-    pcl::PointIndices::Ptr ret(new pcl::PointIndices);
-    ret->indices = std::vector<int>(set_indices.begin(), set_indices.end());
+
+    //ret->indices = std::vector<int>(set_indices.begin(), set_indices.end());
     return ret;
+  }
+  
+  pcl::PointIndices::Ptr
+  FootstepState::cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                ANNGrid::Ptr grid_search)
+  {
+    pcl::PointIndices::Ptr near_indices(new pcl::PointIndices);
+    Eigen::Vector3f a = pose_ * Eigen::Vector3f(dimensions_[0]/2, dimensions_[1]/2, 0);
+    Eigen::Vector3f b = pose_ * Eigen::Vector3f(-dimensions_[0]/2, dimensions_[1]/2, 0);
+    Eigen::Vector3f c = pose_ * Eigen::Vector3f(-dimensions_[0]/2, -dimensions_[1]/2, 0);
+    Eigen::Vector3f d = pose_ * Eigen::Vector3f(dimensions_[0]/2, -dimensions_[1]/2, 0);
+    grid_search->approximateSearchInBox(a, b, c, d, *near_indices);
+    return cropPointCloudExact(cloud, near_indices);
+  }
+  
+  pcl::PointIndices::Ptr
+  FootstepState::cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                pcl::search::Octree<pcl::PointNormal>& tree)
+  {
+    pcl::PointNormal center;
+    center.getVector3fMap() = Eigen::Vector3f(pose_.translation());
+    center.z = 0.0;
+    float r = 0.2;
+    pcl::PointIndices::Ptr near_indices(new pcl::PointIndices);
+    std::vector<float> distances;
+    tree.radiusSearch(center, r, near_indices->indices, distances);
+    return cropPointCloudExact(cloud, near_indices);
   }
   
   FootstepState::Ptr
   FootstepState::projectToCloud(pcl::KdTreeFLANN<pcl::PointNormal>& tree,
                                 pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                ANNGrid::Ptr grid_search,
                                 pcl::search::Octree<pcl::PointNormal>& tree_2d,
                                 pcl::PointCloud<pcl::PointNormal>::Ptr cloud_2d,
                                 const Eigen::Vector3f& z,
@@ -115,7 +137,8 @@ namespace jsk_footstep_planner
   {
     // TODO: z is ignored
     // extract candidate points
-    pcl::PointIndices::Ptr indices = cropPointCloud(cloud_2d, tree_2d);
+    //pcl::PointIndices::Ptr indices = cropPointCloud(cloud_2d, tree_2d);
+    pcl::PointIndices::Ptr indices = cropPointCloud(cloud, grid_search);
     if (indices->indices.size() < min_inliers) {
       error_state = projection_state::no_enough_inliers;
       return FootstepState::Ptr();
@@ -158,7 +181,8 @@ namespace jsk_footstep_planner
       
       // check is it enough points to support the footstep
       FootstepSupportState support_state
-        = isSupportedByPointCloud(new_pose, cloud, tree, inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+        = isSupportedByPointCloud(new_pose, cloud, tree,
+                                  inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
       if (support_state == NOT_SUPPORTED) {
         error_state = projection_state::no_enough_support;
         return FootstepState::Ptr();

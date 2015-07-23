@@ -28,7 +28,8 @@ add_library(jsk_footstep_planner
   src/simple_neighbored_graph.cpp
   src/footstep_state.cpp
   src/footstep_graph.cpp
-  src/footstep_state_discrete_close_list.cpp)
+  src/footstep_state_discrete_close_list.cpp
+  src/ann_grid.cpp)
 
 add_executable(sample_simple_graph demo/sample_simple_graph.cpp)
 target_link_libraries(sample_simple_graph jsk_footstep_planner)
@@ -44,6 +45,8 @@ add_executable(bench_footstep_planning_without_perception bench/bench_footstep_p
 target_link_libraries(bench_footstep_planning_without_perception jsk_footstep_planner)
 add_executable(bench_footstep_planning_with_perception bench/bench_footstep_planning_with_perception.cpp)
 target_link_libraries(bench_footstep_planning_with_perception jsk_footstep_planner)
+add_executable(ann_grid_demo demo/ann_grid_demo.cpp)
+target_link_libraries(ann_grid_demo jsk_footstep_planner)
 
 add_executable(footstep_projection_demo demo/footstep_projection_demo.cpp)
 target_link_libraries(footstep_projection_demo jsk_footstep_planner)
@@ -58,6 +61,7 @@ install(TARGETS jsk_footstep_planner sample_astar sample_simple_graph
   footstep_planning_2d_perception_demo
   footstep_projection_demo
   bench_footstep_planning_without_perception
+  ann_grid_demo
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})

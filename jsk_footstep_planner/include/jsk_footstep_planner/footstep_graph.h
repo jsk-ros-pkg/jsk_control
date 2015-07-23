@@ -42,6 +42,7 @@
 #include "jsk_footstep_planner/graph.h"
 #include "jsk_footstep_planner/footstep_state.h"
 #include "jsk_footstep_planner/astar_solver.h"
+#include "jsk_footstep_planner/ann_grid.h"
 
 namespace jsk_footstep_planner
 {
@@ -62,6 +63,7 @@ namespace jsk_footstep_planner
       pointcloud_model_2d_(new pcl::PointCloud<pcl::PointNormal>),
       tree_model_(new pcl::KdTreeFLANN<pcl::PointNormal>),
       tree_model_2d_(new pcl::search::Octree<pcl::PointNormal>(0.2)),
+      grid_search_(new ANNGrid(0.1)),
       local_move_x_(0.1), local_move_y_(0.05), local_move_theta_(0.2),
       local_move_x_num_(3), local_move_y_num_(3), local_move_theta_num_(3)
       {}
@@ -120,6 +122,7 @@ namespace jsk_footstep_planner
       proj.setInputCloud(pointcloud_model_);
       proj.filter(*pointcloud_model_2d_);
       tree_model_2d_->setInputCloud(pointcloud_model_2d_);
+      grid_search_->build(*model);
     }
     virtual bool projectGoal();
     virtual bool projectStart();
@@ -135,6 +138,7 @@ namespace jsk_footstep_planner
     pcl::KdTreeFLANN<pcl::PointNormal>::Ptr tree_model_;
     //pcl::KdTreeFLANN<pcl::PointNormal>::Ptr tree_model_2d_;
     pcl::search::Octree<pcl::PointNormal>::Ptr tree_model_2d_;
+    ANNGrid::Ptr grid_search_;
     std::vector<Eigen::Affine3f> successors_from_left_to_right_;
     std::vector<Eigen::Affine3f> successors_from_right_to_left_;
     FootstepState::Ptr left_goal_state_;
