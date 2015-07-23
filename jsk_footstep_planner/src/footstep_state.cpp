@@ -143,6 +143,17 @@ namespace jsk_footstep_planner
       error_state = projection_state::no_enough_inliers;
       return FootstepState::Ptr();
     }
+    // Before computing, check is it supported or not to omit recognition
+    FootstepSupportState presupport_state
+      = isSupportedByPointCloud(pose_, cloud, tree,
+                                indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+    if (presupport_state == projection_state::success) {
+      return FootstepState::Ptr(new FootstepState(leg_, pose_, dimensions_,
+                                                  resolution_,
+                                                  index_x_,
+                                                  index_y_,
+                                                  index_yaw_));
+    }
     // estimate plane with ransac
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
