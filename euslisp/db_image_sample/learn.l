@@ -255,7 +255,7 @@
   )
 
 (defun predict
-  (&key (path "image_small/cockroach/1.jpg")
+  (&key (path "image_small/cockroach/0.jpg")
 	(img (let* ((i (image::read-image-file path)))
 	       (setq i (check-color-image24-size i))
 	       (setq i (convert-to-caffe-image i))))
@@ -285,6 +285,7 @@
   (dotimes (i count)
     (setq img (instance image::color-image24 :init width height
                         (subseq sdata (* 3 i width height) (* 3 (+ 1 i) width height))))
+    (setq img (convert-from-caffe-image img))
     (img::write-image-file (format nil "/tmp/caffe/~A~A.jpg" name (caffe::zero-string i)) img)
     ))
 
