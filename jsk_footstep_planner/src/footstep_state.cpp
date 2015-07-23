@@ -42,6 +42,32 @@
 
 namespace jsk_footstep_planner
 {
+
+  std::string projectStateToString(unsigned int state)
+  {
+    if (state == projection_state::success) {
+      return "success";
+    }
+    else if (state == projection_state::no_pointcloud) {
+      return "no pointcloud";
+    }
+    else if (state == projection_state::no_enough_support) {
+      return "no enough support";
+    }
+    else if (state == projection_state::no_plane) {
+      return "no plane";
+    }
+    else if (state == projection_state::no_enough_inliers) {
+      return "no enough inliers";
+    }
+    else if (state == projection_state::close_to_success) {
+      return "close to success";
+    }
+    else {
+      return "unknown error";
+    }
+  }
+  
   jsk_footstep_msgs::Footstep::Ptr
   FootstepState::toROSMsg()
   {
@@ -224,11 +250,12 @@ namespace jsk_footstep_planner
   {
     const double dx = dimensions_[0] / foot_x_sampling_num;
     const double dy = dimensions_[1] / foot_y_sampling_num;
-    const Eigen::Vector3f ex = pose.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX();
-    const Eigen::Vector3f ey = pose.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitY();
+    // vertices
+    const Eigen::Vector3f ux = Eigen::Vector3f::UnitX();
+    const Eigen::Vector3f uy = Eigen::Vector3f::UnitY();
     const Eigen::Affine3f new_origin = pose *
-      Eigen::Translation3f(- ex * dimensions_[0] / 2.0) *
-      Eigen::Translation3f(- ey * dimensions_[1] / 2.0);
+      Eigen::Translation3f(- ux * dimensions_[0] / 2.0) *
+      Eigen::Translation3f(- uy * dimensions_[1] / 2.0);
     const Eigen::Affine3f inv_pose = new_origin.inverse();
     
     bool occupiedp[foot_x_sampling_num][foot_y_sampling_num];
@@ -259,9 +286,6 @@ namespace jsk_footstep_planner
       }
     }
 
-    // vertices
-    const Eigen::Vector3f ux = Eigen::Vector3f::UnitX();
-    const Eigen::Vector3f uy = Eigen::Vector3f::UnitY();
     Eigen::Vector3f a((pose * Eigen::Translation3f(ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
     Eigen::Vector3f b((pose * Eigen::Translation3f(- ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
     Eigen::Vector3f c((pose * Eigen::Translation3f(- ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
