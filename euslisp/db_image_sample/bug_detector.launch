@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="eus_caffe" type="bug-detector.l" name="bug_detector" />
+  <node pkg="eus_caffe" type="image-logger.l" name="image_logger" />
+  <node pkg="usb_cam" type="usb_cam_node" name="usb_cam" />
+  <node pkg="image_view" type="image_view" name="usb_cam_viewer" args="image:=usb_cam/image_raw" />
+  <node pkg="image_view" type="image_view" name="cockroach_viewer" args="image:=bug_detector/cockroach/image" />
+</launch>

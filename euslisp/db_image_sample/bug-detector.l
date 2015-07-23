@@ -90,8 +90,12 @@
 (ros::advertise "/bug_detector/cockroach/image"
 		sensor_msgs::Image)
 
-(caffe::gen-test-net :netproto "cnn_small_predict.prototxt"
-		     :caffemodel "bug.caffemodel")
+(caffe::gen-test-net :netproto
+		     (format nil "~A/euslisp/db_image_sample/cnn_small_predict.prototxt"
+			     (ros::rospack-find "eus_caffe"))
+		     :caffemodel
+		     (format nil "~A/euslisp/db_image_sample/bug.caffemodel"
+			     (ros::rospack-find "eus_caffe")))
 
 (ros::rate 3)
 (do-until-key
