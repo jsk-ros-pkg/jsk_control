@@ -284,3 +284,6 @@
     (img::write-image-file (format nil "/tmp/caffe/~A~A.jpg" name (caffe::zero-string i)) img)
     ))
 
+#|
+
+(calc-hit-rate :root-path (list "image_small/cockroach") :check-path (list (list "782.jpg" "546.jpg" "713.jpg" "869.jpg" "949.jpg" "49.jpg" "738.jpg" "746.jpg" "813.jpg" "152.jpg" "968.jpg" "184.jpg" "123.jpg" "822.jpg" "79.jpg" "414.jpg" "220.jpg" "714.jpg" "932.jpg" "718.jpg" "864.jpg" "603.jpg" "161.jpg" "842.jpg" "624.jpg" "467.jpg" "784.jpg" "177.jpg" "307.jpg" "304.jpg" "541.jpg" "270.jpg" "646.jpg" "504.jpg" "379.jpg" "213.jpg" "229.jpg" "880.jpg" "557.jpg" "480.jpg" "587.jpg" "702.jpg" "314.jpg" "734.jpg" "688.jpg" "853.jpg" "954.jpg" "570.jpg" "271.jpg" "793.jpg" "723.jpg" "313.jpg" "565.jpg" "888.jpg" "310.jpg" "787.jpg" "894.jpg" "815.jpg" "301.jpg" "36.jpg" "918.jpg" "816.jpg" "488.jpg" "500.jpg" "199.jpg" "437.jpg" "300.jpg" "6.jpg" "625.jpg" "792.jpg" "297.jpg" "915.jpg" "491.jpg" "986.jpg" "522.jpg" "879.jpg" "439.jpg" "306.jpg" "181.jpg" "507.jpg" "964.jpg" "214.jpg" "303.jpg" "855.jpg" "65.jpg" "117.jpg" "665.jpg" "97.jpg" "25.jpg" "375.jpg" "241.jpg" "678.jpg" "249.jpg" "610.jpg" "697.jpg" "274.jpg" "244.jpg" "495.jpg" "928.jpg" "67.jpg")))
