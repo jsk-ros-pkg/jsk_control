@@ -51,15 +51,20 @@ namespace jsk_footstep_planner
     typedef boost::shared_ptr<FootstepGraph> Ptr;
     FootstepGraph(const Eigen::Vector3f& resolution,
                   const bool use_pointcloud_model = false,
-                  const bool lazy_projection = true):
+                  const bool lazy_projection = true,
+                  const bool local_movement = false):
       max_successor_distance_(0.0), max_successor_rotation_(0.0),
       pos_goal_thr_(0.1), rot_goal_thr_(0.17), publish_progress_(false),
       resolution_(resolution),
       use_pointcloud_model_(use_pointcloud_model),
       lazy_projection_(lazy_projection),
+      local_movement_(local_movement),
       pointcloud_model_2d_(new pcl::PointCloud<pcl::PointNormal>),
       tree_model_(new pcl::KdTreeFLANN<pcl::PointNormal>),
-      tree_model_2d_(new pcl::search::Octree<pcl::PointNormal>(0.2)){}
+      tree_model_2d_(new pcl::search::Octree<pcl::PointNormal>(0.2)),
+      local_move_x_(0.1), local_move_y_(0.05), local_move_theta_(0.2),
+      local_move_x_num_(3), local_move_y_num_(3), local_move_theta_num_(3)
+      {}
     virtual std::vector<StatePtr> successors(StatePtr target_state);
     virtual bool isGoal(StatePtr state);
     virtual void setBasicSuccessors(
@@ -118,9 +123,12 @@ namespace jsk_footstep_planner
     }
     virtual bool projectGoal();
     virtual bool projectStart();
-    virtual bool usePointCloudModel() { return use_pointcloud_model_; }
-    virtual bool lazyProjection() { return lazy_projection_; }
+    virtual bool usePointCloudModel() const { return use_pointcloud_model_; }
+    virtual bool lazyProjection()  const { return lazy_projection_; }
+    virtual bool localMovement() const { return local_movement_; }
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in);
+    virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in, unsigned int& state);
+    virtual std::vector<FootstepState::Ptr> localMoveFootstepState(FootstepState::Ptr in);
   protected:
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_2d_;
@@ -138,6 +146,15 @@ namespace jsk_footstep_planner
     bool publish_progress_;
     const bool use_pointcloud_model_;
     const bool lazy_projection_;
+    const bool local_movement_;
+    
+    double local_move_x_;
+    double local_move_y_;
+    double local_move_theta_;
+    size_t local_move_x_num_;
+    size_t local_move_y_num_;
+    size_t local_move_theta_num_;
+    
     ros::Publisher pub_progress_;
     const Eigen::Vector3f resolution_;
   private:

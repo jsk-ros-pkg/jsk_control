@@ -66,9 +66,27 @@ namespace jsk_footstep_planner
     
     // SolverNode(StatePtr state, Ptr parent):
     //   cost_(0.0), state_(state), parent_(parent) {}
-    
-    StatePtr getState() { return state_; }
+    virtual
+    StatePtr getState() const { return state_; }
 
+    virtual 
+    std::vector<Ptr> wrapWithSolverNodes(Ptr this_ptr, std::vector<StatePtr> successors)
+    {
+      GraphPtr graph_ptr = graph_.lock();
+      std::vector<Ptr> solver_nodes;
+      for (size_t i = 0; i < successors.size(); i++) {
+        StatePtr next_state = successors[i];
+        SolverNode::Ptr solver_node(new SolverNode(
+                                      next_state,
+                                      graph_ptr->pathCost(state_, next_state, cost_),
+                                      this_ptr,
+                                      graph_ptr));
+        solver_nodes.push_back(solver_node);
+      }
+      return solver_nodes;
+    }
+
+    virtual
     std::vector<Ptr> expand(Ptr this_ptr, bool verbose)
     {
       GraphPtr graph_ptr = graph_.lock();
@@ -78,16 +96,7 @@ namespace jsk_footstep_planner
         if (verbose) {
           std::cerr << successors.size() << " successors" << std::endl;
         }
-        // wrap StateT into SolverNode
-        for (size_t i = 0; i < successors.size(); i++) {
-          StatePtr next_state = successors[i];
-          SolverNode::Ptr solver_node(new SolverNode(
-                                        next_state,
-                                        graph_ptr->pathCost(state_, next_state, cost_),
-                                        this_ptr,
-                                        graph_ptr));
-          solver_nodes.push_back(solver_node);
-        }
+        return wrapWithSolverNodes(this_ptr, successors);
       }
       else {
         // TODO: should raise exception
@@ -97,9 +106,9 @@ namespace jsk_footstep_planner
       return solver_nodes;
     }
 
-    bool isRoot() { return !parent_; }
-    double getCost() { return cost_; }
-    double getSortValue() { return sort_value_; }
+    bool isRoot() const { return !parent_; }
+    double getCost() const { return cost_; }
+    double getSortValue() const { return sort_value_; }
     void setGraph(GraphPtr graph) { graph_ = graph; }
     void setSortValue(double v) { sort_value_ = v; }
     void setCost(double c) { cost_ = c; }
@@ -130,6 +139,8 @@ namespace jsk_footstep_planner
     {
       return a->getSortValue() > b->getSortValue();
     }
+
+    virtual Ptr getParent() const { return parent_; }
     
   protected:
     double cost_;

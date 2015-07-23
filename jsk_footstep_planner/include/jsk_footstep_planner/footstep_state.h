@@ -58,7 +58,15 @@ namespace jsk_footstep_planner
     const unsigned int no_enough_support = 4;
     const unsigned int no_plane = 8;
     const unsigned int no_enough_inliers = 16;
+    const unsigned int close_to_success = 32;
   }
+
+  enum FootstepSupportState
+  {
+    NOT_SUPPORTED,
+    SUPPORTED,
+    CLOSE_TO_SUPPORTED,
+  };
   
   class FootstepState
   {
@@ -128,19 +136,23 @@ namespace jsk_footstep_planner
               (index_yaw_ == other.index_yaw_));
     }
 
+    virtual Eigen::Vector3f getResolution() { return resolution_; }
+      
+
     inline virtual int indexX() { return index_x_; }
     inline virtual int indexY() { return index_y_; }
     inline virtual int indexT() { return index_yaw_; }
 
 
-    virtual bool isSupportedByPointCloud(const Eigen::Affine3f& pose,
-                                         pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
-                                         pcl::KdTreeFLANN<pcl::PointNormal>& tree,
-                                         pcl::PointIndices::Ptr inliers,
-                                         const int foot_x_sampling_num,
-                                         const int foot_y_sampling_num,
-                                         const double vertex_threshold);
-    
+    virtual FootstepSupportState
+    isSupportedByPointCloud(const Eigen::Affine3f& pose,
+                            pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                            pcl::KdTreeFLANN<pcl::PointNormal>& tree,
+                            pcl::PointIndices::Ptr inliers,
+                            const int foot_x_sampling_num,
+                            const int foot_y_sampling_num,
+                            const double vertex_threshold);
+
   protected:
     Eigen::Affine3f pose_;
     const Eigen::Vector3f dimensions_;
