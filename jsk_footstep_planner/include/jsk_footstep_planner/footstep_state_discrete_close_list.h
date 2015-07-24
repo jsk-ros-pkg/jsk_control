@@ -68,6 +68,23 @@ namespace jsk_footstep_planner
       data_[x - x_offset_][y - y_offset_][theta - theta_offset_] = state;
     }
 
+    // Use push_back to inser points
+    template <class PointT>
+    void insertToPointCloud(pcl::PointCloud<PointT>& output)
+    {
+      for (size_t xi = 0; xi < x_num_; xi++) {
+        for (size_t yi = 0; yi < y_num_; yi++) {
+          for (size_t thetai = 0; thetai < theta_num_; thetai++) {
+            if (data_[xi][yi][thetai]) {
+              FootstepState::Ptr state = data_[xi][yi][thetai];
+              PointT p = state->toPoint<PointT>();
+              output.points.push_back(p);
+            }
+          }
+        }
+      }
+    }
+
     inline size_t size() { return size_; }
   protected:
     size_t size_;
@@ -165,6 +182,20 @@ namespace jsk_footstep_planner
         return false;
       }
     }
+
+    // This method may be slow
+    template <class PointT>
+    void toPointCloud(pcl::PointCloud<PointT>& output)
+    {
+      output.points.reserve(size());
+      for (std::map<VolumeKey, FootstepStateDiscreteCloseListLocal::Ptr>::iterator it
+             = local_volumes_.begin();
+           it != local_volumes_.end();
+           ++it) {
+        it->second->insertToPointCloud<PointT>(output);
+      }
+    }
+    
   protected:
     const size_t local_x_num_;
     const size_t local_y_num_;

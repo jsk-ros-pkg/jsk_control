@@ -248,7 +248,12 @@ namespace jsk_footstep_planner
     if (isnan(second_theta)) {
       second_theta = 0;
     }
-    
+    if (first_theta > M_PI) {
+      first_theta = 2.0 * M_PI - first_theta;
+    }
+    if (second_theta > M_PI) {
+      second_theta = 2.0 * M_PI - second_theta;
+    }
     return (diff_pos.norm() / graph->maxSuccessorDistance()) +
       (first_theta + second_theta) / graph->maxSuccessorRotation();
   }

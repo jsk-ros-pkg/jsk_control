@@ -101,11 +101,14 @@ namespace jsk_footstep_planner
     Eigen::Vector2f d2d(d_2d[0], d_2d[1]);
     //std::set<int> set_indices;
     pcl::PointIndices::Ptr ret(new pcl::PointIndices);
+    ret->indices.reserve(near_indices->indices.size());
+    const std::vector<int> near_indices_indices = near_indices->indices;
     for (size_t i = 0; i < near_indices->indices.size(); i++) {
-      size_t index = near_indices->indices[i];
-      pcl::PointNormal point = cloud->points[index];
-      Eigen::Vector3f point_2d = point.getVector3fMap() + (-z.dot(point.getVector3fMap())) * z;
-      Eigen::Vector2f p2d(point_2d[0], point_2d[1]);
+      const int index = near_indices_indices[i];
+      const pcl::PointNormal point = cloud->points[index];
+      const Eigen::Vector3f ep = point.getVector3fMap();
+      const Eigen::Vector3f point_2d = ep + (-z.dot(ep)) * z;
+      const Eigen::Vector2f p2d(point_2d[0], point_2d[1]);
       if (cross2d((b2d - a2d), (p2d - a2d)) > 0 &&
           cross2d((c2d - b2d), (p2d - b2d)) > 0 &&
           cross2d((d2d - c2d), (p2d - c2d)) > 0 &&

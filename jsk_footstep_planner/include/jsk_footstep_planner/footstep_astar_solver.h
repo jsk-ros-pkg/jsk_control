@@ -151,6 +151,28 @@ namespace jsk_footstep_planner
       }
       return (ros::ok() && (ros::WallTime::now() - start_time) < timeout);
     }
+
+    template <class PointT>
+    void closeListToPointCloud(pcl::PointCloud<PointT>& output_cloud)
+    {
+      footstep_close_list_.toPointCloud<PointT>(output_cloud);
+    }
+    
+    template <class PointT>
+    void openListToPointCloud(pcl::PointCloud<PointT>& output_cloud)
+    {
+      output_cloud.points.reserve(open_list_.size());
+      OpenList copied_open_list = open_list_;
+      
+      while (copied_open_list.size() > 0)
+      {
+        SolverNodePtr solver_node = copied_open_list.top();
+        StatePtr state = solver_node->getState();
+        PointT p = ((FootstepState::Ptr)state)->toPoint<PointT>(); // hacky way
+        output_cloud.points.push_back(p);
+        copied_open_list.pop();
+      }
+    }
     
     using Solver<GraphT>::isOpenListEmpty;
     using Solver<GraphT>::popFromOpenList;

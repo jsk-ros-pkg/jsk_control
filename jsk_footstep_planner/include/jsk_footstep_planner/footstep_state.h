@@ -103,7 +103,7 @@ namespace jsk_footstep_planner
     {
     }
     
-    inline float cross2d(const Eigen::Vector2f& a, const Eigen::Vector2f& b)
+    inline float cross2d(const Eigen::Vector2f& a, const Eigen::Vector2f& b) const
     {
       return a[0] * b[1] - a[1] * b[0];
     }
@@ -134,6 +134,14 @@ namespace jsk_footstep_planner
     pcl::PointIndices::Ptr
     cropPointCloudExact(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
                         pcl::PointIndices::Ptr near_indices);
+
+    template <class PointT>
+    PointT toPoint()
+    {
+      PointT p;
+      p.getVector3fMap() = Eigen::Vector3f(pose_.translation());
+      return p;
+    }
     
     virtual Eigen::Affine3f getPose() { return pose_; }
     virtual void setPose(const Eigen::Affine3f& pose)
