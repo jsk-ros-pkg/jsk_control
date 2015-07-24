@@ -63,7 +63,7 @@ namespace jsk_footstep_planner
       pointcloud_model_2d_(new pcl::PointCloud<pcl::PointNormal>),
       tree_model_(new pcl::KdTreeFLANN<pcl::PointNormal>),
       tree_model_2d_(new pcl::search::Octree<pcl::PointNormal>(0.2)),
-      grid_search_(new ANNGrid(0.1)),
+      grid_search_(new ANNGrid(0.05)),
       local_move_x_(0.1), local_move_y_(0.05), local_move_theta_(0.2),
       local_move_x_num_(3), local_move_y_num_(3), local_move_theta_num_(3)
       {}

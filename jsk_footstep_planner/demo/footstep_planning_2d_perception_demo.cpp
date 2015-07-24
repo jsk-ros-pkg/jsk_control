@@ -49,7 +49,7 @@ using namespace jsk_footstep_planner;
 
 const Eigen::Vector3f footstep_size(0.2, 0.1, 0.000001);
 const Eigen::Vector3f resolution(0.05, 0.05, 0.08);
-ros::Publisher pub_goal, pub_path, pub_text;
+ros::Publisher pub_goal, pub_path, pub_text, pub_close_list, pub_open_list;
 FootstepGraph::Ptr graph;
 
 void profile(FootstepAStarSolver<FootstepGraph>& solver, FootstepGraph::Ptr graph)
@@ -115,7 +115,18 @@ void plan(const Eigen::Affine3f& goal_center,
     ros_path.footsteps.push_back(*path[i]->getState()->toROSMsg());
   }
   pub_path.publish(ros_path);
-
+  pcl::PointCloud<pcl::PointXYZ> close_cloud, open_cloud;
+  solver.openListToPointCloud<pcl::PointXYZ>(open_cloud);
+  solver.closeListToPointCloud<pcl::PointXYZ>(close_cloud);
+  sensor_msgs::PointCloud2 ros_close_cloud, ros_open_cloud;
+  pcl::toROSMsg(close_cloud, ros_close_cloud);
+  ros_close_cloud.header.stamp = ros::Time::now();
+  ros_close_cloud.header.frame_id = "odom";
+  pub_close_list.publish(ros_close_cloud);
+  pcl::toROSMsg(open_cloud, ros_open_cloud);
+  ros_open_cloud.header.stamp = ros::Time::now();
+  ros_open_cloud.header.frame_id = "odom";
+  pub_open_list.publish(ros_open_cloud);
 }
 
 
@@ -235,6 +246,10 @@ int main(int argc, char** argv)
   pub_text = nh.advertise<jsk_rviz_plugins::OverlayText>("text", 1, true);
   ros::Publisher pub_cloud
     = nh.advertise<sensor_msgs::PointCloud2>("cloud", 1, true);
+  pub_close_list
+    = nh.advertise<sensor_msgs::PointCloud2>("close_list", 1, true);
+  pub_open_list
+    = nh.advertise<sensor_msgs::PointCloud2>("open_list", 1, true);
   boost::mt19937 rng( static_cast<unsigned long>(time(0)) );
   boost::uniform_real<> xyrange(-3.0,3.0);
   boost::variate_generator< boost::mt19937, boost::uniform_real<> > pos_rand(rng, xyrange);

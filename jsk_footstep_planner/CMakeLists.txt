@@ -16,6 +16,7 @@ catkin_package(
   LIBRARIES jsk_footstep_planner # TODO
   )
 
+# add_definitions("-g -O2 -DEIGEN_NO_DEBUG")
 add_definitions("-g -O2")
 find_package(OpenMP)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
