@@ -33,29 +33,17 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include "jsk_footstep_planner/footstep_graph.h"
-#include "jsk_footstep_planner/astar_solver.h"
-#include "jsk_footstep_planner/footstep_astar_solver.h"
 
-using namespace jsk_footstep_planner;
-const Eigen::Vector3f resolution(0.05, 0.05, 0.08);
+#ifndef JSK_FOOTSTEP_PLANNER_UTIL_H_
+#define JSK_FOOTSTEP_PLANNER_UTIL_H_
 
-inline void plan(double x, double y, double yaw,
-          FootstepGraph::Ptr graph,
-          Eigen::Vector3f footstep_size)
+namespace jsk_footstep_planner
 {
-  Eigen::Affine3f goal_center = affineFromXYYaw(x, y, yaw);
-  FootstepState::Ptr left_goal(new FootstepState(jsk_footstep_msgs::Footstep::LEFT,
-                                                 goal_center * Eigen::Translation3f(0, 0.1, 0),
-                                                 footstep_size,
-                                                 resolution));
-  FootstepState::Ptr right_goal(new FootstepState(jsk_footstep_msgs::Footstep::RIGHT,
-                                                  goal_center * Eigen::Translation3f(0, -0.1, 0),
-                                                  footstep_size,
-                                                  resolution));
-  graph->setGoalState(left_goal, right_goal);
-  //AStarSolver<FootstepGraph> solver(graph);
-  FootstepAStarSolver<FootstepGraph> solver(graph, 100, 100, 100);
-  solver.setHeuristic(boost::bind(&footstepHeuristicStepCost, _1, _2, 1.0, 0.1));
-  std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve();
+  inline Eigen::Affine3f affineFromXYYaw(double x, double y, double yaw)
+  {
+    return (Eigen::Translation3f(x, y, 0) *
+            Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ()));
+  }
 }
+
+#endif

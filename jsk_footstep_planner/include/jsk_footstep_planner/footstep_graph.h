@@ -79,6 +79,16 @@ namespace jsk_footstep_planner
       right_goal_state_ = right;
     }
 
+    virtual void setLeftGoalState(FootstepState::Ptr goal)
+    {
+      left_goal_state_ = goal;
+    }
+    
+    virtual void setRightGoalState(FootstepState::Ptr goal)
+    {
+      right_goal_state_ = goal;
+    }
+
     virtual FootstepState::Ptr getGoal(int leg)
     {
       if (leg == jsk_footstep_msgs::Footstep::LEFT) {
@@ -173,7 +183,9 @@ namespace jsk_footstep_planner
   double footstepHeuristicStraightRotation(
     SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
   double footstepHeuristicStepCost(
-    SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
+    SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph,
+    double first_rotation_weight,
+    double second_rotation_weight);
 }
 
 #endif

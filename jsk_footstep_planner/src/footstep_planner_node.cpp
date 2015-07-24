@@ -33,29 +33,12 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include "jsk_footstep_planner/footstep_graph.h"
-#include "jsk_footstep_planner/astar_solver.h"
-#include "jsk_footstep_planner/footstep_astar_solver.h"
+#include "jsk_footstep_planner/footstep_planner.h"
 
-using namespace jsk_footstep_planner;
-const Eigen::Vector3f resolution(0.05, 0.05, 0.08);
-
-inline void plan(double x, double y, double yaw,
-          FootstepGraph::Ptr graph,
-          Eigen::Vector3f footstep_size)
+int main(int argc, char** argv)
 {
-  Eigen::Affine3f goal_center = affineFromXYYaw(x, y, yaw);
-  FootstepState::Ptr left_goal(new FootstepState(jsk_footstep_msgs::Footstep::LEFT,
-                                                 goal_center * Eigen::Translation3f(0, 0.1, 0),
-                                                 footstep_size,
-                                                 resolution));
-  FootstepState::Ptr right_goal(new FootstepState(jsk_footstep_msgs::Footstep::RIGHT,
-                                                  goal_center * Eigen::Translation3f(0, -0.1, 0),
-                                                  footstep_size,
-                                                  resolution));
-  graph->setGoalState(left_goal, right_goal);
-  //AStarSolver<FootstepGraph> solver(graph);
-  FootstepAStarSolver<FootstepGraph> solver(graph, 100, 100, 100);
-  solver.setHeuristic(boost::bind(&footstepHeuristicStepCost, _1, _2, 1.0, 0.1));
-  std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve();
+  ros::init(argc, argv, "footstep_planner");
+  ros::NodeHandle pnh("~");
+  jsk_footstep_planner::FootstepPlanner planner(pnh);
+  ros::spin();
 }

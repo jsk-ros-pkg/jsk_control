@@ -226,18 +226,21 @@ namespace jsk_footstep_planner
   }
 
   double footstepHeuristicStepCost(
-    SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
+    SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph,
+    double first_rotation_weight,
+    double second_rotation_weight)
   {
     FootstepState::Ptr state = node->getState();
     FootstepState::Ptr goal = graph->getGoal(state->getLeg());
-    Eigen::Vector3f diff_pos(goal->getPose().translation() - state->getPose().translation());
+    Eigen::Vector3f goal_pos(goal->getPose().translation());
+    Eigen::Vector3f diff_pos(goal_pos - state->getPose().translation());
     Eigen::Quaternionf first_rot;
     // Eigen::Affine3f::rotation is too slow because it calls SVD decomposition
     first_rot.setFromTwoVectors(state->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX(),
-                                diff_pos);
+                                diff_pos.normalized());
 
     Eigen::Quaternionf second_rot;
-    second_rot.setFromTwoVectors(diff_pos,
+    second_rot.setFromTwoVectors(diff_pos.normalized(),
                                  goal->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX());
     // is it correct??
     double first_theta = acos(first_rot.w()) * 2;
@@ -254,8 +257,8 @@ namespace jsk_footstep_planner
     if (second_theta > M_PI) {
       second_theta = 2.0 * M_PI - second_theta;
     }
-    return (diff_pos.norm() / graph->maxSuccessorDistance()) +
-      (first_theta + second_theta) / graph->maxSuccessorRotation();
+    return (Eigen::Vector2f(diff_pos[0], diff_pos[1]).norm() / graph->maxSuccessorDistance()) +
+      (first_theta * first_rotation_weight + second_theta * second_rotation_weight) / graph->maxSuccessorRotation();
   }
 
 }

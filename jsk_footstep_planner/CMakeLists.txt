@@ -3,10 +3,12 @@ project(jsk_footstep_planner)
 
 find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_pcl_ros
   message_generation jsk_topic_tools roscpp pcl_ros
-  jsk_interactive_marker visualization_msgs)
+  jsk_interactive_marker visualization_msgs dynamic_reconfigure)
 find_package(PCL REQUIRED)
 add_service_files(FILES
   ChangeSuccessor.srv)
+generate_dynamic_reconfigure_options(
+  cfg/FootstepPlanner.cfg)
 generate_messages()
 #catkin_python_setup()
 catkin_package(
@@ -30,7 +32,8 @@ add_library(jsk_footstep_planner
   src/footstep_state.cpp
   src/footstep_graph.cpp
   src/footstep_state_discrete_close_list.cpp
-  src/ann_grid.cpp)
+  src/ann_grid.cpp
+  src/footstep_planner.cpp)
 
 add_executable(sample_simple_graph demo/sample_simple_graph.cpp)
 target_link_libraries(sample_simple_graph jsk_footstep_planner)
@@ -48,9 +51,13 @@ add_executable(bench_footstep_planning_with_perception bench/bench_footstep_plan
 target_link_libraries(bench_footstep_planning_with_perception jsk_footstep_planner)
 add_executable(ann_grid_demo demo/ann_grid_demo.cpp)
 target_link_libraries(ann_grid_demo jsk_footstep_planner)
-
+add_executable(footstep_planner_node src/footstep_planner_node.cpp)
+target_link_libraries(footstep_planner_node jsk_footstep_planner)
 add_executable(footstep_projection_demo demo/footstep_projection_demo.cpp)
 target_link_libraries(footstep_projection_demo jsk_footstep_planner)
+
+add_dependencies(jsk_footstep_planner ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
+add_dependencies(footstep_planner_node ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
 
 install(DIRECTORY euslisp launch scripts
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
@@ -63,6 +70,7 @@ install(TARGETS jsk_footstep_planner sample_astar sample_simple_graph
   footstep_projection_demo
   bench_footstep_planning_without_perception
   ann_grid_demo
+  footstep_planner_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
