@@ -7,5 +7,5 @@ stepsize: 10000 ## learning rate update: base_lr *= gamma,  in every stepsize ca
 max_iter: 30000
 momentum: 0.9
 display: 10000
-snapshot_prefix: "sample"
+snapshot_prefix: "linear_equation_db"
 solver_mode: CPU
