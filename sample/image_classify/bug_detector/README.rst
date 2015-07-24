@@ -12,4 +12,4 @@ just detect bug::
 gen new bug detection network::
   ./learn_image_data.sh;
 
-`demo <https://drive.google.com/file/d/0B8oIKrGqkbKaYUlQWjM2WDc1WXM/view>`
+demo <https://drive.google.com/file/d/0B8oIKrGqkbKaYUlQWjM2WDc1WXM/view>
