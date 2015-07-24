@@ -1,6 +1,6 @@
 
-(require "../eus-caffe.l")
-(require "../eus-caffe-db.l")
+(require "package://eus_caffe/euslisp/eus-caffe.l")
+(require "package://eus_caffe/euslisp/eus-caffe-db.l")
 
 (defun gen-linear-equation-db
   (&key

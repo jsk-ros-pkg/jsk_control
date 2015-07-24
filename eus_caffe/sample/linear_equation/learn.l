@@ -1,6 +1,6 @@
 #!/usr/bin/env roseus
 
-(require "../eus-caffe.l")
+(require "package://eus_caffe/euslisp/eus-caffe.l")
 
 (defun linear-equation-test
   (&key
