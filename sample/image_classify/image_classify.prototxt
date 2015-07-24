@@ -11,7 +11,7 @@ layer {
     scale: 1.0 ##0.003922
   }
   data_param {
-    source: "input_lmdb_image_small"
+    source: "input_lmdb_image"
     batch_size: 10 ## must be same as target one
     backend: LMDB
   }
@@ -214,7 +214,7 @@ layer {
     phase: TRAIN
   }
   data_param {
-    source: "target_lmdb_class_id_small"
+    source: "target_lmdb_class_id"
     batch_size: 10
     backend: LMDB
   }
