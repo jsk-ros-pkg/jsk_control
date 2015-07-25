@@ -201,6 +201,7 @@ namespace jsk_footstep_planner
     const jsk_footstep_msgs::PlanFootstepsGoal::ConstPtr& goal)
   {
     boost::mutex::scoped_lock lock(mutex_);
+    latest_header_ = goal->goal_footstep.header;
     JSK_ROS_INFO("planCB");
     // check message sanity
     if (goal->initial_footstep.footsteps.size() == 0) {
@@ -367,6 +368,13 @@ namespace jsk_footstep_planner
   {
     JSK_ROS_INFO("open list: %lu", solver.getOpenList().size());
     JSK_ROS_INFO("close list: %lu", solver.getCloseList().size());
+    if (rich_profiling_) {
+      pcl::PointCloud<pcl::PointNormal> close_list_cloud, open_list_cloud;
+      solver.openListToPointCloud(open_list_cloud);
+      solver.closeListToPointCloud(close_list_cloud);
+      publishPointCloud(close_list_cloud, pub_close_list_, latest_header_);
+      publishPointCloud(open_list_cloud, pub_open_list_, latest_header_);
+    }
   }
   
   double FootstepPlanner::stepCostHeuristic(
@@ -474,6 +482,7 @@ namespace jsk_footstep_planner
       resolution_theta_ = config.resolution_theta;
       need_to_rebuild_graph = true;
     }
+    rich_profiling_ = config.rich_profiling;
     use_transition_limit_ = config.use_transition_limit;
     local_move_x_ = config.local_move_x;
     local_move_y_ = config.local_move_y;
