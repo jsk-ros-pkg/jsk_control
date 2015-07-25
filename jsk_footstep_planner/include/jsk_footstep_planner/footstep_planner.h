@@ -52,6 +52,8 @@
 #include "jsk_footstep_planner/astar_solver.h"
 #include "jsk_footstep_planner/footstep_astar_solver.h"
 
+#include <jsk_interactive_marker/SnapFootPrint.h>
+
 namespace jsk_footstep_planner
 {
   /**
@@ -90,7 +92,11 @@ namespace jsk_footstep_planner
     virtual void publishPointCloud(
       const pcl::PointCloud<pcl::PointNormal>& cloud,
       ros::Publisher& pub,
-      const std_msgs::Header& header);    
+      const std_msgs::Header& header);
+    virtual bool projectFootPrintService(
+      jsk_interactive_marker::SnapFootPrint::Request& req,
+      jsk_interactive_marker::SnapFootPrint::Response& res);
+    
     boost::mutex mutex_;
     actionlib::SimpleActionServer<jsk_footstep_msgs::PlanFootstepsAction> as_;
     jsk_footstep_msgs::PlanFootstepsResult result_;
@@ -98,6 +104,7 @@ namespace jsk_footstep_planner
     ros::Publisher pub_close_list_;
     ros::Publisher pub_open_list_;
     ros::Subscriber sub_pointcloud_model_;
+    ros::ServiceServer srv_project_footprint_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     FootstepGraph::Ptr graph_;
     std::vector<Eigen::Affine3f> successors_;

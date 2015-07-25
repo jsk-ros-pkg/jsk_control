@@ -52,6 +52,8 @@ namespace jsk_footstep_planner
       "close_list", 1, true);
     pub_open_list_ = nh.advertise<sensor_msgs::PointCloud2>(
       "open_list", 1, true);
+    srv_project_footprint_ = nh.advertiseService(
+      "project_footprint", &FootstepPlanner::projectFootPrintService, this);
     {
       boost::mutex::scoped_lock lock(mutex_);
       if (!readSuccessors(nh)) {
@@ -76,6 +78,60 @@ namespace jsk_footstep_planner
     if (graph_ && use_pointcloud_model_) {
       graph_->setPointCloudModel(pointcloud_model_);
     }
+  }
+
+  bool FootstepPlanner::projectFootPrintService(
+      jsk_interactive_marker::SnapFootPrint::Request& req,
+      jsk_interactive_marker::SnapFootPrint::Response& res)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    JSK_ROS_INFO("projectFootPrintService");
+    if (!graph_) {
+      JSK_ROS_ERROR("Not yet graph is available");
+      return false;
+    }
+    Eigen::Affine3f left_pose, right_pose, center_pose;
+    Eigen::Affine3f left_pose_trans, right_pose_trans;
+    const Eigen::Vector3f resolution(resolution_x_,
+                                     resolution_y_,
+                                     resolution_theta_);
+    const Eigen::Vector3f footstep_size(footstep_size_x_,
+                                        footstep_size_y_,
+                                        0.000001);
+    tf::poseMsgToEigen(req.lleg_pose, left_pose_trans);
+    tf::poseMsgToEigen(req.rleg_pose, right_pose_trans);
+    tf::poseMsgToEigen(req.input_pose.pose, center_pose);
+    left_pose = center_pose * left_pose_trans;
+    right_pose = center_pose * right_pose_trans;
+    FootstepState::Ptr left_input(new FootstepState(
+                                    jsk_footstep_msgs::Footstep::LEFT,
+                                    left_pose,
+                                    footstep_size,
+                                    resolution));
+    FootstepState::Ptr right_input(new FootstepState(
+                                    jsk_footstep_msgs::Footstep::RIGHT,
+                                    right_pose,
+                                    footstep_size,
+                                    resolution));
+    FootstepState::Ptr projected_left = graph_->projectFootstep(left_input);
+    FootstepState::Ptr projected_right = graph_->projectFootstep(right_input);
+    if (!projected_left || !projected_right) {
+      JSK_ROS_ERROR("Failed to project footstep");
+      return false;
+    }
+    Eigen::Affine3f projected_left_pose = projected_left->getPose();
+    Eigen::Affine3f projected_right_pose = projected_right->getPose();
+    Eigen::Quaternionf rot = Eigen::Quaternionf(projected_left_pose.rotation()).slerp(
+      0.5, Eigen::Quaternionf(projected_right_pose.rotation()));
+    Eigen::Vector3f pos = (Eigen::Vector3f(projected_right_pose.translation()) +
+                           Eigen::Vector3f(projected_left_pose.translation())) / 2.0;
+    Eigen::Affine3f mid = Eigen::Translation3f(pos) * rot;
+    res.success = true;
+    JSK_ROS_INFO("pos: [%f, %f, %f]", pos[0], pos[1], pos[2]);
+    tf::poseEigenToMsg(mid, res.snapped_pose.pose);
+    res.snapped_pose.header = req.input_pose.header;
+    JSK_ROS_INFO("success to project footprint");
+    return true;
   }
   
   void FootstepPlanner::planCB(
