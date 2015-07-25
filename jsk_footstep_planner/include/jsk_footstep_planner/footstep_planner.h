@@ -93,7 +93,16 @@ namespace jsk_footstep_planner
       const pcl::PointCloud<pcl::PointNormal>& cloud,
       ros::Publisher& pub,
       const std_msgs::Header& header);
+    virtual bool projectFootPrint(
+      const Eigen::Affine3f& center_pose,
+      const Eigen::Affine3f& left_pose_trans,
+      const Eigen::Affine3f& right_pose_trans,
+      geometry_msgs::Pose& pose);
+
     virtual bool projectFootPrintService(
+      jsk_interactive_marker::SnapFootPrint::Request& req,
+      jsk_interactive_marker::SnapFootPrint::Response& res);
+    virtual bool projectFootPrintWithLocalSearchService(
       jsk_interactive_marker::SnapFootPrint::Request& req,
       jsk_interactive_marker::SnapFootPrint::Response& res);
     
@@ -105,6 +114,7 @@ namespace jsk_footstep_planner
     ros::Publisher pub_open_list_;
     ros::Subscriber sub_pointcloud_model_;
     ros::ServiceServer srv_project_footprint_;
+    ros::ServiceServer srv_project_footprint_with_local_search_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     FootstepGraph::Ptr graph_;
     std::vector<Eigen::Affine3f> successors_;
