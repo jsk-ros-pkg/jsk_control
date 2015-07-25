@@ -293,14 +293,16 @@ namespace jsk_footstep_planner
     Eigen::Vector3f b((pose * Eigen::Translation3f(- ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
     Eigen::Vector3f c((pose * Eigen::Translation3f(- ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
     Eigen::Vector3f d((pose * Eigen::Translation3f(ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
-    pcl::PointNormal pa, pb, pc, pd;
+    pcl::PointNormal pa, pb, pc, pd, p;
     pa.getVector3fMap() = a;
     pb.getVector3fMap() = b;
     pc.getVector3fMap() = c;
     pd.getVector3fMap() = d;
+    p.getVector3fMap() = Eigen::Vector3f(pose.translation());
     std::vector<int> kdl_indices;
     std::vector<float> kdl_distances;
-    if (tree.radiusSearch(pa, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
+    if (tree.radiusSearch(p, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
+        tree.radiusSearch(pa, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
         tree.radiusSearch(pb, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
         tree.radiusSearch(pc, vertex_threshold, kdl_indices, kdl_distances, 1) > 0 &&
         tree.radiusSearch(pd, vertex_threshold, kdl_indices, kdl_distances, 1) > 0) {
