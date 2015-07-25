@@ -271,6 +271,7 @@ namespace jsk_footstep_planner
     if (isnan(second_theta)) {
       second_theta = 0;
     }
+    // acos := [0, M_PI]
     if (first_theta > M_PI) {
       first_theta = 2.0 * M_PI - first_theta;
     }
