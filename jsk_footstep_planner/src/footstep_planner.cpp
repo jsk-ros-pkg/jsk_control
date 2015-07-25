@@ -150,7 +150,19 @@ namespace jsk_footstep_planner
         return;
       }
     }
-
+    // set parameters
+    graph_->setLocalXMovement(local_move_x_);
+    graph_->setLocalYMovement(local_move_y_);
+    graph_->setLocalThetaMovement(local_move_theta_);
+    graph_->setLocalXMovementNum(local_move_x_num_);
+    graph_->setLocalYMovementNum(local_move_y_num_);
+    graph_->setLocalThetaMovementNum(local_move_theta_num_);
+    graph_->setPlaneEstimationMaxIterations(plane_estimation_max_iterations_);
+    graph_->setPlaneEstimationMinInliers(plane_estimation_min_inliers_);
+    graph_->setPlaneEstimationOutlierThreshold(plane_estimation_outlier_threshold_);
+    graph_->setSupportCheckXSampling(support_check_x_sampling_);
+    graph_->setSupportCheckYSampling(support_check_y_sampling_);
+    graph_->setSupportCheckVertexNeighborThreshold(support_check_vertex_neighbor_threshold_);
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
                                               close_list_x_num_,
@@ -330,6 +342,20 @@ namespace jsk_footstep_planner
       resolution_theta_ = config.resolution_theta;
       need_to_rebuild_graph = true;
     }
+    local_move_x_ = config.local_move_x;
+    local_move_y_ = config.local_move_y;
+    local_move_theta_ = config.local_move_theta;
+    local_move_x_num_ = config.local_move_x_num;
+    local_move_y_num_ = config.local_move_y_num;
+    local_move_theta_num_ = config.local_move_theta_num;
+    goal_pos_thr_ = config.goal_pos_thr;
+    goal_rot_thr_ = config.goal_rot_thr;
+    plane_estimation_max_iterations_ = config.plane_estimation_max_iterations;
+    plane_estimation_min_inliers_ = config.plane_estimation_min_inliers;
+    plane_estimation_outlier_threshold_ = config.plane_estimation_outlier_threshold;
+    support_check_x_sampling_ = config.support_check_x_sampling;
+    support_check_y_sampling_ = config.support_check_y_sampling;
+    support_check_vertex_neighbor_threshold_ = config.support_check_vertex_neighbor_threshold;
     footstep_size_x_ = config.footstep_size_x;
     footstep_size_y_ = config.footstep_size_y;
     project_start_state_ = config.project_start_state;

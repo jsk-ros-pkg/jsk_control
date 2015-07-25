@@ -168,9 +168,12 @@ namespace jsk_footstep_planner
                               pointcloud_model_2d_,
                               Eigen::Vector3f(0, 0, 1),
                               error_state,
-                              0.02,
-                              100,
-                              100);
+                              plane_estimation_outlier_threshold_,
+                              plane_estimation_max_iterations_,
+                              plane_estimation_min_inliers_,
+                              support_check_x_sampling_,
+                              support_check_y_sampling_,
+                              support_check_vertex_neighbor_threshold_);
   }
   
   bool FootstepGraph::projectGoal()

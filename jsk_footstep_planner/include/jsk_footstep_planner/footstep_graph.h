@@ -65,7 +65,13 @@ namespace jsk_footstep_planner
       tree_model_2d_(new pcl::search::Octree<pcl::PointNormal>(0.2)),
       grid_search_(new ANNGrid(0.05)),
       local_move_x_(0.1), local_move_y_(0.05), local_move_theta_(0.2),
-      local_move_x_num_(3), local_move_y_num_(3), local_move_theta_num_(3)
+      local_move_x_num_(3), local_move_y_num_(3), local_move_theta_num_(3),
+      plane_estimation_max_iterations_(100),
+      plane_estimation_min_inliers_(100),
+      plane_estimation_outlier_threshold_(0.02),
+      support_check_x_sampling_(3),
+      support_check_y_sampling_(3),
+      support_check_vertex_neighbor_threshold_(0.02)
       {}
     virtual std::vector<StatePtr> successors(StatePtr target_state);
     virtual bool isGoal(StatePtr state);
@@ -136,9 +142,24 @@ namespace jsk_footstep_planner
     }
     virtual bool projectGoal();
     virtual bool projectStart();
+    
     virtual bool usePointCloudModel() const { return use_pointcloud_model_; }
     virtual bool lazyProjection()  const { return lazy_projection_; }
     virtual bool localMovement() const { return local_movement_; }
+    virtual void setPositionGoalThreshold(double x) { pos_goal_thr_ = x; }
+    virtual void setRotationGoalThreshold(double x) { rot_goal_thr_ = x; }
+    virtual void setLocalXMovement(double x) { local_move_x_ = x; }
+    virtual void setLocalYMovement(double x) { local_move_y_ = x; }
+    virtual void setLocalThetaMovement(double x) { local_move_theta_ = x; }
+    virtual void setLocalXMovementNum(size_t n) { local_move_x_num_ = n; }
+    virtual void setLocalYMovementNum(size_t n) { local_move_y_num_ = n; }
+    virtual void setLocalThetaMovementNum(size_t n) { local_move_theta_num_ = n; }
+    virtual void setPlaneEstimationMaxIterations(int n) { plane_estimation_max_iterations_ = n; }
+    virtual void setPlaneEstimationMinInliers(int n) { plane_estimation_min_inliers_ = n; }
+    virtual void setPlaneEstimationOutlierThreshold(double d) { plane_estimation_outlier_threshold_ = d; }
+    virtual void setSupportCheckXSampling(int n) { support_check_x_sampling_ = n; }
+    virtual void setSupportCheckYSampling(int n) { support_check_y_sampling_ = n; }
+    virtual void setSupportCheckVertexNeighborThreshold(double d) { support_check_vertex_neighbor_threshold_ = d; }
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in);
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in, unsigned int& state);
     virtual std::vector<FootstepState::Ptr> localMoveFootstepState(FootstepState::Ptr in);
@@ -171,6 +192,13 @@ namespace jsk_footstep_planner
     
     ros::Publisher pub_progress_;
     const Eigen::Vector3f resolution_;
+
+    int plane_estimation_max_iterations_;
+    int plane_estimation_min_inliers_;
+    double plane_estimation_outlier_threshold_;
+    int support_check_x_sampling_;
+    int support_check_y_sampling_;
+    double support_check_vertex_neighbor_threshold_;
   private:
 
   };
