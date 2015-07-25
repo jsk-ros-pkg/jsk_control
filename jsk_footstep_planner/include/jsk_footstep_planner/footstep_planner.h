@@ -159,6 +159,8 @@ namespace jsk_footstep_planner
     std::string heuristic_;
     double heuristic_first_rotation_weight_;
     double heuristic_second_rotation_weight_;
+    double cost_weight_;
+    double heuristic_weight_;
   private:
     
   };

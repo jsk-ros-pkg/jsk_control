@@ -59,14 +59,24 @@ namespace jsk_footstep_planner
                                          std::greater<SolverNodePtr> > OpenList;    
     FootstepAStarSolver(
       GraphPtr graph, size_t x_num, size_t y_num, size_t theta_num,
-      unsigned int profile_period = 1024):
+      unsigned int profile_period = 1024,
+      double cost_weight = 1.0,
+      double heuristic_weight = 1.0):
       footstep_close_list_(x_num, y_num, theta_num),
       profile_period_(profile_period),
       is_set_profile_function_(false),
+      cost_weight_(cost_weight),
+      heuristic_weight_(heuristic_weight),
       AStarSolver<GraphT>(graph)
     {
       
     }
+
+    virtual double fn(SolverNodePtr n)
+    {
+      return cost_weight_ * gn(n) + heuristic_weight_ * hn(n);
+    }
+
     
     virtual
     std::vector<typename SolverNode<State, GraphT>::Ptr>
@@ -193,6 +203,8 @@ namespace jsk_footstep_planner
     using Solver<GraphT>::isOpenListEmpty;
     using Solver<GraphT>::popFromOpenList;
     using Solver<GraphT>::addToOpenList;
+    using AStarSolver<GraphT>::gn;
+    using AStarSolver<GraphT>::hn;
     
   protected:
     unsigned int loop_counter_;
@@ -203,7 +215,8 @@ namespace jsk_footstep_planner
     using Solver<GraphT>::graph_;
     using Solver<GraphT>::verbose_;
     using BestFirstSearchSolver<GraphT>::open_list_;
-    
+    const double cost_weight_;
+    const double heuristic_weight_;
   };
 }
 

@@ -301,7 +301,9 @@ namespace jsk_footstep_planner
                                               close_list_x_num_,
                                               close_list_y_num_,
                                               close_list_theta_num_,
-                                              profile_period_);
+                                              profile_period_,
+                                              cost_weight_,
+                                              heuristic_weight_);
     if (heuristic_ == "step_cost") {
       solver.setHeuristic(boost::bind(&FootstepPlanner::stepCostHeuristic, this, _1, _2));
     }
@@ -515,6 +517,8 @@ namespace jsk_footstep_planner
     heuristic_ = config.heuristic;
     heuristic_first_rotation_weight_ = config.heuristic_first_rotation_weight;
     heuristic_second_rotation_weight_ = config.heuristic_second_rotation_weight;
+    cost_weight_ = config.cost_weight;
+    heuristic_weight_ = config.heuristic_weight;
     if (need_to_rebuild_graph) {
       if (graph_) {             // In order to skip first initialization
         buildGraph();
