@@ -127,7 +127,8 @@ namespace jsk_footstep_planner
                    int min_inliers,
                    int foot_x_sampling_num = 3,
                    int foot_y_sampling_num = 3,
-                   double vertex_threshold = 0.02);
+                   double vertex_threshold = 0.02,
+                   const bool skip_cropping = true);
     
     pcl::PointIndices::Ptr
     cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
@@ -180,6 +181,14 @@ namespace jsk_footstep_planner
                             const int foot_x_sampling_num,
                             const int foot_y_sampling_num,
                             const double vertex_threshold);
+    virtual FootstepSupportState
+    isSupportedByPointCloudWithoutCrpping(const Eigen::Affine3f& pose,
+                                          pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                                          pcl::KdTreeFLANN<pcl::PointNormal>& tree,
+                                          pcl::PointIndices::Ptr inliers,
+                                          const int foot_x_sampling_num,
+                                          const int foot_y_sampling_num,
+                                          const double vertex_threshold);
 
   protected:
     Eigen::Affine3f pose_;
