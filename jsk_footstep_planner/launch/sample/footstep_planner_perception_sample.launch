@@ -1,6 +1,5 @@
 <launch>
-  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen"
-        respawn="true">
+  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
     <remap from="~pointcloud_model" to="pointcloud_model_generator/output" />
     <rosparam>
       use_pointcloud_model: true
@@ -82,7 +81,7 @@
     <!-- <remap from="move_marker" to="$(arg POSE_REMAP)" /> -->
     <!-- <param name="wait_snapit_server" value="false" /> -->
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
-    <remap from="project_footprint" to="/footstep_planner/project_footprint" />
+    <remap from="project_footprint" to="/footstep_planner/project_footprint_with_local_search" />
     <rosparam>
         use_plane_snap: true
         use_projection_service: true
