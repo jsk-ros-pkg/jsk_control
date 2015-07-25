@@ -8,7 +8,7 @@ find_package(PCL REQUIRED)
 add_service_files(FILES
   ChangeSuccessor.srv)
 generate_dynamic_reconfigure_options(
-  cfg/FootstepPlanner.cfg)
+  cfg/FootstepPlanner.cfg cfg/PointCloudModelGenerator.cfg)
 generate_messages()
 #catkin_python_setup()
 catkin_package(
@@ -33,6 +33,7 @@ add_library(jsk_footstep_planner
   src/footstep_graph.cpp
   src/footstep_state_discrete_close_list.cpp
   src/ann_grid.cpp
+  src/pointcloud_model_generator.cpp
   src/footstep_planner.cpp)
 
 add_executable(sample_simple_graph demo/sample_simple_graph.cpp)
@@ -55,9 +56,12 @@ add_executable(footstep_planner_node src/footstep_planner_node.cpp)
 target_link_libraries(footstep_planner_node jsk_footstep_planner)
 add_executable(footstep_projection_demo demo/footstep_projection_demo.cpp)
 target_link_libraries(footstep_projection_demo jsk_footstep_planner)
+add_executable(pointcloud_model_generator_node src/pointcloud_model_generator_node.cpp)
+target_link_libraries(pointcloud_model_generator_node jsk_footstep_planner)
 
 add_dependencies(jsk_footstep_planner ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
 add_dependencies(footstep_planner_node ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
+add_dependencies(pointcloud_model_generator_node ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
 
 install(DIRECTORY euslisp launch scripts
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
