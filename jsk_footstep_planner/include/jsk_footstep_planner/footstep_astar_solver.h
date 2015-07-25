@@ -76,6 +76,7 @@ namespace jsk_footstep_planner
       SolverNodePtr start_state(new SolverNode<State, GraphT>(
                                   graph_->getStartState(),
                                   0, graph_));
+      TransitionLimit::Ptr limit = graph_->getTransitionLimit();
       bool lazy_projection = graph_->lazyProjection();
       addToOpenList(start_state);
       while (!isOpenListEmpty()  && isOK(start_time, timeout)) {
@@ -90,11 +91,26 @@ namespace jsk_footstep_planner
                 = target_node->wrapWithSolverNodes(target_node->getParent(),
                                                    graph_->localMoveFootstepState(projected_state));
               // TODO: need to check if they are included in close list?
-              addToOpenList(locally_moved_nodes);
+              if (limit && target_node->getParent()) {
+                for (size_t i = 0; i < locally_moved_nodes.size(); i++) {
+                  if (limit->check(target_node->getParent()->getState(),
+                                   locally_moved_nodes[i]->getState())) {
+                    addToOpenList(locally_moved_nodes[i]);
+                  }
+                }
+              }
+              else {
+                addToOpenList(locally_moved_nodes);
+              }
             }
             continue;
           }
           else {
+            if (limit &&
+                target_node->getParent() &&
+                !limit->check(target_node->getParent()->getState(), projected_state)) {
+              continue;
+            }
             target_node->setState(projected_state);
           }
         }

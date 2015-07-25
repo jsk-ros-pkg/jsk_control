@@ -140,12 +140,26 @@ namespace jsk_footstep_planner
           std::vector<StatePtr> locally_moved_nodes
             = localMoveFootstepState(next);
           for (size_t j = 0; j < locally_moved_nodes.size(); j++) {
-            ret.push_back(locally_moved_nodes[j]);
+            if (transition_limit_) {
+              if (transition_limit_->check(target_state, locally_moved_nodes[j])) {
+                ret.push_back(locally_moved_nodes[j]);
+              }
+            }
+            else {
+              ret.push_back(locally_moved_nodes[j]);
+            }
           }
         }
       }
       if (next) {
-        ret.push_back(next);
+        if (transition_limit_) {
+          if (transition_limit_->check(target_state, next)) {
+            ret.push_back(next);
+          }
+        }
+        else {
+          ret.push_back(next);
+        }
       }
     }
     return ret;
@@ -161,19 +175,22 @@ namespace jsk_footstep_planner
   FootstepState::Ptr FootstepGraph::projectFootstep(FootstepState::Ptr in,
                                                     unsigned int& error_state)
   {
-    return in->projectToCloud(*tree_model_,
-                              pointcloud_model_,
-                              grid_search_,
-                              *tree_model_2d_,
-                              pointcloud_model_2d_,
-                              Eigen::Vector3f(0, 0, 1),
-                              error_state,
-                              plane_estimation_outlier_threshold_,
-                              plane_estimation_max_iterations_,
-                              plane_estimation_min_inliers_,
-                              support_check_x_sampling_,
-                              support_check_y_sampling_,
-                              support_check_vertex_neighbor_threshold_);
+    FootstepState::Ptr projected_footstep = in->projectToCloud(
+      *tree_model_,
+      pointcloud_model_,
+      grid_search_,
+      *tree_model_2d_,
+      pointcloud_model_2d_,
+      Eigen::Vector3f(0, 0, 1),
+      error_state,
+      plane_estimation_outlier_threshold_,
+      plane_estimation_max_iterations_,
+      plane_estimation_min_inliers_,
+      support_check_x_sampling_,
+      support_check_y_sampling_,
+      support_check_vertex_neighbor_threshold_);
+    
+    return projected_footstep;
   }
   
   bool FootstepGraph::projectGoal()

@@ -61,6 +61,7 @@ namespace jsk_footstep_planner
     const unsigned int no_plane = 8;
     const unsigned int no_enough_inliers = 16;
     const unsigned int close_to_success = 32;
+    const unsigned int transition_limit = 64;
   }
 
   std::string projectStateToString(unsigned int state);
