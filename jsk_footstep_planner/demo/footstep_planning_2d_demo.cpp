@@ -43,11 +43,6 @@ using namespace jsk_footstep_planner;
 const Eigen::Vector3f footstep_size(0.2, 0.1, 0.000001);
 const Eigen::Vector3f resolution(0.05, 0.05, 0.08);
 
-Eigen::Affine3f affineFromXYYaw(double x, double y, double yaw)
-{
-  return Eigen::Translation3f(x, y, 0) * Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ());
-}
-
 void plan(double x, double y, double yaw,
           FootstepGraph::Ptr graph, ros::Publisher& pub_path,
           ros::Publisher& pub_goal,
@@ -75,7 +70,7 @@ void plan(double x, double y, double yaw,
   FootstepAStarSolver<FootstepGraph> solver(graph, 100, 100, 100);
   //solver.setHeuristic(&footstepHeuristicStraight);
   //solver.setHeuristic(&footstepHeuristicStraightRotation);
-  solver.setHeuristic(&footstepHeuristicStepCost);
+  solver.setHeuristic(boost::bind(&footstepHeuristicStepCost, _1, _2, 1.0, 0.1));
   ros::WallTime start_time = ros::WallTime::now();
   std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve();
   ros::WallTime end_time = ros::WallTime::now();

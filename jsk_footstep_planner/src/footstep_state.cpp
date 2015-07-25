@@ -310,4 +310,16 @@ namespace jsk_footstep_planner
       return CLOSE_TO_SUPPORTED;
     }
   }
+  
+  FootstepState::Ptr FootstepState::fromROSMsg(const jsk_footstep_msgs::Footstep& f,
+                                               const Eigen::Vector3f& size,
+                                               const Eigen::Vector3f& resolution)
+  {
+    Eigen::Affine3f pose;
+    tf::poseMsgToEigen(f.pose, pose);
+    return FootstepState::Ptr(new FootstepState(
+                                f.leg, pose,
+                                size, resolution));
+  }
+
 }

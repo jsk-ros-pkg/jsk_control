@@ -59,12 +59,6 @@ void profile(FootstepAStarSolver<FootstepGraph>& solver, FootstepGraph::Ptr grap
   FootstepAStarSolver<FootstepGraph>::OpenList open_list = solver.getOpenList();
 }
 
-
-Eigen::Affine3f affineFromXYYaw(double x, double y, double yaw)
-{
-  return Eigen::Translation3f(x, y, 0) * Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ());
-}
-
 void plan(const Eigen::Affine3f& goal_center,
           FootstepGraph::Ptr graph, ros::Publisher& pub_path,
           ros::Publisher& pub_goal,
@@ -97,7 +91,7 @@ void plan(const Eigen::Affine3f& goal_center,
   FootstepAStarSolver<FootstepGraph> solver(graph, 100, 100, 100);
   //solver.setHeuristic(&footstepHeuristicStraight);
   //solver.setHeuristic(&footstepHeuristicStraightRotation);
-  solver.setHeuristic(&footstepHeuristicStepCost);
+  solver.setHeuristic(boost::bind(&footstepHeuristicStepCost, _1, _2, 1.0, 0.1));
   solver.setProfileFunction(&profile);
   ros::WallTime start_time = ros::WallTime::now();
   std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(ros::WallDuration(2000.0));
@@ -228,7 +222,7 @@ generateCloudStairs()
       pcl::PointNormal p;
       p.x = x;
       p.y = y;
-      p.z = floor(x);
+      p.z = floor(x * 4) * 0.1;
       gen_cloud->points.push_back(p);
     }
   }

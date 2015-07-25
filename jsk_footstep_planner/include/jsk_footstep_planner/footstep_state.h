@@ -49,7 +49,7 @@
 #include <pcl/search/octree.h>
 
 #include "jsk_footstep_planner/ann_grid.h"
-
+#include "jsk_footstep_planner/util.h"
 namespace jsk_footstep_planner
 {
 
@@ -102,6 +102,11 @@ namespace jsk_footstep_planner
       index_x_(index_x), index_y_(index_y), index_yaw_(index_yaw)
     {
     }
+
+    static
+    FootstepState::Ptr fromROSMsg(const jsk_footstep_msgs::Footstep& f,
+                                  const Eigen::Vector3f& size,
+                                  const Eigen::Vector3f& resolution);
     
     inline float cross2d(const Eigen::Vector2f& a, const Eigen::Vector2f& b) const
     {
