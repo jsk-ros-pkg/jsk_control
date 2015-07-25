@@ -1,14 +1,17 @@
 <launch>
-  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
+  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen"
+        respawn="true">
     <remap from="~pointcloud_model" to="pointcloud_model_generator/output" />
     <rosparam>
       use_pointcloud_model: true
       use_lazy_perception: true
       use_local_movement: true
+      project_start_state: true
+      project_goal_state: true
     </rosparam>
     <rosparam>
-      footstep_size_x: 0.24
-      footstep_size_y: 0.15
+      footstep_size_x: 0.2
+      footstep_size_y: 0.1
     </rosparam>
     <!-- successors -->
     <rosparam>
