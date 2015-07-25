@@ -118,8 +118,9 @@ namespace jsk_footstep_planner
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     FootstepGraph::Ptr graph_;
     std::vector<Eigen::Affine3f> successors_;
-
+    std_msgs::Header latest_header_;
     // Parameters
+    bool rich_profiling_;
     bool use_pointcloud_model_;
     bool use_lazy_perception_;
     bool use_local_movement_;
