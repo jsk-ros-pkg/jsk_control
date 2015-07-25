@@ -97,6 +97,7 @@ namespace jsk_footstep_planner
     boost::shared_ptr <dynamic_reconfigure::Server<Config> > srv_;
     ros::Publisher pub_close_list_;
     ros::Publisher pub_open_list_;
+    ros::Subscriber sub_pointcloud_model_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     FootstepGraph::Ptr graph_;
     std::vector<Eigen::Affine3f> successors_;

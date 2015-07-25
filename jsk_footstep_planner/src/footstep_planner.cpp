@@ -42,8 +42,7 @@ namespace jsk_footstep_planner
 {
   FootstepPlanner::FootstepPlanner(ros::NodeHandle& nh):
     as_(nh, nh.getNamespace(),
-        boost::bind(&FootstepPlanner::planCB, this, _1), false),
-    pointcloud_model_(new pcl::PointCloud<pcl::PointNormal>)
+        boost::bind(&FootstepPlanner::planCB, this, _1), false)
   {
     srv_ = boost::make_shared <dynamic_reconfigure::Server<Config> > (nh);
     typename dynamic_reconfigure::Server<Config>::CallbackType f =
@@ -63,6 +62,7 @@ namespace jsk_footstep_planner
       buildGraph();
       JSK_ROS_INFO("build graph done");
     }
+    sub_pointcloud_model_ = nh.subscribe("pointcloud_model", 1, &FootstepPlanner::pointcloudCallback, this);
     as_.start();
   }
   
@@ -71,6 +71,7 @@ namespace jsk_footstep_planner
   {
     boost::mutex::scoped_lock lock(mutex_);
     JSK_ROS_INFO("pointcloud model is updated");
+    pointcloud_model_.reset(new pcl::PointCloud<pcl::PointNormal>);
     pcl::fromROSMsg(*msg, *pointcloud_model_);
     if (graph_ && use_pointcloud_model_) {
       graph_->setPointCloudModel(pointcloud_model_);
