@@ -162,6 +162,7 @@ namespace jsk_footstep_planner
     virtual void setSupportCheckVertexNeighborThreshold(double d) { support_check_vertex_neighbor_threshold_ = d; }
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in);
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in, unsigned int& state);
+
     virtual std::vector<FootstepState::Ptr> localMoveFootstepState(FootstepState::Ptr in);
   protected:
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
