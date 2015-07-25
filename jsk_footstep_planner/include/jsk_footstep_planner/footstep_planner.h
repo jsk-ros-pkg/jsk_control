@@ -123,6 +123,7 @@ namespace jsk_footstep_planner
     bool use_pointcloud_model_;
     bool use_lazy_perception_;
     bool use_local_movement_;
+    bool use_transition_limit_;
     bool project_start_state_;
     bool project_goal_state_;
     double local_move_x_;
@@ -131,6 +132,12 @@ namespace jsk_footstep_planner
     int local_move_x_num_;
     int local_move_y_num_;
     int local_move_theta_num_;
+    double transition_limit_x_;
+    double transition_limit_y_;
+    double transition_limit_z_;
+    double transition_limit_roll_;
+    double transition_limit_pitch_;
+    double transition_limit_yaw_;
     double goal_pos_thr_;
     double goal_rot_thr_;
     int plane_estimation_max_iterations_;

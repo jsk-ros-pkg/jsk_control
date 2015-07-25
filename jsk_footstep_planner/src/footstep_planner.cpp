@@ -270,6 +270,19 @@ namespace jsk_footstep_planner
       }
     }
     // set parameters
+    if (use_transition_limit_) {
+      graph_->setTransitionLimit(
+        TransitionLimitXYZRPY::Ptr(new TransitionLimitXYZRPY(
+                                     transition_limit_x_,
+                                     transition_limit_y_,
+                                     transition_limit_z_,
+                                     transition_limit_roll_,
+                                     transition_limit_pitch_,
+                                     transition_limit_yaw_)));
+    }
+    else {
+      graph_->setTransitionLimit(TransitionLimitXYZRPY::Ptr());
+    }
     graph_->setLocalXMovement(local_move_x_);
     graph_->setLocalYMovement(local_move_y_);
     graph_->setLocalThetaMovement(local_move_theta_);
@@ -461,12 +474,19 @@ namespace jsk_footstep_planner
       resolution_theta_ = config.resolution_theta;
       need_to_rebuild_graph = true;
     }
+    use_transition_limit_ = config.use_transition_limit;
     local_move_x_ = config.local_move_x;
     local_move_y_ = config.local_move_y;
     local_move_theta_ = config.local_move_theta;
     local_move_x_num_ = config.local_move_x_num;
     local_move_y_num_ = config.local_move_y_num;
     local_move_theta_num_ = config.local_move_theta_num;
+    transition_limit_x_ = config.transition_limit_x;
+    transition_limit_y_ = config.transition_limit_y;
+    transition_limit_z_ = config.transition_limit_z;
+    transition_limit_roll_ = config.transition_limit_roll;
+    transition_limit_pitch_ = config.transition_limit_pitch;
+    transition_limit_yaw_ = config.transition_limit_yaw;
     goal_pos_thr_ = config.goal_pos_thr;
     goal_rot_thr_ = config.goal_rot_thr;
     plane_estimation_max_iterations_ = config.plane_estimation_max_iterations;

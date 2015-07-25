@@ -43,6 +43,7 @@
 #include "jsk_footstep_planner/footstep_state.h"
 #include "jsk_footstep_planner/astar_solver.h"
 #include "jsk_footstep_planner/ann_grid.h"
+#include "jsk_footstep_planner/transition_limit.h"
 
 namespace jsk_footstep_planner
 {
@@ -160,6 +161,8 @@ namespace jsk_footstep_planner
     virtual void setSupportCheckXSampling(int n) { support_check_x_sampling_ = n; }
     virtual void setSupportCheckYSampling(int n) { support_check_y_sampling_ = n; }
     virtual void setSupportCheckVertexNeighborThreshold(double d) { support_check_vertex_neighbor_threshold_ = d; }
+    virtual void setTransitionLimit(TransitionLimit::Ptr limit) { transition_limit_ = limit; }
+    virtual TransitionLimit::Ptr getTransitionLimit() { return transition_limit_; }
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in);
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in, unsigned int& state);
 
@@ -183,7 +186,7 @@ namespace jsk_footstep_planner
     const bool use_pointcloud_model_;
     const bool lazy_projection_;
     const bool local_movement_;
-    
+    TransitionLimit::Ptr transition_limit_;
     double local_move_x_;
     double local_move_y_;
     double local_move_theta_;
