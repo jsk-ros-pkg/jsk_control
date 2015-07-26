@@ -11,7 +11,7 @@ layer {
   }
   data_param {
     source: "input_lmdb_potentio"
-    batch_size: 32 ## must be same as target one
+    batch_size: 100 ## must be same as target one
     backend: LMDB
   }
 }
@@ -159,7 +159,7 @@ layer {
   }
   data_param {
     source: "target_lmdb_limb_coords"
-    batch_size: 32
+    batch_size: 100
     backend: LMDB
   }
 }
@@ -184,7 +184,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 50
     weight_filler {
       type: "gaussian"
       std: 1
@@ -248,7 +248,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 50
+    num_output: 10
     weight_filler {
       type: "gaussian"
       std: 1

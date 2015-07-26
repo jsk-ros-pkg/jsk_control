@@ -260,7 +260,7 @@
   ret)
 
 (defun gen-redundancy-ik-learning-data
-  (&key (sep 6)
+  (&key (sep 10)
 	(joint-list (butlast (send *robot* :rarm :joint-list)))
 	(sample-points (expt sep (length joint-list)))
 	(draw? nil)
