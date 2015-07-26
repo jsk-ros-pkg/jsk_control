@@ -1,0 +1,11 @@
+net: "redundancy_ik_net.prototxt"
+solver_type: SGD
+base_lr: 0.05
+lr_policy: "step"
+gamma: 0.95
+stepsize: 100000 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
+max_iter: 5000000
+momentum: 0.9
+display: 10000
+snapshot_prefix: "redundancy_ik_net"
+solver_mode: CPU

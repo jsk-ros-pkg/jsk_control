@@ -1,6 +1,7 @@
 #!/usr/bin/env roseus
 
 (require "package://eus_caffe/euslisp/eus-caffe.l")
+(require "package://eus_caffe/euslisp/eus-caffe-db.l")
 (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
 
 (defvar *robot* (hrp2jsknt))
@@ -241,6 +242,93 @@
 			(send c :difference-position (send *robot* :rarm :end-coords))
 			(send c :difference-rotation (send *robot* :rarm :end-coords))))
     ))
+
+;;
+
+(defun random-index-vector
+  (size
+   &key
+   (ret (instantiate integer-vector size))
+   (cnt (* 10 size)))
+  (dotimes (i size) (setf (aref ret i) i))
+  (dotimes (i cnt)
+    (let* ((x (random size))
+	   (y (random size))
+	   (buf (aref ret x)))
+      (setf (aref ret x) (aref ret y))
+      (setf (aref ret y) buf)))
+  ret)
+
+(defun gen-redundancy-ik-learning-data
+  (&key (sep 6)
+	(joint-list (butlast (send *robot* :rarm :joint-list)))
+	(sample-points (expt sep (length joint-list)))
+	(draw? nil)
+	;;
+	(input-path "input_lmdb_potentio")
+	(target-path "target_lmdb_limb_coords")
+	(random-index-vector (random-index-vector sample-points))
+	(i 0)
+	)
+  (caffe::db-set-id 0)
+  (if (not (zerop (caffe::db-open :dtype "lmdb" :path target-path :mode #\n)))
+      (return-from gen-redundancy-ik-learning-data (print 'db-open-failed)))
+  (caffe::db-set-id 1)
+  (if (not (zerop (caffe::db-open :dtype "lmdb" :path input-path :mode #\n)))
+      (return-from gen-redundancy-ik-learning-data (print 'db-open-failed)))
+  ;;
+  (labels ((itter
+	    (jlist)
+	    (cond
+	     ((null jlist)
+	      (let* (pos rot)
+		(send-all (send *robot* :links) :worldcoords)
+		(send *robot* :rarm :end-coords :worldcoords)
+		(cond
+		 (draw?
+		  (send *viewer* :draw-objects :flush nil)
+		  (send (send *robot* :rarm :end-coords :worldcoords) :draw-on :flush nil
+			:color (float-vector 1 0 0) :size 100)
+		  (send *viewer* :viewsurface :flush)))
+		(setq pos (send (send (car (send *robot* :links)) :worldcoords)
+				:difference-position
+				(send *robot* :rarm :end-coords)))
+		(setq rot (send (send (car (send *robot* :links)) :worldcoords)
+				:difference-rotation
+				(send *robot* :rarm :end-coords)))
+		;;
+		(caffe::db-set-id 1)
+		(caffe::db-put-double
+		 :channels (length joint-list) :width 1 :height 1 :label i
+		 :id_str (caffe::zero-string (aref random-index-vector i))
+		 :data (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
+		;;
+		(caffe::db-set-id 0)
+		(caffe::db-put-double
+		 :channels 6 :width 1 :height 1 :label i
+		 :id_str (caffe::zero-string (aref random-index-vector i))
+		 :data (concatenate float-vector (scale 1e-3 pos) rot))
+		(setq i (+ i 1))))
+	     (t
+	      (dotimes (j sep)
+		(send (car jlist) :joint-angle
+		      (+ (send (car jlist) :min-angle)
+			 (* (/ j (- sep 1.0))
+			    (- (send (car jlist) :max-angle)
+			       (send (car jlist) :min-angle)))))
+		(itter (cdr jlist))))
+	     )))
+    (itter joint-list)
+    (caffe::db-set-id 0) (caffe::db-close)
+    (caffe::db-set-id 1) (caffe::db-close)
+    ))
+
+(defun redundancy-ik-learn
+  nil
+  (caffe::learn
+   :solver "redundancy_ik_solver.prototxt"
+   :size 0
+   ))
 
 
 #|
