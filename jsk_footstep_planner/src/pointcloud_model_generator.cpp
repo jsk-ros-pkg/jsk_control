@@ -34,67 +34,95 @@
  *********************************************************************/
 
 #include "jsk_footstep_planner/pointcloud_model_generator.h"
+#include <boost/random.hpp>
 
 namespace jsk_footstep_planner
 {
   void PointCloudModelGenerator::generate(
     const std::string& model_name,
-    pcl::PointCloud<PointT>& output)
+    pcl::PointCloud<PointT>& output,
+    double hole_rate)
   {
     output.points.clear();
     if (model_name == "flat") {
-      flat(output);
+      flat(output, hole_rate);
     }
     else if (model_name == "stairs") {
-      stairs(output);
+      stairs(output, hole_rate);
     }
     else if (model_name == "hills") {
-      hills(output);
+      hills(output, hole_rate);
     }
   }
 
-  void PointCloudModelGenerator::flat(pcl::PointCloud<PointT>& output)
+  void PointCloudModelGenerator::flat(pcl::PointCloud<PointT>& output, double hole_rate)
   {
+    boost::mt19937 gen( static_cast<unsigned long>(time(0)) );
+    boost::uniform_real<> dst( 0, 100 );
+    boost::variate_generator<
+      boost::mt19937&, boost::uniform_real<>
+      > rand( gen, dst );
+
     for (double y = -2; y < 2; y = y + 0.01) {
       for (double x = -2; x < 2; x = x + 0.01) {
-        pcl::PointNormal p;
-        p.x = x;
-        p.y = y;
-        output.points.push_back(p);
+        if (rand() >= hole_rate) {
+          pcl::PointNormal p;
+          p.x = x;
+          p.y = y;
+          output.points.push_back(p);
+        }
       }
     }
   }
 
-  void PointCloudModelGenerator::hills(pcl::PointCloud<PointT>& output)
+  void PointCloudModelGenerator::hills(pcl::PointCloud<PointT>& output, double hole_rate)
   {
+    boost::mt19937 gen( static_cast<unsigned long>(time(0)) );
+    boost::uniform_real<> dst( 0, 100 );
+    boost::variate_generator<
+      boost::mt19937&, boost::uniform_real<>
+      > rand( gen, dst );
+
     const double height = 0.1;
     for (double y = -2; y < 2; y = y + 0.01) {
       for (double x = -2; x < 2; x = x + 0.01) {
-        pcl::PointNormal p;
-        p.x = x;
-        p.y = y;
-        p.z = height * sin(x * 2) * sin(y * 2);
-        output.points.push_back(p);
+        if (rand() >= hole_rate) {
+          pcl::PointNormal p;
+          p.x = x;
+          p.y = y;
+          p.z = height * sin(x * 2) * sin(y * 2);
+          output.points.push_back(p);
+        }
       }
     }
   }
 
-  void PointCloudModelGenerator::stairs(pcl::PointCloud<PointT>& output)
+  void PointCloudModelGenerator::stairs(pcl::PointCloud<PointT>& output, double hole_rate)
   {
+    boost::mt19937 gen( static_cast<unsigned long>(time(0)) );
+    boost::uniform_real<> dst( 0, 100 );
+    boost::variate_generator<
+      boost::mt19937&, boost::uniform_real<>
+      > rand( gen, dst );
+
     for (double y = -2; y < 2; y = y + 0.01) {
       for (double x = -1; x < 0; x = x + 0.01) {
-        pcl::PointNormal p;
-        p.x = x;
-        p.y = y;
-        p.z = 0;
-        output.points.push_back(p);
+        if (rand() >= hole_rate) {
+          pcl::PointNormal p;
+          p.x = x;
+          p.y = y;
+          p.z = 0;
+          output.points.push_back(p);
+        }
       }
       for (double x = 0; x < 5; x = x + 0.01) {
-        pcl::PointNormal p;
-        p.x = x;
-        p.y = y;
-        p.z = floor(x * 3) * 0.1;
-        output.points.push_back(p);
+        if (rand() >= hole_rate) {
+          pcl::PointNormal p;
+          p.x = x;
+          p.y = y;
+          p.z = floor(x * 3) * 0.1;
+          output.points.push_back(p);
+        }
       }
     }
   }
