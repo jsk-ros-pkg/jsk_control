@@ -41,16 +41,14 @@
 
 using namespace jsk_footstep_planner;
 
-ros::Publisher pub_cloud;
-sensor_msgs::PointCloud2 ros_cloud;
+double hole_rate;
+std::string model;
+boost::mutex mutex;
 void reconfigureCallback(PointCloudModelGeneratorConfig &config, uint32_t level)
 {
-  PointCloudModelGenerator gen;
-  pcl::PointCloud<pcl::PointNormal> cloud;
-  gen.generate(config.model, cloud);
-  pcl::toROSMsg(cloud, ros_cloud);
-  ros_cloud.header.frame_id = "odom";
-  ros_cloud.header.stamp = ros::Time::now();
+  boost::mutex::scoped_lock lock(mutex);
+  hole_rate = config.hole_rate;
+  model = config.model;
 }
 
 
@@ -59,13 +57,23 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "pointcloud_model_generator_node");
   ros::NodeHandle pnh("~");
   ros::Rate r(1);
-  pub_cloud = pnh.advertise<sensor_msgs::PointCloud2>("output", 1, true);
+  ros::Publisher pub_cloud = pnh.advertise<sensor_msgs::PointCloud2>("output", 1, true);
   dynamic_reconfigure::Server<PointCloudModelGeneratorConfig> server;
   server.setCallback(boost::bind(&reconfigureCallback, _1, _2));
   while (ros::ok()) {
     ros::spinOnce();
     r.sleep();
-    pub_cloud.publish(ros_cloud);
+    {
+      boost::mutex::scoped_lock lock(mutex);
+      PointCloudModelGenerator gen;
+      pcl::PointCloud<pcl::PointNormal> cloud;
+      gen.generate(model, cloud, hole_rate);
+      sensor_msgs::PointCloud2 ros_cloud;
+      pcl::toROSMsg(cloud, ros_cloud);
+      ros_cloud.header.frame_id = "odom";
+      ros_cloud.header.stamp = ros::Time::now();
+      pub_cloud.publish(ros_cloud);
+    }
   }
   return 0;
 }

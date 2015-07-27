@@ -55,11 +55,15 @@ namespace jsk_footstep_planner
     typedef boost::shared_ptr<PointCloudModelGenerator> Ptr;
     typedef pcl::PointNormal PointT;
     virtual void generate(const std::string& model_name,
-                          pcl::PointCloud<PointT>& output);
+                          pcl::PointCloud<PointT>& output,
+                          double hole_rate = 0.0);
   protected:
-    virtual void flat(pcl::PointCloud<PointT>& output);
-    virtual void stairs(pcl::PointCloud<PointT>& output);
-    virtual void hills(pcl::PointCloud<PointT>& output);
+    virtual void flat(pcl::PointCloud<PointT>& output,
+                      double hole_rate);
+    virtual void stairs(pcl::PointCloud<PointT>& output,
+                        double hole_rate);
+    virtual void hills(pcl::PointCloud<PointT>& output,
+                       double hole_rate);
   private:
     
   };
