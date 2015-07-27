@@ -244,6 +244,7 @@ namespace jsk_footstep_planner
 
     ////////////////////////////////////////////////////////////////////
     // set goal state
+    jsk_footstep_msgs::Footstep left_goal, right_goal;
     for (size_t i = 0; i < goal->goal_footstep.footsteps.size(); i++) {
       FootstepState::Ptr goal_state(FootstepState::fromROSMsg(
                                       goal->goal_footstep.footsteps[i],
@@ -253,9 +254,11 @@ namespace jsk_footstep_planner
                                                       resolution_theta_)));
       if (goal_state->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
         graph_->setLeftGoalState(goal_state);
+        left_goal = goal->goal_footstep.footsteps[i];
       }
       else if (goal_state->getLeg() == jsk_footstep_msgs::Footstep::RIGHT) {
         graph_->setRightGoalState(goal_state);
+        right_goal = goal->goal_footstep.footsteps[i];
       }
       else {
         JSK_ROS_ERROR("unknown goal leg");
@@ -327,8 +330,8 @@ namespace jsk_footstep_planner
     std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(timeout);
     ros::WallTime end_time = ros::WallTime::now();
     
-    std::cout << "took " << (end_time - start_time).toSec() << " sec" << std::endl;
-    std::cout << "path: " << path.size() << std::endl;
+    JSK_ROS_INFO_STREAM("took " << (end_time - start_time).toSec() << " sec");
+    JSK_ROS_INFO_STREAM("path: " << path.size());
     
     if (path.size() == 0) {
       JSK_ROS_ERROR("Failed to plan path");
@@ -343,6 +346,15 @@ namespace jsk_footstep_planner
     ros_path.header = goal->goal_footstep.header;
     for (size_t i = 0; i < path.size(); i++) {
       ros_path.footsteps.push_back(*path[i]->getState()->toROSMsg());
+    }
+    // finalize path
+    if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
+      ros_path.footsteps.push_back(right_goal);
+      ros_path.footsteps.push_back(left_goal);
+    }
+    else if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::RIGHT) {
+      ros_path.footsteps.push_back(left_goal);
+      ros_path.footsteps.push_back(right_goal);
     }
     result_.result = ros_path;
     as_.setSucceeded(result_);

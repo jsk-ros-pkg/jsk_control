@@ -120,7 +120,7 @@ namespace jsk_footstep_planner
           pcl::PointNormal p;
           p.x = x;
           p.y = y;
-          p.z = floor(x * 4) * 0.1;
+          p.z = floor(x * 3) * 0.1;
           output.points.push_back(p);
         }
       }

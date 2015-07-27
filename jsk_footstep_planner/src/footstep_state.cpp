@@ -162,7 +162,8 @@ namespace jsk_footstep_planner
                                 int min_inliers,
                                 int foot_x_sampling_num,
                                 int foot_y_sampling_num,
-                                double vertex_threshold)
+                                double vertex_threshold,
+                                const bool skip_cropping)
   {
     // TODO: z is ignored
     // extract candidate points
@@ -173,9 +174,17 @@ namespace jsk_footstep_planner
       return FootstepState::Ptr();
     }
     // Before computing, check is it supported or not to omit recognition
-    FootstepSupportState presupport_state
-      = isSupportedByPointCloud(pose_, cloud, tree,
-                                indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+    FootstepSupportState presupport_state;
+    if (skip_cropping) {
+      presupport_state = isSupportedByPointCloudWithoutCrpping(
+        pose_, cloud, tree,
+        indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+    }
+    else {
+      presupport_state = isSupportedByPointCloud(
+        pose_, cloud, tree,
+        indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+    }
     if (presupport_state == projection_state::success) {
       return FootstepState::Ptr(new FootstepState(leg_, pose_, dimensions_,
                                                   resolution_,
@@ -220,9 +229,17 @@ namespace jsk_footstep_planner
       Eigen::Affine3f new_pose = Eigen::Translation3f(q) * new_rot;
       
       // check is it enough points to support the footstep
-      FootstepSupportState support_state
-        = isSupportedByPointCloud(new_pose, cloud, tree,
-                                  inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+      FootstepSupportState support_state;
+      if (skip_cropping) {
+        support_state = isSupportedByPointCloudWithoutCrpping(
+          new_pose, cloud, tree,
+          inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+      }
+      else {
+        support_state = isSupportedByPointCloud(
+          new_pose, cloud, tree,
+          inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+      }
       if (support_state == NOT_SUPPORTED) {
         error_state = projection_state::no_enough_support;
         return FootstepState::Ptr();
@@ -312,6 +329,60 @@ namespace jsk_footstep_planner
       return CLOSE_TO_SUPPORTED;
     }
   }
+  
+  FootstepSupportState
+  FootstepState::isSupportedByPointCloudWithoutCrpping(
+    const Eigen::Affine3f& pose,
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+    pcl::KdTreeFLANN<pcl::PointNormal>& tree,
+    pcl::PointIndices::Ptr inliers,
+    const int foot_x_sampling_num,
+    const int foot_y_sampling_num,
+    const double vertex_threshold)
+  {
+    const Eigen::Vector3f ux = Eigen::Vector3f::UnitX();
+    const Eigen::Vector3f uy = Eigen::Vector3f::UnitY();
+    Eigen::Vector3f a((pose * Eigen::Translation3f(ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
+    Eigen::Vector3f b((pose * Eigen::Translation3f(- ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
+    Eigen::Vector3f c((pose * Eigen::Translation3f(- ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
+    Eigen::Vector3f d((pose * Eigen::Translation3f(ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
+    pcl::PointNormal pa, pb, pc, pd, p;
+    pa.getVector3fMap() = a;
+    pb.getVector3fMap() = b;
+    pc.getVector3fMap() = c;
+    pd.getVector3fMap() = d;
+    p.getVector3fMap() = Eigen::Vector3f(pose.translation());
+    std::vector<int> kdl_indices;
+    std::vector<float> kdl_distances;
+    size_t success_count = 0;
+    
+    if (tree.radiusSearch(p, vertex_threshold, kdl_indices, kdl_distances, 1) > 0) {
+      ++success_count;
+    }
+    if (tree.radiusSearch(pa, vertex_threshold, kdl_indices, kdl_distances, 1) > 0) {
+      ++success_count;
+    }
+    if (tree.radiusSearch(pb, vertex_threshold, kdl_indices, kdl_distances, 1) > 0) {
+      ++success_count;
+    }
+    if (tree.radiusSearch(pc, vertex_threshold, kdl_indices, kdl_distances, 1) > 0) {
+      ++success_count;
+    }
+    if (tree.radiusSearch(pd, vertex_threshold, kdl_indices, kdl_distances, 1) > 0) {
+      ++success_count;
+    }
+    if (success_count == 5) {
+      return SUPPORTED;
+    }
+    else if (success_count > 0) {
+      return CLOSE_TO_SUPPORTED;
+    }
+    else {
+      return NOT_SUPPORTED;
+    }
+  }
+  
+
   
   FootstepState::Ptr FootstepState::fromROSMsg(const jsk_footstep_msgs::Footstep& f,
                                                const Eigen::Vector3f& size,
