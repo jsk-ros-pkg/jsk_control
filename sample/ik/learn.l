@@ -372,6 +372,12 @@
 
 #|
 
+(let* ((id -1.0) (step 0.1) (max 3.0))
+  (do-until-key
+   (setq id (+ id step))
+   (test-redundancy-ik :id 0 :redundancy id)
+   (if (> (abs id) max) (setq step (* -1 step)))))
+
 (caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
 		     :caffemodel "redundancy_ik_net_iter_50000000.caffemodel")
 
