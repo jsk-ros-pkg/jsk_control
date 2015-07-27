@@ -351,6 +351,12 @@
 	 :isize (length input) :osize (length joint-list)
 	 :num 1 :channels (length input) :width 1 :height 1
 	 :input input))
+  ;; ;; test
+  ;; (caffe::db-open :path "input_lmdb_potentio")
+  ;; (caffe::db-read id)
+  ;; (setq output (caffe::db-get-float-data))
+  ;; (caffe::db-close)
+  ;; ;;
   (map cons '(lambda (j av) (send j :joint-angle (rad2deg av)))
        joint-list output)
   (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
@@ -372,10 +378,14 @@
 
 #|
 
-(let* ((id -1.0) (step 0.1) (max 3.0))
+(let* ((id2 (random 1000)) (id -1.0) (step 0.1) (max 3.0)
+       (min-dif *inf*) (min-dif-id id) buf)
   (do-until-key
+   (format t "[param] (db_id, rd_id) = (~A, ~A)~%" id2 id)
+   (format t "        (min_dif, rd_id) = (~A, ~A)~%" min-dif min-dif-id)
    (setq id (+ id step))
-   (test-redundancy-ik :id 0 :redundancy id)
+   (if (> min-dif (norm (setq buf (test-redundancy-ik :id id2 :redundancy id))))
+       (setq min-dif (norm buf) min-dif-id id))
    (if (> (abs id) max) (setq step (* -1 step)))))
 
 (caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"

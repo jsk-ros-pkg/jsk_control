@@ -4,7 +4,7 @@ base_lr: 0.05
 lr_policy: "step"
 gamma: 0.95
 stepsize: 1000000 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
-max_iter: 50000000
+max_iter: 30000000
 momentum: 0.9
 display: 100000
 snapshot_prefix: "redundancy_ik_net"

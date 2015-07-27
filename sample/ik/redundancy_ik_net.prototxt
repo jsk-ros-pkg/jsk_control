@@ -93,7 +93,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 20
     weight_filler {
       type: "gaussian"
       std: 1
@@ -112,9 +112,41 @@ layer {
   top: "encode3neuron"
 }
 layer {
-  name: "redundancy_coords"
+  name: "middle3"
   type: "InnerProduct"
   bottom: "encode3neuron"
+  top: "middle3"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 10
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "encode4neuron"
+  type: "Sigmoid"
+  bottom: "middle3"
+  top: "encode4neuron"
+}
+layer {
+  name: "redundancy_coords"
+  type: "InnerProduct"
+  bottom: "encode4neuron"
   top: "redundancy_coords"
   param {
     lr_mult: 1
@@ -173,7 +205,7 @@ layer {
 layer {
   name: "_redundancy_coords"
   type: "InnerProduct"
-  top: "_encode3neuron"
+  top: "_encode4neuron"
   bottom: "redundancy_coords"
   param {
     lr_mult: 1
@@ -185,6 +217,38 @@ layer {
   }
   inner_product_param {
     num_output: 50
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_encode4neuron"
+  type: "Sigmoid"
+  top: "_middle3"
+  bottom: "_encode4neuron"
+}
+layer {
+  name: "_middle3"
+  type: "InnerProduct"
+  top: "_encode3neuron"
+  bottom: "_middle3"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 30
     weight_filler {
       type: "gaussian"
       std: 1
@@ -216,7 +280,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 20
     weight_filler {
       type: "gaussian"
       std: 1
