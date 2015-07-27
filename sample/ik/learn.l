@@ -330,10 +330,53 @@
    :size 0
    ))
 
+(defun test-redundancy-ik
+  (&key
+   (id (random 10000))
+   (joint-list (butlast (send *robot* :rarm :joint-list)))
+   (initialize-net? nil)
+   (redundancy (random 1.0))
+   input output c)
+  (if initialize-net?
+      (caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
+			   :caffemodel "redundancy_ik_net_iter_50000000.caffemodel"))
+  (caffe::db-open :path "target_lmdb_limb_coords")
+  (caffe::db-read id)
+  (setq input (caffe::db-get-float-data))
+  (caffe::db-close)
+  ;;
+  (setq input (concatenate float-vector input (float-vector redundancy)))
+  (setq output
+	(caffe::calc-forward-double
+	 :isize (length input) :osize (length joint-list)
+	 :num 1 :channels (length input) :width 1 :height 1
+	 :input input))
+  (map cons '(lambda (j av) (send j :joint-angle (rad2deg av)))
+       joint-list output)
+  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
+		       :rot (matrix-exponent (subseq input 3 6))))
+  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		:transform c :local))
+  (send *viewer* :draw-objects :flush nil)
+  (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+  (send *viewer* :viewsurface :flush)
+  (v- (subseq input 0 6)
+      (concatenate float-vector
+		   (scale 1e-3 (send (send (car (send *robot* :links)) :worldcoords)
+				     :difference-position
+				     (send *robot* :rarm :end-coords)))
+		   (send (send (car (send *robot* :links)) :worldcoords)
+				:difference-rotation
+				(send *robot* :rarm :end-coords))))
+  )
 
 #|
 
-(caffe::gen-net-image :net-path "ik_net.prototxt")
+(caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
+		     :caffemodel "redundancy_ik_net_iter_50000000.caffemodel")
 
-(caffe::initialize-solver :solver "ik_solver.prototxt" :solverstate "_iter_5000000.solverstate")
-(caffe::initialize-solver :solver "ik_solver.prototxt" :solverstate "ik_net_iter_5000000.solverstate")
+(caffe::calc-forward-double
+ :isize 7 :osize 7
+ :num 1 :channels 7 :width 1 :height 1
+ :input (float-vector -0.105524 0.0936122 0.250577 -0.603332 0.946547 1.00249
+		      0))
