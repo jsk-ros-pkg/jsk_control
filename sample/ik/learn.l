@@ -269,6 +269,7 @@
 	(target-path "target_lmdb_limb_coords")
 	(random-index-vector (random-index-vector sample-points))
 	(i 0)
+	(zero-str-length (length (format nil "~A" sample-points)))
 	)
   (caffe::db-set-id 0)
   (if (not (zerop (caffe::db-open :dtype "lmdb" :path target-path :mode #\n)))
@@ -300,13 +301,13 @@
 		(caffe::db-set-id 1)
 		(caffe::db-put-double
 		 :channels (length joint-list) :width 1 :height 1 :label i
-		 :id_str (caffe::zero-string (aref random-index-vector i))
+		 :id_str (caffe::zero-string (aref random-index-vector i) zero-str-length)
 		 :data (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
 		;;
 		(caffe::db-set-id 0)
 		(caffe::db-put-double
 		 :channels 6 :width 1 :height 1 :label i
-		 :id_str (caffe::zero-string (aref random-index-vector i))
+		 :id_str (caffe::zero-string (aref random-index-vector i) zero-str-length)
 		 :data (concatenate float-vector (scale 1e-3 pos) rot))
 		(setq i (+ i 1))))
 	     (t
