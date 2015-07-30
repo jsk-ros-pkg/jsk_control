@@ -35,7 +35,8 @@ add_library(jsk_footstep_planner
   src/ann_grid.cpp
   src/pointcloud_model_generator.cpp
   src/transition_limit.cpp
-  src/footstep_planner.cpp)
+  src/footstep_planner.cpp
+  src/line2d.cpp)
 
 add_executable(sample_simple_graph demo/sample_simple_graph.cpp)
 target_link_libraries(sample_simple_graph jsk_footstep_planner)

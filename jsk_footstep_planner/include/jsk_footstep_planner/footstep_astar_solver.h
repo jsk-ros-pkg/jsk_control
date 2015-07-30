@@ -199,10 +199,24 @@ namespace jsk_footstep_planner
         copied_open_list.pop();
       }
     }
+
+    void addToOpenList(SolverNodePtr node)
+    {
+      if (node->isRoot()) {
+        BestFirstSearchSolver<GraphT>::addToOpenList(node);
+      }
+      else {
+        if (node->getState()->crossCheck(
+              node->getParent()->getState())) {
+          BestFirstSearchSolver<GraphT>::addToOpenList(node);
+        }
+      }
+    }
     
     using Solver<GraphT>::isOpenListEmpty;
     using Solver<GraphT>::popFromOpenList;
     using Solver<GraphT>::addToOpenList;
+    using BestFirstSearchSolver<GraphT>::addToOpenList;
     using AStarSolver<GraphT>::gn;
     using AStarSolver<GraphT>::hn;
     
