@@ -206,7 +206,7 @@ layer {
   type: "Slice"
   bottom: "redundancy_coords"
   top: "coords"
-  top: "_dev_null"
+  top: "redundancy"
   slice_param {
     slice_point: 6
   }
@@ -235,10 +235,23 @@ layer {
   top: "loss"
 }
 layer {
+  name: "normalized_redundancy"
+  type: "Sigmoid"
+  bottom: "redundancy"
+  top: "normalized_redundancy"
+}
+layer {
+  name: "concate"
+  type: "Concatenate"
+  bottom: "coords"
+  bottom: "normalized_redundancy"
+  top: "redundancy_coords2"
+}
+layer {
   name: "_redundancy_coords"
   type: "InnerProduct"
   top: "_redundancy_coords"
-  bottom: "redundancy_coords"
+  bottom: "redundancy_coords2"
   param {
     lr_mult: 1
     decay_mult: 1
