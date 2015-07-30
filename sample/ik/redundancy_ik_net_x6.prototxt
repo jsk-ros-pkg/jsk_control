@@ -242,7 +242,7 @@ layer {
 }
 layer {
   name: "concate"
-  type: "Concatenate"
+  type: "Concat"
   bottom: "coords"
   bottom: "normalized_redundancy"
   top: "redundancy_coords2"
