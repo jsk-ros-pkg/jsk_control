@@ -1,0 +1,9 @@
+<launch>
+  <arg name="INPUT" default="/latest_heightmap/output" />
+  <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
+    <remap from="~input" to="$(arg INPUT)" />
+  </node>
+  <node pkg="image_view" type="image_view" name="heightmap_view">
+    <remap from="image" to="colorize_heightmap/output" />
+  </node>
+</launch>
