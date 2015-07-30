@@ -1,0 +1,71 @@
+<launch>
+  <arg name="STATIC_FRAME" default="odom" />
+  <arg name="ROBOT_FRAME" default="BODY" /> <!--it's not good-->
+  <arg name="INPUT" default="/distance_filtered_laser_snapshots/output_cloud" />
+  <arg name="DEBUG_VIEW" default="false" />
+  <node pkg="jsk_topic_tools" type="standalone_complexed_nodelet" name="heightmap_nodelet"
+        output="screen">
+    <rosparam subst_value="true">
+      nodelets:
+        - name: robot_center_pointcloud
+          type: jsk_pcl/TfTransformCloud
+          remappings:
+            - from: ~input
+              to: $(arg INPUT)
+        - name: latest_heightmap
+          type: jsk_pcl/HeightmapConverter
+          remappings:
+            - from: ~input
+              to: robot_center_pointcloud/output
+        - name: latest_complete_heightmap
+          type: jsk_pcl/HeightmapMorphologicalFiltering
+          remappings:
+            - from: ~input
+              to: latest_heightmap/output
+        - name: accumulated_heightmap
+          type: jsk_pcl/HeightmapTimeAccumulation
+          remappings:
+            - from: ~input
+              to: latest_complete_heightmap/output
+            - from: ~input/prev_pointcloud
+              to: accumulated_heightmap_pointcloud/output
+        - name: accumulated_heightmap_pointcloud
+          type: jsk_pcl/HeightmapToPointCloud
+          remappings:
+            - from: ~input
+              to: accumulated_heightmap/output
+    </rosparam>
+  </node>
+  <rosparam param="robot_center_pointcloud" subst_value="true">
+    target_frame_id: $(arg ROBOT_FRAME)
+  </rosparam>
+  <rosparam param="latest_heightmap" subst_value="true">
+    min_x: -4.0
+    max_x: 4.0
+    min_y: -4.0
+    max_y: 4.0
+    resolution_x: 800
+    resolution_y: 800
+  </rosparam>
+  <rosparam param="accumulated_heightmap" subst_value="true">
+    center_frame_id: $(arg ROBOT_FRAME)
+    fixed_frame_id: $(arg STATIC_FRAME)
+  </rosparam>
+  <group if="$(arg DEBUG_VIEW)" ns="heightmap_visualization">
+    <group ns="latest">
+      <include file="$(find jsk_footstep_planner)/launch/heightmap_perception/heightmap_viewer.launch">
+        <arg name="INPUT" value="/latest_heightmap/output" />
+      </include>
+    </group>
+    <group ns="filtered">
+      <include file="$(find jsk_footstep_planner)/launch/heightmap_perception/heightmap_viewer.launch">
+        <arg name="INPUT" value="/latest_complete_heightmap/output" />
+      </include>
+    </group>
+    <group ns="accumulated">
+      <include file="$(find jsk_footstep_planner)/launch/heightmap_perception/heightmap_viewer.launch">
+        <arg name="INPUT" value="/accumulated_heightmap/output" />
+      </include>
+    </group>
+  </group>
+</launch>
