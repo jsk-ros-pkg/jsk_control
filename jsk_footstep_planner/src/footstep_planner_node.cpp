@@ -37,6 +37,7 @@
 
 int main(int argc, char** argv)
 {
+  pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
   ros::init(argc, argv, "footstep_planner");
   ros::NodeHandle pnh("~");
   jsk_footstep_planner::FootstepPlanner planner(pnh);
