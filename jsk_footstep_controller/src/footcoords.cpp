@@ -71,7 +71,6 @@ namespace jsk_footstep_controller
     pnh.param("parent_frame_id", parent_frame_id_, std::string("odom"));
     pnh.param("midcoords_frame_id", midcoords_frame_id_, std::string("ground"));
     pnh.param("root_frame_id", root_frame_id_, std::string("BODY"));
-    pnh.param("odom_root_frame_id", odom_root_frame_id_, std::string("odom_root"));
     pnh.param("lfoot_frame_id", lfoot_frame_id_,
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
@@ -899,7 +898,7 @@ namespace jsk_footstep_controller
   void Footcoords::publishTF(const ros::Time& stamp)
   {
     // publish midcoords_ and ground_cooords_
-    geometry_msgs::TransformStamped ros_midcoords, ros_ground_coords, ros_odom_root_coords, ros_odom_to_body_coords;
+    geometry_msgs::TransformStamped ros_midcoords, ros_ground_coords, ros_odom_to_body_coords;
 
     // ros_midcoords: ROOT -> ground
     // ros_ground_coords: odom -> odom_on_ground = identity
@@ -912,11 +911,8 @@ namespace jsk_footstep_controller
     ros_midcoords.header.frame_id = root_frame_id_;
     ros_midcoords.child_frame_id = midcoords_frame_id_;
     ros_ground_coords.header.stamp = stamp;
-    ros_ground_coords.header.frame_id = odom_root_frame_id_;
+    ros_ground_coords.header.frame_id = parent_frame_id_;
     ros_ground_coords.child_frame_id = output_frame_id_;
-    ros_odom_root_coords.header.stamp = stamp;
-    ros_odom_root_coords.header.frame_id = parent_frame_id_;
-    ros_odom_root_coords.child_frame_id = odom_root_frame_id_;
     ros_odom_to_body_coords.header.stamp = stamp;
     ros_odom_to_body_coords.header.frame_id = parent_frame_id_;
     ros_odom_to_body_coords.child_frame_id = root_frame_id_;
@@ -924,12 +920,10 @@ namespace jsk_footstep_controller
     Eigen::Affine3d identity = Eigen::Affine3d::Identity();
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
     tf::transformEigenToMsg(identity, ros_ground_coords.transform);
-    tf::transformEigenToMsg(identity, ros_odom_root_coords.transform);
     tf::transformEigenToMsg(identity, ros_ground_coords.transform);
     tf::transformEigenToMsg(odom_pose_, ros_odom_to_body_coords.transform);
     std::vector<geometry_msgs::TransformStamped> tf_transforms;
     tf_transforms.push_back(ros_midcoords);
-    tf_transforms.push_back(ros_odom_root_coords);
     tf_transforms.push_back(ros_ground_coords);
     tf_transforms.push_back(ros_odom_to_body_coords);
     tf_broadcaster_.sendTransform(tf_transforms);
