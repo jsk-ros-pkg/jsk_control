@@ -228,11 +228,11 @@ layer {
   }
 }
 layer {
-  name: "loss"
+  name: "_loss"
   type: "EuclideanLoss"
   bottom: "coords"
   bottom: "target"
-  top: "loss"
+  top: "_loss"
 }
 layer {
   name: "normalized_redundancy"
@@ -241,9 +241,21 @@ layer {
   top: "normalized_redundancy"
 }
 layer {
+  name: "reshape"
+  type: "Reshape"
+  bottom: "target"
+  top: "target2"
+  reshape_param {
+    shape {
+        dim: 0  # copy the dimension from below
+        dim: -1 # infer it from the other dimensions
+    }
+  }
+}
+layer {
   name: "concate"
   type: "Concat"
-  bottom: "coords"
+  bottom: "target2"
   bottom: "normalized_redundancy"
   top: "redundancy_coords2"
 }
@@ -434,9 +446,9 @@ layer {
   }
 }
 layer {
-  name: "_loss"
+  name: "loss"
   type: "EuclideanLoss"
   bottom: "output"
   bottom: "input"
-  top: "loss_"
+  top: "loss"
 }
