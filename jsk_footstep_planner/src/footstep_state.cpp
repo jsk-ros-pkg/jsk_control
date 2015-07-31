@@ -168,18 +168,20 @@ namespace jsk_footstep_planner
     // TODO: z is ignored
     // extract candidate points
     //pcl::PointIndices::Ptr indices = cropPointCloud(cloud_2d, tree_2d);
-    pcl::PointIndices::Ptr indices = cropPointCloud(cloud, grid_search);
-    if (indices->indices.size() < min_inliers) {
-      error_state = projection_state::no_enough_inliers;
-      return FootstepState::Ptr();
-    }
     // Before computing, check is it supported or not to omit recognition
+    pcl::PointIndices::Ptr indices;
     FootstepSupportState presupport_state;
     if (skip_cropping) {
       presupport_state = isSupportedByPointCloudWithoutCrpping(
         pose_, cloud, tree,
         indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
     }
+    indices = cropPointCloud(cloud, grid_search);
+    if (indices->indices.size() < min_inliers) {
+      error_state = projection_state::no_enough_inliers;
+      return FootstepState::Ptr();
+    }
+
     else {
       presupport_state = isSupportedByPointCloud(
         pose_, cloud, tree,
@@ -218,16 +220,25 @@ namespace jsk_footstep_planner
       if (!plane.isSameDirection(z)) {
         plane = plane.flip();
       }
-
       Eigen::Vector3f n = plane.getNormal();
-      Eigen::Quaternionf rot;
-      rot.setFromTwoVectors(pose_.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitZ(), n);
-      Eigen::Quaternionf new_rot(pose_.matrix().block<3, 3>(0, 0) * rot);
+      Eigen::Vector3f x = pose_.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX();
+      if (acos(n.dot(x)) == 0) {
+        error_state = projection_state::vertical_footstep;
+        return FootstepState::Ptr();
+      }
+      Eigen::Vector3f rotation_axis = n.cross(x);
+      Eigen::Vector3f new_x = Eigen::AngleAxisf(M_PI / 2.0, rotation_axis) * n;
+      if (acos(new_x.dot(x)) > M_PI / 2.0) {
+        new_x = - new_x;
+      }
+      Eigen::Vector3f new_y = n.cross(new_x);
+      Eigen::Matrix3f new_rot_mat;
+      new_rot_mat << new_x, new_y, n;
+      Eigen::Quaternionf new_rot(new_rot_mat);
       Eigen::Vector3f p(pose_.translation());
       double alpha = (- plane.getD() - n.dot(p)) / (n.dot(z));
       Eigen::Vector3f q = p + alpha * z;
       Eigen::Affine3f new_pose = Eigen::Translation3f(q) * new_rot;
-      
       // check is it enough points to support the footstep
       FootstepSupportState support_state;
       if (skip_cropping) {
