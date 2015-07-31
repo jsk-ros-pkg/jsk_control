@@ -16,10 +16,10 @@ layer {
   }
 }
 layer {
-  name: "ip"
+  name: "ip1"
   type: "InnerProduct"
   bottom: "input"
-  top: "ip"
+  top: "ip1"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -42,16 +42,16 @@ layer {
   }
 }
 layer {
-  name: "encode1neuron"
+  name: "sigmoid1"
   type: "Sigmoid"
-  bottom: "ip"
-  top: "encode1neuron"
+  bottom: "ip1"
+  top: "sigmoid1"
 }
 layer {
-  name: "middle1"
+  name: "ip2"
   type: "InnerProduct"
-  bottom: "encode1neuron"
-  top: "middle1"
+  bottom: "sigmoid1"
+  top: "ip2"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -74,48 +74,16 @@ layer {
   }
 }
 layer {
-  name: "encode2neuron"
+  name: "sigmoid2"
   type: "Sigmoid"
-  bottom: "middle1"
-  top: "encode2neuron"
+  bottom: "ip2"
+  top: "sigmoid2"
 }
 layer {
-  name: "middle2"
+  name: "ip3"
   type: "InnerProduct"
-  bottom: "encode2neuron"
-  top: "middle2"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 1
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 20
-    weight_filler {
-      type: "gaussian"
-      std: 1
-      sparse: 1
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "encode3neuron"
-  type: "Sigmoid"
-  bottom: "middle2"
-  top: "encode3neuron"
-}
-layer {
-  name: "middle3"
-  type: "InnerProduct"
-  bottom: "encode3neuron"
-  top: "middle3"
+  bottom: "sigmoid2"
+  top: "ip3"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -138,15 +106,15 @@ layer {
   }
 }
 layer {
-  name: "encode4neuron"
+  name: "sigmoid3"
   type: "Sigmoid"
-  bottom: "middle3"
-  top: "encode4neuron"
+  bottom: "ip3"
+  top: "sigmoid3"
 }
 layer {
   name: "redundancy_coords"
   type: "InnerProduct"
-  bottom: "encode4neuron"
+  bottom: "sigmoid3"
   top: "redundancy_coords"
   param {
     lr_mult: 1
@@ -174,7 +142,7 @@ layer {
   type: "Slice"
   bottom: "redundancy_coords"
   top: "coords"
-  top: "aredundancy"
+  top: "redundancy"
   slice_param {
     slice_point: 6
   }
@@ -196,17 +164,42 @@ layer {
   }
 }
 layer {
-  name: "loss"
+  name: "_loss"
   type: "EuclideanLoss"
   bottom: "coords"
   bottom: "target"
-  top: "loss"
+  top: "_loss"
+}
+layer {
+  name: "normalized_redundancy"
+  type: "Sigmoid"
+  bottom: "redundancy"
+  top: "normalized_redundancy"
+}
+layer {
+  name: "reshape"
+  type: "Reshape"
+  bottom: "target"
+  top: "target2"
+  reshape_param {
+    shape {
+        dim: 0  # copy the dimension from below
+        dim: -1 # infer it from the other dimensions
+    }
+  }
+}
+layer {
+  name: "concate"
+  type: "Concat"
+  bottom: "target2"
+  bottom: "normalized_redundancy"
+  top: "redundancy_coords2"
 }
 layer {
   name: "_redundancy_coords"
   type: "InnerProduct"
-  top: "_encode4neuron"
-  bottom: "redundancy_coords"
+  top: "_redundancy_coords"
+  bottom: "redundancy_coords2"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -229,16 +222,16 @@ layer {
   }
 }
 layer {
-  name: "_encode4neuron"
+  name: "_sigmoid3"
   type: "Sigmoid"
-  top: "_middle3"
-  bottom: "_encode4neuron"
+  top: "_sigmoid3"
+  bottom: "_redundancy_coords"
 }
 layer {
-  name: "_middle3"
+  name: "_ip3"
   type: "InnerProduct"
-  top: "_encode3neuron"
-  bottom: "_middle3"
+  top: "_ip3"
+  bottom: "_sigmoid3"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -261,48 +254,16 @@ layer {
   }
 }
 layer {
-  name: "_encode3neuron"
+  name: "_sigmoid2"
   type: "Sigmoid"
-  top: "_middle2"
-  bottom: "_encode3neuron"
+  top: "_sigmoid2"
+  bottom: "_ip3"
 }
 layer {
-  name: "_middle2"
+  name: "_ip2"
   type: "InnerProduct"
-  top: "_encode2neuron"
-  bottom: "_middle2"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 1
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 20
-    weight_filler {
-      type: "gaussian"
-      std: 1
-      sparse: 1
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "_encode2neuron"
-  type: "Sigmoid"
-  top: "_middle1"
-  bottom: "_encode2neuron"
-}
-layer {
-  name: "_middle1"
-  type: "InnerProduct"
-  top: "_encode1neuron"
-  bottom: "_middle1"
+  top: "_ip2"
+  bottom: "_sigmoid2"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -325,16 +286,16 @@ layer {
   }
 }
 layer {
-  name: "_encode1neuron"
+  name: "_sigmoid1"
   type: "Sigmoid"
-  top: "_ip"
-  bottom: "_encode1neuron"
+  top: "_sigmoid1"
+  bottom: "_ip2"
 }
 layer {
-  name: "_ip"
+  name: "_ip1"
   type: "InnerProduct"
   top: "output"
-  bottom: "_ip"
+  bottom: "_sigmoid1"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -357,9 +318,9 @@ layer {
   }
 }
 layer {
-  name: "_loss"
+  name: "loss"
   type: "EuclideanLoss"
   bottom: "output"
   bottom: "input"
-  top: "loss_"
+  top: "loss"
 }

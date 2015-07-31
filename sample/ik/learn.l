@@ -324,12 +324,170 @@
     (caffe::db-set-id 1) (caffe::db-close)
     ))
 
+(defun gen-redundancy-ik-learning-data2-once
+  (&key (sep 3)
+	(joint-list (butlast (send *robot* :rarm :joint-list)))
+	(sample-points (expt sep (length joint-list)))
+	(draw? nil)
+	;;
+	(i 0)
+	(zero-str-length (length (format nil "~A" sample-points)))
+	(target-coords (make-coords :pos (float-vector 230.357 -298.274 1024.051)
+				    :rpy '(0.066 -0.021 -0.084)))
+	)
+  (labels ((itter
+	    (jlist)
+	    (cond
+	     ((null jlist)
+	      (let* (pos rot prev)
+		(send-all (send *robot* :links) :worldcoords)
+		(setq prev (send-all joint-list :joint-angle))
+		(cond
+		 ((send *robot* :rarm :inverse-kinematics target-coords :warnp nil)
+		  (send *robot* :rarm :end-coords :worldcoords)
+		  (cond
+		   (draw?
+		    (send *viewer* :draw-objects :flush nil)
+		    (send (send *robot* :rarm :end-coords :worldcoords) :draw-on :flush nil
+			  :color (float-vector 1 0 0) :size 100)
+		    (send *viewer* :viewsurface :flush)))
+		  (setq pos (send (send (car (send *robot* :links)) :worldcoords)
+				  :difference-position
+				  target-coords))
+		  (setq rot (send (send (car (send *robot* :links)) :worldcoords)
+				  :difference-rotation
+				  target-coords))
+		  ;;
+		  (caffe::db-set-id 1)
+		  (caffe::db-put-double
+		   :channels (length joint-list) :width 1 :height 1 :label i
+		   :id_str (caffe::zero-string i zero-str-length)
+		   :data (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
+		  ;;
+		  (caffe::db-set-id 0)
+		  (caffe::db-put-double
+		   :channels 6 :width 1 :height 1 :label i
+		   :id_str (caffe::zero-string i zero-str-length)
+		   :data (concatenate float-vector (scale 1e-3 pos) rot))
+		  (setq i (+ i 1))
+		  (mapcar '(lambda (j av) (send j :joint-angle av))
+			  joint-list prev)
+		  ))))
+	     (t
+	      (dotimes (j sep)
+		(send (car jlist) :joint-angle
+		      (+ (send (car jlist) :min-angle)
+			 (* (/ j (- sep 1.0))
+			    (- (send (car jlist) :max-angle)
+			       (send (car jlist) :min-angle)))))
+		(itter (cdr jlist))))
+	     )))
+    (itter joint-list)
+    i
+    ))
+
+(defun gen-redundancy-ik-learning-data2
+  (&key (sep 3)
+	(joint-list (butlast (send *robot* :rarm :joint-list)))
+	(sample-points (* (expt sep (length joint-list))
+			  (expt sep (length joint-list))))
+	(draw? nil)
+	;;
+	(input-path "input_lmdb_potentio")
+	(target-path "target_lmdb_limb_coords")
+	(i 0)
+	(zero-str-length (length (format nil "~A" sample-points)))
+	)
+  (caffe::db-set-id 0)
+  (if (not (zerop (caffe::db-open :dtype "lmdb" :path target-path :mode #\n)))
+      (return-from gen-redundancy-ik-learning-data2 (print 'db-open-failed)))
+  (caffe::db-set-id 1)
+  (if (not (zerop (caffe::db-open :dtype "lmdb" :path input-path :mode #\n)))
+      (return-from gen-redundancy-ik-learning-data2 (print 'db-open-failed)))
+  ;;
+  (labels ((itter
+	    (jlist)
+	    (cond
+	     ((null jlist)
+	      (send-all (send *robot* :links) :worldcoords)
+	      (send *robot* :rarm :end-coords :worldcoords)
+	      (setq i (apply
+		       'gen-redundancy-ik-learning-data2-once
+		       (append (list :i i
+				     :sample-points (expt sep (length joint-list))
+				     :sep sep
+				     :joint-list joint-list
+				     :zero-str-length zero-str-length
+				     :draw? draw?
+				     :target-coords (send *robot* :rarm :end-coords :copy-worldcoords)
+				     )
+			       nil)))
+	      )
+	     (t
+	      (dotimes (j sep)
+		(send (car jlist) :joint-angle
+		      (+ (send (car jlist) :min-angle)
+			 (* (/ j (- sep 1.0))
+			    (- (send (car jlist) :max-angle)
+			       (send (car jlist) :min-angle)))))
+		(itter (cdr jlist))))
+	     )))
+    (itter joint-list)
+    (caffe::db-set-id 0) (caffe::db-close)
+    (caffe::db-set-id 1) (caffe::db-close)
+    ;;
+    ;; swap
+    (caffe::db-set-id 0)
+    (caffe::db-open :dtype "lmdb" :path target-path :mode #\w)
+    (caffe::db-set-id 1)
+    (caffe::db-open :dtype "lmdb" :path input-path :mode #\w)
+    (caffe::db-random-swap (* 7 i) :size i)
+    (caffe::db-set-id 0) (caffe::db-close)
+    (caffe::db-set-id 1) (caffe::db-close)
+    ))
+
 (defun redundancy-ik-learn
   nil
   (caffe::learn
    :solver "redundancy_ik_solver.prototxt"
    :size 0
    ))
+
+(defun ik-db-test
+  (&key
+   (id (random 1000))
+   (input-path "input_lmdb_potentio")
+   (target-path "target_lmdb_limb_coords")
+   input target c)
+  (caffe::db-open :path target-path)
+  (caffe::db-read id)
+  (setq input (caffe::db-get-float-data))
+  (caffe::db-close)
+  ;;
+  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
+		       :rot (matrix-exponent (subseq input 3 6))))
+  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		:transform c :local))
+  ;;
+  (caffe::db-open :path input-path)
+  (caffe::db-read id)
+  (setq output (caffe::db-get-float-data))
+  (caffe::db-close)
+  (map cons '(lambda (av j) (send j :joint-angle (rad2deg av)))
+       output (send *robot* :rarm :joint-list))
+  ;;
+  (send *viewer* :draw-objects :flush nil)
+  (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+  (send *viewer* :viewsurface :flush)
+  (v- (subseq input 0 6)
+      (concatenate float-vector
+		   (scale 1e-3 (send (send (car (send *robot* :links)) :worldcoords)
+				     :difference-position
+				     (send *robot* :rarm :end-coords)))
+		   (send (send (car (send *robot* :links)) :worldcoords)
+				:difference-rotation
+				(send *robot* :rarm :end-coords))))
+  )
 
 (defun test-redundancy-ik
   (&key
