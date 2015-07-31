@@ -1,0 +1,18 @@
+<launch>
+  <node pkg="jsk_footstep_planner"
+        type="footstep-planner-node.l"
+        name="footstep_planner"
+        clear_params="true"
+        output="screen">
+    <rosparam>
+    x:     [-0.039375,0.0525,0.0525,0.027176,-0.027176,-0.08,0.0,0.0,0.075,0.15,0.0]
+    y:     [0.2475,0.26,0.26,0.206422,0.206422,0.21,0.27,0.19,0.21,0.21,0.21]
+    theta: [0.174533,-0.20944,0.20944,-0.261799,0.261799,0.0,0.0,0.0,0.0,0.0,0.0]
+    </rosparam>
+  </node>
+  <node pkg="jsk_footstep_planner"
+        type="footstep-planner-client-sample.l"
+        name="footstep_planner_client"
+        output="screen">
+  </node>
+</launch>

@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="rviz" type="rviz" name="footstep_successors_rviz"
+        args="-d $(find jsk_footstep_planner)/config/footstep_successors.rviz"
+        />
+</launch>
