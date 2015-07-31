@@ -38,6 +38,7 @@
 #include <jsk_topic_tools/rosparam_utils.h>
 #include <jsk_pcl_ros/pcl_conversion_util.h>
 #include <pcl/common/angles.h>
+#include <boost/format.hpp>
 
 namespace jsk_footstep_planner
 {
@@ -49,6 +50,8 @@ namespace jsk_footstep_planner
     typename dynamic_reconfigure::Server<Config>::CallbackType f =
       boost::bind (&FootstepPlanner::configCallback, this, _1, _2);
     srv_->setCallback (f);
+    pub_text_ = nh.advertise<jsk_rviz_plugins::OverlayText>(
+      "text", 1, true);
     pub_close_list_ = nh.advertise<sensor_msgs::PointCloud2>(
       "close_list", 1, true);
     pub_open_list_ = nh.advertise<sensor_msgs::PointCloud2>(
@@ -170,9 +173,12 @@ namespace jsk_footstep_planner
       }
     }
     JSK_ROS_ERROR("Failed to project footprint");
+    publishText(pub_text_,
+                "Failed to project goal",
+                ERROR);
     return false;
   }
-  
+
   bool FootstepPlanner::projectFootPrintService(
     jsk_interactive_marker::SnapFootPrint::Request& req,
     jsk_interactive_marker::SnapFootPrint::Response& res)
@@ -193,10 +199,54 @@ namespace jsk_footstep_planner
     }
     else {
       JSK_ROS_ERROR("Failed to project footprint");
+      publishText(pub_text_,
+                  "Failed to project goal",
+                  ERROR);
       return false;
     }
   }
-  
+
+  void FootstepPlanner::publishText(ros::Publisher& pub,
+                                    const std::string& text,
+                                    PlanningStatus status)
+  {
+    std_msgs::ColorRGBA ok_color;
+    ok_color.r = 0.3568627450980392;
+    ok_color.g = 0.7529411764705882;
+    ok_color.b = 0.8705882352941177;
+    ok_color.a = 1.0;
+    std_msgs::ColorRGBA warn_color;
+    warn_color.r = 0.9411764705882353;
+    warn_color.g = 0.6784313725490196;
+    warn_color.b = 0.3058823529411765;
+    warn_color.a = 1.0;
+    std_msgs::ColorRGBA error_color;
+    error_color.r = 0.8509803921568627;
+    error_color.g = 0.3254901960784314;
+    error_color.b = 0.30980392156862746;
+    error_color.a = 1.0;
+    std_msgs::ColorRGBA color;
+    if (status == OK) {
+      color = ok_color;
+    }
+    else if (status == WARNING) {
+      color = warn_color;
+    }
+    else if (status == ERROR) {
+      color = error_color;
+    }
+    jsk_rviz_plugins::OverlayText msg;
+    msg.text = text;
+    msg.width = 1000;
+    msg.height = 1000;
+    msg.top = 10;
+    msg.left = 10;
+    msg.bg_color.a = 0.0;
+    msg.fg_color = color;
+    msg.text_size = 24;
+    pub.publish(msg);
+  }
+
   void FootstepPlanner::planCB(
     const jsk_footstep_msgs::PlanFootstepsGoal::ConstPtr& goal)
   {
@@ -237,6 +287,10 @@ namespace jsk_footstep_planner
     if (project_start_state_) {
       if (!graph_->projectStart()) {
         JSK_ROS_ERROR("Failed to project start state");
+        publishText(pub_text_,
+                    "Failed to project start",
+                    ERROR);
+
         as_.setPreempted();
         return;
       }
@@ -270,6 +324,9 @@ namespace jsk_footstep_planner
       if (!graph_->projectGoal()) {
         JSK_ROS_ERROR("Failed to project goal");
         as_.setPreempted();
+        publishText(pub_text_,
+                    "Failed to project goal",
+                    ERROR);
         return;
       }
     }
@@ -325,22 +382,20 @@ namespace jsk_footstep_planner
       return;
     }
     solver.setProfileFunction(boost::bind(&FootstepPlanner::profile, this, _1, _2));
-    
     ros::WallTime start_time = ros::WallTime::now();
     std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(timeout);
     ros::WallTime end_time = ros::WallTime::now();
-    
-    JSK_ROS_INFO_STREAM("took " << (end_time - start_time).toSec() << " sec");
+    double planning_duration = (end_time - start_time).toSec();
+    JSK_ROS_INFO_STREAM("took " << planning_duration << " sec");
     JSK_ROS_INFO_STREAM("path: " << path.size());
-    
     if (path.size() == 0) {
       JSK_ROS_ERROR("Failed to plan path");
+      publishText(pub_text_,
+                  "Failed to plan",
+                  ERROR);
       as_.setPreempted();
       return;
     }
-    JSK_ROS_INFO_STREAM("planned path: " << path.size());
-    JSK_ROS_INFO_STREAM("took: " << (end_time - start_time).toSec() << " sec");
-    
     // Convert path to FootstepArray
     jsk_footstep_msgs::FootstepArray ros_path;
     ros_path.header = goal->goal_footstep.header;
@@ -364,9 +419,14 @@ namespace jsk_footstep_planner
     solver.closeListToPointCloud(close_list_cloud);
     publishPointCloud(close_list_cloud, pub_close_list_, goal->goal_footstep.header);
     publishPointCloud(open_list_cloud, pub_open_list_, goal->goal_footstep.header);
-    
+    publishText(pub_text_,
+                (boost::format("Planning took %f sec\n%lu path\nopen list: %lu\nclose list:%lu")
+                 % planning_duration % path.size()
+                 % open_list_cloud.points.size()
+                 % close_list_cloud.points.size()).str(),
+                OK);
   }
-  
+
   void FootstepPlanner::publishPointCloud(
     const pcl::PointCloud<pcl::PointNormal>& cloud,
     ros::Publisher& pub,
@@ -382,6 +442,10 @@ namespace jsk_footstep_planner
   {
     JSK_ROS_INFO("open list: %lu", solver.getOpenList().size());
     JSK_ROS_INFO("close list: %lu", solver.getCloseList().size());
+    publishText(pub_text_,
+                (boost::format("open_list: %lu\nclose list:%lu")
+                 % (solver.getOpenList().size()) % (solver.getCloseList().size())).str(),
+                OK);
     if (rich_profiling_) {
       pcl::PointCloud<pcl::PointNormal> close_list_cloud, open_list_cloud;
       solver.openListToPointCloud(open_list_cloud);
