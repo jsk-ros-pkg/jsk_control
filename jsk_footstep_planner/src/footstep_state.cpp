@@ -39,6 +39,7 @@
 
 #include <jsk_pcl_ros/pcl_conversion_util.h>
 #include <jsk_pcl_ros/geo_util.h>
+#include "jsk_footstep_planner/line2d.h"
 
 namespace jsk_footstep_planner
 {
@@ -147,6 +148,32 @@ namespace jsk_footstep_planner
     std::vector<float> distances;
     tree.radiusSearch(center, r, near_indices->indices, distances);
     return cropPointCloudExact(cloud, near_indices);
+  }
+
+  bool FootstepState::crossCheck(FootstepState::Ptr other)
+  {
+    Eigen::Vector3f a0, a1, a2, a3;
+    Eigen::Vector3f b0, b1, b2, b3;
+    vertices(a0, a1, a2, a3);
+    other->vertices(b0, b1, b2, b3);
+    Line2D a_01(a0, a1), a_12(a1, a2), a_23(a2, a3), a_30(a3, a0);
+    Line2D b_01(b0, b1), b_12(b1, b2), b_23(b2, b3), b_30(b3, b0);
+    return !(a_01.isCrossing(b_01) ||
+             a_01.isCrossing(b_12) ||
+             a_01.isCrossing(b_23) ||
+             a_01.isCrossing(b_30) ||
+             a_12.isCrossing(b_01) ||
+             a_12.isCrossing(b_12) ||
+             a_12.isCrossing(b_23) ||
+             a_12.isCrossing(b_30) ||
+             a_23.isCrossing(b_01) ||
+             a_23.isCrossing(b_12) ||
+             a_23.isCrossing(b_23) ||
+             a_23.isCrossing(b_30) ||
+             a_30.isCrossing(b_01) ||
+             a_30.isCrossing(b_12) ||
+             a_30.isCrossing(b_23) ||
+             a_30.isCrossing(b_30));
   }
   
   FootstepState::Ptr

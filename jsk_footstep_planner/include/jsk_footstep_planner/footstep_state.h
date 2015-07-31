@@ -150,6 +150,27 @@ namespace jsk_footstep_planner
       p.getVector3fMap() = Eigen::Vector3f(pose_.translation());
       return p;
     }
+
+    inline void vertices(Eigen::Vector3f& a,
+                         Eigen::Vector3f& b,
+                         Eigen::Vector3f& c,
+                         Eigen::Vector3f& d)
+    {
+      const Eigen::Vector3f ux = Eigen::Vector3f::UnitX();
+      const Eigen::Vector3f uy = Eigen::Vector3f::UnitY();
+
+      a = Eigen::Vector3f((pose_ * Eigen::Translation3f(ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
+      b = Eigen::Vector3f((pose_ * Eigen::Translation3f(- ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
+      c = Eigen::Vector3f((pose_ * Eigen::Translation3f(- ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
+      d = Eigen::Vector3f((pose_ * Eigen::Translation3f(ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
+
+    }
+    
+    /**
+     * @brief
+     * return true if this and other are collision free.
+     */
+    virtual bool crossCheck(FootstepState::Ptr other);
     
     virtual Eigen::Affine3f getPose() { return pose_; }
     virtual void setPose(const Eigen::Affine3f& pose)
