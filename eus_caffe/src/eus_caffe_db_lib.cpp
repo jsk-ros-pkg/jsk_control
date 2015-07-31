@@ -32,6 +32,7 @@ public:
       std::cout << " -- read mode" << std::endl;
       mode = caffe::db::READ;
     }
+    // file check
     if (mode == caffe::db::NEW && path && file_exist==0){
       std::cout << "unable to create file " << path << std::endl;
       return 1;
@@ -40,6 +41,7 @@ public:
       return 1;
     }
     //
+    // db open
     if ( this->db_ ){
       this->db_.reset(caffe::db::GetDB(db_type));
     } else {
@@ -47,28 +49,35 @@ public:
     }
     this->db_->Open(path, mode);
     //
+    // transaction initialize
     if ( mode == caffe::db::NEW || mode == caffe::db::WRITE ){
       if ( this->txn_ ){
 	this->txn_.reset(this->db_->NewTransaction());
       } else {
 	this->txn_ = std::shared_ptr<caffe::db::Transaction>(this->db_->NewTransaction());
       }
-      if ( this->cursor_ ) {
-	this->cursor_.reset();
-	this->cursor_ = NULL;
-      }
     } else { // read mode
+      if ( this->txn_ ) {
+	this->txn_.reset();
+	this->txn_ = NULL;
+      }
+    }
+    //
+    // cursor initialize
+    if ( mode == caffe::db::READ || mode == caffe::db::WRITE ){
       if ( this->cursor_ ){
 	this->cursor_.reset(this->db_->NewCursor());
       } else {
 	this->cursor_ = std::shared_ptr<caffe::db::Cursor>(this->db_->NewCursor());
       }
       this->read(0);
-      if ( this->txn_ ) {
-	this->txn_.reset();
-	this->txn_ = NULL;
+    } else {
+      if ( this->cursor_ ) {
+	this->cursor_.reset();
+	this->cursor_ = NULL;
       }
     }
+    //
     return 0;
   }
 
@@ -134,6 +143,11 @@ public:
     return val.size();
   }
 
+  int get_label(){
+    assert(this->cursor_);
+    return this->datum_.label();
+  }
+
   int get_shape(double* ret){
     assert(this->cursor_);
     ret[0] = this->datum_.channels();
@@ -143,6 +157,7 @@ public:
   }
 
   int dump_datum(){
+    assert(this->cursor_);
     std::cout << "key  : " << this->cursor_->key() << std::endl;
     std::cout << "label: " << this->datum_.label() << std::endl;
     std::cout << "data : " << this->datum_.data() << std::endl;
@@ -238,6 +253,7 @@ extern "C" {
   int eus_caffe_db_dump(){ return ecd->dump_datum() ; }
   int eus_caffe_db_get_shape(double* ret){ return ecd->get_shape(ret) ; }
   int eus_caffe_db_get_data(char* ret){ return ecd->get_data(ret) ; }
+  int eus_caffe_db_get_label(){ return ecd->get_label() ; }
   int eus_caffe_db_get_float_data(double* ret){ return ecd->get_float_data(ret) ; }
   int eus_caffe_db_get_key(char* ret){ return ecd->get_key(ret) ; }
   int eus_caffe_db_get_data_size(){ return ecd->get_data_size() ; }
