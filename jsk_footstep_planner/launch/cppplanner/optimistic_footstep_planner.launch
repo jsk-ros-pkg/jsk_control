@@ -1,0 +1,163 @@
+<launch>
+  <node pkg="dynamic_tf_publisher" type="tf_publish.py" name="dynamic_tf_publisher">
+    <param name="use_cache" type="bool" value="false"/>
+  </node>
+
+  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen"
+        respawn="true">
+    <remap from="~pointcloud_model" to="accumulated_heightmap_pointcloud_static/output" />
+    <rosparam>
+      use_pointcloud_model: true
+      use_lazy_perception: true
+      use_local_movement: true
+      use_transition_limit: true
+      project_start_state: true
+      project_goal_state: true
+    </rosparam>
+    <rosparam>
+      footstep_size_x: 0.2
+      footstep_size_y: 0.1
+    </rosparam>
+    <!-- successors -->
+    <rosparam>
+      successors:
+      - x: 0
+        y: -0.2
+        theta: 0
+      - x: 0
+        y: -0.3
+        theta: 0
+      - x: 0
+        y: -0.15
+        theta: 0
+      - x: 0.2
+        y: -0.2
+        theta: 0
+      - x: 0.25
+        y: -0.2
+        theta: 0
+      - x: 0.3
+        y: -0.2
+        theta: 0
+      - x: 0.1
+        y: -0.2
+        theta: 0
+      - x: -0.1
+        y: -0.2
+        theta: 0
+      - x: 0
+        y: -0.2
+        theta: 0.17
+      - x: 0
+        y: -0.3
+        theta: 0.17
+      - x: 0.2
+        y: -0.2
+        theta: 0.17
+      - x: 0.25
+        y: -0.2
+        theta: 0.17
+      - x: 0.1
+        y: -0.2
+        theta: 0.17
+      - x: 0
+        y: -0.2
+        theta: -0.17
+      - x: 0
+        y: -0.3
+        theta: -0.17
+      - x: 0.2
+        y: -0.2
+        theta: -0.17
+      - x: 0.25
+        y: -0.2
+        theta: -0.17
+      - x: 0.1
+        y: -0.2
+        theta: -0.17
+    </rosparam>
+  </node>
+
+    <!-- marker -->
+  <node pkg="jsk_interactive_marker"
+        type="footstep_marker"
+        name="footstep_marker"
+        output="screen"
+        >
+    <!-- <remap from="move_marker" to="$(arg POSE_REMAP)" /> -->
+    <!-- <param name="wait_snapit_server" value="false" /> -->
+    <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
+    <remap from="project_footprint" to="/footstep_planner/project_footprint_with_local_search" />
+    <rosparam>
+        use_plane_snap: true
+        use_projection_service: true
+        use_projection_topic: false
+        use_footstep_planner: true
+        use_footstep_controller: false
+        use_initial_footstep_tf: true
+        use_initial_reference: true
+        initial_reference_frame: 'ground'
+        foot_size_x: 0.2
+        foot_size_y: 0.1
+        foot_size_z: 0.0001
+        frame_id: map
+    </rosparam>
+    <remap from="~snapped_pose" to="/urdf_control_marker/set_pose"/>
+  </node>
+  <!-- furutaractive marker! -->
+  <node pkg="jsk_topic_tools" type="lightweight_throttle" name="joint_states_throttle">
+    <remap from="~input" to="/joint_states_appended" />
+  </node>
+  <node pkg="jsk_interactive_marker"
+        type="urdf_model_marker"
+        name="urdf_model_marker"
+        output="screen">
+    <remap from="/robot_description" to="/robot_description" />
+    <remap from="/urdf_model_marker/robot/reset_joint_states" to="joint_states_throttle/output" />
+    <rosparam>
+      model_config:
+        - name: "robot"
+          frame-id: "/robot_marker_root"
+          robot: false
+          mode: "visualization"
+          # mode: "registration"
+          use_robot_description: true
+          scale: 1.0
+          pose:
+            position:
+              x: 0.0
+              y: 0.0
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.0
+              w: 1.0
+          offset:
+            position:
+              x: 0.0
+              y: 0.0
+              z: 0.0
+            orientation:
+              x: 0.0
+              y: 0.0
+              z: 0.0
+              w: 1.0
+          fixed_link:
+            - "lleg_end_coords"
+            - "rleg_end_coords"
+          display: true
+    </rosparam>
+    <param name="use_dynamic_tf" value="true"/>
+  </node>
+  <node pkg="jsk_interactive_marker" type="urdf_control_marker" name="urdf_control_marker" output="screen">
+    <param name="use_dynamic_tf" value="true"/>
+    <param name="move_2d" value="true"/>
+    <param name="frame_id" value="map"/>
+    <param name="marker_frame_id" value="robot_marker_root"/>
+  </node>
+
+  <node pkg="rviz" type="rviz" name="rviz"
+        launch-prefix="glc-capture"
+        args="-d $(find jsk_footstep_planner)/launch/cppplanner/footstep_planner.rviz" />
+</launch>
