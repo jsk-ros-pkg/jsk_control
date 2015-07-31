@@ -1,22 +1,41 @@
 <launch>
-  <arg name="STATIC_FRAME" default="odom" />
+  <arg name="STATIC_FRAME" default="map" />
   <arg name="ROBOT_FRAME" default="BODY" /> <!--it's not good-->
   <arg name="INPUT" default="/distance_filtered_laser_snapshots/output_cloud" />
-  <arg name="DEBUG_VIEW" default="false" />
+  <arg name="DEBUG_VIEW" default="true" />
   <node pkg="jsk_topic_tools" type="standalone_complexed_nodelet" name="heightmap_nodelet"
         output="screen">
     <rosparam subst_value="true">
       nodelets:
+        - name: map_origin_polygon
+          type: jsk_pcl/StaticPolygonArrayPublisher
+          remappings:
+            - from: ~input
+              to: robot_center_pointcloud/output
+        - name: map_origin_polygon_sampler
+          type: jsk_pcl/PolygonPointsSampler
+          remappings:
+            - from: ~input/polygons
+              to: map_origin_polygon/output_polygons
+            - from: ~input/coefficients
+              to: map_origin_polygon/output_coefficients
+        - name: robot_center_map_origin_points
+          type: jsk_pcl/TfTransformCloud
+          remappings:
+            - from: ~input
+              to: map_origin_polygon_sampler/output_xyz
         - name: robot_center_pointcloud
           type: jsk_pcl/TfTransformCloud
           remappings:
             - from: ~input
               to: $(arg INPUT)
+        - name: robot_center_pointcloud_with_map_origin_points
+          type: pcl/PointCloudConcatenateDataSynchronizer
         - name: latest_heightmap
           type: jsk_pcl/HeightmapConverter
           remappings:
             - from: ~input
-              to: robot_center_pointcloud/output
+              to: robot_center_pointcloud_with_map_origin_points/output
         - name: latest_complete_heightmap
           type: jsk_pcl/HeightmapMorphologicalFiltering
           remappings:
@@ -34,10 +53,28 @@
           remappings:
             - from: ~input
               to: accumulated_heightmap/output
+        - name: accumulated_heightmap_pointcloud_static
+          type: jsk_pcl/TfTransformCloud
+          remappings:
+            - from: ~input
+              to: accumulated_heightmap_pointcloud/output
     </rosparam>
   </node>
+  <rosparam param="map_origin_polygon" subst_value="true">
+    use_message: true
+    frame_ids: [$(arg STATIC_FRAME)]
+    polygon_array: [[[1.0, 1.0, 0.0], [-1.0, 1.0, 0.0], [-1.0, -1.0, 0.0], [1.0, -1.0, 0.0]]]
+  </rosparam>
+  <rosparam param="robot_center_map_origin_points" subst_value="true">
+    target_frame_id: $(arg ROBOT_FRAME)
+  </rosparam>
   <rosparam param="robot_center_pointcloud" subst_value="true">
     target_frame_id: $(arg ROBOT_FRAME)
+  </rosparam>
+  <rosparam param="robot_center_pointcloud_with_map_origin_points" subst_value="true">
+    input_topics: ["/robot_center_pointcloud/output", "/robot_center_map_origin_points/output"]
+    output_frame: $(arg ROBOT_FRAME)
+    max_queue_size: 50
   </rosparam>
   <rosparam param="latest_heightmap" subst_value="true">
     min_x: -4.0
@@ -50,6 +87,9 @@
   <rosparam param="accumulated_heightmap" subst_value="true">
     center_frame_id: $(arg ROBOT_FRAME)
     fixed_frame_id: $(arg STATIC_FRAME)
+  </rosparam>
+  <rosparam param="accumulated_heightmap_pointcloud_static" subst_value="true">
+    target_frame_id: $(arg STATIC_FRAME)
   </rosparam>
   <group if="$(arg DEBUG_VIEW)" ns="heightmap_visualization">
     <group ns="latest">

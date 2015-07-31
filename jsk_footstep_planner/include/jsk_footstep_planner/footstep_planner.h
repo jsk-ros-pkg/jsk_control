@@ -46,6 +46,7 @@
 #include <jsk_footstep_planner/FootstepPlannerConfig.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <dynamic_reconfigure/server.h>
+#include <jsk_rviz_plugins/OverlayText.h>
 
 // footstep planning
 #include "jsk_footstep_planner/footstep_graph.h"
@@ -56,6 +57,11 @@
 
 namespace jsk_footstep_planner
 {
+
+  enum PlanningStatus
+  {
+    OK, WARNING, ERROR
+  };
   /**
    * @brief
    * Actionlib server for footstep planning
@@ -105,13 +111,16 @@ namespace jsk_footstep_planner
     virtual bool projectFootPrintWithLocalSearchService(
       jsk_interactive_marker::SnapFootPrint::Request& req,
       jsk_interactive_marker::SnapFootPrint::Response& res);
-    
+    virtual void publishText(ros::Publisher& pub,
+                             const std::string& text,
+                             PlanningStatus status);
     boost::mutex mutex_;
     actionlib::SimpleActionServer<jsk_footstep_msgs::PlanFootstepsAction> as_;
     jsk_footstep_msgs::PlanFootstepsResult result_;
     boost::shared_ptr <dynamic_reconfigure::Server<Config> > srv_;
     ros::Publisher pub_close_list_;
     ros::Publisher pub_open_list_;
+    ros::Publisher pub_text_;
     ros::Subscriber sub_pointcloud_model_;
     ros::ServiceServer srv_project_footprint_;
     ros::ServiceServer srv_project_footprint_with_local_search_;
