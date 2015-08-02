@@ -125,7 +125,7 @@ function convert_to_jpg (){
     mkdir -p $OUT;
     for p in `ls $ORG`;
     do
-	convert -resize 128x128! $ORG/$p $OUT/$ID.jpg;
+	convert -resize 64x64! $ORG/$p $OUT/$ID.jpg;
 	ID=`expr $ID + 1`;
     done
 }

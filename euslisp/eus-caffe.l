@@ -1,6 +1,6 @@
 #!/usr/bin/env roseus
 
-(require "eus-log.l")
+;; (require "eus-log.l")
 (require "eus-plugin-util.l")
 
 (if (not (find-package "CAFFE")) (make-package "CAFFE"))
@@ -157,11 +157,11 @@
    ret
    &allow-other-keys
    )
-  (if log (cpplog::change-output-stream log))
+  ;; (if log (cpplog::change-output-stream log))
   (if initialize? (apply 'initialize-solver args))
   (setq ret (_learn))
   (if timer (format t "time: ~A~%" (setq timer (send timer :stop))))
-  (if log (cpplog::change-output-stream ""))
+  ;; (if log (cpplog::change-output-stream ""))
   ret)
 
 (defun gen-test-net
