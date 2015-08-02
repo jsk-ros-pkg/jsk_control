@@ -159,12 +159,12 @@
 ;; (load-ik-learning-data)
 
 (defun ik-learn
-  nil
+  (&key (solver "ik_solver.prototxt"))
   (if (or (zerop (length *ef-coords-map*))
 	  (zerop (length *angle-vector-map*)))
       (load-ik-learning-data))
   (caffe::learn
-   :solver "ik_solver.prototxt"
+   :solver solver
    :size *sample-points*
    :idata *ef-coords-map*
    :ddata *angle-vector-map*
