@@ -227,13 +227,20 @@
 				  (random-vector 500.0))
 			 :rpy (random-vector 3.14)))
 	 (b (send (car (send *robot* :links)) :copy-worldcoords))
-	 (av (instantiate float-vector (length *rarm-joints*))))
-    (caffe::memory-calc-forward
-     :input (concatenate float-vector
-			 (scale 1e-3 (send b :difference-position c))
-			 (send b :difference-rotation c))
-     :osize (length av)
-     :output av)
+	 (av (instantiate float-vector (length *rarm-joints*)))
+	 (joint-list (butlast (send *robot* :rarm :joint-list)))
+	 )
+    (send *robot* :rarm :inverse-kinematics c
+	  :link-list (send-all joint-list :child-link)
+	  :revert-if-fail nil)
+    (send c :newcoords (send *robot* :rarm :end-coords :copy-worldcoords))
+    (bench
+     (caffe::memory-calc-forward
+      :input (concatenate float-vector
+			  (scale 1e-3 (send b :difference-position c))
+			  (send b :difference-rotation c))
+      :osize (length av)
+      :output av))
     (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
     (send *viewer* :draw-objects :flush nil)
     (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)

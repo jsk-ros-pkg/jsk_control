@@ -12,10 +12,22 @@ layer {
   }
 }
 layer {
-  name: "ip"
+  name: "target"
+  type: "MemoryData"
+  top: "target"
+  top: "dummy_label2"
+  memory_data_param {
+    batch_size: 32
+    channels: 6
+    height: 1
+    width: 1
+  }
+}
+layer {
+  name: "ip6"
   type: "InnerProduct"
+  top: "ip6"
   bottom: "input"
-  top: "ip"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -25,7 +37,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 50
+    num_output: 100
     weight_filler {
       type: "gaussian"
       std: 1
@@ -38,16 +50,16 @@ layer {
   }
 }
 layer {
-  name: "encode1neuron"
+  name: "sigmoid5"
   type: "Sigmoid"
-  bottom: "ip"
-  top: "encode1neuron"
+  top: "sigmoid5"
+  bottom: "ip6"
 }
 layer {
-  name: "middle1"
+  name: "ip5"
   type: "InnerProduct"
-  bottom: "encode1neuron"
-  top: "middle1"
+  top: "ip5"
+  bottom: "sigmoid5"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -57,7 +69,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 80
     weight_filler {
       type: "gaussian"
       std: 1
@@ -70,16 +82,16 @@ layer {
   }
 }
 layer {
-  name: "encode2neuron"
+  name: "sigmoid4"
   type: "Sigmoid"
-  bottom: "middle1"
-  top: "encode2neuron"
+  top: "sigmoid4"
+  bottom: "ip5"
 }
 layer {
-  name: "middle2"
+  name: "ip4"
   type: "InnerProduct"
-  bottom: "encode2neuron"
-  top: "middle2"
+  top: "ip4"
+  bottom: "sigmoid4"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -89,7 +101,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 60
     weight_filler {
       type: "gaussian"
       std: 1
@@ -102,16 +114,80 @@ layer {
   }
 }
 layer {
-  name: "encode3neuron"
+  name: "sigmoid3"
   type: "Sigmoid"
-  bottom: "middle2"
-  top: "encode3neuron"
+  top: "sigmoid3"
+  bottom: "ip4"
 }
 layer {
-  name: "output"
+  name: "ip3"
   type: "InnerProduct"
-  bottom: "encode3neuron"
+  top: "ip3"
+  bottom: "sigmoid3"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 40
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "sigmoid2"
+  type: "Sigmoid"
+  top: "sigmoid2"
+  bottom: "ip3"
+}
+layer {
+  name: "ip2"
+  type: "InnerProduct"
+  top: "ip2"
+  bottom: "sigmoid2"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 20
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "sigmoid1"
+  type: "Sigmoid"
+  top: "sigmoid1"
+  bottom: "ip2"
+}
+layer {
+  name: "ip1"
+  type: "InnerProduct"
   top: "output"
+  bottom: "sigmoid1"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -131,18 +207,6 @@ layer {
       type: "constant"
       value: 0
     }
-  }
-}
-layer {
-  name: "target"
-  type: "MemoryData"
-  top: "target"
-  top: "dummy_label2"
-  memory_data_param {
-    batch_size: 32
-    channels: 6
-    height: 1
-    width: 1
   }
 }
 layer {
