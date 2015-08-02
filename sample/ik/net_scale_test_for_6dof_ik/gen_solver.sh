@@ -43,7 +43,7 @@ do
     depth=1;
     ##
     sed "s/@SCALE@/${scale}/g" ik_solver.prototxt > ik_solver_${scale}.prototxt;
-    sed "s/@DEPTH@/${DEPTH}/g" ik_net.prototxt > ik_net_${scale}.prototxt;
+    sed "s/@DEPTH@/${DEPTH}/g" ik_net1.prototxt > ik_net_${scale}.prototxt;
     ##
     while [ "$depth" -le "$DEPTH" ];
     do
@@ -51,4 +51,5 @@ do
 	depth=`expr $depth + 1`;
 	WIDTH=`expr ${WIDTH} - ${dw}`;
     done
+    sed "s/@DEPTH@/${DEPTH}/g" ik_net2.prototxt >> ik_net_${scale}.prototxt;
 done
