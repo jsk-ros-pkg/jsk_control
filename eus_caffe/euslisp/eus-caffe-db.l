@@ -1,10 +1,11 @@
 #!/usr/bin/env roseus
 
+(require "eus-plugin-util.l")
+
 (if (not (find-package "CAFFE")) (make-package "CAFFE"))
 (In-package "CAFFE")
 
-(require "eus-plugin-util.l")
-(defvar *eus-caffe-db-plugin* (gen-plugin-obj "libeus_caffe_db.so"))
+(defvar *eus-caffe-db-plugin* (user::gen-plugin-obj "libeus_caffe_db.so"))
 
 (defforeign db-set-id *eus-caffe-db-plugin* "eus_caffe_db_set_id" (:integer) :integer)
 (defforeign _db-open *eus-caffe-db-plugin* "eus_caffe_db_open" (:string :string :integer) :integer)
