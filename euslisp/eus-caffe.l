@@ -1,10 +1,12 @@
 #!/usr/bin/env roseus
 
+(require "eus-log.l")
+(require "eus-plugin-util.l")
+
 (if (not (find-package "CAFFE")) (make-package "CAFFE"))
 (In-package "CAFFE")
 
-(require "eus-plugin-util.l")
-(defvar *eus-caffe-plugin* (gen-plugin-obj "libeus_caffe.so"))
+(defvar *eus-caffe-plugin* (user::gen-plugin-obj "libeus_caffe.so"))
 
 (defforeign _get_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_layer_blob_data" (:string :integer :string :integer) :integer)
 (defforeign _get_train_net_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_train_net_layer_blob_data" (:string :integer :string :integer) :integer)
@@ -151,12 +153,15 @@
    &key
    (initialize? t)
    (timer (instance user::mtimer :init))
+   (log (format nil "caffe_~A.log" (car (unix::gettimeofday))))
    ret
    &allow-other-keys
    )
+  (if log (cpplog::change-output-stream log))
   (if initialize? (apply 'initialize-solver args))
   (setq ret (_learn))
   (if timer (format t "time: ~A~%" (setq timer (send timer :stop))))
+  (if log (cpplog::change-output-stream ""))
   ret)
 
 (defun gen-test-net
