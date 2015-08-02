@@ -532,27 +532,30 @@
   (send *viewer* :draw-objects :flush nil)
   (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
   (send *viewer* :viewsurface :flush)
-  (v- (subseq input 0 6)
-      (concatenate float-vector
-		   (scale 1e-3 (send (send (car (send *robot* :links)) :worldcoords)
-				     :difference-position
-				     (send *robot* :rarm :end-coords)))
-		   (send (send (car (send *robot* :links)) :worldcoords)
-				:difference-rotation
-				(send *robot* :rarm :end-coords))))
+  (print
+   (concatenate float-vector
+		(scale 1e-3
+		       (send c :difference-position
+			     (send *robot* :rarm :end-coords)))
+		(send c :difference-rotation
+		      (send *robot* :rarm :end-coords))))
   )
 
 #|
 
-(let* ((id2 (random 1000)) (id -1.0) (step 0.1) (max 3.0)
+(caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
+		     :caffemodel "redundancy_ik_net_x4_iter_60000000.caffemodel")
+(let* ((id2 (random 1000)) (id 0.0) (step 0.01) (max 1.0) (min 0.0)
        (min-dif *inf*) (min-dif-id id) buf)
   (do-until-key
    (format t "[param] (db_id, rd_id) = (~A, ~A)~%" id2 id)
    (format t "        (min_dif, rd_id) = (~A, ~A)~%" min-dif min-dif-id)
    (setq id (+ id step))
-   (if (> min-dif (norm (setq buf (test-redundancy-ik :id id2 :redundancy id))))
-       (setq min-dif (norm buf) min-dif-id id))
-   (if (> (abs id) max) (setq step (* -1 step)))))
+   (if (> min-dif
+	  (setq buf (apply 'max (map cons 'abs (test-redundancy-ik :id id2 :redundancy id)))))
+       (setq min-dif buf min-dif-id id))
+   (if (> id max) (return-from nil (print min-dif)))
+   (if (or (> id max) (< id min)) (setq step (* -1 step)))))
 
 (caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
 		     :caffemodel "redundancy_ik_net_iter_50000000.caffemodel")
