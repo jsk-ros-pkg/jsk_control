@@ -3,32 +3,8 @@
 (if (not (find-package "CAFFE")) (make-package "CAFFE"))
 (In-package "CAFFE")
 
-(defvar *eus-caffe-plugin*
-  (labels
-      ((library_search
-	(str &key
-	     (depth 0)
-	     colon-pos lib-path)
-	(format t "  [~A] target=" depth)
-	(cond
-	 ((eq (length str) 0)
-	  (format t "~% caffe_plugin_not_found in eus_caffe.l~%")
-	  (exit -1))
-	 ((and (setq colon-pos (or (position #\: str) (length str)))
-	       (setq lib-path (subseq str 0 colon-pos))
-	       (setq lib-path
-		     (if (eq (aref lib-path (- (length lib-path) 1)) #\/)
-			 (subseq lib-path 0 (- (length lib-path) 1))
-		       lib-path))
-	       (probe-file (setq lib-path
-				 (print (format nil "~A/libeus_caffe.so" lib-path)))))
-	  (load-foreign lib-path))
-	 (t
-	  (library_search (subseq str (min (length str) (+ colon-pos 1)))
-			  :depth (+ depth 1))))))
-    (library_search (format nil "~A:~A/lib"
-			    (unix:getenv "LD_LIBRARY_PATH")
-			    (read-line (piped-fork "rospack find eus_caffe"))))))
+(require "eus-plugin-util.l")
+(defvar *eus-caffe-plugin* (gen-plugin-obj "libeus_caffe.so"))
 
 (defforeign _get_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_layer_blob_data" (:string :integer :string :integer) :integer)
 (defforeign _get_train_net_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_train_net_layer_blob_data" (:string :integer :string :integer) :integer)

@@ -3,33 +3,8 @@
 (if (not (find-package "CAFFE")) (make-package "CAFFE"))
 (In-package "CAFFE")
 
-(defvar *eus-caffe-db-plugin*
-  (labels
-      ((library_search
-	(str &key
-	     (depth 0)
-	     colon-pos lib-path)
-	(format t "  [~A] target=" depth)
-	(cond
-	 ((eq (length str) 0)
-	  (format t "~% caffe_db_plugin_not_found in eus_caffe_db.l~%")
-	  (exit -1))
-	 ((and (setq colon-pos (or (position #\: str) (length str)))
-	       (setq lib-path (subseq str 0 colon-pos))
-	       (setq lib-path
-		     (if (eq (aref lib-path (- (length lib-path) 1)) #\/)
-			 (subseq lib-path 0 (- (length lib-path) 1))
-		       lib-path))
-	       (probe-file (setq lib-path
-				 (print (format nil "~A/libeus_caffe_db.so" lib-path)))))
-	  (load-foreign lib-path))
-	 (t
-	  (library_search (subseq str (min (length str) (+ colon-pos 1)))
-			  :depth (+ depth 1))))))
-    (library_search (format nil "~A:~A/lib"
-			    (unix:getenv "LD_LIBRARY_PATH")
-			    (read-line (piped-fork "rospack find eus_caffe"))))))
-
+(require "eus-plugin-util.l")
+(defvar *eus-caffe-db-plugin* (gen-plugin-obj "libeus_caffe_db.so"))
 
 (defforeign db-set-id *eus-caffe-db-plugin* "eus_caffe_db_set_id" (:integer) :integer)
 (defforeign _db-open *eus-caffe-db-plugin* "eus_caffe_db_open" (:string :string :integer) :integer)
