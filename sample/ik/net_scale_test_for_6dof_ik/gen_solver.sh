@@ -14,7 +14,7 @@ LAYER="layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 100
+    num_output: @WIDTH@
     weight_filler {
       type: \"gaussian\"
       std: 1
@@ -37,6 +37,9 @@ for scale in 4x50 4x100 4x200 6x50 6x100 6x200;
 do
     DEPTH=`echo $scale | sed "s/^\(.\+\)x.\+$/\\1/g"`;
     WIDTH=`echo $scale | sed "s/^.\+x\(.\+\)$/\\1/g"`;
+    dw=`expr ${WIDTH} - 10`;
+    ds=`expr ${DEPTH} - 1`;
+    dw=`expr ${dw} / ${ds}`;
     depth=1;
     ##
     sed "s/@SCALE@/${scale}/g" ik_solver.prototxt > ik_solver_${scale}.prototxt;
@@ -44,7 +47,8 @@ do
     ##
     while [ "$depth" -le "$DEPTH" ];
     do
-	echo "$LAYER" | sed "s/@DEPTH@/${DEPTH}/g" | sed "s/@depth@/${depth}/g" | sed "s/@depth_1@/`expr $depth - 1`/g" >> ik_net_${scale}.prototxt;
+	echo "$LAYER" | sed "s/@DEPTH@/${DEPTH}/g" | sed "s/@WIDTH@/${WIDTH}/g" | sed "s/@depth@/${depth}/g" | sed "s/@depth_1@/`expr $depth - 1`/g" >> ik_net_${scale}.prototxt;
 	depth=`expr $depth + 1`;
+	WIDTH=`expr ${WIDTH} - ${dw}`;
     done
 done
