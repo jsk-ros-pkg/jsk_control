@@ -91,21 +91,33 @@
   <rosparam param="accumulated_heightmap_pointcloud_static" subst_value="true">
     target_frame_id: $(arg STATIC_FRAME)
   </rosparam>
-  <group if="$(arg DEBUG_VIEW)" ns="heightmap_visualization">
+  <group ns="heightmap_visualization">
     <group ns="latest">
-      <include file="$(find jsk_footstep_planner)/launch/heightmap_perception/heightmap_viewer.launch">
-        <arg name="INPUT" value="/latest_heightmap/output" />
-      </include>
+      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
+        <remap from="~input" to="/latest_heightmap/output" />
+      </node>
+      <node pkg="image_view" type="image_view" name="heightmap_view"
+            if="$(arg DEBUG_VIEW)">
+        <remap from="image" to="colorize_heightmap/output" />
+      </node>
     </group>
     <group ns="filtered">
-      <include file="$(find jsk_footstep_planner)/launch/heightmap_perception/heightmap_viewer.launch">
-        <arg name="INPUT" value="/latest_complete_heightmap/output" />
-      </include>
+      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
+        <remap from="~input" to="/latest_complete_heightmap/output" />
+      </node>
+      <node pkg="image_view" type="image_view" name="heightmap_view"
+            if="$(arg DEBUG_VIEW)">
+        <remap from="image" to="colorize_heightmap/output" />
+      </node>
     </group>
     <group ns="accumulated">
-      <include file="$(find jsk_footstep_planner)/launch/heightmap_perception/heightmap_viewer.launch">
-        <arg name="INPUT" value="/accumulated_heightmap/output" />
-      </include>
+      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
+        <remap from="~input" to="/accumulated_heightmap/output" />
+      </node>
+      <node pkg="image_view" type="image_view" name="heightmap_view"
+            if="$(arg DEBUG_VIEW)">
+        <remap from="image" to="colorize_heightmap/output" />
+      </node>
     </group>
   </group>
 </launch>
