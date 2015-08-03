@@ -134,6 +134,10 @@ namespace jsk_footstep_planner
     if (!graph_ ) {
       return false;
     }
+    if (!pointcloud_model_) {
+      JSK_ROS_ERROR("No pointcloud model is yet available");
+      return false;
+    }
     Eigen::Affine3f center_pose, left_pose_trans, right_pose_trans;
     std::vector<Eigen::Affine3f> center_poses;
     tf::poseMsgToEigen(req.lleg_pose, left_pose_trans);
@@ -185,6 +189,10 @@ namespace jsk_footstep_planner
   {
     boost::mutex::scoped_lock lock(mutex_);
     if (!graph_) {
+      return false;
+    }
+    if (!pointcloud_model_) {
+      JSK_ROS_ERROR("No pointcloud model is yet available");
       return false;
     }
     Eigen::Affine3f center_pose, left_pose_trans, right_pose_trans;
