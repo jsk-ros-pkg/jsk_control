@@ -33,7 +33,7 @@ layer {
   bottom: \"ip@depth@\"
 }" ;
 
-for scale in 4x50 4x100 4x200 6x50 6x100 6x200;
+for scale in 2x50 2x100 2x200 4x50 4x100 4x200 6x50 6x100 6x200;
 do
     DEPTH=`echo $scale | sed "s/^\(.\+\)x.\+$/\\1/g"`;
     WIDTH=`echo $scale | sed "s/^.\+x\(.\+\)$/\\1/g"`;
