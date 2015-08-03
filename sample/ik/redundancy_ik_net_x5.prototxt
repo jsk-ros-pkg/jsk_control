@@ -382,9 +382,9 @@ layer {
   }
 }
 layer {
-  name: "_loss"
+  name: "loss"
   type: "EuclideanLoss"
   bottom: "output"
   bottom: "input"
-  top: "loss_"
+  top: "loss"
 }
