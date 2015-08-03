@@ -136,6 +136,9 @@ namespace jsk_footstep_planner
     }
     if (!pointcloud_model_) {
       JSK_ROS_ERROR("No pointcloud model is yet available");
+      publishText(pub_text_,
+                  "No pointcloud model is yet available",
+                  ERROR);
       return false;
     }
     Eigen::Affine3f center_pose, left_pose_trans, right_pose_trans;
@@ -193,6 +196,9 @@ namespace jsk_footstep_planner
     }
     if (!pointcloud_model_) {
       JSK_ROS_ERROR("No pointcloud model is yet available");
+      publishText(pub_text_,
+                  "No pointcloud model is yet available",
+                  ERROR);
       return false;
     }
     Eigen::Affine3f center_pose, left_pose_trans, right_pose_trans;
