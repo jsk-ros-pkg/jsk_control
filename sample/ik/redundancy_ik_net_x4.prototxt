@@ -29,7 +29,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 50
+    num_output: 100
     weight_filler {
       type: "gaussian"
       std: 1
@@ -61,7 +61,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 60
     weight_filler {
       type: "gaussian"
       std: 1
@@ -93,7 +93,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 20
     weight_filler {
       type: "gaussian"
       std: 1
@@ -177,6 +177,12 @@ layer {
   top: "normalized_redundancy"
 }
 layer {
+  name: "normalized_redundancy"
+  type: "Sigmoid"
+  bottom: "redundancy"
+  top: "_debug_redundancy"
+}
+layer {
   name: "reshape"
   type: "Reshape"
   bottom: "target"
@@ -209,7 +215,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 50
+    num_output: 100
     weight_filler {
       type: "gaussian"
       std: 1
@@ -241,7 +247,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 60
     weight_filler {
       type: "gaussian"
       std: 1
@@ -273,7 +279,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 20
     weight_filler {
       type: "gaussian"
       std: 1

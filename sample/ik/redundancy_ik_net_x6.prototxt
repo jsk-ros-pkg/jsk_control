@@ -29,7 +29,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 50
+    num_output: 100
     weight_filler {
       type: "gaussian"
       std: 1
@@ -61,7 +61,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 40
+    num_output: 80
     weight_filler {
       type: "gaussian"
       std: 1
@@ -93,7 +93,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 60
     weight_filler {
       type: "gaussian"
       std: 1
@@ -125,7 +125,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 20
+    num_output: 40
     weight_filler {
       type: "gaussian"
       std: 1
@@ -157,7 +157,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 20
     weight_filler {
       type: "gaussian"
       std: 1
@@ -234,11 +234,28 @@ layer {
   bottom: "target"
   top: "_loss"
 }
+## layer {
+##   name: "_powered_loss"
+##   bottom: "_loss"
+##   top: "_powered_loss"
+##   type: "Power"
+##   power_param {
+##     power: 1
+##     scale: 0.01
+##     shift: 0
+##   }
+## }
 layer {
   name: "normalized_redundancy"
   type: "Sigmoid"
   bottom: "redundancy"
   top: "normalized_redundancy"
+}
+layer {
+  name: "normalized_redundancy"
+  type: "Sigmoid"
+  bottom: "redundancy"
+  top: "_debug_redundancy"
 }
 layer {
   name: "reshape"
@@ -273,7 +290,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 50
+    num_output: 100
     weight_filler {
       type: "gaussian"
       std: 1
@@ -305,7 +322,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 40
+    num_output: 80
     weight_filler {
       type: "gaussian"
       std: 1
@@ -337,7 +354,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 60
     weight_filler {
       type: "gaussian"
       std: 1
@@ -369,7 +386,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 20
+    num_output: 40
     weight_filler {
       type: "gaussian"
       std: 1
@@ -401,7 +418,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 20
     weight_filler {
       type: "gaussian"
       std: 1

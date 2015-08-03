@@ -512,11 +512,12 @@
   (caffe::db-close)
   ;;
   (setq input (concatenate float-vector input (float-vector redundancy)))
-  (setq output
-	(caffe::calc-forward-double
-	 :isize (length input) :osize (length joint-list)
-	 :num 1 :channels (length input) :width 1 :height 1
-	 :input input))
+  (bench
+   (setq output
+	 (caffe::calc-forward-double
+	  :isize (length input) :osize (length joint-list)
+	  :num 1 :channels (length input) :width 1 :height 1
+	  :input input)))
   ;; ;; test
   ;; (caffe::db-open :path "input_lmdb_potentio")
   ;; (caffe::db-read id)
@@ -544,7 +545,7 @@
 #|
 
 (caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
-		     :caffemodel "redundancy_ik_net_x4_iter_60000000.caffemodel")
+		     :caffemodel "redundancy_ik_net_x6_iter_60000000.caffemodel")
 (let* ((id2 (random 1000)) (id 0.0) (step 0.01) (max 1.0) (min 0.0)
        (min-dif *inf*) (min-dif-id id) buf)
   (do-until-key
@@ -554,7 +555,10 @@
    (if (> min-dif
 	  (setq buf (apply 'max (map cons 'abs (test-redundancy-ik :id id2 :redundancy id)))))
        (setq min-dif buf min-dif-id id))
-   (if (> id max) (return-from nil (print min-dif)))
+   (cond
+    ((> id max)
+     (test-redundancy-ik :id id2 :redundancy min-dif-id)
+     (return-from nil (print min-dif))))
    (if (or (> id max) (< id min)) (setq step (* -1 step)))))
 
 (caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"

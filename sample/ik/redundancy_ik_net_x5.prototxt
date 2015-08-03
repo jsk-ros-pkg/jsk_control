@@ -29,7 +29,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 50
+    num_output: 200
     weight_filler {
       type: "gaussian"
       std: 1
@@ -61,7 +61,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 137
     weight_filler {
       type: "gaussian"
       std: 1
@@ -93,7 +93,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 20
+    num_output: 74
     weight_filler {
       type: "gaussian"
       std: 1
@@ -125,7 +125,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 11
     weight_filler {
       type: "gaussian"
       std: 1
@@ -196,11 +196,11 @@ layer {
   }
 }
 layer {
-  name: "loss"
+  name: "_loss"
   type: "EuclideanLoss"
   bottom: "coords"
   bottom: "target"
-  top: "loss"
+  top: "_loss"
 }
 layer {
   name: "normalized_redundancy"
@@ -209,9 +209,21 @@ layer {
   top: "normalized_redundancy"
 }
 layer {
+  name: "reshape"
+  type: "Reshape"
+  bottom: "target"
+  top: "target2"
+  reshape_param {
+    shape {
+        dim: 0  # copy the dimension from below
+        dim: -1 # infer it from the other dimensions
+    }
+  }
+}
+layer {
   name: "concate"
   type: "Concat"
-  bottom: "coords"
+  bottom: "target2"
   bottom: "normalized_redundancy"
   top: "redundancy_coords2"
 }
@@ -229,7 +241,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 50
+    num_output: 200
     weight_filler {
       type: "gaussian"
       std: 1
@@ -261,7 +273,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 30
+    num_output: 137
     weight_filler {
       type: "gaussian"
       std: 1
@@ -293,7 +305,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 20
+    num_output: 74
     weight_filler {
       type: "gaussian"
       std: 1
@@ -325,7 +337,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 10
+    num_output: 11
     weight_filler {
       type: "gaussian"
       std: 1
