@@ -14,10 +14,10 @@ set output "${log}.eps"
 set xlabel "STEP"
 set ylabel "LOSS"
 set title "loss/step for ${log}"
-set yrange [ 0 : 2 ]
+set yrange [ 0 : 1 ]
 set mxtics 5
 set mytics 5
-set xtics 5
+set xtics 100
 set ytics 0.5
 plot "/tmp/${log}.dat" using 1:2 notitle w l
 EOF
