@@ -204,6 +204,7 @@ namespace jsk_footstep_controller
     std::string lfoot_sensor_frame_;
     std::string rfoot_sensor_frame_;
     std::string root_frame_id_;
+    std::string body_on_odom_frame_;
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
     tf::Transform root_link_pose_;
