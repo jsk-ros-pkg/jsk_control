@@ -209,6 +209,12 @@ layer {
   top: "normalized_redundancy"
 }
 layer {
+  name: "normalized_redundancy"
+  type: "Sigmoid"
+  bottom: "redundancy"
+  top: "_debug_redundancy"
+}
+layer {
   name: "reshape"
   type: "Reshape"
   bottom: "target"
