@@ -78,8 +78,8 @@ dw=`expr ${dw} / ${ds}`;
 depth=0;
 ##
 sed "s/@SCALE@/${scale}/g" ik_solver.prototxt > ik_solver_${scale}.prototxt;
-sed "s/@SCALE@/${scale}/g" ik_solver_NESTEROV.prototxt > ik_solver_NESTEROV_${scale}.prototxt;
-sed "s/@SCALE@/${scale}/g" ik_solver_ADAGRAD.prototxt > ik_solver_ADAGRAD_${scale}.prototxt;
+sed "s/@SCALE@/${scale}/g" ik_NESTEROV_solver.prototxt > ik_NESTEROV_solver_${scale}.prototxt;
+sed "s/@SCALE@/${scale}/g" ik_ADAGRAD_solver.prototxt > ik_ADAGRAD_solver_${scale}.prototxt;
 ##
 sed "s/@DEPTH@/${depth}/g" ik_net1.prototxt > ik_net_${scale}.prototxt;
 depth=`expr $depth + 1`;
