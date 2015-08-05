@@ -69,7 +69,7 @@ layer {
 
 ## for scale in 3x50 3x100 3x200 3x400 4x50 4x100 4x200 4x400 5x50 5x100 5x200 5x400;
 ## do
-scale=5x200;
+scale=6x200;
 DEPTH=`echo $scale | sed "s/^\(.\+\)x.\+$/\\1/g"`;
 WIDTH=`echo $scale | sed "s/^.\+x\(.\+\)$/\\1/g"`;
 dw=`expr ${WIDTH} - 20`;
