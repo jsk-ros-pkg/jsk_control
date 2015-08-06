@@ -44,10 +44,13 @@ do
     ##
     sed "s/@SCALE@/${scale}/g" ik_solver.prototxt > ik_solver_${scale}.prototxt;
     sed "s/@DEPTH@/${DEPTH}/g" ik_net1.prototxt > ik_net_${scale}.prototxt;
+    sed "s/@DEPTH@/`expr $depth - 1`/g" ik_net1_predict.prototxt > ik_net_${scale}_predict.prototxt;
     ##
     while [ "$depth" -le "$DEPTH" ];
     do
-	echo "$LAYER" | sed "s/@DEPTH@/${DEPTH}/g" | sed "s/@WIDTH@/${WIDTH}/g" | sed "s/@depth@/${depth}/g" | sed "s/@depth_1@/`expr $depth - 1`/g" >> ik_net_${scale}.prototxt;
+	echo "$LAYER" | sed "s/@DEPTH@/${DEPTH}/g" | sed "s/@WIDTH@/${WIDTH}/g" | sed "s/@depth@/${depth}/g" | sed "s/@depth_1@/`expr $depth - 1`/g" > /tmp/buf;
+	cat /tmp/buf >> ik_net_${scale}.prototxt;
+	cat /tmp/buf >> ik_net_${scale}_predict.prototxt;
 	depth=`expr $depth + 1`;
 	WIDTH=`expr ${WIDTH} - ${dw}`;
     done
