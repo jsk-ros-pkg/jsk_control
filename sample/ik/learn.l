@@ -199,6 +199,8 @@
 (defun ik-test
   (&optional
    (i 0)
+   (calc-forward 'caffe::memory-calc-forward)
+   ;;
    (input (instantiate float-vector 6))
    (output (instantiate float-vector 6))
    c
@@ -208,8 +210,10 @@
 		       :rot (matrix-exponent (subseq input 3 6))))
   (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
 		:transform c :local))
-  (caffe::memory-calc-forward
-   :input input :osize (length output) :output output)
+  (bench
+   (apply calc-forward
+	  (list :isize (length input) :input input
+		:osize (length output) :output output)))
   (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
        *rarm-joints* output)
   (send *viewer* :draw-objects :flush nil)
@@ -222,7 +226,7 @@
   )
 
 (defun ik-random-test
-  nil
+  (&key (calc-forward 'caffe::memory-calc-forward))
   (let* ((c (make-coords :pos (v+ (float-vector 436.244 -210.8 766.991)
 				  (random-vector 500.0))
 			 :rpy (random-vector 3.14)))
@@ -235,12 +239,14 @@
 	  :revert-if-fail nil)
     (send c :newcoords (send *robot* :rarm :end-coords :copy-worldcoords))
     (bench
-     (caffe::memory-calc-forward
-      :input (concatenate float-vector
-			  (scale 1e-3 (send b :difference-position c))
-			  (send b :difference-rotation c))
-      :osize (length av)
-      :output av))
+     (apply calc-forward
+	    (list :isize 6
+		  :input (concatenate float-vector
+				      (scale 1e-3 (send b :difference-position c))
+				      (send b :difference-rotation c))
+		  :osize (length av)
+		  :output av))
+     )
     (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
     (send *viewer* :draw-objects :flush nil)
     (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
