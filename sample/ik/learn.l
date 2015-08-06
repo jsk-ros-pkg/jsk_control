@@ -200,33 +200,42 @@
   (&optional
    (i 0)
    (calc-forward 'caffe::memory-calc-forward)
+   (draw? t)
    ;;
    (input (instantiate float-vector 6))
    (output (instantiate float-vector 6))
-   c
+   c tm
    )
   (dotimes (j 6) (setf (aref input j) (aref *ef-coords-map* (+ (* i 6) j))))
   (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
 		       :rot (matrix-exponent (subseq input 3 6))))
   (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
 		:transform c :local))
-  (bench
-   (apply calc-forward
-	  (list :isize (length input) :input input
-		:osize (length output) :output output)))
+  (setq
+   tm
+   (bench2
+    (bench
+     (apply calc-forward
+	    (list :isize (length input) :input input
+		  :osize (length output) :output output)))))
   (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
        *rarm-joints* output)
-  (send *viewer* :draw-objects :flush nil)
-  (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
-  (send *viewer* :viewsurface :flush)
-  (print (concatenate
-	  float-vector
-	  (send c :difference-position (send *robot* :rarm :end-coords))
-	  (send c :difference-rotation (send *robot* :rarm :end-coords))))
+  (cond
+   (draw?
+    (send *viewer* :draw-objects :flush nil)
+    (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+    (send *viewer* :viewsurface :flush)))
+  (list
+   (cons :time tm)
+   (cons :diff
+	 (print (concatenate
+		 float-vector
+		 (send c :difference-position (send *robot* :rarm :end-coords))
+		 (send c :difference-rotation (send *robot* :rarm :end-coords))))))
   )
 
 (defun ik-random-test
-  (&key (calc-forward 'caffe::memory-calc-forward))
+  (&key (calc-forward 'caffe::memory-calc-forward) (draw? t) tm)
   (let* ((c (make-coords :pos (v+ (float-vector 436.244 -210.8 766.991)
 				  (random-vector 500.0))
 			 :rpy (random-vector 3.14)))
@@ -238,23 +247,31 @@
 	  :link-list (send-all joint-list :child-link)
 	  :revert-if-fail nil)
     (send c :newcoords (send *robot* :rarm :end-coords :copy-worldcoords))
-    (bench
-     (apply calc-forward
-	    (list :isize 6
-		  :input (concatenate float-vector
-				      (scale 1e-3 (send b :difference-position c))
-				      (send b :difference-rotation c))
-		  :osize (length av)
-		  :output av))
-     )
+    (setq
+     tm
+     (bench2
+      (bench
+       (apply calc-forward
+	      (list :isize 6
+		    :input (concatenate float-vector
+					(scale 1e-3 (send b :difference-position c))
+					(send b :difference-rotation c))
+		    :osize (length av)
+		    :output av))
+       )))
     (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
-    (send *viewer* :draw-objects :flush nil)
-    (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
-    (send *viewer* :viewsurface :flush)
-    (print (concatenate float-vector
-			(send c :difference-position (send *robot* :rarm :end-coords))
-			(send c :difference-rotation (send *robot* :rarm :end-coords))))
-    ))
+    (cond
+     (draw?
+      (send *viewer* :draw-objects :flush nil)
+      (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+      (send *viewer* :viewsurface :flush)))
+    (list
+     (cons :time tm)
+     (cons :diff
+	   (print (concatenate float-vector
+			       (send c :difference-position (send *robot* :rarm :end-coords))
+			       (send c :difference-rotation (send *robot* :rarm :end-coords))))
+	   ))))
 
 ;;
 
