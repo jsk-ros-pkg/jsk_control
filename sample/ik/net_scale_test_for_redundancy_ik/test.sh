@@ -7,4 +7,5 @@ for solver in `ls | grep -e "solver_[0-9]\+x[0-9]\+.prototxt$"`
 do
     echo $solver;
     DISPLAY="" roseus "../learn.l" "(progn (redundancy-ik-learn :solver \"${solver}\") (exit 0))" 1>test_${solver}.log 2>&1 &
+    sleep 1;
 done
