@@ -1,6 +1,6 @@
 <launch>
   <arg name="STATIC_FRAME" default="map" />
-  <arg name="ROBOT_FRAME" default="BODY" /> <!--it's not good-->
+  <arg name="ROBOT_FRAME" default="body_on_odom" /> <!--it's not good-->
   <arg name="INPUT" default="/distance_filtered_laser_snapshots/output_cloud" />
   <arg name="DEBUG_VIEW" default="true" />
   <node pkg="jsk_topic_tools" type="standalone_complexed_nodelet" name="heightmap_nodelet"
