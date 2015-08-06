@@ -2,7 +2,7 @@ layer {
   name: "redundancy_coords"
   type: "InnerProduct"
   bottom: "sigmoid@DEPTH@"
-  top: "redundancy_coords"
+  top: "redundancy"
   param {
     lr_mult: 1
     decay_mult: 1
@@ -12,7 +12,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 7
+    num_output: 1
     weight_filler {
       type: "gaussian"
       std: 1
@@ -23,23 +23,6 @@ layer {
       value: 0
     }
   }
-}
-layer {
-  name: "slice"
-  type: "Slice"
-  bottom: "redundancy_coords"
-  top: "coords"
-  top: "redundancy"
-  slice_param {
-    slice_point: 6
-  }
-}
-layer {
-  name: "_loss"
-  type: "EuclideanLoss"
-  bottom: "coords"
-  bottom: "target"
-  top: "_loss"
 }
 layer {
   name: "normalized_redundancy"
