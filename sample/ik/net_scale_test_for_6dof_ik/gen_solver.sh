@@ -55,4 +55,5 @@ do
 	WIDTH=`expr ${WIDTH} - ${dw}`;
     done
     sed "s/@DEPTH@/${DEPTH}/g" ik_net2.prototxt >> ik_net_${scale}.prototxt;
+    sed "s/@DEPTH@/${DEPTH}/g" ik_net2_predict.prototxt >> ik_net_${scale}_predict.prototxt;
 done
