@@ -2,7 +2,7 @@
 
 source `rospack find eus_caffe`/sh/graph.sh;
 
-for log in `ls | grep -e "test_ik_solver" | grep -e "\.prototxt\.log$"`;
+for log in `ls | grep -e "test_ik" | grep -e "\.prototxt\.log$"`;
 do
     gen_loss_graph $log;
 done;

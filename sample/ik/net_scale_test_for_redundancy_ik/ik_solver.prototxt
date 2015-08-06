@@ -4,7 +4,7 @@ base_lr: 0.05
 lr_policy: "step"
 gamma: 0.95
 stepsize: 10000 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
-max_iter: 1000000 ## 3000000 is too much
+max_iter: 10000000
 momentum: 0.9
 display: 5000
 snapshot_prefix: "ik_net_@SCALE@"
