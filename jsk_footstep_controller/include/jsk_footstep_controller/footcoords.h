@@ -197,6 +197,7 @@ namespace jsk_footstep_controller
     boost::shared_ptr<tf::TransformListener> tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
     // parameters
+    std::string zmp_frame_id_;
     std::string output_frame_id_;
     std::string parent_frame_id_;
     std::string midcoords_frame_id_;

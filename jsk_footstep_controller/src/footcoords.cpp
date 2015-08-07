@@ -69,6 +69,9 @@ namespace jsk_footstep_controller
     pnh.param("sampling_time_", sampling_time_, 0.2);
     pnh.param("output_frame_id", output_frame_id_,
               std::string("odom_on_ground"));
+    pnh.param("zmp_frame_id", zmp_frame_id_,
+              std::string("zmp"));
+
     pnh.param("parent_frame_id", parent_frame_id_, std::string("odom"));
     pnh.param("midcoords_frame_id", midcoords_frame_id_, std::string("ground"));
     pnh.param("root_frame_id", root_frame_id_, std::string("BODY"));
@@ -291,8 +294,24 @@ namespace jsk_footstep_controller
     forces.joint_angles = *joint_states;
     forces.zmp = *zmp;
     pub_synchronized_forces_.publish(forces);
+    Eigen::Vector3d zmp_point;
+    tf::pointMsgToEigen(zmp->point, zmp_point);
+    // Just for visualization
+    if (zmp->point.z < 0) {
+      geometry_msgs::TransformStamped ros_zmp_coords;
+      ros_zmp_coords.header = zmp->header;
+      ros_zmp_coords.child_frame_id = zmp_frame_id_;
+      Eigen::Affine3d zmp_pose = Eigen::Affine3d::Identity() * Eigen::Translation3d(zmp_point);        
+      tf::transformEigenToMsg(zmp_pose, ros_zmp_coords.transform);
+      std::vector<geometry_msgs::TransformStamped> tf_transforms;
+      tf_transforms.push_back(ros_zmp_coords);
+      {
+        boost::mutex::scoped_lock lock(mutex_);
+        tf_broadcaster_.sendTransform(tf_transforms);
+      }
+    }
   }
-
+  
   void Footcoords::updateChain(std::map<std::string, double>& joint_angles,
                                KDL::Chain& chain,
                                tf::Pose& output_pose)
@@ -959,6 +978,7 @@ namespace jsk_footstep_controller
                                                            odom_init_pose_.translation()[1],
                                                            0.0) * 
                                       Eigen::AngleAxisd(getYaw(odom_init_pose_), Eigen::Vector3d::UnitZ()));
+
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
     tf::transformEigenToMsg(identity, ros_ground_coords.transform);
     tf::transformEigenToMsg(body_on_odom_pose.inverse(), ros_body_on_odom_coords.transform);
