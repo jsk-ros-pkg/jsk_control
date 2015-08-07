@@ -64,6 +64,8 @@ namespace jsk_footstep_planner
                         double hole_rate);
     virtual void hills(pcl::PointCloud<PointT>& output,
                        double hole_rate);
+    virtual void gaussian(pcl::PointCloud<PointT>& output,
+                          double hole_rate);
   private:
     
   };
