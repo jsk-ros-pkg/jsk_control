@@ -53,6 +53,9 @@ namespace jsk_footstep_planner
     else if (model_name == "hills") {
       hills(output, hole_rate);
     }
+    else if (model_name == "gaussian") {
+      gaussian(output, hole_rate);
+    }
   }
 
   void PointCloudModelGenerator::flat(pcl::PointCloud<PointT>& output, double hole_rate)
@@ -91,6 +94,29 @@ namespace jsk_footstep_planner
           p.x = x;
           p.y = y;
           p.z = height * sin(x * 2) * sin(y * 2);
+          output.points.push_back(p);
+        }
+      }
+    }
+  }
+
+  void PointCloudModelGenerator::gaussian(pcl::PointCloud<PointT>& output, double hole_rate)
+  {
+    boost::mt19937 gen( static_cast<unsigned long>(time(0)) );
+    boost::uniform_real<> dst( 0, 100 );
+    boost::variate_generator<
+      boost::mt19937&, boost::uniform_real<>
+      > rand( gen, dst );
+    const double height = 1.0;
+    const double sigma = 0.3;
+    for (double y = -2; y < 2; y = y + 0.01) {
+      for (double x = -2; x < 2; x = x + 0.01) {
+        if (rand() >= hole_rate) {
+          pcl::PointNormal p;
+          p.x = x;
+          p.y = y;
+          //p.z = height * sin(x * 2) * sin(y * 2);
+          p.z = height * exp(-x*x / (2 * sigma * 2)) * exp(-y*y / (2 * sigma * 2));
           output.points.push_back(p);
         }
       }
