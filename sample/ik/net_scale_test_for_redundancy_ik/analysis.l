@@ -10,8 +10,7 @@
 
 (defvar *input*)
 
-(defun-c-callable target-loss ((v1 :string) (v2 :string)) :integer
-  ;; (print v1)
+(defun _target-loss (v1 v2)
   (let* ((input (concatenate float-vector *input* v1))
 	 (joint-list (butlast (send *robot* :rarm :joint-list)))
 	 (output
@@ -24,26 +23,97 @@
     (map cons '(lambda (j av) (send j :joint-angle (- (rad2deg av) (send j :joint-angle))
 				    :relative t))
 	 joint-list output)
+    (send-all (send *robot* :links) :worldcoords)
     (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
 			 :rot (matrix-exponent (subseq input 3 6))))
     (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
 		  :transform c :local))
     ;;
+    (concatenate float-vector
+		 (scale 1e-2
+			(send c :difference-position
+			      (send *robot* :rarm :end-coords)))
+		 (send c :difference-rotation
+		       (send *robot* :rarm :end-coords)))
+    ))
+
+(defun _normal-target-loss (v1 v2)
+  (let* ((joint-list (butlast (send *robot* :rarm :joint-list)))
+	 c)
+    ;;
+    (map cons '(lambda (j av) (send j :joint-angle (- (rad2deg av) (send j :joint-angle))
+				    :relative t))
+	 joint-list v1)
+    (send-all (send *robot* :links) :worldcoords)
+    (setq c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
+			 :rot (matrix-exponent (subseq *input* 3 6))))
+    (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		  :transform c :local))
+    ;; (send *viewer*  :draw-objects)
+    ;;
+    (concatenate float-vector
+		 (scale 1e-2
+			(send c :difference-position
+			      (send *robot* :rarm :end-coords)))
+		 (send c :difference-rotation
+		       (send *robot* :rarm :end-coords)))
+    ))
+
+(defun-c-callable target-loss ((v1 :string) (v2 :string)) :integer
+  (let* ((dif (_target-loss v1 v2)))
+    (setf (aref v2 0)
+	  (apply 'max (map cons 'abs dif)))
+    0
+    ))
+
+(defun-c-callable normal-target-loss ((v1 :string) (v2 :string)) :integer
+  (let* ((dif (_normal-target-loss v1 v2)))
+    (setf (aref v2 0)
+	  (apply 'max (map cons 'abs dif)))
+    0
+    ))
+
+(defun-c-callable torque-objective ((v1 :string) (v2 :string)) :integer
+  (let* ((joint-list (butlast (send *robot* :rarm :joint-list))))
+    (_target-loss v1 v2)
+    ;;
+    (send *robot* :calc-torque :force-list (list (float-vector 1000 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
+    ;;
     (setf
      (aref v2 0)
-     (apply 'max
-	    (map cons
-		 'abs
-		 (concatenate float-vector
-			      (scale 1e-2
-				     (send c :difference-position
-					   (send *robot* :rarm :end-coords)))
-			      (send c :difference-rotation
-				    (send *robot* :rarm :end-coords))))))
+     (* 1e-3 (apply 'max (mapcar 'abs (send-all joint-list :joint-torque)))))
+    0
+    ))
+
+(defun-c-callable normal-torque-objective ((v1 :string) (v2 :string)) :integer
+  (let* ((joint-list (butlast (send *robot* :rarm :joint-list))))
+    (_normal-target-loss v1 v2)
+    ;;
+    (send *robot* :calc-torque :force-list (list (float-vector 1000 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
+    ;;
+    (setf
+     (aref v2 0)
+     (* 1e-3 (apply 'max (mapcar 'abs (send-all joint-list :joint-torque)))))
     0
     ))
 
 (defun-c-callable nop ((v1 :string) (v2 :string)) :integer
+  0)
+
+(defun-c-callable check-ik-thre ((v1 :string) (v2 :string)) :integer
+  (let* ((dif (_target-loss v1 v2))
+	 (thre (float-vector 0.5 0.5 0.5 0.3 0.3 0.3)))
+    (dotimes (i 6)
+      (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
+    )
+  0)
+
+(defun-c-callable normal-check-ik-thre ((v1 :string) (v2 :string)) :integer
+  (let* ((dif (_normal-target-loss v1 v2))
+	 (thre (float-vector 0.5 0.5 0.5 0.3 0.3 0.3)))
+    (dotimes (i 6)
+      (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
+    )
   0)
 
 (defun redundancy-ik-search
@@ -66,24 +136,26 @@
 			:difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords))))))
 	(time-buf (float-vector 0))
 	(draw? t)
+	;;
+	(objective 'target-loss) ;; torque-objective
 	)
   (setq *input* target)
   (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
 			 :rot (matrix-exponent (subseq *input* 3 6))))
-	 ret)
+	 x (f (float-vector 0)))
     (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
 		  :transform c :local))
     (setq
-     ret
+     x
      (nlopt-optimize
       :initial-state (float-vector 0)
       :state-min-vector (float-vector 0)
       :state-max-vector (float-vector 1)
-      :evaluation-function 'target-loss
+      :evaluation-function objective
       :evaluation-function-gradient 'nop
       :equality-function 'nop
       :equality-function-gradient 'nop
-      :inequality-function 'nop
+      :inequality-function 'check-ik-thre ;;'nop
       :inequality-function-gradient 'nop
       :alg G_DIRECT
       :ftol 1e-3
@@ -93,7 +165,10 @@
       :max-time 1
       :timebuf time-buf
       :log? draw?
+      :equality-dimension 0
+      :inequality-dimension 6
       ))
+    (funcall objective x f)
     (cond
      (draw?
       ;; (send *viewer* :draw-objects :flush nil)
@@ -110,8 +185,173 @@
 				     (send *robot* :rarm :end-coords)))
 			(send c :difference-rotation
 			      (send *robot* :rarm :end-coords))))
+     (cons :f f)
      (cons :time (aref time-buf 0)))
     ))
+
+(defun normal-ik-search
+  (&key (target
+	 (setq *input*
+	       (progn
+		 (mapcar #'(lambda (j)
+			     (send j :joint-angle
+				   (+ (send j :min-angle)
+				      (* (random 1.0)
+					 (- (send j :max-angle) (send j :min-angle))))))
+			 (butlast (send *robot* :rarm :joint-list)))
+		 (send-all (send *robot* :links) :worldcoords)
+		 (concatenate
+		  float-vector
+		  (scale 1e-3
+			 (send (send (car (send *robot* :links)) :copy-worldcoords)
+			       :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
+		  (send (send (car (send *robot* :links)) :copy-worldcoords)
+			:difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords))))))
+	(joint-list (butlast (send *robot* :rarm :joint-list)))
+	(time-buf (float-vector 0))
+	(draw? t)
+	;;
+	(objective 'normal-target-loss) ;; 'normal-torque-objective
+	)
+  (setq *input* target)
+  (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
+			 :rot (matrix-exponent (subseq *input* 3 6))))
+	 x (f (float-vector 0)))
+    (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		  :transform c :local))
+    (send *arrow* :newcoords (send c :copy-worldcoords))
+    (setq
+     x
+     (nlopt-optimize
+      :initial-state (map float-vector 'deg2rad (send-all joint-list :joint-angle))
+      :state-min-vector (map float-vector 'deg2rad (send-all joint-list :min-angle))
+      :state-max-vector (map float-vector 'deg2rad (send-all joint-list :max-angle))
+      :evaluation-function objective
+      :evaluation-function-gradient 'nop
+      :equality-function 'nop
+      :equality-function-gradient 'nop
+      :inequality-function 'normal-check-ik-thre ;;'nop
+      :inequality-function-gradient 'nop
+      :alg G_DIRECT
+      :ftol 1e-3
+      :xtol 1e-3
+      :eqthre 1e-3
+      :max-eval 10000
+      :max-time (* 60 60)
+      :timebuf time-buf
+      :log? draw?
+      :equality-dimension 0
+      :inequality-dimension 6
+      ))
+    (funcall objective x f)
+    (cond
+     (draw?
+      ;; (send *viewer* :draw-objects :flush nil)
+      ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+      (send *arrow* :newcoords (send c :copy-worldcoords))
+      (send *viewer* :draw-objects :flush nil)
+      (send *viewer* :viewsurface :flush)))
+    ;;
+    (list
+     (cons :diff
+	   (concatenate float-vector
+			(scale 1e-3
+			       (send c :difference-position
+				     (send *robot* :rarm :end-coords)))
+			(send c :difference-rotation
+			      (send *robot* :rarm :end-coords))))
+     (cons :f f)
+     (cons :time (aref time-buf 0)))
+    ))
+
+(defun torque-eval-once
+  (&key (target
+	 (setq *input*
+	       (progn
+		 (mapcar #'(lambda (j)
+			     (send j :joint-angle
+				   (+ (send j :min-angle)
+				      (* (random 1.0)
+					 (- (send j :max-angle) (send j :min-angle))))))
+			 (butlast (send *robot* :rarm :joint-list)))
+		 (send-all (send *robot* :links) :worldcoords)
+		 (concatenate
+		  float-vector
+		  (scale 1e-3
+			 (send (send (car (send *robot* :links)) :copy-worldcoords)
+			       :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
+		  (send (send (car (send *robot* :links)) :copy-worldcoords)
+			:difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords))))))
+	(joint-list (butlast (send *robot* :rarm :joint-list)))
+	(time-buf (float-vector 0))
+	(draw? t)
+	;;
+	(objective 'normal-target-loss) ;; torque-objective
+	;; (ret (float-vector 0))
+	(timer (instance mtimer :init))
+	)
+  (setq *input* target)
+  (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
+			 :rot (matrix-exponent (subseq *input* 3 6)))))
+    (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		  :transform c :local))
+    (send *arrow* :newcoords (send c :copy-worldcoords))
+    (send *robot* :rarm :inverse-kinematics c
+	  :thre 5 :rthre 0.3)
+    (send *robot* :calc-torque :force-list (list (float-vector 1000 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
+    ;;
+    (list
+     (cons :diff
+	   (concatenate float-vector
+			(scale 1e-3
+			       (send c :difference-position
+				     (send *robot* :rarm :end-coords)))
+			(send c :difference-rotation
+			      (send *robot* :rarm :end-coords))))
+     (cons :f (* 1e-3 (apply 'max (mapcar 'abs (send-all joint-list :joint-torque)))))
+     (cons :time (send timer :stop))
+     )))
+
+(defun torque-ik-analysis
+  (&key (output "test")
+	(size 100)
+	;;
+	(net-size (or (unix::getenv "NET_SIZE") "6x200"))
+	(alg "NESTEROV")
+	(log (open (format nil "torque_analysis.~A.~A.log.~A" net-size alg output) :direction :output))
+	;;
+	)
+  (caffe::gen-test-net
+   :netproto (format nil "ik_net_~A_predict.prototxt" net-size)
+   :caffemodel (format nil "ik_net_~A_~A_iter_1000000.caffemodel" net-size alg))
+  (dotimes (i size)
+    ;; random target
+    (setq *input*
+	  (progn
+	    (mapcar #'(lambda (j)
+			(send j :joint-angle
+			      (+ (send j :min-angle)
+				 (* (random 1.0)
+				    (- (send j :max-angle) (send j :min-angle))))))
+		    (butlast (send *robot* :rarm :joint-list)))
+	    (send-all (send *robot* :links) :worldcoords)
+	    (concatenate
+	     float-vector
+	     (scale 1e-3
+		    (send (send (car (send *robot* :links)) :copy-worldcoords)
+			  :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
+	     (send (send (car (send *robot* :links)) :copy-worldcoords)
+		   :difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords)))))
+    ;;
+    (format log "[~A] target=~A~%" i *input*)
+    (format log ":ik ~A~%" (torque-eval-once :target *input*))
+    (format log ":redundancy-ik ~A~%"
+	    (redundancy-ik-search :target *input* :objective 'torque-objective))
+    (format log ":direct ~A~%"
+	    (normal-ik-search :target *input* :objective 'normal-torque-objective)))
+  (close log)
+  )
+
 
 (defun redundancy-ik-analysis
   (&key (output "test")
@@ -253,7 +493,7 @@
       (setq draw-cnt (+ draw-cnt step)))
     ret))
 
-(redundancy-ik-analysis)
+;; (redundancy-ik-analysis)
 
 
 
