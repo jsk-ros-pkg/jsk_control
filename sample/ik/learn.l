@@ -533,6 +533,7 @@
    (joint-list (butlast (send *robot* :rarm :joint-list)))
    (initialize-net? nil)
    (redundancy (random 1.0))
+   (draw? t)
    input output c)
   (if initialize-net?
       (caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
@@ -561,9 +562,11 @@
 		       :rot (matrix-exponent (subseq input 3 6))))
   (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
 		:transform c :local))
-  (send *viewer* :draw-objects :flush nil)
-  (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
-  (send *viewer* :viewsurface :flush)
+  (cond
+   (draw?
+    (send *viewer* :draw-objects :flush nil)
+    (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+    (send *viewer* :viewsurface :flush)))
   (print
    (concatenate float-vector
 		(scale 1e-3
