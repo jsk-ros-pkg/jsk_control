@@ -96,8 +96,10 @@
       ))
     (cond
      (draw?
+      ;; (send *viewer* :draw-objects :flush nil)
+      ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+      (send *arrow* :newcoords (send c :copy-worldcoords))
       (send *viewer* :draw-objects :flush nil)
-      (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
       (send *viewer* :viewsurface :flush)))
     ;;
     (list
@@ -115,7 +117,7 @@
   (&key (output "test")
 	(func '(lambda (i) (redundancy-ik-search :draw? nil)))
 	;;
-	(size (expt 6 7))
+	(size (expt 3 7))
 	(dif-max (float-vector 0 0 0 0 0 0))
 	(dif-sum (float-vector 0 0 0 0 0 0))
 	(net-size (or (unix::getenv "NET_SIZE") "6x200"))
@@ -182,6 +184,75 @@
   (list avtm dif-max dif-sum)
   )
 
+(defun gather-candidates
+  (&key (target
+	 (setq *input*
+	       (progn
+		 (mapcar #'(lambda (j)
+			     (send j :joint-angle
+				   (+ (send j :min-angle)
+				      (* (random 1.0)
+					 (- (send j :max-angle) (send j :min-angle))))))
+			 (butlast (send *robot* :rarm :joint-list)))
+		 (send-all (send *robot* :links) :worldcoords)
+		 (concatenate
+		  float-vector
+		  (scale 1e-3
+			 (send (send (car (send *robot* :links)) :copy-worldcoords)
+			       :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
+		  (send (send (car (send *robot* :links)) :copy-worldcoords)
+			:difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords))))))
+	(cnt 0)
+	(step 0.01)
+	(draw-step 100)
+	(draw-cnt 0)
+	(thre (float-vector 0.05 0.05 0.05 0.3 0.3 0.3))
+	(draw? t)
+	)
+  (setq *input* target)
+  (let* ((_c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
+			  :rot (matrix-exponent (subseq *input* 3 6))))
+	 (c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		  :transform _c :local))
+	 (joint-list (butlast (send *robot* :rarm :joint-list)))
+	 ret)
+    (while (< cnt 1.0)
+      (let* ((input (concatenate float-vector *input* (float-vector cnt)))
+	     (output
+	      (caffe::calc-forward-double
+	       :isize (length input) :osize (length joint-list)
+	       :num 1 :channels (length input) :width 1 :height 1
+	       :input input))
+	     (update? t)
+	     )
+	;;
+	(map cons '(lambda (j av) (send j :joint-angle (- (rad2deg av) (send j :joint-angle))
+					:relative t))
+	     joint-list output)
+	(send-all (send *robot* :links) :worldcoords)
+	(if (v<
+	     (concatenate float-vector
+			  (scale 1e-3
+				 (send c :difference-position
+				       (send *robot* :rarm :end-coords)))
+			  (send c :difference-rotation
+				(send *robot* :rarm :end-coords)))
+	     thre)
+	    (push output ret) (setq update? nil))
+	;;
+	(cond
+	 ((and draw? (or update? (> draw-cnt draw-step)))
+	  ;; (send *viewer* :draw-objects :flush nil)
+	  ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+	  (send *arrow* :newcoords (send c :copy-worldcoords))
+	  (send *viewer* :draw-objects :flush nil)
+	  (send *viewer* :viewsurface :flush)
+	  (setq draw-cnt 0)
+	  )))
+      (setq cnt (+ cnt step))
+      (setq draw-cnt (+ draw-cnt step)))
+    ret))
+
 (redundancy-ik-analysis)
 
 
@@ -231,8 +302,10 @@
 	     (setq min-dif buf min-dif-id id))
 	 (> (incf d-cnt) (/ 0.1 step)))
      (setq d-cnt 0)
+     ;; (send *viewer* :draw-objects :flush nil)
+     ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+     (send *arrow* :newcoords (send c :copy-worldcoords))
      (send *viewer* :draw-objects :flush nil)
-     (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
      (send *viewer* :viewsurface :flush)))
    ;;
    (if done (return-from nil (print min-dif)))
