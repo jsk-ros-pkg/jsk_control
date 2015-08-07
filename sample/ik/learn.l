@@ -3,7 +3,9 @@
 (require "package://eus_caffe/euslisp/eus-caffe.l")
 (require "package://eus_caffe/euslisp/eus-caffe-db.l")
 (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
+(require "models/arrow-object.l")
 
+(defvar *arrow* (arrow))
 (defvar *robot* (hrp2jsknt))
 (defvar *rarm-links* (send *robot* :rarm :links))
 (defvar *rarm-joints*
@@ -11,6 +13,7 @@
 	  (send-all (butlast *rarm-links*) :joint)))
 
 (objects (append
+	  (list *arrow*)
 	  *rarm-links*
 	  (send *robot* :hand :rarm :links)))
 
@@ -187,8 +190,10 @@
 		:transform c :local))
   (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
        *rarm-joints* output)
+  ;; (send *viewer* :draw-objects :flush nil)
+  ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+  (send *arrow* :newcoords (send c :copy-worldcoords))
   (send *viewer* :draw-objects :flush nil)
-  (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
   (send *viewer* :viewsurface :flush)
   (print (concatenate
 	  float-vector
@@ -222,8 +227,10 @@
        *rarm-joints* output)
   (cond
    (draw?
+    ;; (send *viewer* :draw-objects :flush nil)
+    ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+    (send *arrow* :newcoords (send c :copy-worldcoords))
     (send *viewer* :draw-objects :flush nil)
-    (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
     (send *viewer* :viewsurface :flush)))
   (list
    (cons :time tm)
@@ -270,8 +277,10 @@
     (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
     (cond
      (draw?
+      ;; (send *viewer* :draw-objects :flush nil)
+      ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+      (send *arrow* :newcoords (send c :copy-worldcoords))
       (send *viewer* :draw-objects :flush nil)
-      (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
       (send *viewer* :viewsurface :flush)))
     (list
      (cons :time tm)
@@ -514,8 +523,10 @@
   (map cons '(lambda (av j) (send j :joint-angle (rad2deg av)))
        output (send *robot* :rarm :joint-list))
   ;;
+  ;; (send *viewer* :draw-objects :flush nil)
+  ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+  (send *arrow* :newcoords (send c :copy-worldcoords))
   (send *viewer* :draw-objects :flush nil)
-  (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
   (send *viewer* :viewsurface :flush)
   (v- (subseq input 0 6)
       (concatenate float-vector
@@ -564,8 +575,10 @@
 		:transform c :local))
   (cond
    (draw?
+    ;; (send *viewer* :draw-objects :flush nil)
+    ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
+    (send *arrow* :newcoords (send c :copy-worldcoords))
     (send *viewer* :draw-objects :flush nil)
-    (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
     (send *viewer* :viewsurface :flush)))
   (print
    (concatenate float-vector
