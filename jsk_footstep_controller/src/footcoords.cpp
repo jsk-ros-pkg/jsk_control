@@ -73,6 +73,7 @@ namespace jsk_footstep_controller
     pnh.param("midcoords_frame_id", midcoords_frame_id_, std::string("ground"));
     pnh.param("root_frame_id", root_frame_id_, std::string("BODY"));
     pnh.param("body_on_odom_frame", body_on_odom_frame_, std::string("body_on_odom"));
+    pnh.param("odom_init_frame_id", odom_init_frame_id_, std::string("odom_init"));
     pnh.param("lfoot_frame_id", lfoot_frame_id_,
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
@@ -115,6 +116,9 @@ namespace jsk_footstep_controller
       odom_sub_ = pnh.subscribe("/odom", 1,
                                 &Footcoords::odomCallback, this);
     }
+    odom_init_pose_ = Eigen::Affine3d::Identity();
+    odom_init_trigger_sub_ = pnh.subscribe("/odom_init_trigger", 1,
+                                           &Footcoords::odomInitTriggerCallback, this);
     periodic_update_timer_ = pnh.createTimer(ros::Duration(1.0 / 25),
                                              boost::bind(&Footcoords::periodicTimerCallback, this, _1));
     sub_lfoot_force_.subscribe(nh, "lfsensor", 50);
@@ -897,13 +901,29 @@ namespace jsk_footstep_controller
     }
   }
 
+  void Footcoords::getRollPitch(const Eigen::Affine3d& pose, float& roll, float& pitch)
+  {
+    Eigen::Affine3f posef;
+    jsk_pcl_ros::convertEigenAffine3(pose, posef);
+    float yaw;
+    pcl::getEulerAngles(posef, roll, pitch, yaw);
+  }
+
+  float Footcoords::getYaw(const Eigen::Affine3d& pose)
+  {
+    Eigen::Affine3f posef;
+    jsk_pcl_ros::convertEigenAffine3(pose, posef);
+    float roll, pitch, yaw;
+    pcl::getEulerAngles(posef, roll, pitch, yaw);
+    return yaw;
+  }
+
   void Footcoords::publishTF(const ros::Time& stamp)
   {
     // publish midcoords_ and ground_cooords_
     geometry_msgs::TransformStamped ros_midcoords, 
       ros_ground_coords, ros_odom_to_body_coords,
-      ros_body_on_odom_coords;
-
+      ros_body_on_odom_coords, ros_odom_init_coords;
     // ros_midcoords: ROOT -> ground
     // ros_ground_coords: odom -> odom_on_ground = identity
     // ros_odom_root_coords: odom -> odom_root = identity
@@ -923,27 +943,41 @@ namespace jsk_footstep_controller
     ros_body_on_odom_coords.header.stamp = stamp;
     ros_body_on_odom_coords.header.frame_id = root_frame_id_;
     ros_body_on_odom_coords.child_frame_id = body_on_odom_frame_;
+    ros_odom_init_coords.header.stamp = stamp;
+    ros_odom_init_coords.header.frame_id = parent_frame_id_;
+    ros_odom_init_coords.child_frame_id = odom_init_frame_id_;
     Eigen::Affine3d identity = Eigen::Affine3d::Identity();
-    float roll, pitch, yaw;
-    Eigen::Affine3f odom_pose_f;
-    jsk_pcl_ros::convertEigenAffine3(odom_pose_, odom_pose_f);
-    pcl::getEulerAngles(odom_pose_f, roll, pitch, yaw);
+    float roll, pitch;
+    getRollPitch(odom_pose_, roll, pitch);
     Eigen::Affine3d body_on_odom_pose = (Eigen::Translation3d(0,
                                                               0,
                                                               odom_pose_.translation()[2]) * 
                                          Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()) *
                                          Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()));
     midcoords_.getRotation().normalize();
+    Eigen::Affine3d odom_init_pose = (Eigen::Translation3d(odom_init_pose_.translation()[0],
+                                                           odom_init_pose_.translation()[1],
+                                                           0.0) * 
+                                      Eigen::AngleAxisd(getYaw(odom_init_pose_), Eigen::Vector3d::UnitZ()));
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
     tf::transformEigenToMsg(identity, ros_ground_coords.transform);
     tf::transformEigenToMsg(body_on_odom_pose.inverse(), ros_body_on_odom_coords.transform);
     tf::transformEigenToMsg(odom_pose_, ros_odom_to_body_coords.transform);
+    tf::transformEigenToMsg(odom_init_pose, ros_odom_init_coords.transform);
     std::vector<geometry_msgs::TransformStamped> tf_transforms;
     tf_transforms.push_back(ros_midcoords);
     tf_transforms.push_back(ros_ground_coords);
     tf_transforms.push_back(ros_odom_to_body_coords);
     tf_transforms.push_back(ros_body_on_odom_coords);
+    tf_transforms.push_back(ros_odom_init_coords);
     tf_broadcaster_.sendTransform(tf_transforms);
+  }
+
+  void Footcoords::odomInitTriggerCallback(const std_msgs::Empty& trigger)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    // Update odom_init_pose
+    odom_init_pose_ = odom_pose_;
   }
 
   void Footcoords::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)

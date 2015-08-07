@@ -7,6 +7,7 @@
   <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen"
         respawn="true">
     <remap from="~pointcloud_model" to="accumulated_heightmap_pointcloud_static/output" />
+    <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" />
     <rosparam>
       use_pointcloud_model: false
       use_lazy_perception: true
@@ -161,6 +162,12 @@
   <node pkg="jsk_footstep_controller" type="simple-footstep-controller.l" name="simple_footstep_controller"
         output="screen">
   </node>
+  <node pkg="jsk_footstep_controller" type="footstep-refinement.l"
+        name="footstep_refinement">
+    <remap from="planner_result" to="footstep_planner/result_non_refined"/>
+    <remap from="refined_footstep_result" to="footstep_planner/result" />
+  </node>
+
   <node pkg="rviz" type="rviz" name="rviz"
         launch-prefix="glc-capture"
         args="-d $(find jsk_footstep_planner)/launch/cppplanner/footstep_planner.rviz" />

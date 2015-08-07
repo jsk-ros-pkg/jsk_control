@@ -48,6 +48,7 @@
 #include <jsk_footstep_controller/GroundContactState.h>
 #include <jsk_footstep_controller/FootCoordsLowLevelInfo.h>
 #include <jsk_footstep_controller/SynchronizedForces.h>
+#include <std_msgs/Empty.h>
 #include <nav_msgs/Odometry.h>
 #include <urdf/model.h>
 #include <kdl/tree.hpp>
@@ -142,7 +143,10 @@ namespace jsk_footstep_controller
                                 const geometry_msgs::WrenchStamped& rfoot,
                                 tf::Vector3& lfoot_force, tf::Vector3& rfoot_force);
     virtual void periodicTimerCallback(const ros::TimerEvent& event);
+    virtual void odomInitTriggerCallback(const std_msgs::Empty& trigger);
     virtual void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
+    // This callback is called when robot is put on the ground.
+    // virtual void odomInitCallback(const std_msgs::Empty& odom_init_msg);
     virtual void synchronizeForces(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
                                    const geometry_msgs::WrenchStamped::ConstPtr& rfoot,
                                    const sensor_msgs::JointState::ConstPtr& joint_states,
@@ -160,10 +164,14 @@ namespace jsk_footstep_controller
                                  std::map<std::string, double>& joint_angles,
                                  KDL::Chain& chain,
                                  geometry_msgs::Twist& output);
+    virtual float getYaw(const Eigen::Affine3d& pose);
+    virtual void getRollPitch(const Eigen::Affine3d& pose, float& roll, float& pitch);
     // ros variables
     boost::mutex mutex_;
     Eigen::Affine3d odom_pose_;
+    Eigen::Affine3d odom_init_pose_;
     ros::Timer periodic_update_timer_;
+    ros::Subscriber odom_init_trigger_sub_;
     ros::Subscriber odom_sub_;
     ros::Subscriber synchronized_forces_sub_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
@@ -205,6 +213,7 @@ namespace jsk_footstep_controller
     std::string rfoot_sensor_frame_;
     std::string root_frame_id_;
     std::string body_on_odom_frame_;
+    std::string odom_init_frame_id_;
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
     tf::Transform root_link_pose_;
