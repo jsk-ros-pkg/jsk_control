@@ -4,4 +4,7 @@
         name="footcoords"
         >
   </node>
+  <node pkg="jsk_footstep_controller"
+        type="stabilizer_watcher.py"
+        name="stabilizer_watcher" />
 </launch>
