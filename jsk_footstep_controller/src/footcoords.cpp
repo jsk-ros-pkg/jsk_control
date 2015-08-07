@@ -294,15 +294,24 @@ namespace jsk_footstep_controller
     forces.joint_angles = *joint_states;
     forces.zmp = *zmp;
     pub_synchronized_forces_.publish(forces);
-    {
-      boost::mutex::scoped_lock lock(mutex_);
-      // Just for visualization
-      if (zmp->point.z < 0) {
-        tf::pointMsgToEigen(zmp->point, latest_zmp_point_);
+    Eigen::Vector3d zmp_point;
+    tf::pointMsgToEigen(zmp->point, zmp_point);
+    // Just for visualization
+    if (zmp->point.z < 0) {
+      geometry_msgs::TransformStamped ros_zmp_coords;
+      ros_zmp_coords.header = zmp->header;
+      ros_zmp_coords.child_frame_id = zmp_frame_id_;
+      Eigen::Affine3d zmp_pose = Eigen::Affine3d::Identity() * Eigen::Translation3d(zmp_point);        
+      tf::transformEigenToMsg(zmp_pose, ros_zmp_coords.transform);
+      std::vector<geometry_msgs::TransformStamped> tf_transforms;
+      tf_transforms.push_back(ros_zmp_coords);
+      {
+        boost::mutex::scoped_lock lock(mutex_);
+        tf_broadcaster_.sendTransform(tf_transforms);
       }
     }
   }
-
+  
   void Footcoords::updateChain(std::map<std::string, double>& joint_angles,
                                KDL::Chain& chain,
                                tf::Pose& output_pose)
@@ -933,8 +942,7 @@ namespace jsk_footstep_controller
     // publish midcoords_ and ground_cooords_
     geometry_msgs::TransformStamped ros_midcoords, 
       ros_ground_coords, ros_odom_to_body_coords,
-      ros_body_on_odom_coords, ros_odom_init_coords,
-      ros_zmp_coords;
+      ros_body_on_odom_coords, ros_odom_init_coords;
     // ros_midcoords: ROOT -> ground
     // ros_ground_coords: odom -> odom_on_ground = identity
     // ros_odom_root_coords: odom -> odom_root = identity
@@ -957,9 +965,6 @@ namespace jsk_footstep_controller
     ros_odom_init_coords.header.stamp = stamp;
     ros_odom_init_coords.header.frame_id = parent_frame_id_;
     ros_odom_init_coords.child_frame_id = odom_init_frame_id_;
-    ros_zmp_coords.header.stamp = stamp;
-    ros_zmp_coords.header.frame_id = root_frame_id_;
-    ros_zmp_coords.child_frame_id = zmp_frame_id_;
     Eigen::Affine3d identity = Eigen::Affine3d::Identity();
     float roll, pitch;
     getRollPitch(odom_pose_, roll, pitch);
@@ -973,20 +978,18 @@ namespace jsk_footstep_controller
                                                            odom_init_pose_.translation()[1],
                                                            0.0) * 
                                       Eigen::AngleAxisd(getYaw(odom_init_pose_), Eigen::Vector3d::UnitZ()));
-    Eigen::Affine3d zmp_pose = Eigen::Affine3d::Identity() * Eigen::Translation3d(latest_zmp_point_);
+
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
     tf::transformEigenToMsg(identity, ros_ground_coords.transform);
     tf::transformEigenToMsg(body_on_odom_pose.inverse(), ros_body_on_odom_coords.transform);
     tf::transformEigenToMsg(odom_pose_, ros_odom_to_body_coords.transform);
     tf::transformEigenToMsg(odom_init_pose, ros_odom_init_coords.transform);
-    tf::transformEigenToMsg(zmp_pose, ros_zmp_coords.transform);
     std::vector<geometry_msgs::TransformStamped> tf_transforms;
     tf_transforms.push_back(ros_midcoords);
     tf_transforms.push_back(ros_ground_coords);
     tf_transforms.push_back(ros_odom_to_body_coords);
     tf_transforms.push_back(ros_body_on_odom_coords);
     tf_transforms.push_back(ros_odom_init_coords);
-    tf_transforms.push_back(ros_zmp_coords);
     tf_broadcaster_.sendTransform(tf_transforms);
   }
 
