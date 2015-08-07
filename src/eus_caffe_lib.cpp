@@ -11,11 +11,16 @@ private:
   caffe::SolverParameter solver_param;
   boost::shared_ptr<caffe::Solver<double>> solver;
   boost::shared_ptr<caffe::Net<double>> test_net;
+  bool output_log;
 
 public:
+  eus_caffe() { this->output_log = true; }
+
+  bool set_output_log(bool val) { this->output_log = val; }
+
   template <typename T> bool _check(boost::shared_ptr<T> val, std::string name){
     if (! val) {
-      std::cout << name << " is NULL" << std::endl;
+      if (this->output_log) std::cout << name << " is NULL" << std::endl;
       return false;
     } else {
       return true;
@@ -24,14 +29,14 @@ public:
 
   int get_blob_data (boost::shared_ptr<caffe::Blob<double> > blob, double* ret, int osize) {
     if ( ! this->_check(blob, "blob") ) return -1 ;
-    std::cout << "[i E " << blob->count() << "] = "<< " (";
+    if (this->output_log) std::cout << "[i E " << blob->count() << "] = "<< " (";
     if ( osize < 0 || osize > blob->count() ) osize = blob->count();
     for ( int i=0; i<osize; i++ ){
       ret[i] = blob->cpu_data()[i];
-      if ( osize < 64 ) std::cout << ret[i] << " ";
+      if ( osize < 64 && this->output_log) std::cout << ret[i] << " ";
     }
-    if ( blob->count() >= 64 ) std::cout << "...";
-    std::cout << ")" << std::endl;
+    if ( blob->count() >= 64 && this->output_log) std::cout << "...";
+    if (this->output_log) std::cout << ")" << std::endl;
     return 0;
   }
 
@@ -54,10 +59,10 @@ public:
     if ( ! this->_check(net, "net") ) return -1 ;
     const boost::shared_ptr<caffe::Layer<double>> layer = net->layer_by_name(name);
     std::vector<boost::shared_ptr<caffe::Blob<double>>> ip_blobs = layer->blobs();
-    std::cout << "<" << layer->type() << ">" << name << "[" << blob_id << "<" << ip_blobs.size() << "]" ;
+    if (this->output_log) std::cout << "<" << layer->type() << ">" << name << "[" << blob_id << "<" << ip_blobs.size() << "]" ;
     if ( ip_blobs.size() <= blob_id ){
-      std::cout << std::endl;
-      std::cout << " --- too large blob_id" << std::endl;
+      if (this->output_log) std::cout << std::endl;
+      if (this->output_log) std::cout << " --- too large blob_id" << std::endl;
       return -1;
     }
     return this->get_blob_data(ip_blobs[blob_id], ret, osize);
@@ -76,9 +81,10 @@ public:
   int get_input_blob_data(int id, double* ret, int osize){
     if ( ! this->_check(this->solver, "solver") ) return -1 ;
     if ( id >= this->solver->net()->input_blobs().size() ){
-      std::cout << "too large id for input layer "
-		<< id << " > " << this->solver->net()->input_blobs().size()
-		<< std::endl;
+      if (this->output_log)
+	std::cout << "too large id for input layer "
+		  << id << " > " << this->solver->net()->input_blobs().size()
+		  << std::endl;
       return 1;
     }
     return this->get_blob_data( boost::shared_ptr<caffe::Blob<double> >(this->solver->net()->input_blobs()[id]), ret ,osize);
@@ -91,7 +97,7 @@ public:
       if ( this->solver ) this->solver.reset();
       this->solver = boost::shared_ptr<caffe::Solver<double>>(caffe::GetSolver<double>(this->solver_param));
       if (solverstate && stat(solverstate, &buf)==0) {
-	std::cout << "Restoring previous solver status from " << solverstate << std::endl;
+	if (this->output_log) std::cout << "Restoring previous solver status from " << solverstate << std::endl;
 	this->solver->Restore(solverstate);
       }
       //
@@ -122,7 +128,7 @@ public:
 	boost::dynamic_pointer_cast<caffe::MemoryDataLayer<double>>(layer_org);
       layer->Reset(data, label, size);
     } else {
-      std::cout << " reset_memory failed, type = " << layer_org->type() << std::endl;
+      if (this->output_log) std::cout << " reset_memory failed, type = " << layer_org->type() << std::endl;
     }
     //
     return 0;
@@ -218,7 +224,7 @@ public:
     } else if ( this->solver && this->solver_param.has_net() && stat(this->solver_param.net().c_str(), &buf)==0) {
       net_path = this->solver_param.net().c_str();
     } else {
-      std::cout << " network missing" << std::endl;
+      if (this->output_log) std::cout << " network missing" << std::endl;
       return 1;
     }
     if ( this->test_net ) this->test_net.reset();
@@ -229,7 +235,7 @@ public:
     } else if ( this->solver ) {
       this->test_net->ShareTrainedLayersWith(this->solver->net().get());
     } else {
-      std::cout << " no layer params" << std::endl;
+      if (this->output_log) std::cout << " no layer params" << std::endl;
       return 1;
     }
     return 0;
@@ -239,6 +245,7 @@ public:
 boost::shared_ptr<eus_caffe> ec(new eus_caffe);
 
 extern "C" {
+  int eus_caffe_output_log (int val){ return (int)ec->set_output_log((bool)val);  }
   int eus_caffe_get_blob_data (char* name, double* ret, int osize){ return ec->get_blob_data(name,ret,osize); }
   int eus_caffe_get_train_net_blob_data (char* name, double* ret, int osize){ return ec->get_train_net_blob_data(name,ret,osize); }
   int eus_caffe_get_layer_blob_data (char* name, int blob_id, double* ret, int osize) { return ec->get_layer_blob_data(name,blob_id,ret,osize); }
