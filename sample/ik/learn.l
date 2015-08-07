@@ -236,28 +236,36 @@
 
 (defun ik-random-test
   (&key (calc-forward 'caffe::memory-calc-forward) (draw? t) tm)
-  (let* ((c (make-coords :pos (v+ (float-vector 436.244 -210.8 766.991)
-				  (random-vector 500.0))
-			 :rpy (random-vector 3.14)))
+  (let* ((joint-list (butlast (send *robot* :rarm :joint-list)))
+	 (random-angle
+	  (mapcar '(lambda (j) (send j :joint-angle
+				     (+ (send j :min-angle)
+					(* (random 1.0)
+					   (- (send j :max-angle)
+					      (send j :min-angle))))))
+		  joint-list))
+	 (lc (send-all (send *robot* :links) :worldcoords))
+	 (c (send *robot* :rarm :end-coords :copy-worldcoords))
+	 ;; (make-coords :pos (v+ (float-vector 436.244 -210.8 766.991)
+	  ;; (random-vector 500.0))
+	 ;;:rpy (random-vector 3.14)))
 	 (b (send (car (send *robot* :links)) :copy-worldcoords))
 	 (av (instantiate float-vector (length *rarm-joints*)))
-	 (joint-list (butlast (send *robot* :rarm :joint-list)))
+	 (input (concatenate float-vector
+			     (scale 1e-3 (send b :difference-position c))
+			     (send b :difference-rotation c)))
 	 )
-    (send *robot* :rarm :inverse-kinematics c
-	  :link-list (send-all joint-list :child-link)
-	  :revert-if-fail nil)
-    (send c :newcoords (send *robot* :rarm :end-coords :copy-worldcoords))
+    ;; (send *robot* :rarm :inverse-kinematics c
+    ;; :link-list (send-all joint-list :child-link)
+    ;; :revert-if-fail nil)
+    ;; (send c :newcoords (send *robot* :rarm :end-coords :copy-worldcoords))
     (setq
      tm
      (bench2
       (bench
        (apply calc-forward
-	      (list :isize 6
-		    :input (concatenate float-vector
-					(scale 1e-3 (send b :difference-position c))
-					(send b :difference-rotation c))
-		    :osize (length av)
-		    :output av))
+	      (list :isize (length input) :input input
+		    :osize (length av) :output av))
        )))
     (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
     (cond
