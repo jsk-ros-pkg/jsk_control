@@ -168,6 +168,7 @@ namespace jsk_footstep_controller
     virtual void getRollPitch(const Eigen::Affine3d& pose, float& roll, float& pitch);
     // ros variables
     boost::mutex mutex_;
+    Eigen::Vector3d latest_zmp_point_;
     Eigen::Affine3d odom_pose_;
     Eigen::Affine3d odom_init_pose_;
     ros::Timer periodic_update_timer_;
@@ -197,6 +198,7 @@ namespace jsk_footstep_controller
     boost::shared_ptr<tf::TransformListener> tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
     // parameters
+    std::string zmp_frame_id_;
     std::string output_frame_id_;
     std::string parent_frame_id_;
     std::string midcoords_frame_id_;
