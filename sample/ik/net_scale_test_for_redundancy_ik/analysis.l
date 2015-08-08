@@ -102,7 +102,7 @@
 
 (defun-c-callable check-ik-thre ((v1 :string) (v2 :string)) :integer
   (let* ((dif (_target-loss v1 v2))
-	 (thre (float-vector 0.5 0.5 0.5 0.3 0.3 0.3)))
+	 (thre (float-vector 0.5 0.5 0.5 0.5 0.5 0.5)))
     (dotimes (i 6)
       (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
     )
@@ -110,7 +110,7 @@
 
 (defun-c-callable normal-check-ik-thre ((v1 :string) (v2 :string)) :integer
   (let* ((dif (_normal-target-loss v1 v2))
-	 (thre (float-vector 0.5 0.5 0.5 0.3 0.3 0.3)))
+	 (thre (float-vector 0.5 0.5 0.5 0.5 0.5 0.5)))
     (dotimes (i 6)
       (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
     )
@@ -185,7 +185,7 @@
 				     (send *robot* :rarm :end-coords)))
 			(send c :difference-rotation
 			      (send *robot* :rarm :end-coords))))
-     (cons :f f)
+     (cons :x x) (cons :f f)
      (cons :time (aref time-buf 0)))
     ))
 
@@ -236,8 +236,8 @@
       :ftol 1e-3
       :xtol 1e-3
       :eqthre 1e-3
-      :max-eval 10000
-      :max-time (* 60 60)
+      :max-eval 10000000
+      :max-time (* 60 15)
       :timebuf time-buf
       :log? draw?
       :equality-dimension 0
@@ -260,7 +260,7 @@
 				     (send *robot* :rarm :end-coords)))
 			(send c :difference-rotation
 			      (send *robot* :rarm :end-coords))))
-     (cons :f f)
+     (cons :x x) (cons :f f)
      (cons :time (aref time-buf 0)))
     ))
 
@@ -297,7 +297,7 @@
 		  :transform c :local))
     (send *arrow* :newcoords (send c :copy-worldcoords))
     (send *robot* :rarm :inverse-kinematics c
-	  :thre 5 :rthre 0.3)
+	  :thre 5 :rthre 0.5)
     (send *robot* :calc-torque :force-list (list (float-vector 1000 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
     ;;
     (list
@@ -308,6 +308,7 @@
 				     (send *robot* :rarm :end-coords)))
 			(send c :difference-rotation
 			      (send *robot* :rarm :end-coords))))
+     (cons :x (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
      (cons :f (* 1e-3 (apply 'max (mapcar 'abs (send-all joint-list :joint-torque)))))
      (cons :time (send timer :stop))
      )))
@@ -446,7 +447,7 @@
 	(step 0.01)
 	(draw-step 100)
 	(draw-cnt 0)
-	(thre (float-vector 0.05 0.05 0.05 0.3 0.3 0.3))
+	(thre (float-vector 0.05 0.05 0.05 0.5 0.5 0.5))
 	(draw? t)
 	)
   (setq *input* target)
