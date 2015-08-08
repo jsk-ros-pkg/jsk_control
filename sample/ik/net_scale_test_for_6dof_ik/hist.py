@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import matplotlib.pyplot as plt
 from pylab import *
 import numpy
@@ -36,6 +38,23 @@ def gen_pos_buf(x, path):
         elif read_flag:
         ## print line
             time_buf.append( float(line.split(" ")[1+x]) )
+        line = f.readline()
+    f.close()
+    return time_buf
+
+def gen_rot_buf(x, path):
+    f = open(path, 'r')
+    read_flag=False
+    time_buf=[]
+    line = f.readline()
+    while line:
+        if ":raw" in line:
+            read_flag=True
+        elif ":" in line:
+            read_flag=False
+        elif read_flag:
+        ## print line
+            time_buf.append( 180 / 3.14 * float(line.split(" ")[4+x]) )
         line = f.readline()
     f.close()
     return time_buf
@@ -88,4 +107,8 @@ params = {'backend': 'ps',
 plt.rcParams.update(params)
 
 ## gen_graph(["analysis_5x400.log.train", "analysis_5x200.log.train", "analysis_5x100.log.train"], [0, 0.5], gen_time_buf, 'time [mili sec]')
-gen_graph(["analysis_5x200.log.train", "analysis_4x200.log.train", "analysis_3x200.log.train"], [-200, 100], functools.partial(gen_pos_buf, 0), xlabel='dif [mm]', title="diff pos[0] histgram", labels=["5layer", "4layer", "3layer"])
+for i in [0, 1, 2]:
+    gen_graph(["analysis_5x200.log.test", "analysis_4x200.log.test", "analysis_3x200.log.test"], [-300, 300], functools.partial(gen_pos_buf, i), xlabel='dif [mm]', title="diff pos["+str(i)+"] histgram", labels=["5layer", "4layer", "3layer"])
+
+for i in [0, 1, 2]:
+    gen_graph(["analysis_5x200.log.test", "analysis_4x200.log.test", "analysis_3x200.log.test"], [-100, 100], functools.partial(gen_rot_buf, i), xlabel='dif [rad]', title="diff rpy[" + str(i) + "] histgram", labels=["5layer", "4layer", "3layer"])
