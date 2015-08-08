@@ -1,0 +1,7 @@
+robot_command_buttons:
+  - name: "Reset Walking Pose"
+    type: emptysrv
+    srv: "/footstep_command/reset_walking_pose"
+  - name: "Reset Pose"
+    type: emptysrv
+    srv: "/footstep_command/reset_pose"

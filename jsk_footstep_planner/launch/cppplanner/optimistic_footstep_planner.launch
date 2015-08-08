@@ -1,20 +1,21 @@
 <launch>
+  <arg name="USE_JOY" default="false" />
   <node pkg="dynamic_tf_publisher" type="tf_publish.py" name="dynamic_tf_publisher"
         output="log">
-    <param name="use_cache" type="bool" value="false"/>
+    <param name="use_cache" value="false"/>
   </node>
 
-  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen"
+  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="log"
         respawn="true">
     <remap from="~pointcloud_model" to="accumulated_heightmap_pointcloud_static/output" />
     <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" />
     <rosparam>
-      use_pointcloud_model: false
+      use_pointcloud_model: true
       use_lazy_perception: true
       use_local_movement: true
       use_transition_limit: true
-      project_start_state: false
-      project_goal_state: false
+      project_start_state: true
+      project_goal_state: true
     </rosparam>
     <rosparam>
       resolution_x: 0.1
@@ -35,12 +36,12 @@
       - x: 0
         y: -0.15
         theta: 0
-      - x: 0.2
-        y: -0.2
-        theta: 0
-      - x: 0.25
-        y: -0.2
-        theta: 0
+#      - x: 0.2
+#        y: -0.2
+#        theta: 0
+#      - x: 0.25
+#        y: -0.2
+#        theta: 0
       - x: 0.1
         y: -0.2
         theta: 0
@@ -53,12 +54,12 @@
       - x: 0
         y: -0.3
         theta: 0.17
-      - x: 0.2
-        y: -0.2
-        theta: 0.17
-      - x: 0.25
-        y: -0.2
-        theta: 0.17
+#      - x: 0.2
+#        y: -0.2
+#        theta: 0.17
+#      - x: 0.25
+#        y: -0.2
+#        theta: 0.17
       - x: 0.1
         y: -0.2
         theta: 0.17
@@ -68,12 +69,12 @@
       - x: 0
         y: -0.3
         theta: -0.17
-      - x: 0.2
-        y: -0.2
-        theta: -0.17
-      - x: 0.25
-        y: -0.2
-        theta: -0.17
+#      - x: 0.2
+#        y: -0.2
+#        theta: -0.17
+#      - x: 0.25
+#        y: -0.2
+#        theta: -0.17
       - x: 0.1
         y: -0.2
         theta: -0.17
@@ -84,7 +85,7 @@
   <node pkg="jsk_interactive_marker"
         type="footstep_marker"
         name="footstep_marker"
-        output="screen"
+        output="log"
         >
     <!-- <remap from="move_marker" to="$(arg POSE_REMAP)" /> -->
     <!-- <param name="wait_snapit_server" value="false" /> -->
@@ -170,5 +171,40 @@
 
   <node pkg="rviz" type="rviz" name="rviz"
         launch-prefix="glc-capture"
-        args="-d $(find jsk_footstep_planner)/launch/cppplanner/footstep_planner.rviz" />
+        args="-d $(find jsk_footstep_planner)/launch/cppplanner/footstep_planner.rviz">
+    <rosparam command="load" file="$(find jsk_footstep_planner)/config/footstep_buttons.yaml" />
+  </node>
+  
+    <group if="$(arg USE_JOY)">
+    <arg name="POSE_REMAP" default="/move_marker" />
+    <!-- <arg name="DEV" default="/dev/input/ps3joy" /> -->
+    <arg name="DEV" default="/dev/input/js1" />
+    <node pkg="joy" type="joy_node" name="joy_node" output="screen" >
+      <param name="dev" type="string" value="$(arg DEV)" />
+      <param name="deadzone" value="0.2" />
+      <param name="autorepeat_rate" value="40" />
+      <param name="coalesce_interval" value="0.025" />
+    </node>
+
+    <node pkg="jsk_teleop_joy" type="joy.py" name="teleop_manager0" output="screen"
+          clear_params="true">
+      <param name="controller_type" value="auto" />
+      <rosparam subst_value="true">
+        plugins:
+          'Footstep Planner':
+             class: 'JoyFootstepPlanner'
+             args:
+               pose: $(arg POSE_REMAP)
+               follow_view: true
+               publish_pose: true
+               execute: '/footstep_marker/execute'
+               resume: '/footstep_marker/resume'
+               frame_id: odom
+      </rosparam>
+      <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
+      <remap from="/footstep_controller/status" to="/simple_footstep_controller/status" />
+  </node>
+  </group>
+  <node pkg="jsk_footstep_controller" type="gui-client.l" name="gui_client">
+  </node>
 </launch>
