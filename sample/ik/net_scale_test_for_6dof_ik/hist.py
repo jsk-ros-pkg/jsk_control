@@ -20,7 +20,7 @@ def gen_time_buf(path):
             read_flag=False
         elif read_flag:
         ## print line
-            time_buf.append( (1e3 * float(line.split(" ")[0])) )
+            time_buf.append( (1e6 * float(line.split(" ")[0])) )
         line = f.readline()
     f.close()
     return time_buf
@@ -60,7 +60,7 @@ def gen_rot_buf(x, path):
     return time_buf
 
 
-def gen_graph(ls, rng, gen_data, title="histgram", xlabel="dif [m]", labels=None):
+def gen_graph(ls, rng, gen_data, title="histgram", xlabel="dif [m]", labels=None, logpath="log.eps"):
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel("histgram")
@@ -80,14 +80,15 @@ def gen_graph(ls, rng, gen_data, title="histgram", xlabel="dif [m]", labels=None
             time_buf = gen_data(p)
             ## time_buf_fit = dis.norm.fit(time_buf)
             weights = np.ones_like(time_buf) ##/len(time_buf)
-            plt.hist(time_buf, weights=weights, bins=100, label=labels[i], range=rng, normed=True)
+            plt.hist(time_buf, weights=weights, bins=100, label=labels[i], range=rng, normed=True, alpha=0.2)
             ##
             loc=float(np.mean(time_buf))
             scale=float(np.std(time_buf))
             x = np.arange(rng[0], rng[1], (rng[1] - rng[0])/1000.0)
-            plt.plot(x, dis.norm.pdf(x, loc=loc, scale=scale), label=(labels[i]+".fit (" + (r'''$\mu=%.1f$, $\sigma=%.2f$''' % (loc, scale)) + ")"), marker=markers[(i % len(markers))])
+            plt.plot(x, dis.norm.pdf(x, loc=loc, scale=scale), label=(labels[i]+".nd (" + (r'''$\mu=%.1f$, $\sigma=%.2f$''' % (loc, scale)) + ")"), marker=markers[(i % len(markers))])
             i = i+1
     plt.legend()
+    plt.savefig(logpath)
     plt.show()
 
 params = {'backend': 'ps',
@@ -100,15 +101,26 @@ params = {'backend': 'ps',
           ## "figure.subplot.top": 0.95,
           ## "figure.subplot.left": 0.05,
           ## "figure.subplot.bottom": 0.05,
-          ## 'figure.figsize': [13, 9],
+          'figure.figsize': [20, 10],
           'ps.useafm': True,
           'pdf.use14corefonts': True
           }
 plt.rcParams.update(params)
 
-## gen_graph(["analysis_5x400.log.train", "analysis_5x200.log.train", "analysis_5x100.log.train"], [0, 0.5], gen_time_buf, 'time [mili sec]')
+ls=["analysis_5x400.log.test", "analysis_5x200.log.test", "analysis_5x100.log.test"]
+lb=["mid100", "mid200", "mid400"]
+gen_graph(ls, [50, 500], gen_time_buf, xlabel='time [micro sec]', title="_", labels=lb, logpath="hist_time_wide.eps")
 for i in [0, 1, 2]:
-    gen_graph(["analysis_5x200.log.test", "analysis_4x200.log.test", "analysis_3x200.log.test"], [-300, 300], functools.partial(gen_pos_buf, i), xlabel='dif [mm]', title="diff pos["+str(i)+"] histgram", labels=["5layer", "4layer", "3layer"])
+    print "diff pos["+str(i)+"] histgram"
+    gen_graph(ls, [-300, 300], functools.partial(gen_pos_buf, i), xlabel='dif [mm]', title="_", labels=lb, logpath=("hist_dpos" + str(i) + "_wide.eps"))
+for i in [0, 1, 2]:
+    print "diff rpy[" + str(i) + "] histgram"
+    gen_graph(ls, [-100, 100], functools.partial(gen_rot_buf, i), xlabel='dif [rad]', title="_", labels=lb, logpath=("hist_drpy" + str(i) + "_wide.eps"))
 
+gen_graph(["analysis_5x200.log.test", "analysis_4x200.log.test", "analysis_3x200.log.test"], [50, 500], gen_time_buf, xlabel='time [micro sec]', title="_", labels=["5layer", "4layer", "3layer"], logpath="hist_time_depth.eps")
 for i in [0, 1, 2]:
-    gen_graph(["analysis_5x200.log.test", "analysis_4x200.log.test", "analysis_3x200.log.test"], [-100, 100], functools.partial(gen_rot_buf, i), xlabel='dif [rad]', title="diff rpy[" + str(i) + "] histgram", labels=["5layer", "4layer", "3layer"])
+    print "diff pos["+str(i)+"] histgram"
+    gen_graph(["analysis_5x200.log.test", "analysis_4x200.log.test", "analysis_3x200.log.test"], [-300, 300], functools.partial(gen_pos_buf, i), xlabel='dif [mm]', title="_", labels=["5layer", "4layer", "3layer"], logpath=("hist_dpos" + str(i) + "_depth.eps"))
+for i in [0, 1, 2]:
+    print "diff rpy[" + str(i) + "] histgram"
+    gen_graph(["analysis_5x200.log.test", "analysis_4x200.log.test", "analysis_3x200.log.test"], [-100, 100], functools.partial(gen_rot_buf, i), xlabel='dif [rad]', title="_", labels=["5layer", "4layer", "3layer"], logpath=("hist_drpy" + str(i) + "_depth.eps"))
