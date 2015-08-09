@@ -45,6 +45,7 @@
   <run_depend>kdl_parser</run_depend>
   <run_depend>urdf</run_depend>
   <run_depend>kdl_conversions</run_depend>
+  <run_depend>sound_play</run_depend>
   <export>
   </export>
 </package>

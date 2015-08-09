@@ -5,6 +5,7 @@
 from hrpsys_ros_bridge.srv import OpenHRP_StabilizerService_getParameter as getParameter
 import rospy
 from std_msgs.msg import Empty
+from sound_play.msg import SoundRequest
 
 # global variable
 g_previous_st_controller_mode = None
@@ -31,7 +32,7 @@ def isChangedControllerMode(actual_from, actual_to, expected_from, expected_to):
 
 def watch(event):
     global g_get_parameter_srv, g_previous_st_controller_mode
-    global g_odom_init_trigger_pub
+    global g_odom_init_trigger_pub, g_robotsound_pub
     st_param = g_get_parameter_srv().i_param
     controller_mode = controllerModeToString(st_param.controller_mode)
     if (controller_mode == "MODE_AIR" or 
@@ -45,6 +46,12 @@ def watch(event):
                                        ["MODE_AIR", "MODE_IDLE"],
                                        "MODE_ST"):
                 g_odom_init_trigger_pub.publish(Empty())
+                # Say something
+                sound = SoundRequest()
+                sound.sound = SoundRequest.SAY
+                sound.command = SoundRequest.PLAY_ONCE
+                sound.arg = "Robot stans on the ground."
+                g_robotsound_pub.publish(sound)
             g_previous_st_controller_mode = controller_mode
 
 if __name__ == "__main__":
@@ -52,6 +59,7 @@ if __name__ == "__main__":
     rate = rospy.get_param("~rate", 1.0) # 10Hz
     g_get_parameter_srv = rospy.ServiceProxy("/StabilizerServiceROSBridge/getParameter", getParameter)
     g_odom_init_trigger_pub = rospy.Publisher("/odom_init_trigger", Empty)
+    g_robotsound_pub = rospy.Publisher("/robotsound", SoundRequest)
     timer = rospy.Timer(rospy.Duration(1.0 / rate), watch)
     rospy.spin()
 
