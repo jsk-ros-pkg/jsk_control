@@ -89,6 +89,14 @@ def calc_lap(xl, loc=0, scale=1):
         ret.append(y)
     return ret;
 
+def calc_cosh(xl, loc=0, scale=1):
+    ret=[]
+    for _x in xl:
+        x = (_x - loc) / scale
+        y = 1.0/(exp(3.14/2*x) + exp(-3.14/2*x))/scale
+        ret.append(y)
+    return ret;
+
 def gen_graph(ls, rng, gen_data, title="histgram", xlabel="dif [m]", labels=None, logpath="log.eps", draw_np=True):
     plt.title(title)
     plt.xlabel(xlabel)
@@ -117,7 +125,7 @@ def gen_graph(ls, rng, gen_data, title="histgram", xlabel="dif [m]", labels=None
             scale=float(np.std(time_buf))
             x = np.arange(rng[0], rng[1], (rng[1] - rng[0])/1000.0)
             if draw_np:
-                plt.plot(x, calc_logistic(x, loc=loc, scale=scale), label=(labels[i]+".nd (" + (r'''$\mu=%.1f$, $\sigma=%.2f$''' % (loc, scale)) + ")"), marker=markers[(i % len(markers))])
+                plt.plot(x, calc_cosh(x, loc=loc, scale=scale), label=(labels[i]+".nd (" + (r'''$\mu=%.1f$, $\sigma=%.2f$''' % (loc, scale)) + ")"), marker=markers[(i % len(markers))])
             i = i+1
             ##plt.hist(time_buf_buf, bins=100, label=labels, range=rng, normed=True)
     plt.legend()
