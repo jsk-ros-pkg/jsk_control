@@ -115,9 +115,14 @@ namespace jsk_footstep_controller
     pub_leg_odometory_ = pnh.advertise<geometry_msgs::PoseStamped>("leg_odometry", 1);
     pub_twist_ = pnh.advertise<geometry_msgs::TwistStamped>("base_vel", 1);
     before_on_the_air_ = true;
+    pnh.param("use_imu", use_imu_, true);
+    pnh.param("use_imu_yaw", use_imu_yaw_, true);
     if (publish_odom_tf_) {
-      odom_sub_ = pnh.subscribe("/odom", 1,
-                                &Footcoords::odomCallback, this);
+      odom_sub_.subscribe(pnh, "/odom", 50);
+      imu_sub_.subscribe(pnh, "/imu", 50);
+      odom_imu_sync_ = boost::make_shared<message_filters::Synchronizer<OdomImuSyncPolicy> >(100);
+      odom_imu_sync_->connectInput(odom_sub_, imu_sub_);
+      odom_imu_sync_->registerCallback(boost::bind(&Footcoords::odomImuCallback, this, _1, _2));
     }
     odom_init_pose_ = Eigen::Affine3d::Identity();
     odom_init_trigger_sub_ = pnh.subscribe("/odom_init_trigger", 1,
@@ -1000,10 +1005,29 @@ namespace jsk_footstep_controller
     odom_init_pose_ = odom_pose_;
   }
 
-  void Footcoords::odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
+  void Footcoords::odomImuCallback(const nav_msgs::Odometry::ConstPtr& odom_msg,
+                                   const sensor_msgs::Imu::ConstPtr& imu_msg)
   {
     boost::mutex::scoped_lock lock(mutex_);
-    tf::poseMsgToEigen(odom_msg->pose.pose, odom_pose_);
+    if (use_imu_) {
+      Eigen::Affine3d odom_pose;
+      tf::poseMsgToEigen(odom_msg->pose.pose, odom_pose);
+      Eigen::Quaterniond imu_orientation;
+      tf::quaternionMsgToEigen(imu_msg->orientation, imu_orientation);
+      if (use_imu_yaw_) {
+        odom_pose_ = Eigen::Translation3d(odom_pose.translation()) * imu_orientation;
+      }
+      else {
+        float roll, pitch;
+        getRollPitch(Eigen::Affine3d::Identity() * imu_orientation, roll, pitch);
+        odom_pose_ = (Eigen::Translation3d(odom_pose.translation()) *
+                      Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()) *
+                      Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()));
+      }
+    }
+    else {
+      tf::poseMsgToEigen(odom_msg->pose.pose, odom_pose_);
+    }
   }
 }
 
