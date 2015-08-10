@@ -93,6 +93,49 @@ function gen_table(){
 \end{table}";
 }
 
+function gen_net_config(){
+    echo "";
+    ##
+    echo "\begin{table}[htb]
+  \caption{Network configuration: Depth x Width}
+  \label{tab:net_config}
+  \begin{center}
+    \begin{tabular}{|l||r|r|r|r|r|r|} \\hline
+      Depth & layer1 & layer2 & layer3 & layer4 & layer5 & output \\\\
+      x Width & cells & cells & cells & cells & cells & cells
+      \\\\ \\hline \\hline";
+    ##
+    ls | grep -e "ik_net_.\+\.prototxt" | grep -v "x50\." | grep -v "predict" | while read line;
+    do
+	SIZE=`echo $line | sed -e "s/^ik_net_\(.\+\)\.prototxt$/\\1/g"`;
+	DEPTH=`echo $SIZE | sed -e "s/^\([0-9]\+\)x.\+$/\\1/g"`;
+	WIDTH=`echo $SIZE | sed -e "s/^.\+x\([0-9]\+\)$/\\1/g"`;
+	id=0;
+	echo -n "$SIZE";
+	for val in `cat $line | grep num_output | sed -e "s/^ *num_output: \(.\+\)$/\\1/g"`;
+	do
+	    if [ "$val" ];
+	    then
+		echo -n " & $val";
+		id=`expr $id + 1`;
+	    fi
+	    if [ "$id" -ge "$DEPTH" ];
+	    then
+		while [ "$id" -le "4" ];
+		do
+		    echo -n " & \-";
+		    id=`expr $id + 1`;
+		done
+	    fi
+	done
+	echo " \\\\ \\hline";
+    done
+    echo "    \end{tabular}
+  \end{center}
+\end{table}";
+}
+
+
 gen_table "test" "average";
 gen_table "test" "variance";
 gen_table "train" "average";
