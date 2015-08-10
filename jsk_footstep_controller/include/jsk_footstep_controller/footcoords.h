@@ -36,6 +36,7 @@
 #ifndef JSK_FOOTSTEP_CONTROLLER_FOOTCOORDS_H_
 #define JSK_FOOTSTEP_CONTROLLER_FOOTCOORDS_H_
 #include <Eigen/Geometry>
+#include <sensor_msgs/Imu.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <tf/transform_listener.h>
 #include <diagnostic_updater/diagnostic_updater.h>
@@ -99,6 +100,9 @@ namespace jsk_footstep_controller
     geometry_msgs::WrenchStamped,
     sensor_msgs::JointState,
     geometry_msgs::PointStamped> SyncPolicy;
+    typedef message_filters::sync_policies::ExactTime<
+      nav_msgs::Odometry,
+      sensor_msgs::Imu> OdomImuSyncPolicy;
 
     Footcoords();
     virtual ~Footcoords();
@@ -144,7 +148,8 @@ namespace jsk_footstep_controller
                                 tf::Vector3& lfoot_force, tf::Vector3& rfoot_force);
     virtual void periodicTimerCallback(const ros::TimerEvent& event);
     virtual void odomInitTriggerCallback(const std_msgs::Empty& trigger);
-    virtual void odomCallback(const nav_msgs::Odometry::ConstPtr& odom_msg);
+    virtual void odomImuCallback(const nav_msgs::Odometry::ConstPtr& odom_msg,
+                                 const sensor_msgs::Imu::ConstPtr& imu_msg);
     // This callback is called when robot is put on the ground.
     // virtual void odomInitCallback(const std_msgs::Empty& odom_init_msg);
     virtual void synchronizeForces(const geometry_msgs::WrenchStamped::ConstPtr& lfoot,
@@ -172,7 +177,10 @@ namespace jsk_footstep_controller
     Eigen::Affine3d odom_init_pose_;
     ros::Timer periodic_update_timer_;
     ros::Subscriber odom_init_trigger_sub_;
-    ros::Subscriber odom_sub_;
+    //ros::Subscriber odom_sub_;
+    message_filters::Subscriber<nav_msgs::Odometry> odom_sub_;
+    message_filters::Subscriber<sensor_msgs::Imu> imu_sub_;
+    boost::shared_ptr<message_filters::Synchronizer<OdomImuSyncPolicy> > odom_imu_sync_;
     ros::Subscriber synchronized_forces_sub_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_lfoot_force_;
     message_filters::Subscriber<geometry_msgs::WrenchStamped> sub_rfoot_force_;
@@ -207,6 +215,8 @@ namespace jsk_footstep_controller
     double force_thr_;
     bool before_on_the_air_;
     std::map<std::string, double> prev_joints_;
+    bool use_imu_;
+    bool use_imu_yaw_;
     ros::Time last_time_;
     std::string lfoot_frame_id_;
     std::string rfoot_frame_id_;
