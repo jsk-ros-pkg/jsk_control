@@ -199,7 +199,7 @@ namespace jsk_footstep_planner
     pcl::PointIndices::Ptr indices;
     FootstepSupportState presupport_state;
     if (skip_cropping) {
-      presupport_state = isSupportedByPointCloudWithoutCrpping(
+      presupport_state = isSupportedByPointCloudWithoutCropping(
         pose_, cloud, tree,
         indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
     }
@@ -269,7 +269,7 @@ namespace jsk_footstep_planner
       // check is it enough points to support the footstep
       FootstepSupportState support_state;
       if (skip_cropping) {
-        support_state = isSupportedByPointCloudWithoutCrpping(
+        support_state = isSupportedByPointCloudWithoutCropping(
           new_pose, cloud, tree,
           inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
       }
@@ -369,7 +369,7 @@ namespace jsk_footstep_planner
   }
   
   FootstepSupportState
-  FootstepState::isSupportedByPointCloudWithoutCrpping(
+  FootstepState::isSupportedByPointCloudWithoutCropping(
     const Eigen::Affine3f& pose,
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
     pcl::KdTreeFLANN<pcl::PointNormal>& tree,
