@@ -55,10 +55,10 @@ function gen_table(){
     echo "";
     ##
     echo "\begin{table}[htb]
+  \begin{center}
   \caption{${AVER} of conputational time and difference between target
     value for ${TEST} data set}
   \label{tab:${AVER}_diff_for_${TEST}_data}
-  \begin{center}
     \begin{tabular}{|l||r|r||r|r|r||r|r|} \\hline
       Depth & Time & \$p_{x}$ & \$p_{y}$ & \$p_{z}$ & \$r_{x}$ &
       \$r_{y}$ & \$r_{z}$ \\\\
@@ -97,9 +97,9 @@ function gen_net_config(){
     echo "";
     ##
     echo "\begin{table}[htb]
+  \begin{center}
   \caption{Network configuration: Depth x Width}
   \label{tab:net_config}
-  \begin{center}
     \begin{tabular}{|l||r|r|r|r|r|r|} \\hline
       Depth & layer1 & layer2 & layer3 & layer4 & layer5 & output \\\\
       x Width & cells & cells & cells & cells & cells & cells
@@ -140,3 +140,4 @@ gen_table "test" "average";
 gen_table "test" "variance";
 gen_table "train" "average";
 gen_table "train" "variance";
+gen_net_config
