@@ -17,7 +17,7 @@
 	  *rarm-links*
 	  (send *robot* :hand :rarm :links)))
 
-(defvar *sample-points* (expt 6 6))
+(defvar *sample-points* (expt 10 6))
 (defvar *angle-vector-map*)
 (defvar *ef-coords-map*)
 
@@ -38,7 +38,7 @@
 		(+ j (* 6 i)) (+ j (* 6 r))))))))
 
 (defun gen-ik-learning-data
-  (&key (sep 6)
+  (&key (sep 10)
 	(sample-points (expt sep (length *rarm-joints*)))
 	(i 0)
 	(draw? nil))
@@ -204,7 +204,7 @@
 (defun ik-test
   (&optional
    (i 0)
-   (calc-forward 'caffe::memory-calc-forward)
+   (calc-forward 'caffe::calc-forward-double)
    (draw? t)
    ;;
    (input (instantiate float-vector 6))
@@ -242,7 +242,7 @@
   )
 
 (defun ik-random-test
-  (&key (calc-forward 'caffe::memory-calc-forward) (draw? t) tm)
+  (&key (calc-forward 'caffe::calc-forward-double) (draw? t) tm)
   (let* ((joint-list (butlast (send *robot* :rarm :joint-list)))
 	 (random-angle
 	  (mapcar '(lambda (j) (send j :joint-angle
