@@ -11,9 +11,13 @@ private:
   std::shared_ptr<caffe::db::Transaction> txn_;
   std::shared_ptr<caffe::db::Cursor> cursor_;
   caffe::Datum datum_;
+  int put_cnt;
+  // int size;
 
 public:
   eus_caffe_db(){
+    this->put_cnt=0;
+    // this->size = -1;
   }
   ~eus_caffe_db(){
     this->close();
@@ -84,7 +88,7 @@ public:
   int close(){
     if ( this->txn_ ) {
       std::cout << " -- transaction close" << std::endl;
-      this->txn_->Commit();
+      if ( this->put_cnt != 0 ) this->txn_->Commit();
       this->txn_.reset();
       this->txn_ = NULL;
     }
@@ -177,6 +181,12 @@ public:
     return 0;
   }
 
+  int read_pos(int pos){
+    assert(this->cursor_);
+    this->cursor_->SeekToFirst();
+    return this->read(pos);
+  }
+
   int read(int step){
     assert(this->cursor_);
     for ( int i=0; i<step ; i++ ){
@@ -188,6 +198,19 @@ public:
     }
     this->datum_.ParseFromString(this->cursor_->value());
     return 0;
+  }
+
+  int get_size(){
+    assert(this->cursor_);
+    this->cursor_->SeekToFirst();
+    int ret = 0;
+    while ( this->cursor_->valid() ){
+      this->cursor_->Next();
+      ret++;
+    }
+    this->cursor_->SeekToFirst();
+    this->datum_.ParseFromString(this->cursor_->value());
+    return ret;
   }
 
   int _put(int chan, int width, int height, int label, char* key, char* data, int data_max, double* float_data, int float_data_max){
@@ -212,7 +235,23 @@ public:
     std::string datum_str;
     this->datum_.SerializeToString(&datum_str);
     this->txn_->Put(key, datum_str);
+    if ( ++this->put_cnt % 1000 == 0 ) this->commit();
     return 0;
+  }
+
+  int commit(){
+    assert(this->txn_);
+    std::cout << "db commit size=" << this->put_cnt << std::endl;
+    //
+    int ret = this->put_cnt;
+    if ( this->put_cnt != 0 ){
+      this->txn_->Commit();
+      this->put_cnt = 0;
+      this->txn_.reset(this->db_->NewTransaction());
+    } else {
+      std::cout << " -- empty transaction, skipped" << std::endl;
+    }
+    return ret;
   }
 
   int put(int chan, int width, int height, int label, char* key, char* data, int data_max){
@@ -248,9 +287,12 @@ extern "C" {
   int eus_caffe_db_open(char* db_type, char* path, int mode){ return ecd->open(db_type, path, mode); }
   int eus_caffe_db_put(int chan, int width, int height, int label, char* id_str, char* data, int data_max){ return ecd->put(chan,width,height,label,id_str,data,data_max); }
   int eus_caffe_db_put_double(int chan, int width, int height, int label, char* id_str, double* data, int data_max){ return ecd->put_double(chan,width,height,label,id_str,data,data_max); }
+  int eus_caffe_db_commit(){ return ecd->commit() ; }
   int eus_caffe_db_close(){ return ecd->close() ; }
   int eus_caffe_db_read(int step){ return ecd->read(step) ; }
+  int eus_caffe_db_read_pos(int pos){ return ecd->read_pos(pos) ; }
   int eus_caffe_db_dump(){ return ecd->dump_datum() ; }
+  int eus_caffe_db_get_size(){ return ecd->get_size() ; }
   int eus_caffe_db_get_shape(double* ret){ return ecd->get_shape(ret) ; }
   int eus_caffe_db_get_data(char* ret){ return ecd->get_data(ret) ; }
   int eus_caffe_db_get_label(){ return ecd->get_label() ; }
