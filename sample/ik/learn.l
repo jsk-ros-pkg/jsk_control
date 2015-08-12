@@ -504,9 +504,11 @@
     ))
 
 (defun redundancy-ik-learn
-  (&key (solver "redundancy_ik_solver.prototxt"))
+  (&key (solver "redundancy_ik_solver.prototxt")
+	(solverstate ""))
   (caffe::learn
    :solver solver
+   :solverstate solverstate
    :size 0
    ))
 
