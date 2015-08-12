@@ -11,6 +11,7 @@ private:
   std::shared_ptr<caffe::db::Transaction> txn_;
   std::shared_ptr<caffe::db::Cursor> cursor_;
   caffe::Datum datum_;
+  std::string db_type_; std::string db_path_; int db_mode_;
   int put_cnt;
   // int size;
 
@@ -23,7 +24,13 @@ public:
     this->close();
   }
 
-  int open(char* db_type, char* path, int m){
+  int open(const char* db_type, const char* path, int m){
+    //
+    this->db_type_.assign(db_type);
+    this->db_path_.assign(path);
+    this->db_mode_ = m;
+    std::cout << "db open: " << this->db_path_ << "(" << this->db_type_ << ")" << std::endl;
+    //
     struct stat buf;
     caffe::db::Mode mode;
     int file_exist = stat(path, &buf);
@@ -104,6 +111,12 @@ public:
       this->db_.reset();
       this->db_ = NULL;
     }
+    return 0;
+  }
+
+  int reopen(){
+    this->close();
+    this->open(this->db_type_.c_str(), this->db_path_.c_str(), this->db_mode_);
     return 0;
   }
 
@@ -241,7 +254,7 @@ public:
     std::string datum_str;
     this->datum_.SerializeToString(&datum_str);
     this->txn_->Put(key, datum_str);
-    if ( ++this->put_cnt % 1000 == 0 ) this->commit();
+    if ( ++this->put_cnt % 100000 == 0 ) this->commit();
     return 0;
   }
 
@@ -293,10 +306,11 @@ extern "C" {
 
 extern "C" {
   int eus_caffe_db_open(char* db_type, char* path, int mode){ return ecd->open(db_type, path, mode); }
+  int eus_caffe_db_close(){ return ecd->close() ; }
+  int eus_caffe_db_reopen(){ return ecd->reopen() ; }
   int eus_caffe_db_put(int chan, int width, int height, int label, char* id_str, char* data, int data_max){ return ecd->put(chan,width,height,label,id_str,data,data_max); }
   int eus_caffe_db_put_double(int chan, int width, int height, int label, char* id_str, double* data, int data_max){ return ecd->put_double(chan,width,height,label,id_str,data,data_max); }
   int eus_caffe_db_commit(){ return ecd->commit() ; }
-  int eus_caffe_db_close(){ return ecd->close() ; }
   int eus_caffe_db_read(int step){ return ecd->read(step) ; }
   int eus_caffe_db_read_pos(int pos){ return ecd->read_pos(pos) ; }
   int eus_caffe_db_dump(){ return ecd->dump_datum() ; }
