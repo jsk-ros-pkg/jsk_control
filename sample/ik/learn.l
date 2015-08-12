@@ -307,14 +307,14 @@
   ret)
 
 (defun gen-redundancy-ik-learning-data
-  (&key (sep 10)
+  (&key (sep 30)
 	(joint-list (butlast (send *robot* :rarm :joint-list)))
 	(sample-points (expt sep (length joint-list)))
 	(draw? nil)
 	;;
 	(input-path "input_lmdb_potentio")
 	(target-path "target_lmdb_limb_coords")
-	(random-index-vector (random-index-vector sample-points))
+	;; (random-index-vector (random-index-vector sample-points))
 	(i 0)
 	(zero-str-length (length (format nil "~A" sample-points)))
 	)
@@ -348,13 +348,13 @@
 		(caffe::db-set-id 1)
 		(caffe::db-put-double
 		 :channels (length joint-list) :width 1 :height 1 :label i
-		 :id_str (caffe::zero-string (aref random-index-vector i) zero-str-length)
+		 :id_str (caffe::zero-string i zero-str-length)
 		 :data (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
 		;;
 		(caffe::db-set-id 0)
 		(caffe::db-put-double
 		 :channels 6 :width 1 :height 1 :label i
-		 :id_str (caffe::zero-string (aref random-index-vector i) zero-str-length)
+		 :id_str (caffe::zero-string i zero-str-length)
 		 :data (concatenate float-vector (scale 1e-3 pos) rot))
 		(setq i (+ i 1))))
 	     (t
@@ -367,6 +367,14 @@
 		(itter (cdr jlist))))
 	     )))
     (itter joint-list)
+    (caffe::db-set-id 0) (caffe::db-close)
+    (caffe::db-set-id 1) (caffe::db-close)
+    ;; swap
+    (caffe::db-set-id 0)
+    (caffe::db-open :dtype "lmdb" :path target-path :mode #\w)
+    (caffe::db-set-id 1)
+    (caffe::db-open :dtype "lmdb" :path input-path :mode #\w)
+    (caffe::db-random-swap (* 3 sample-points) :size i)
     (caffe::db-set-id 0) (caffe::db-close)
     (caffe::db-set-id 1) (caffe::db-close)
     ))
