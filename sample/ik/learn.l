@@ -370,11 +370,13 @@
     (caffe::db-set-id 0) (caffe::db-close)
     (caffe::db-set-id 1) (caffe::db-close)
     ;; swap
+    (format t "start random swapping~%")
     (caffe::db-set-id 0)
     (caffe::db-open :dtype "lmdb" :path target-path :mode #\w)
     (caffe::db-set-id 1)
     (caffe::db-open :dtype "lmdb" :path input-path :mode #\w)
-    (caffe::db-random-swap (* 3 sample-points) :size i)
+    (caffe::db-random-swap-fast (* 3 sample-points) :size sample-points
+                                :id-list '(0 1) :step (min (/ sample-points 30) 10000))
     (caffe::db-set-id 0) (caffe::db-close)
     (caffe::db-set-id 1) (caffe::db-close)
     ))
@@ -496,7 +498,7 @@
     (caffe::db-open :dtype "lmdb" :path target-path :mode #\w)
     (caffe::db-set-id 1)
     (caffe::db-open :dtype "lmdb" :path input-path :mode #\w)
-    (caffe::db-random-swap (* 7 i) :size i)
+    (caffe::db-random-swap-fast (* 7 i) :size i)
     (caffe::db-set-id 0) (caffe::db-close)
     (caffe::db-set-id 1) (caffe::db-close)
     ))
