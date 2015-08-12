@@ -53,19 +53,19 @@ public:
     }
     this->db_->Open(path, mode);
     //
-    // transaction initialize
-    if ( mode == caffe::db::NEW || mode == caffe::db::WRITE ){
-      if ( this->txn_ ){
-	this->txn_.reset(this->db_->NewTransaction());
-      } else {
-	this->txn_ = std::shared_ptr<caffe::db::Transaction>(this->db_->NewTransaction());
-      }
-    } else { // read mode
-      if ( this->txn_ ) {
-	this->txn_.reset();
-	this->txn_ = NULL;
-      }
-    }
+    // transaction initialize, -> auto initialize in put function
+    // if ( mode == caffe::db::NEW || mode == caffe::db::WRITE ){
+    //   if ( this->txn_ ){
+    // 	this->txn_.reset(this->db_->NewTransaction());
+    //   } else {
+    // 	this->txn_ = std::shared_ptr<caffe::db::Transaction>(this->db_->NewTransaction());
+    //   }
+    // } else { // read mode
+    //   if ( this->txn_ ) {
+    // 	this->txn_.reset();
+    // 	this->txn_ = NULL;
+    //   }
+    // }
     //
     // cursor initialize
     if ( mode == caffe::db::READ || mode == caffe::db::WRITE ){
@@ -91,6 +91,7 @@ public:
       if ( this->put_cnt != 0 ) this->txn_->Commit();
       this->txn_.reset();
       this->txn_ = NULL;
+      // this->commit();
     }
     if ( this->cursor_ ) {
       std::cout << " -- cursor close" << std::endl;
@@ -214,7 +215,12 @@ public:
   }
 
   int _put(int chan, int width, int height, int label, char* key, char* data, int data_max, double* float_data, int float_data_max){
-    assert(this->txn_);
+    //assert(this->txn_);
+    if ( ! this->txn_ ){
+      this->txn_ = std::shared_ptr<caffe::db::Transaction>(this->db_->NewTransaction());
+      this->put_cnt = 0;
+    }
+    //
     this->datum_.set_channels(chan);
     this->datum_.set_height(width);
     this->datum_.set_width(height);
@@ -247,7 +253,9 @@ public:
     if ( this->put_cnt != 0 ){
       this->txn_->Commit();
       this->put_cnt = 0;
-      this->txn_.reset(this->db_->NewTransaction());
+      // this->txn_.reset(this->db_->NewTransaction());
+      this->txn_.reset();
+      this->txn_ = NULL;
     } else {
       std::cout << " -- empty transaction, skipped" << std::endl;
     }
