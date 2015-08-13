@@ -2,6 +2,7 @@
 
 (require "package://eus_caffe/euslisp/eus-caffe.l")
 (require "package://eus_caffe/euslisp/eus-caffe-db.l")
+(require "package://eus_caffe/euslisp/eus-log.l")
 (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
 (require "models/arrow-object.l")
 
@@ -19,7 +20,7 @@
 	  (send-all *rarm-joints* :child-link)
 	  (send *robot* :hand :rarm :links)))
 
-(defvar *sample-points* (expt 3 (* 3 6)))
+(defvar *sample-points* (expt 3 (* 3 (length *rarm-joints*))))
 
 (defun coords2vector
   (c)
@@ -51,7 +52,7 @@
 (defun gen-traj-learning-data
   (&key (sep 3)
 	(id-max 3)
-	(joint-list (butlast (send *robot* :rarm :joint-list)))
+	(joint-list *rarm-joints*)
 	(sample-points (expt sep (* id-max (length joint-list))))
 	;;
 	(recursive-order 1)
@@ -149,8 +150,10 @@
     (caffe::db-open :dtype "lmdb" :path target-path :mode #\w)
     (caffe::db-set-id 1)
     (caffe::db-open :dtype "lmdb" :path input-path :mode #\w)
+    (cpplog::change-output-stream "/tmp/traj_swap.log")
     (caffe::db-random-swap-fast (* 3 sample-points) :size sample-points
                                 :id-list '(0 1) :step (min (/ sample-points 30) 10000))
+    (cpplog::change-output-stream "")
     (caffe::db-set-id 0) (caffe::db-close)
     (caffe::db-set-id 1) (caffe::db-close)
     ))
@@ -175,7 +178,7 @@
   (caffe::db-close)
   ;;
   (send *start* :newcoords c1)
-  (send *goal* :newcoords c1)
+  (send *goal* :newcoords c2)
   (setq ret (check-trajectory :gain output))
   ;;
   (v- input
