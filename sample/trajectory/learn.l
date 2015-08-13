@@ -259,6 +259,92 @@
     (caffe::db-set-id 1) (caffe::db-close)
     ))
 
+(defun add-random-minjerk-traj-learning-data
+  (&key (cnt 100)
+	(start-joint-list *rarm-joints2*)
+	(end-joint-list *rarm-joints1*)
+	(joint-list (append start-joint-list end-joint-list))
+	;;
+	(draw? nil)
+	;;
+	(input-path "input_lmdb_traj")
+	(target-path "target_lmdb_coords")
+	;;
+	(zero-str-length);; (length (format nil "~A" sample-points)))
+	(sample-points)
+	(print-step 1000)
+	(gc-step 10000)
+	(i -1)
+	)
+  (caffe::db-set-id 0)
+  (if (not (zerop (caffe::db-open :dtype "lmdb" :path target-path :mode #\w)))
+      (return-from gen-redundancy-ik-learning-data (print 'db-open-failed)))
+  (caffe::db-set-id 1)
+  (if (not (zerop (caffe::db-open :dtype "lmdb" :path input-path :mode #\w)))
+      (return-from gen-redundancy-ik-learning-data (print 'db-open-failed)))
+  (cond
+   ((minusp i)
+    (caffe::db-set-id 0)
+    (setq i (caffe::db-get-size))
+    (caffe::db-set-id 1)
+    (if (not (eq  i (caffe::db-get-size)))
+	(format t "-- db size mismatch ~A vs ~A~%" i (caffe::db-get-size)))))
+  (setq zero-str-length (length (format nil "~A" (setq sample-points (+ i cnt)))))
+  (format t " -- size : ~A~%" i)
+  ;;
+  (labels ((_draw
+	    nil
+	    (cond
+	     (draw?
+	      (send *viewer* :draw-objects :flush nil)
+	      (send (send *robot* :rarm :end-coords :worldcoords) :draw-on :flush nil
+		    :color (float-vector 1 0 0) :size 100)
+	      (send *viewer* :viewsurface :flush)
+	      (x::window-main-one)
+	      (unix::usleep (* 100 1000))))))
+    (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
+    (let ((v (instantiate float-vector (length joint-list))))
+      (dotimes (j cnt)
+	(dotimes (k (length v)) (setf (aref v k) (random 1.0)))
+	(let* (v1 v2)
+	  (map cons
+	       #'(lambda (j av)
+		   (send j :joint-angle
+			 (- (+ (send j :min-angle)
+			       (* av (- (send j :max-angle)
+					(send j :min-angle))))
+			    (send j :joint-angle))
+			 :relative t
+			 ))
+	       joint-list v)
+	  (send-all (send-all joint-list :child-link) :worldcoords)
+	  (setq v1 (concatenate float-vector (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords)) (subseq v 0 (length start-joint-list))))
+	  (_draw)
+	  ;;
+	  (setq v2
+		(send (gen-minjerk-gain :jlist end-joint-list  :start-av (subseq v 0 (length start-joint-list)) :end-av (subseq v (length start-joint-list))) :gain-vector))
+	  ;;
+	  (caffe::db-set-id 1)
+	  (caffe::db-put-double
+	   :channels (length v2) :width 1 :height 1 :label i
+	   :id_str (caffe::zero-string i zero-str-length)
+	   :data v2)
+	  ;;
+	  (caffe::db-set-id 0)
+	  (caffe::db-put-double
+	   :channels (length v1) :width 1 :height 1 :label i
+	   :id_str (caffe::zero-string i zero-str-length)
+	   :data v1)
+	  (setq i (+ i 1))
+	  (if (eq 0 (mod i print-step))
+	      (format t "[~A/~A]~%" i sample-points))
+	  (if (eq 0 (mod i gc-step)) (sys::gc))
+	  ))
+      ;;
+      (caffe::db-set-id 0) (caffe::db-close)
+      (caffe::db-set-id 1) (caffe::db-close)
+      )))
+
 (defun traj-db-test
   (&key
    (id (random 1000))
@@ -268,6 +354,7 @@
   (caffe::db-open :path target-path)
   (caffe::db-read id)
   (setq input (caffe::db-get-float-data))
+  (format t " -- size : ~A~%" (caffe::db-get-size))
   (caffe::db-close)
   ;;
   (setq c (vector2coords (subseq input 0 3)))
@@ -282,6 +369,7 @@
   (caffe::db-open :path input-path)
   (caffe::db-read id)
   (setq output (caffe::db-get-float-data))
+  (format t " -- size : ~A~%" (caffe::db-get-size))
   (caffe::db-close)
   ;;
   (send *goal* :newcoords c)
