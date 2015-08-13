@@ -42,8 +42,11 @@
       (setq inequality-max-vector (fill (instantiate float-vector inequality-dim) inf-var)))
   (labels ((concatenate-matrix-column
             (&rest args)
-            (let (m ml)
+            (let (m ml (size-of-column (car (remove nil (mapcar #'(lambda (x) (array-dimension x 1)) args)))))
               (dolist (mat args)
+                (if mat
+                    (unless (= (array-dimension mat 1) size-of-column)
+                      (error ";; concatenate-matrix-column matrix size error (size=~A)~%" (mapcar #'(lambda (x) (array-dimension x 1)) args))))
                 (setq m (if mat (length (matrix-column mat 0)) 0))
                 (dotimes (i m)
                   (push (matrix-row mat i) ml)))
