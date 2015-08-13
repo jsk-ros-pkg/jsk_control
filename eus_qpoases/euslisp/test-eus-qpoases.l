@@ -20,7 +20,7 @@
               2 2
               (list (list 1 0.5) (list 0.5 2)))))
          (q (float-vector -8 -12))
-         (ret (solve-qpoases
+         (ret (solve-qpoases-qp
                :initial-state x0
                :eval-weight-matrix H
                :eval-coeff-vector q)))
@@ -52,7 +52,7 @@
              1 2
              (list (list 2 1))))
          (B (float-vector 2))
-         (ret (solve-qpoases
+         (ret (solve-qpoases-qp
                :initial-state x0
                :eval-weight-matrix H
                :eval-coeff-vector q
@@ -85,7 +85,7 @@
              (list (list 1 2))))
          (B (float-vector 1))
          (LB (float-vector 0 0))
-         (ret (solve-qpoases
+         (ret (solve-qpoases-qp
                :initial-state x0
                :eval-weight-matrix H
                :eval-coeff-vector q
@@ -114,7 +114,7 @@
          (LB (float-vector 10 10))
          (UB (float-vector -10 -10))
          ;; check-status = t => return value should be nil.
-         (ret0 (solve-qpoases
+         (ret0 (solve-qpoases-qp
                 :initial-state x0
                 :eval-weight-matrix H
                 :eval-coeff-vector q
@@ -122,7 +122,7 @@
                 :state-max-vector UB
                 ))
          ;; check-status = nil => something is returned.
-         (ret1 (solve-qpoases
+         (ret1 (solve-qpoases-qp
                 :initial-state x0
                 :eval-weight-matrix H
                 :eval-coeff-vector q
@@ -135,7 +135,115 @@
     (and (not ret0) ret1)
     ))
 
+;; sample for lp
+;;max 5x1 + 4x2
+;;    => [5 4] [x1 x2]'
+;;s.t x1 + 2x2 ≤ 80
+;;    4x1 + 4x2 ≤ 180
+;;    3x1 + x2 ≤ 90
+;;    x1 ≥ 0, x2 ≥ 0
+;;    =>
+;;    |1 2||x1 x2|'<=80
+;;    |4 4||x1 x2|'<=180
+;;    |3 1||x1 x2|'<=90
+;;    |x1 x2|>=0
+;;=>[22.5 22.5]
+(defun demo-eus-qpOASES5
+  ()
+  "Demo for LP with inequality."
+  (let* ((X0 (float-vector 0 0 0 0))
+         (q (scale -1 (float-vector 5 4)))
+         (A (make-matrix
+             3 2
+             (list (list 1 2)
+                   (list 4 4)
+                   (list 3 1))))
+         (ubA (float-vector 80 180 90))
+         (ret (solve-qpoases-lp
+               :initial-state x0
+               :eval-coeff-vector q
+               :state-min-vector (float-vector 0 0)
+               :inequality-matrix A
+               :inequality-max-vector ubA
+               )))
+    (warn ";; solution ~A => ~A~%"
+          ret
+          (setq ret
+                (eps-v= (float-vector 22.5 22.5) ret)))
+    ;; correct solution
+    ret
+    ))
+
+;; min −x1 x−2
+;;     =>|-1 -1 0 0||x1 x2 x3 x4|'
+;; s.t. 2x1 + 3x2 + x3 = 12
+;;      −x1 + x2 − x4 = −2
+;;      x1 ≥ 0, x2 ≥ 0, x3 ≥ 0, x4 ≥ 0
+;;      =>
+;;      |2  3 1  0|X = 12
+;;      |-1 1 0 -1|X =-2
+;;      X>=0
+;; =>[18/5, 8/5, 0, 0]
+(defun demo-eus-qpOASES6
+  ()
+  "Demo for LP with equality."
+  (let* ((X0 (float-vector 0 0 0 0))
+         (q (float-vector -1 -1 0 0))
+         (A (make-matrix
+             2 4
+             (list (list 2 3 1 0)
+                   (list -1 1 0 -1))))
+         (ubA (float-vector 12 -2))
+         (ret (solve-qpoases-lp
+               :initial-state x0
+               :eval-coeff-vector q
+               :state-min-vector (float-vector 0 0 0 0)
+               :equality-matrix A
+               :equality-vector ubA
+               )))
+    (warn ";; solution ~A => ~A~%"
+          ret
+          (setq ret
+                (eps-v= (float-vector (/ 18.0 5) (/ 8.0 5) 0 0) ret)))
+    ;; correct solution
+    ret
+    ))
+
+;; min  x1 + x2
+;;      => |1 1 0||x1 x2 x3|'
+;; s.t. 2x1 − x2 − x3 = 4
+;;      x2 ≥ 0, x3 ≥ 0
+;;      =>|2 -1 -1|X=4
+;;        |-inf 0 0|<=X<=|inf inf inf|
+;; =>[2.0 0.0 0.0]
+(defun demo-eus-qpOASES7
+  ()
+  "Demo for LP with equality + unbound."
+  (let* ((X0 (float-vector 0 0 0 0))
+         (q (float-vector 1 1 0))
+         (A (make-matrix
+             1 3
+             (list (list 2 -1 -1))))
+         (ubA (float-vector 4))
+         (ret (solve-qpoases-lp
+               :initial-state x0
+               :eval-coeff-vector q
+               :state-min-vector (float-vector -1e35 0 0)
+               :equality-matrix A
+               :equality-vector ubA
+               )))
+    (warn ";; solution ~A => ~A~%"
+          ret
+          (setq ret
+                (eps-v= (float-vector 2 0 0) ret)))
+    ;; correct solution
+    ret
+    ))
+
 (warn ";; (demo-eus-qpOASES1) ;; ~A~%" (documentation 'demo-eus-qpOASES1))
 (warn ";; (demo-eus-qpOASES2) ;; ~A~%" (documentation 'demo-eus-qpOASES2))
 (warn ";; (demo-eus-qpOASES3) ;; ~A~%" (documentation 'demo-eus-qpOASES3))
 (warn ";; (demo-eus-qpOASES4) ;; ~A~%" (documentation 'demo-eus-qpOASES4))
+(warn ";; (demo-eus-qpOASES5) ;; ~A~%" (documentation 'demo-eus-qpOASES5))
+(warn ";; (demo-eus-qpOASES6) ;; ~A~%" (documentation 'demo-eus-qpOASES6))
+(warn ";; (demo-eus-qpOASES7) ;; ~A~%" (documentation 'demo-eus-qpOASES7))

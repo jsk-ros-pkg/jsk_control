@@ -19,7 +19,7 @@
         (contact-constraint-vector-list)
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
-        (qp-solver #'solve-qpoases)
+        (qp-solver #'solve-qpoases-qp)
         (check-status t)
         (min-inequality-violation-weight) (min-inequality-violation-weight-vector))
   "Wrench distribution function."
@@ -185,7 +185,7 @@
         (debug)
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
-        (qp-solver #'solve-qpoases)
+        (qp-solver #'solve-qpoases-qp)
         (check-status t))
   "Wrench + torque distribution function."
   (let* ((contact-matrix (apply #'concatenate-matrix-diagonal contact-constraint-matrix-list))
