@@ -1,0 +1,443 @@
+name: "redundancy_ik_net"
+layer {
+  name: "input"
+  type: "Data"
+  top: "sigmoid0"
+  include {
+    phase: TRAIN
+  }
+  transform_param {
+    scale: 1.0 ##0.003922
+  }
+  data_param {
+    source: "input_lmdb_traj"
+    batch_size: 100 ## must be same as target one
+    backend: LMDB
+  }
+}
+layer {
+  name: "target"
+  type: "Data"
+  top: "target"
+  transform_param {
+    scale: 1.0
+  }
+  include {
+    phase: TRAIN
+  }
+  data_param {
+    source: "target_lmdb_coords"
+    batch_size: 100
+    backend: LMDB
+  }
+}
+layer {
+  name: "ip1"
+  type: "InnerProduct"
+  top: "ip1"
+  bottom: "sigmoid0"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 200
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "sigmoid1"
+  type: "Sigmoid"
+  top: "sigmoid1"
+  bottom: "ip1"
+}
+layer {
+  name: "ip2"
+  type: "InnerProduct"
+  top: "ip2"
+  bottom: "sigmoid1"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 160
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "sigmoid2"
+  type: "Sigmoid"
+  top: "sigmoid2"
+  bottom: "ip2"
+}
+layer {
+  name: "ip3"
+  type: "InnerProduct"
+  top: "ip3"
+  bottom: "sigmoid2"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 120
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "sigmoid3"
+  type: "Sigmoid"
+  top: "sigmoid3"
+  bottom: "ip3"
+}
+layer {
+  name: "ip4"
+  type: "InnerProduct"
+  top: "ip4"
+  bottom: "sigmoid3"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 80
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "sigmoid4"
+  type: "Sigmoid"
+  top: "sigmoid4"
+  bottom: "ip4"
+}
+layer {
+  name: "ip5"
+  type: "InnerProduct"
+  top: "ip5"
+  bottom: "sigmoid4"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 40
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "sigmoid5"
+  type: "Sigmoid"
+  top: "sigmoid5"
+  bottom: "ip5"
+}
+layer {
+  name: "redundancy_coords"
+  type: "InnerProduct"
+  bottom: "sigmoid5"
+  top: "redundancy"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 1
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "normalized_redundancy"
+  type: "Sigmoid"
+  bottom: "redundancy"
+  top: "normalized_redundancy"
+}
+layer {
+  name: "_debug_redundancy"
+  type: "Sigmoid"
+  bottom: "redundancy"
+  top: "_debug_redundancy"
+}
+layer {
+  name: "reshape"
+  type: "Reshape"
+  bottom: "target"
+  top: "target2"
+  reshape_param {
+    shape {
+        dim: 0  # copy the dimension from below
+        dim: -1 # infer it from the other dimensions
+    }
+  }
+}
+layer {
+  name: "concate"
+  type: "Concat"
+  bottom: "target2"
+  bottom: "normalized_redundancy"
+  top: "_sigmoid6"
+}
+layer {
+  name: "_ip5"
+  type: "InnerProduct"
+  top: "_ip5"
+  bottom: "_sigmoid6"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 200
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid5"
+  type: "Sigmoid"
+  top: "_sigmoid5"
+  bottom: "_ip5"
+}
+layer {
+  name: "_ip4"
+  type: "InnerProduct"
+  top: "_ip4"
+  bottom: "_sigmoid5"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 160
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid4"
+  type: "Sigmoid"
+  top: "_sigmoid4"
+  bottom: "_ip4"
+}
+layer {
+  name: "_ip3"
+  type: "InnerProduct"
+  top: "_ip3"
+  bottom: "_sigmoid4"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 120
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid3"
+  type: "Sigmoid"
+  top: "_sigmoid3"
+  bottom: "_ip3"
+}
+layer {
+  name: "_ip2"
+  type: "InnerProduct"
+  top: "_ip2"
+  bottom: "_sigmoid3"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 80
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid2"
+  type: "Sigmoid"
+  top: "_sigmoid2"
+  bottom: "_ip2"
+}
+layer {
+  name: "_ip1"
+  type: "InnerProduct"
+  top: "_ip1"
+  bottom: "_sigmoid2"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 40
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid1"
+  type: "Sigmoid"
+  top: "_sigmoid1"
+  bottom: "_ip1"
+}
+layer {
+  name: "output"
+  type: "InnerProduct"
+  top: "_ip0"
+  bottom: "_sigmoid1"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 18
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "sigmoid0"
+  bottom: "_ip0"
+  top: "loss"
+}

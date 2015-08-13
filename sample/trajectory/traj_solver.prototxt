@@ -1,0 +1,11 @@
+net: "traj_net.prototxt"
+solver_type: SGD
+base_lr: 0.05
+lr_policy: "step"
+gamma: 0.95
+stepsize: 1000000 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
+max_iter: 30000000
+momentum: 0.9
+display: 100000
+snapshot_prefix: "traj_net"
+solver_mode: CPU
