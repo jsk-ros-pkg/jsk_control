@@ -286,7 +286,7 @@
   (setq ret (check-trajectory :gain output))
   ;;
   (v- input
-      (concatenate float-vector (car (last ret)) (car ret)))
+      (concatenate float-vector (caar ret) (cadr (car (last ret)))))
   )
 
 (defun gen-minjerk-gain
@@ -319,7 +319,7 @@
 			   (make-list id-max)))
 		      jlist))))
       (coerce gain-list float-vector)))
-   ret
+   ret tmp
    )
   (send bspline :convert-gain-vector-to-gain-matrix gain)
   (while (<= x-buf x-max)
@@ -327,9 +327,10 @@
 	 #'(lambda (j av) (send j :joint-angle
 				(+ (send j :min-angle)
 				   (* av (- (send j :max-angle) (send j :min-angle))))))
-	 jlist (print (send bspline :calc x-buf)))
+	 jlist (setq tmp (send bspline :calc x-buf)))
     (send-all (send *robot* :links) :worldcoords)
-    (push (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords)) ret)
+    (push (list (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords))
+		(copy-seq tmp)) ret)
     (send *viewer* :draw-objects)
     (x::window-main-one)
     (unix:usleep (round (* 0.01 1000 1000)))
