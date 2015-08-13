@@ -177,6 +177,7 @@
 	(target-path "target_lmdb_coords")
 	(i 0)
 	(print-step 100)
+	(gc-step 10000)
 	;; (random-index-vector (random-index-vector sample-points))
 	(zero-str-length (length (format nil "~A" sample-points)))
 	)
@@ -233,6 +234,7 @@
 		(setq i (+ i 1))
 		(if (eq 0 (mod i print-step))
 		    (format t "[~A/~A]~%" i sample-points))
+		(if (eq 0 (mod i gc-step)) (sys::gc))
 		))
 	     (t
 	      (dotimes (j sep)
