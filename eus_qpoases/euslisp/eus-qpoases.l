@@ -36,6 +36,11 @@
   :string)
 
 (defun solve-qpoases
+  (&rest args)
+  (warning-message 1 ";; solve-qpoases is deprecated!! Use solve-qpoases-qp function!!~%")
+  (apply #'solve-qpoases-qp args))
+
+(defun solve-qpoases-qp
   (&key (inf-var 1e35)
         (initial-state)
         (eval-weight-matrix)

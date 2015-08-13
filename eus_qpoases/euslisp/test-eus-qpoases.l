@@ -20,7 +20,7 @@
               2 2
               (list (list 1 0.5) (list 0.5 2)))))
          (q (float-vector -8 -12))
-         (ret (solve-qpoases
+         (ret (solve-qpoases-qp
                :initial-state x0
                :eval-weight-matrix H
                :eval-coeff-vector q)))
@@ -52,7 +52,7 @@
              1 2
              (list (list 2 1))))
          (B (float-vector 2))
-         (ret (solve-qpoases
+         (ret (solve-qpoases-qp
                :initial-state x0
                :eval-weight-matrix H
                :eval-coeff-vector q
@@ -85,7 +85,7 @@
              (list (list 1 2))))
          (B (float-vector 1))
          (LB (float-vector 0 0))
-         (ret (solve-qpoases
+         (ret (solve-qpoases-qp
                :initial-state x0
                :eval-weight-matrix H
                :eval-coeff-vector q
@@ -114,7 +114,7 @@
          (LB (float-vector 10 10))
          (UB (float-vector -10 -10))
          ;; check-status = t => return value should be nil.
-         (ret0 (solve-qpoases
+         (ret0 (solve-qpoases-qp
                 :initial-state x0
                 :eval-weight-matrix H
                 :eval-coeff-vector q
@@ -122,7 +122,7 @@
                 :state-max-vector UB
                 ))
          ;; check-status = nil => something is returned.
-         (ret1 (solve-qpoases
+         (ret1 (solve-qpoases-qp
                 :initial-state x0
                 :eval-weight-matrix H
                 :eval-coeff-vector q
