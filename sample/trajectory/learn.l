@@ -292,58 +292,48 @@
   (setq zero-str-length (length (format nil "~A" (setq sample-points (+ i cnt)))))
   (format t " -- size : ~A~%" i)
   ;;
-  (labels ((_draw
-	    nil
-	    (cond
-	     (draw?
-	      (send *viewer* :draw-objects :flush nil)
-	      (send (send *robot* :rarm :end-coords :worldcoords) :draw-on :flush nil
-		    :color (float-vector 1 0 0) :size 100)
-	      (send *viewer* :viewsurface :flush)
-	      (x::window-main-one)
-	      (unix::usleep (* 100 1000))))))
-    (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
-    (let ((v (instantiate float-vector (length joint-list))))
-      (dotimes (j cnt)
-	(dotimes (k (length v)) (setf (aref v k) (random 1.0)))
-	(let* (v1 v2)
-	  (map cons
-	       #'(lambda (j av)
-		   (send j :joint-angle
-			 (- (+ (send j :min-angle)
-			       (* av (- (send j :max-angle)
-					(send j :min-angle))))
-			    (send j :joint-angle))
-			 :relative t
-			 ))
-	       joint-list v)
-	  (send-all (send-all joint-list :child-link) :worldcoords)
-	  (setq v1 (concatenate float-vector (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords)) (subseq v 0 (length start-joint-list))))
-	  (_draw)
-	  ;;
-	  (setq v2
-		(send (gen-minjerk-gain :jlist end-joint-list  :start-av (subseq v 0 (length start-joint-list)) :end-av (subseq v (length start-joint-list))) :gain-vector))
-	  ;;
-	  (caffe::db-set-id 1)
-	  (caffe::db-put-double
-	   :channels (length v2) :width 1 :height 1 :label i
-	   :id_str (caffe::zero-string i zero-str-length)
-	   :data v2)
-	  ;;
-	  (caffe::db-set-id 0)
-	  (caffe::db-put-double
-	   :channels (length v1) :width 1 :height 1 :label i
-	   :id_str (caffe::zero-string i zero-str-length)
-	   :data v1)
-	  (setq i (+ i 1))
-	  (if (eq 0 (mod i print-step))
-	      (format t "[~A/~A]~%" i sample-points))
-	  (if (eq 0 (mod i gc-step)) (sys::gc))
-	  ))
-      ;;
-      (caffe::db-set-id 0) (caffe::db-close)
-      (caffe::db-set-id 1) (caffe::db-close)
-      )))
+  (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
+  (let ((v (instantiate float-vector (length joint-list))))
+    (dotimes (j cnt)
+      (dotimes (k (length v)) (setf (aref v k) (random 1.0)))
+      (let* (v1 v2)
+	(map cons
+	     #'(lambda (j av)
+		 (send j :joint-angle
+		       (- (+ (send j :min-angle)
+			     (* av (- (send j :max-angle)
+				      (send j :min-angle))))
+			  (send j :joint-angle))
+		       :relative t
+		       ))
+	     joint-list v)
+	(send-all (send-all joint-list :child-link) :worldcoords)
+	(setq v1 (concatenate float-vector (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords)) (subseq v 0 (length start-joint-list))))
+	;;
+	(setq v2
+	      (send (gen-minjerk-gain :jlist end-joint-list  :start-av (subseq v 0 (length start-joint-list)) :end-av (subseq v (length start-joint-list))) :gain-vector))
+	(if draw? (check-trajectory :gain v2))
+	;;
+	(caffe::db-set-id 1)
+	(caffe::db-put-double
+	 :channels (length v2) :width 1 :height 1 :label i
+	 :id_str (caffe::zero-string i zero-str-length)
+	 :data v2)
+	;;
+	(caffe::db-set-id 0)
+	(caffe::db-put-double
+	 :channels (length v1) :width 1 :height 1 :label i
+	 :id_str (caffe::zero-string i zero-str-length)
+	 :data v1)
+	(setq i (+ i 1))
+	(if (eq 0 (mod i print-step))
+	    (format t "[~A/~A]~%" i sample-points))
+	(if (eq 0 (mod i gc-step)) (sys::gc))
+	))
+    ;;
+    (caffe::db-set-id 0) (caffe::db-close)
+    (caffe::db-set-id 1) (caffe::db-close)
+    ))
 
 (defun traj-db-test
   (&key
