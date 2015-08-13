@@ -9,7 +9,10 @@
   (if (and (demo-eus-qpOASES1)
 	   (demo-eus-qpOASES2)
 	   (demo-eus-qpOASES3)
-           (demo-eus-qpOASES4))
+           (demo-eus-qpOASES4)
+           (demo-eus-qpOASES5)
+           (demo-eus-qpOASES6)
+           (demo-eus-qpOASES7))
       (assert t)
     (throw :eus_qpoases_fail nil)))
 
