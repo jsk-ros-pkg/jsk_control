@@ -3,8 +3,8 @@
 (require "../learn.l")
 (require "package://eus_nlopt/euslisp/nlopt.l")
 
-(caffe::gen-test-net :netproto "ik_net_6x200_predict.prototxt"
-		     :caffemodel "ik_net_6x200_NESTEROV_iter_1000000.caffemodel")
+(caffe::gen-test-net :netproto "ik_net_5x200_predict.prototxt"
+		     :caffemodel "ik_net_5x200_NESTEROV_iter_10000000.caffemodel")
 (caffe::output-log 0)
 (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
 
@@ -115,7 +115,7 @@
       (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
     )
   0)
-
+#f(0.022274 0.02484 0.024909 0.176786 0.149207 0.171939)
 (defun redundancy-ik-search
   (&key (target
 	 (setq *input*
@@ -138,6 +138,7 @@
 	(draw? t)
 	;;
 	(objective 'target-loss) ;; torque-objective
+	(inequality-dimension 6)
 	)
   (setq *input* target)
   (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
@@ -157,7 +158,7 @@
       :equality-function-gradient 'nop
       :inequality-function 'check-ik-thre ;;'nop
       :inequality-function-gradient 'nop
-      :alg G_DIRECT
+      :alg DIRECT
       :ftol 1e-3
       :xtol 1e-3
       :eqthre 1e-3
@@ -166,7 +167,7 @@
       :timebuf time-buf
       :log? draw?
       :equality-dimension 0
-      :inequality-dimension 6
+      :inequality-dimension inequality-dimension
       ))
     (funcall objective x f)
     (cond
@@ -212,6 +213,7 @@
 	(draw? t)
 	;;
 	(objective 'normal-target-loss) ;; 'normal-torque-objective
+	(alg DIRECT)
 	)
   (setq *input* target)
   (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
@@ -232,12 +234,12 @@
       :equality-function-gradient 'nop
       :inequality-function 'normal-check-ik-thre ;;'nop
       :inequality-function-gradient 'nop
-      :alg G_DIRECT
-      :ftol 1e-3
-      :xtol 1e-3
-      :eqthre 1e-3
+      :alg alg
+      :ftol 1e-32
+      :xtol 1e-32
+      :eqthre 1e-5
       :max-eval 10000000
-      :max-time (* 60 15)
+      :max-time (* 60 3)
       :timebuf time-buf
       :log? draw?
       :equality-dimension 0
@@ -315,16 +317,16 @@
 
 (defun torque-ik-analysis
   (&key (output "test")
-	(size 100)
+	(size 500)
 	;;
 	(net-size (or (unix::getenv "NET_SIZE") "6x200"))
 	(alg "NESTEROV")
-	(log (open (format nil "torque_analysis.~A.~A.log.~A" net-size alg output) :direction :output))
+	(log (open (format nil "torque_analysis.~A.~A.log.~A.small" net-size alg output) :direction :output))
 	;;
 	)
-  (caffe::gen-test-net
-   :netproto (format nil "ik_net_~A_predict.prototxt" net-size)
-   :caffemodel (format nil "ik_net_~A_~A_iter_1000000.caffemodel" net-size alg))
+  ;; (caffe::gen-test-net
+  ;; :netproto (format nil "ik_net_~A_predict.prototxt" net-size)
+  ;; :caffemodel (format nil "ik_net_~A_~A_iter_1000000.caffemodel" net-size alg))
   (dotimes (i size)
     ;; random target
     (setq *input*
@@ -349,14 +351,18 @@
     (format log ":redundancy-ik ~A~%"
 	    (redundancy-ik-search :target *input* :objective 'torque-objective))
     (format log ":direct ~A~%"
-	    (normal-ik-search :target *input* :objective 'normal-torque-objective)))
+	    (progn
+	      (normal-ik-search :target *input* :objective 'normal-torque-objective
+				:alg DIRECT)
+	      ;; (normal-ik-search :target *input* :objective 'normal-torque-objective
+	      ;; :alg COBYLA)
+	      )))
   (close log)
   )
 
-
 (defun redundancy-ik-analysis
   (&key (output "test")
-	(func '(lambda (i) (redundancy-ik-search :draw? nil)))
+	(func '(lambda (i) (redundancy-ik-search :draw? nil :inequality-dimension 0)))
 	;;
 	(size (expt 3 7))
 	(dif-max (float-vector 0 0 0 0 0 0))
@@ -369,9 +375,9 @@
 	(tm-variance 0)
 	)
   ;;
-  (caffe::gen-test-net
-   :netproto (format nil "ik_net_~A_predict.prototxt" net-size)
-   :caffemodel (format nil "ik_net_~A_~A_iter_1000000.caffemodel" net-size alg))
+  ;; (caffe::gen-test-net
+  ;; :netproto (format nil "ik_net_~A_predict.prototxt" net-size)
+  ;; :caffemodel (format nil "ik_net_~A_~A_iter_1000000.caffemodel" net-size alg))
   ;;
   (format log "~A~%" :raw)
   (dotimes (i size)
@@ -386,7 +392,7 @@
       (setf (aref dif-max j)
 	    (max (abs (aref dif j)) (aref dif-max j)))
       (setf (aref dif-sum j)
-	    (+ (/ (abs (aref dif j)) size)
+	    (+ (/ (aref dif j) size)
 	       (aref dif-sum j))))
     (format log " ~%")
     ;;
@@ -400,7 +406,7 @@
     (dotimes (j (length dif))
       (setf (aref variance j)
 	    (+ (aref variance j)
-	       (/ (expt (- (abs (aref dif j)) (aref dif-sum j)) 2) size)))))
+	       (/ (expt (- (aref dif j) (aref dif-sum j)) 2) size)))))
   (dotimes (j (length dif))
     (setf (aref variance j) (sqrt (aref variance j))))
   ;;
@@ -496,61 +502,107 @@
 
 ;; (redundancy-ik-analysis)
 
-
-
-
 #|
 
-(caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
-		     :caffemodel "redundancy_ik_net_x6_iter_60000000.caffemodel")
-(let* ((id2 (random 1000)) (id 0.0) (step 0.0001) (max 0.1) (min 0.0) (d-cnt 0)
-       (min-dif *inf*) (min-dif-id id) buf input output c (done nil)
-       (joint-list (butlast (send *robot* :rarm :joint-list))))
-  (caffe::db-open :path "target_lmdb_limb_coords")
-  (caffe::db-read id2)
-  (setq input (caffe::db-get-float-data))
-  (setq input (concatenate float-vector input (float-vector 0)))
-  (caffe::db-close)
-  (do-until-key
-   ;; (format t "[param] (db_id, rd_id) = (~A, ~A)~%" id2 id)
-   ;; (format t "        (min_dif, rd_id) = (~A, ~A)~%" min-dif min-dif-id)
-   (setq id (+ id step))
-   (setf (aref input (- (length input) 1)) id)
-   (setq output
-	 (caffe::calc-forward-double
-	  :isize (length input) :osize (length joint-list)
-	  :num 1 :channels (length input) :width 1 :height 1
-	  :input input))
-   ;;
-   (map cons '(lambda (j av) (send j :joint-angle (- (rad2deg av) (send j :joint-angle))
-				   :relative t))
-	joint-list output)
-   (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
-			:rot (matrix-exponent (subseq input 3 6))))
-   (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
-		 :transform c :local))
-   ;;
-   (setq output
-	 (concatenate float-vector
-		      (scale 1e-2
-			     (send c :difference-position
-				   (send *robot* :rarm :end-coords)))
-		      (send c :difference-rotation
-			    (send *robot* :rarm :end-coords))))
-   ;;
-   (cond
-    ((or (if (> min-dif (setq buf (apply 'max (map cons 'abs output))))
-	     (setq min-dif buf min-dif-id id))
-	 (> (incf d-cnt) (/ 0.1 step)))
-     (setq d-cnt 0)
-     ;; (send *viewer* :draw-objects :flush nil)
-     ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
-     (send *arrow* :newcoords (send c :copy-worldcoords))
-     (send *viewer* :draw-objects :flush nil)
-     (send *viewer* :viewsurface :flush)))
-   ;;
-   (if done (return-from nil (print min-dif)))
-   (if (or (> id max) (< id min)) (setq step (* -1 step)))
-   (cond
-    ((> id max) (setq done t) (setq id (- min-dif-id step))))
-   ))
+(send *irtviewer* :change-background (float-vector 1 1 1))
+(setq avl (gather-candidates))
+;;
+(unix:system "mkdir img")
+(dotimes (i (length avl))
+  (map cons '(lambda (j av) (send j :joint-angle (rad2deg av)))
+       (butlast (send *robot* :rarm :joint-list))
+       (nth i avl))
+  (send-all (send *robot* :links) :worldcoords)
+  (send *viewer* :draw-objects)
+  (send *viewer* :viewsurface :write-to-image-file (format nil "img/~A.jpg" i)))
+
+(setq
+ *torque-log*
+ (let* ((in (open "torque_analysis.6x200.NESTEROV.log.test.small" :direction :input))
+	buf ret ret-buf id)
+   (while (setq buf (read-line in nil))
+     (cond
+      ((< (length buf) 3) 'nop)
+      ((let* (s d)
+	 (and (setq s (position #\[ buf))
+	      (setq d (position #\] buf))
+	      (setq id (subseq buf (+ 1 s) d))
+	      (> (length id) 0)
+	      (numberp (setq id (read-from-string id)))))
+       (if ret-buf (push ret-buf ret))
+       (setq ret-buf (list id)))
+      (t
+       (setq ret-buf (append ret-buf (list (read-from-string (format nil "(~A)" buf))))))
+      ))
+   (if ret-buf (push ret-buf ret))
+   (close in)
+   (remove-if '(lambda (d) (not (eq (length d) 4))) ret))
+ ;;
+ flat-data
+ (mapcar
+  '(lambda (dl) (mapcar '(lambda (d) (cond ((vectorp d) (elt d 0)) (t d))) dl))
+  (mapcar
+   #'(lambda (dl) (mapcar '(lambda (d) (cdr (assoc :f (cadr d)))) (cdr dl)))
+   *torque-log*))
+ tm-data
+ (mapcar
+  '(lambda (dl) (mapcar '(lambda (d) (cond ((vectorp d) (elt d 0)) (t d))) dl))
+  (mapcar
+   #'(lambda (dl) (mapcar '(lambda (d) (cdr (assoc :time (cadr d)))) (cdr dl)))
+   *torque-log*))
+ rate-data
+ (mapcar
+  '(lambda (dl) (list (/ (nth 0 dl) (nth 2 dl)) (/ (nth 1 dl) (nth 2 dl))))
+  flat-data)
+ rate-data2
+ (mapcar
+  #'(lambda (dl)
+      ;; (format t "~A vs ~A~%" (/ (nth 0 dl) (nth 2 dl)) (/ (nth 1 dl) (nth 2 dl)))
+      (/ (nth 1 dl) (nth 0 dl))
+      ) flat-data)
+ average (/ (apply '+ rate-data2) (length rate-data2))
+ variance (/ (apply '+
+		    (mapcar
+		     #'(lambda (d) (expt (- d average) 2))
+		     rate-data2))
+	     (length rate-data2)))
+
+(sort
+ (mapcar 'cons
+	 (mapcar 'car rate-data)
+	 (mapcar '(lambda (d) (car (last d))) tm-data))
+ '(lambda (a b) (< (car a) (car b))))
+
+(let* ((log (open "torque_analysis.objective.dat" :direction :output))
+       (rate-data (mapcar '(lambda (l) (list (/ 100 (car l)) (/ 100 (cadr l)))) rate-data))
+       (rate-data2 (mapcar '(lambda (d) (* 100 d)) rate-data2))
+       (av (list (/ (apply '+ (mapcar 'car rate-data)) (length rate-data))
+		 (/ (apply '+ (mapcar 'cadr rate-data)) (length rate-data))
+		 (/ (apply '+ rate-data2) (length rate-data2))
+		 ))
+       (vr
+	(append
+	 (mapcar
+	  #'(lambda (rate av)
+	      (sqrt (/ (apply '+ (mapcar #'(lambda (d) (expt (- d av) 2)) rate))
+		       (length rate-data))))
+	  (list (mapcar 'car rate-data) (mapcar 'cadr rate-data))
+	  av)
+	 (list
+	  (sqrt (/ (apply '+ (mapcar #'(lambda (d) (expt (- d (caddr av)) 2)) rate-data2))
+		   (length rate-data2))))))
+       )
+  (format log ":raw~%")
+  (mapcar
+   #'(lambda (rate rate2) (format log "~A ~A ~A~%" (car rate) (cadr rate) rate2))
+   rate-data rate-data2)
+  (format log ":average~%")
+  (format log "~A ~A~%" (car av) (cadr av) (caddr av))
+  (format log ":variance~%")
+  (format log "~A ~A~%" (car vr) (cadr vr) (caddr vr))
+  (close log))
+
+
+(let* ((log (open "/tmp/buf" :direction :output)))
+  (mapcar #'(lambda (d) (format log "~A~%" d)) rate-data2) ;;(mapcar 'cadr rate-data))
+  (close log))
