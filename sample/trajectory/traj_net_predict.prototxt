@@ -5,9 +5,9 @@ input_dim: 8 ## channel
 input_dim: 1 ## w
 input_dim: 1 ## h
 layer {
-  name: "_ip5"
+  name: "_ip4"
   type: "InnerProduct"
-  top: "_ip5"
+  top: "_ip4"
   bottom: "input"
   param {
     lr_mult: 1
@@ -18,39 +18,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 200
-    weight_filler {
-      type: "gaussian"
-      std: 1
-      sparse: 1
-    }
-    bias_filler {
-      type: "constant"
-      value: 0
-    }
-  }
-}
-layer {
-  name: "_sigmoid5"
-  type: "Sigmoid"
-  top: "_sigmoid5"
-  bottom: "_ip5"
-}
-layer {
-  name: "_ip4"
-  type: "InnerProduct"
-  top: "_ip4"
-  bottom: "_sigmoid5"
-  param {
-    lr_mult: 1
-    decay_mult: 1
-  }
-  param {
-    lr_mult: 1
-    decay_mult: 0
-  }
-  inner_product_param {
-    num_output: 160
+    num_output: 100
     weight_filler {
       type: "gaussian"
       std: 1
@@ -82,7 +50,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 120
+    num_output: 80
     weight_filler {
       type: "gaussian"
       std: 1
@@ -114,7 +82,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 80
+    num_output: 60
     weight_filler {
       type: "gaussian"
       std: 1

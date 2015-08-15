@@ -419,6 +419,98 @@
   ret
   )
 
+(defun traj-test
+  (&key
+   (id (random 10000))
+   (input-path "input_lmdb_traj")
+   (target-path "target_lmdb_coords")
+   ;;
+   (initialize-net? nil)
+   (redundancy 0.0)
+   (input
+    (let* ((ret))
+      (if initialize-net?
+	  (caffe::gen-test-net :netproto "traj_net_predict.prototxt"
+			       :caffemodel "traj_net_NESTEROV_iter_1000000.caffemodel"))
+      ;;
+      (caffe::db-open :path target-path)
+      (caffe::db-read id)
+      (setq ret (caffe::db-get-float-data))
+      (format t " -- size : ~A~%" (caffe::db-get-size))
+      (caffe::db-close)
+      ret))
+   target c ret)
+  ;;
+  (setq c (vector2coords (subseq input 0 3)))
+  (map cons
+       #'(lambda (j s)
+	   (send j :joint-angle
+		 (- (+ (send j :min-angle)
+		       (* s (- (send j :max-angle) (send j :min-angle))))
+		    (send j :joint-angle))))
+       *rarm-joints2* (subseq input 3))
+  ;;
+  ;; (caffe::db-open :path input-path)
+  ;; (caffe::db-read id)
+  ;; (setq output (caffe::db-get-float-data))
+  ;; (format t " -- size : ~A~%" (caffe::db-get-size))
+  ;; (caffe::db-close)
+  (setq input (concatenate float-vector input (float-vector redundancy)))
+  (setq output
+	(caffe::calc-forward-double
+	 :isize (length input) :osize 32
+	 :num 1 :channels (length input) :width 1 :height 1
+	 :input input))
+  ;;
+  (send *goal* :newcoords c)
+  (setq ret (check-trajectory :gain output))
+  ;;
+  (list
+   (cons :diff
+	 (v- (subseq input 0 (- (length input) 1))
+	     (concatenate float-vector (caar ret) (cadr (car (last ret))))))
+   (cons :redundancy redundancy)
+   (cons :input input)
+   (cons :output output))
+  )
+
+(defun gather-traj-test
+  (&key
+   (id (random 10000))
+   (input-path "input_lmdb_traj")
+   (target-path "target_lmdb_coords")
+   ;;
+   (initialize-net? nil)
+   (redundancy 0.0)
+   input target c
+   ;;
+   (step 0.05)
+   (cnt 0.0)
+   ret buf
+   )
+  (if initialize-net?
+      (caffe::gen-test-net :netproto "traj_net_predict.prototxt"
+			   :caffemodel "traj_net_NESTEROV_iter_1000000.caffemodel"))
+  ;;
+  (caffe::db-open :path target-path)
+  (caffe::db-read id)
+  (setq input (caffe::db-get-float-data))
+  (format t " -- size : ~A~%" (caffe::db-get-size))
+  (caffe::db-close)
+  (dotimes (i (round (/ 1.0 step)))
+    (setq buf (traj-test :id id :input input :redundancy (* i step)))
+    (push buf ret))
+  (setq ret (sort ret #'(lambda (a b) (< (norm (Cdr (assoc :diff a)))
+					 (norm (cdr (assoc :diff b)))))))
+  (print (car ret))
+  (traj-test :id id :input input :redundancy (cdr (assoc :redundancy (car ret))))
+  ret)
+
+
+
 #|
 
 (do-until-key (add-random-minjerk-traj-learning-data :cnt 10000 :input-path "input_lmdb_traj.cygnus" :target-path "target_lmdb_coords.cygnus"))
+
+(caffe::gen-test-net :netproto "traj_net_predict.prototxt"
+		     :caffemodel "traj_net_NESTEROV_iter_1000000.caffemodel")
