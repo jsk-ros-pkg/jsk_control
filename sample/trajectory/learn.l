@@ -389,7 +389,7 @@
    (bspline (instance partition-spline-vector :init :dimension (length jlist) :id-max id-max :recursive-order (make-list (length jlist) :initial-element recursive-order) :x-min x-min :x-max x-max))
    ;;
    (cnt 30)
-   (x-step (/ (- x-max x-min) (* 1.0 cnt)))
+   (x-step (/ (- x-max x-min) (* 1.0 (or cnt 2))))
    (x-buf x-min)
    (gain
     (let* ((gain-list
@@ -401,6 +401,7 @@
 		      jlist))))
       (coerce gain-list float-vector)))
    ret tmp
+   (draw? t)
    )
   (send bspline :convert-gain-vector-to-gain-matrix gain)
   (while (<= x-buf x-max)
@@ -415,9 +416,11 @@
     (send-all (send *robot* :links) :worldcoords)
     (push (list (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords))
 		(copy-seq tmp)) ret)
-    (send *viewer* :draw-objects)
-    (x::window-main-one)
-    (unix:usleep (round (* 0.01 1000 1000)))
+    (cond
+     (draw?
+      (send *viewer* :draw-objects)
+      (x::window-main-one)
+      (unix:usleep (round (* 0.01 1000 1000)))))
     ;; (if (eq x-min x-buf) (read-line))
     (setq x-buf (+ x-buf x-step))
     )
@@ -463,7 +466,7 @@
     (let* ((ret))
       (if initialize-net?
 	  (caffe::gen-test-net :netproto "traj_net_predict.prototxt"
-			       :caffemodel "traj_net_NESTEROV_iter_1000000.caffemodel"))
+			       :caffemodel "traj_net_NESTEROV_iter_5000000.caffemodel"))
       ;;
       (caffe::db-open :path target-path)
       (caffe::db-read id)
@@ -471,7 +474,10 @@
       (format t " -- size : ~A~%" (caffe::db-get-size))
       (caffe::db-close)
       ret))
-   target c ret)
+   target c ret
+   ;;
+   (draw? t)
+   )
   ;;
   (setq c (vector2coords (subseq input 0 3)))
   (map cons
@@ -496,7 +502,13 @@
 	 :input input))
   ;;
   (send *goal* :newcoords c)
-  (setq ret (check-trajectory :gain output))
+  (setq ret (check-trajectory
+	     :gain output
+	     :cnt (cond
+		   ((numberp draw?) draw?)
+		   (draw? 10)
+		   (t nil))
+	     :draw? draw?))
   ;;
   (list
    (cons :diff
@@ -519,7 +531,7 @@
     (let* ((ret))
       (if initialize-net?
 	  (caffe::gen-test-net :netproto "traj_net_predict.prototxt"
-			       :caffemodel "traj_net_NESTEROV_iter_1000000.caffemodel"))
+			       :caffemodel "traj_net_NESTEROV_iter_5000000.caffemodel"))
       ;;
       (caffe::db-open :path target-path)
       (caffe::db-read id)
@@ -528,17 +540,26 @@
       (caffe::db-close)
       ret))
    (thre (float-vector 0.1 0.1 0.1
-		       0.3 0.3 0.3 0.3))
+		       0.15 0.15 0.15 0.15))
    target c
    ;;
    (step 0.05)
    (cnt 0.0)
    ret buf
+   ;;
+   (draw? t)
+   (draw-step (/ 1 step))
+   (draw-cnt 0)
    )
   (dotimes (i (round (/ 1.0 step)))
-    (setq buf (traj-test :id id :input input :redundancy (* i step)))
-    (if (v< (map float-vector 'abs (cdr (assoc :diff buf))) thre)
-	(push buf ret)))
+    (setq buf (traj-test :id id :input input :redundancy (* i step)
+			 :draw? (if (> (incf draw-cnt) draw-step)
+				    (+ 10 (setq draw-cnt 0)) nil)))
+    (cond
+     ((v< (map float-vector 'abs (cdr (assoc :diff buf))) thre)
+      (if draw? (traj-test :id id :input input :redundancy (* i step)
+			   :draw? draw?))
+      (push buf ret))))
   (setq ret (sort ret #'(lambda (a b) (< (norm (Cdr (assoc :diff a)))
 					 (norm (cdr (assoc :diff b)))))))
   (print (car ret))
@@ -553,3 +574,7 @@
 
 (caffe::gen-test-net :netproto "traj_net_predict.prototxt"
 		     :caffemodel "traj_net_NESTEROV_iter_1000000.caffemodel")
+
+(traj-test :initialize-net? t)
+(caffe::output-log 0)
+(mapcar '(lambda (id) (print (length (gather-traj-test :input (random-traj-input-vector))))) (make-list 1000))
