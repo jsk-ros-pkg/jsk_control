@@ -56,16 +56,15 @@ function gen_table(){
     ##
     echo "\begin{table}[htb]
   \begin{center}
-  \caption{${AVER} of conputational time and difference between target
-    value for ${TEST} data set}
+  \caption{${AVER} for ${TEST} data set\\\\ conputational time and distance between target coordinates}
   \label{tab:${AVER}_diff_for_${TEST}_data}
     \begin{tabular}{|l||r|r||r|r|r||r|r|} \\hline
       Depth & Time & \$p_{x}$ & \$p_{y}$ & \$p_{z}$ & \$r_{x}$ &
       \$r_{y}$ & \$r_{z}$ \\\\
-      x Width & [us] & [mm] & [mm] & [mm] & [rad] & [rad] & [rad]
+      x Width & [us] & [mm] & [mm] & [mm] & [deg] & [deg] & [deg]
       \\\\ \\hline \\hline";
     ##
-    ls | grep -e "analysis_.\+\.log\.${TEST}" | grep -v "x50\." | while read line;
+    ls | grep -e "analysis_.\+\.log\.${TEST}" | grep -v "x50\." | grep -v "7x"| while read line;
     do
 	SIZE=`echo $line | sed -e "s/^analysis_\(.\+\)\.log\.${TEST}$/\\1/g"`;
 	DEPTH=`echo $SIZE | sed -e "s/^\([0-9]\+\)x.\+$/\\1/g"`;
@@ -101,11 +100,11 @@ function gen_net_config(){
   \caption{Network configuration: Depth x Width}
   \label{tab:net_config}
     \begin{tabular}{|l||r|r|r|r|r|r|} \\hline
-      Depth & layer1 & layer2 & layer3 & layer4 & layer5 & output \\\\
+      Depth & layer1 & layer2 & layer3 & layer4 & layer5 & layer6 \\\\
       x Width & cells & cells & cells & cells & cells & cells
       \\\\ \\hline \\hline";
     ##
-    ls | grep -e "ik_net_.\+\.prototxt" | grep -v "x50\." | grep -v "predict" | while read line;
+    ls | grep -e "ik_net_.\+\.prototxt" | grep -v "x50\." | grep -v "7x" | grep -v "predict" | while read line;
     do
 	SIZE=`echo $line | sed -e "s/^ik_net_\(.\+\)\.prototxt$/\\1/g"`;
 	DEPTH=`echo $SIZE | sed -e "s/^\([0-9]\+\)x.\+$/\\1/g"`;
@@ -116,12 +115,15 @@ function gen_net_config(){
 	do
 	    if [ "$val" ];
 	    then
-		echo -n " & $val";
-		id=`expr $id + 1`;
+		if [ "$id" -lt "$DEPTH" ];
+		then
+		    echo -n " & $val";
+		    id=`expr $id + 1`;
+		fi
 	    fi
 	    if [ "$id" -ge "$DEPTH" ];
 	    then
-		while [ "$id" -le "4" ];
+		while [ "$id" -le "5" ];
 		do
 		    echo -n " & \-";
 		    id=`expr $id + 1`;
@@ -135,9 +137,8 @@ function gen_net_config(){
 \end{table}";
 }
 
-
+gen_net_config
 gen_table "test" "average";
 gen_table "test" "variance";
 gen_table "train" "average";
 gen_table "train" "variance";
-gen_net_config
