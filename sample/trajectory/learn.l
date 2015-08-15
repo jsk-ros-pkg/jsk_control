@@ -353,7 +353,8 @@
 	   (send j :joint-angle
 		 (- (+ (send j :min-angle)
 		       (* s (- (send j :max-angle) (send j :min-angle))))
-		    (send j :joint-angle))))
+		    (send j :joint-angle))
+		 :relative t))
        *rarm-joints2* (subseq input 3))
   ;;
   (caffe::db-open :path input-path)
@@ -404,9 +405,12 @@
   (send bspline :convert-gain-vector-to-gain-matrix gain)
   (while (<= x-buf x-max)
     (map cons
-	 #'(lambda (j av) (send j :joint-angle
-				(+ (send j :min-angle)
-				   (* av (- (send j :max-angle) (send j :min-angle))))))
+	 #'(lambda (j av)
+	     (send j :joint-angle
+		   (- (+ (send j :min-angle)
+			 (* av (- (send j :max-angle) (send j :min-angle))))
+		      (send j :joint-angle))
+		   :relative t))
 	 jlist (setq tmp (send bspline :calc x-buf)))
     (send-all (send *robot* :links) :worldcoords)
     (push (list (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords))
@@ -414,10 +418,38 @@
     (send *viewer* :draw-objects)
     (x::window-main-one)
     (unix:usleep (round (* 0.01 1000 1000)))
+    ;; (if (eq x-min x-buf) (read-line))
     (setq x-buf (+ x-buf x-step))
     )
   ret
   )
+
+(defun traj-input-vector
+  nil
+  (concatenate
+   float-vector
+   (coords2vector (send *goal* :copy-worldcoords))
+   (map float-vector
+	#'(lambda (j)
+	    (/ (- (send j :joint-angle) (send j :min-angle))
+	       (- (send j :max-angle) (send j :min-angle))))
+	*rarm-joints2*)))
+
+(defun random-traj-input-vector
+  nil
+  (mapcar
+   #'(lambda (j) (send j :joint-angle
+		       (+ (send j :min-angle)
+			  (* (random 1.0)
+			     (- (send j :max-angle) (send j :min-angle))))))
+   (append *rarm-joints1* *rarm-joints2*))
+  (send-all (send-all (append *rarm-joints1* *rarm-joints2*) :child-link) :worldcoords)
+  (send *goal* :newcoords (send *robot* :rarm :end-coords :copy-worldcoords))
+  (traj-input-vector))
+
+(defun traj-random-test
+  (&rest args)
+  (apply 'traj-test (append args (list :input (random-traj-input-vector)))))
 
 (defun traj-test
   (&key
@@ -447,7 +479,8 @@
 	   (send j :joint-angle
 		 (- (+ (send j :min-angle)
 		       (* s (- (send j :max-angle) (send j :min-angle))))
-		    (send j :joint-angle))))
+		    (send j :joint-angle))
+		 :relative t))
        *rarm-joints2* (subseq input 3))
   ;;
   ;; (caffe::db-open :path input-path)
@@ -482,28 +515,34 @@
    ;;
    (initialize-net? nil)
    (redundancy 0.0)
-   input target c
+   (input
+    (let* ((ret))
+      (if initialize-net?
+	  (caffe::gen-test-net :netproto "traj_net_predict.prototxt"
+			       :caffemodel "traj_net_NESTEROV_iter_1000000.caffemodel"))
+      ;;
+      (caffe::db-open :path target-path)
+      (caffe::db-read id)
+      (setq ret (caffe::db-get-float-data))
+      (format t " -- size : ~A~%" (caffe::db-get-size))
+      (caffe::db-close)
+      ret))
+   (thre (float-vector 0.1 0.1 0.1
+		       0.3 0.3 0.3 0.3))
+   target c
    ;;
    (step 0.05)
    (cnt 0.0)
    ret buf
    )
-  (if initialize-net?
-      (caffe::gen-test-net :netproto "traj_net_predict.prototxt"
-			   :caffemodel "traj_net_NESTEROV_iter_1000000.caffemodel"))
-  ;;
-  (caffe::db-open :path target-path)
-  (caffe::db-read id)
-  (setq input (caffe::db-get-float-data))
-  (format t " -- size : ~A~%" (caffe::db-get-size))
-  (caffe::db-close)
   (dotimes (i (round (/ 1.0 step)))
     (setq buf (traj-test :id id :input input :redundancy (* i step)))
-    (push buf ret))
+    (if (v< (map float-vector 'abs (cdr (assoc :diff buf))) thre)
+	(push buf ret)))
   (setq ret (sort ret #'(lambda (a b) (< (norm (Cdr (assoc :diff a)))
 					 (norm (cdr (assoc :diff b)))))))
   (print (car ret))
-  (traj-test :id id :input input :redundancy (cdr (assoc :redundancy (car ret))))
+  (if ret (traj-test :id id :input input :redundancy (cdr (assoc :redundancy (car ret)))))
   ret)
 
 
