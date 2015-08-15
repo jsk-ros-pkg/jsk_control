@@ -3,8 +3,8 @@
 (require "../learn.l")
 (require "package://eus_nlopt/euslisp/nlopt.l")
 
-(caffe::gen-test-net :netproto "redundancy_ik_net_x6_predict.prototxt"
-		     :caffemodel "redundancy_ik_net_x6_NESTEROV_iter_10000000.caffemodel")
+(caffe::gen-test-net :netproto "ik_net_5x200_predict.prototxt"
+		     :caffemodel "ik_net_5x200_iter_10000000.caffemodel")
 (caffe::output-log 0)
 (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
 
@@ -81,7 +81,7 @@
   (let* ((joint-list (butlast (send *robot* :rarm :joint-list))))
     (_target-loss v1 v2)
     ;;
-    (send *robot* :calc-torque :force-list (list (float-vector 1000 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
+    (send *robot* :calc-torque :force-list (list (float-vector 0 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
     ;;
     (setf
      (aref v2 0)
@@ -95,7 +95,7 @@
   (let* ((joint-list (butlast (send *robot* :rarm :joint-list))))
     (_normal-target-loss v1 v2)
     ;;
-    (send *robot* :calc-torque :force-list (list (float-vector 1000 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
+    (send *robot* :calc-torque :force-list (list (float-vector 0 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
     ;;
     (setf
      (aref v2 0)
@@ -110,7 +110,7 @@
 
 (defun-c-callable check-ik-thre ((v1 :string) (v2 :string)) :integer
   (let* ((dif (_target-loss v1 v2))
-	 (thre (float-vector 0.5 0.5 0.5 0.5 0.5 0.5)))
+	 (thre (float-vector 5 5 5 0.5 0.5 0.5)))
     (dotimes (i 6)
       (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
     )
@@ -118,7 +118,7 @@
 
 (defun-c-callable normal-check-ik-thre ((v1 :string) (v2 :string)) :integer
   (let* ((dif (_normal-target-loss v1 v2))
-	 (thre (float-vector 0.5 0.5 0.5 0.5 0.5 0.5)))
+	 (thre (float-vector 5 5 5 0.5 0.5 0.5)))
     (dotimes (i 6)
       (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
     )
@@ -194,7 +194,7 @@
 				     (send *robot* :rarm :end-coords)))
 			(send c :difference-rotation
 			      (send *robot* :rarm :end-coords))))
-     (cons :x x) (cons :f f)
+     (cons :x x) (cons :f (aref f 0))
      (cons :time (aref time-buf 0)))
     ))
 
@@ -247,7 +247,7 @@
       :xtol 1e-32
       :eqthre 1e-5
       :max-eval 10000000
-      :max-time (* 60 3)
+      :max-time (* 60 5)
       :timebuf time-buf
       :log? draw?
       :equality-dimension 0
@@ -270,7 +270,7 @@
 				     (send *robot* :rarm :end-coords)))
 			(send c :difference-rotation
 			      (send *robot* :rarm :end-coords))))
-     (cons :x x) (cons :f f)
+     (cons :x x) (cons :f (aref f 0))
      (cons :time (aref time-buf 0)))
     ))
 
@@ -306,9 +306,11 @@
     (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
 		  :transform c :local))
     (send *arrow* :newcoords (send c :copy-worldcoords))
-    (send *robot* :rarm :inverse-kinematics c
-	  :thre 5 :rthre 0.5)
-    (send *robot* :calc-torque :force-list (list (float-vector 1000 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
+    (redundancy-ik-search :target target)
+    (send *robot* :rarm :inverse-kinematics c :thre 50 :rthre 0.5 :stop 10 :revert-if-fail nil :warnp nil)
+    (send-all (send *robot* :links) :worldcoords)
+    (if draw? (send *viewer* :draw-objects))
+    (send *robot* :calc-torque :force-list (list (float-vector 0 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
     ;;
     (list
      (cons :diff
@@ -330,7 +332,97 @@
 	;;
 	(net-size (or (unix::getenv "NET_SIZE") "6x200"))
 	(alg "NESTEROV")
-	(log (open (format nil "torque_analysis.~A.~A.log.~A.small" net-size alg output) :direction :output))
+	(log (open (format nil "torque_analysis.~A.~A.log.~A" net-size alg output) :direction :output))
+	(data-set-path (format nil "torque_analysis.~A.~A.log.~A.dataset" net-size alg output))
+	(data-set-log
+	 (if (probe-file data-set-path) (open data-set-path :direction :input)))
+	buf buf1 buf2 ret rate
+	;;
+	(joint-list (butlast (send *robot* :rarm :joint-list)))
+	;;
+	)
+  ;; (caffe::gen-test-net
+  ;; :netproto (format nil "ik_net_~A_predict.prototxt" net-size)
+  ;; :caffemodel (format nil "ik_net_~A_~A_iter_1000000.caffemodel" net-size alg))
+  ;;
+  (format log ":raw~%")
+  ;;
+  (dotimes (i size)
+    (cond
+     (data-set-log
+      (if (or (not (setq buf (read-line data-set-log nil)))
+	      (zerop (length buf))
+	      (not (setq buf (read-from-string (format nil "(~A)" buf))))
+	      (not (eq (length buf) (+ 6 1 (length joint-list) 1))))
+	  (return-from nil nil))
+      (setq buf (list (cons :input (subseq buf 0 6))
+		      (cons :f (nth 6 buf))
+		      (cons :x (subseq buf 7 (+ 7 (length joint-list))))
+		      (cons :time (nth (+ 6 1 (length joint-list)) buf))))
+      (setq *input* (coerce (cdr (assoc :input buf)) float-vector))
+      )
+     (t
+      ;; random target
+      (setq *input*
+	    (progn
+	      (mapcar #'(lambda (j)
+			  (send j :joint-angle
+				(+ (send j :min-angle)
+				   (* (random 1.0)
+				      (- (send j :max-angle) (send j :min-angle))))))
+		      (butlast (send *robot* :rarm :joint-list)))
+	      (send-all (send *robot* :links) :worldcoords)
+	      (concatenate
+	       float-vector
+	       (scale 1e-3
+		      (send (send (car (send *robot* :links)) :copy-worldcoords)
+			    :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
+	       (send (send (car (send *robot* :links)) :copy-worldcoords)
+		     :difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords)))))
+      (setq buf (normal-ik-search :target *input* :objective 'normal-torque-objective
+				  :alg DIRECT))))
+    ;;
+    (push (list buf
+		(setq buf1 (torque-eval-once :target *input*))
+		(setq buf2 (redundancy-ik-search
+			    :target *input* :objective 'torque-objective)))
+	  ret)
+    (push (list (/ (cdr (assoc :f buf1)) (cdr (assoc :f buf)))
+		(/ (cdr (assoc :f buf2)) (cdr (assoc :f buf)))
+		(/ (cdr (assoc :f buf2)) (cdr (assoc :f buf1)))) rate)
+    (format log "~A ~A ~A~%" (nth 0 (car rate)) (nth 1 (car rate)) (nth 2 (car rate)))
+    )
+  ;;
+  (let* ((average (mapcar
+		   #'(lambda (func)
+		       (/ (apply '+ (mapcar func rate)) (length rate)))
+		   '(car cadr caddr)))
+	 (variance
+	  (mapcar
+	   #'(lambda (func)
+	       (sqrt
+		(/ (apply '+
+			  (mapcar #'(lambda (d) (expt (- d (funcall func average)) 2))
+				  (mapcar func rate)))
+		   (length rate))))
+	   '(car cadr caddr))))
+    (format log ":average~%")
+    (format log "~A ~A ~A~%" (nth 0 average) (nth 1 average) (nth 2 average))
+    (format log ":variance~%")
+    (format log "~A ~A ~A~%" (nth 0 variance) (nth 1 variance) (nth 2 variance)))
+  ;;
+  (close log)
+  (if data-set-log (close data-set-log))
+  ret
+  )
+
+(defun gen-torque-ik-analysis-dataset
+  (&key (output "test")
+	(size 500)
+	;;
+	(net-size (or (unix::getenv "NET_SIZE") "6x200"))
+	(alg "NESTEROV")
+	(log (open (format nil "torque_analysis.~A.~A.log.~A.dataset" net-size alg output) :direction :output))
 	;;
 	)
   ;; (caffe::gen-test-net
@@ -355,17 +447,14 @@
 	     (send (send (car (send *robot* :links)) :copy-worldcoords)
 		   :difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords)))))
     ;;
-    (format log "[~A] target=~A~%" i *input*)
-    (format log ":ik ~A~%" (torque-eval-once :target *input*))
-    (format log ":redundancy-ik ~A~%"
-	    (redundancy-ik-search :target *input* :objective 'torque-objective))
-    (format log ":direct ~A~%"
-	    (progn
-	      (normal-ik-search :target *input* :objective 'normal-torque-objective
-				:alg DIRECT)
-	      ;; (normal-ik-search :target *input* :objective 'normal-torque-objective
-	      ;; :alg COBYLA)
-	      )))
+    (dotimes (j (length *input*)) (format log "~A " (aref *input* j)))
+    (let* ((min (normal-ik-search :target *input* :objective 'normal-torque-objective
+				  :alg DIRECT)))
+      (format log "~A " (cdr (assoc :f min)))
+      (dotimes (j (length (cdr (assoc :x min))))
+	(format log "~A " (aref (cdr (assoc :x min)) j)))
+      (format log "~A~%" (cdr (assoc :time min)))
+      ))
   (close log)
   )
 
@@ -505,7 +594,7 @@
 		  (send (send (car (send *robot* :links)) :copy-worldcoords)
 			:difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords))))))
 	(cnt 0)
-	(step 0.01)
+	(step 0.003)
 	(draw-step 100)
 	(draw-cnt 0)
 	(thre (float-vector 0.05 0.05 0.05 0.5 0.5 0.5))
@@ -518,6 +607,8 @@
 		  :transform _c :local))
 	 (joint-list (butlast (send *robot* :rarm :joint-list)))
 	 ret)
+    (send *arrow* :newcoords (send c :copy-worldcoords))
+    (send *viewer* :draw-objects)
     (while (< cnt 1.0)
       (let* ((input (concatenate float-vector *input* (float-vector cnt)))
 	     (output
@@ -532,21 +623,16 @@
 					:relative t))
 	     joint-list output)
 	(send-all (send *robot* :links) :worldcoords)
-	(if (v<
-	     (concatenate float-vector
-			  (scale 1e-3
-				 (send c :difference-position
-				       (send *robot* :rarm :end-coords)))
-			  (send c :difference-rotation
-				(send *robot* :rarm :end-coords)))
-	     thre)
-	    (push output ret) (setq update? nil))
+	(let* ((dif (instantiate float-vector 6)))
+	  (normal-check-ik-thre output dif)
+	  ;; (print dif)
+	  (if (minusp (apply 'max (coerce dif cons)))
+	      (push output ret) (setq update? nil)))
 	;;
 	(cond
 	 ((and draw? (or update? (> draw-cnt draw-step)))
 	  ;; (send *viewer* :draw-objects :flush nil)
 	  ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :size 100)
-	  (send *arrow* :newcoords (send c :copy-worldcoords))
 	  (send *viewer* :draw-objects :flush nil)
 	  (send *viewer* :viewsurface :flush)
 	  (setq draw-cnt 0)
@@ -573,7 +659,7 @@
 
 (setq
  *torque-log*
- (let* ((in (open "torque_analysis.6x200.NESTEROV.log.test.light" :direction :input))
+ (let* ((in (open "torque_analysis.6x200.NESTEROV.log.test.small" :direction :input))
 	buf ret ret-buf id)
    (while (setq buf (read-line in nil))
      (cond
@@ -595,7 +681,8 @@
    (mapcar
     #'(lambda (d)
 	(if (not (eq (length d) 4))
-	    (append d (make-list (- 4 (length d)) :initial-element (car (last d))))))
+	    (append d (make-list (- 4 (length d)) :initial-element (car (last d))))
+	  d))
     ret)
    )
  ;;
