@@ -45,10 +45,11 @@
         (initial-state)
         (eval-weight-matrix)
         (eval-coeff-vector)
+        (state-dim (array-dimension eval-weight-matrix 0))
         (equality-matrix)
         (equality-vector)
-        (state-min-vector (fill (instantiate float-vector (array-dimension eval-weight-matrix 0)) (- inf-var)))
-        (state-max-vector (fill (instantiate float-vector (array-dimension eval-weight-matrix 0)) inf-var))
+        (state-min-vector (fill (instantiate float-vector state-dim) (- inf-var)))
+        (state-max-vector (fill (instantiate float-vector state-dim) inf-var))
         (inequality-matrix)
         (inequality-min-vector)
         (inequality-max-vector)
@@ -74,17 +75,21 @@
                   (push (matrix-row mat i) ml)))
               (when ml (apply #'matrix (reverse ml)))
               )))
-    (let ((ret (instantiate float-vector (array-dimension eval-weight-matrix 0)))
+    (let ((ret (instantiate float-vector state-dim))
           (inequality-matrix
-           (concatenate-matrix-column
-            equality-matrix
-            inequality-matrix))
+           (if equality-matrix
+               (concatenate-matrix-column equality-matrix inequality-matrix)
+             inequality-matrix))
           (inequality-max-vector
-           (concatenate float-vector equality-vector inequality-max-vector))
+           (if equality-vector
+               (concatenate float-vector equality-vector inequality-max-vector)
+             inequality-max-vector))
           (inequality-min-vector
-           (concatenate float-vector equality-vector inequality-min-vector)))
+           (if equality-vector
+               (concatenate float-vector equality-vector inequality-min-vector)
+             inequality-min-vector)))
       (when (and (= (length inequality-min-vector) 0) (= (length inequality-max-vector) 0))
-        (setq inequality-matrix (make-matrix 1 (array-dimension eval-weight-matrix 0)))
+        (setq inequality-matrix (make-matrix 1 state-dim))
         (setq inequality-min-vector (fill (instantiate float-vector 1) (- inf-var)))
         (setq inequality-max-vector (fill (instantiate float-vector 1) inf-var)))
       (_solve-qpoases-qp
@@ -96,7 +101,7 @@
        (array-entity inequality-matrix)
        inequality-min-vector
        inequality-max-vector
-       (length ret)
+       state-dim
        (array-dimension inequality-matrix 0)
        (case print-level
              (:pl-debug-iter -2)
