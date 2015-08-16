@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="test_model_predictive_control" pkg="eus_qp" type="test_model_predictive_control.l">
+  </test>
+</launch>
