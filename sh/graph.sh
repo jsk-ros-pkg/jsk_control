@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+B1;3201;0c#!/usr/bin/env bash
 
 function gen_loss_graph(){
     log=$1;
@@ -19,14 +19,16 @@ function gen_loss_graph(){
     gnuplot <<EOF
 set terminal postscript eps color enhanced
 set output "${log}.eps"
+set grid
+set size ratio 0.5
 set xlabel "STEP/${xtics_scale}"
-set ylabel "LOSS"
-set title "loss/step for ${log}"
+set ylabel "MSE"
+set title "_"
 set yrange [ 0 : 1 ]
 set mxtics 5
 set mytics 5
-set xtics 0.5
-set ytics 0.5
+set xtics 0.1
+set ytics 0.1
 plot "/tmp/${log}.dat" using 1:2 notitle w l
 EOF
     echo " --- plotting done";
