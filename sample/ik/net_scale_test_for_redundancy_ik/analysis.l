@@ -3,8 +3,37 @@
 (require "../learn.l")
 (require "package://eus_nlopt/euslisp/nlopt.l")
 
-(caffe::gen-test-net :netproto "ik_net_5x200_predict.prototxt"
-		     :caffemodel "ik_net_5x200_iter_10000000.caffemodel")
+;; (caffe::gen-test-net :netproto "ik_net_5x200_predict.prototxt"
+;; 		     :caffemodel "ik_net_5x200_iter_10000000.caffemodel")
+;;
+(let* ((predict_net (read-line (piped-fork "ls -v | grep predict | grep -e \"prototxt$\" | tail -1")))
+       (candidate (remove-if #'(lambda (p) (not (substringp "caffemodel" p))) (directory ".")))
+       (iteration (mapcar
+		   #'(lambda (p)
+		       (let* ((p- (subseq p 0 (- (length p) (length ".caffemodel"))))
+			      (id (- (length p-) 1))
+			      ret)
+			 (while (and (>= id 0)
+				     (<= (aref p- id) #\9) (>= (aref p- id) #\0))
+			   (push (aref p- id) ret)
+			   (decf id))
+			 (setq ret (coerce ret string))
+			 (if (plusp (length ret)) (setq ret (read-from-string ret)))
+			 (if (numberp ret) ret)))
+		   candidate))
+       (max-iteration (apply 'max iteration))
+       (max-candidates
+	(mapcar 'cdr (remove-if #'(lambda (dcan) (not (eq (car dcan) max-iteration)))
+				(mapcar 'cons iteration candidate))))
+       ;;
+       (caffemodel (or (find-if #'(lambda (d) (substringp "NESTEROV" d)) max-candidates)
+		       (car max-candidates)))
+       )
+  (caffe::gen-test-net :netproto predict_net
+		       :caffemodel caffemodel)
+  (format t "[auto gen-test-net]~% predict: ~A~% caffemodel: ~A~%" predict_net caffemodel)
+  )
+
 (caffe::output-log 0)
 (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
 
@@ -502,7 +531,6 @@
     )
   (close log)
   )
-
 
 (defun redundancy-ik-analysis
   (&key (output "test")
