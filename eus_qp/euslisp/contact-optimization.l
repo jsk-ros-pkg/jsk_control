@@ -541,6 +541,28 @@
    )
   )
 
+(defclass no-contact-constraint
+  :super contact-constraint
+  )
+
+(defmethod no-contact-constraint
+  (:init
+   (&key (name))
+   "Calc no-contact constraint matrix.
+    Constraint is considered as C w = 0 <=> C w >=0 and C w <= 0.
+    This can be used for swing foot phase for walking."
+   (let ((ret (apply
+               #'append
+               (mapcar #'(lambda (axis)
+                           (list (calc-constraint-param-list-for-min-max axis 0 :min/max :min)
+                                 (calc-constraint-param-list-for-min-max axis 0 :min/max :max)))
+                       '(:fx :fy :fz :nx :ny :nz)))))
+     (setq constraint-param-list
+           (list :matrix (apply #'append (mapcar #'(lambda (x) (cadr (memq :matrix x))) ret))
+                 :vector (apply #'append (mapcar #'(lambda (x) (cadr (memq :vector x))) ret)))))
+   (send-super :init :name name))
+  )
+
 (defun force-axis->index (ax)
   (case ax
     (:fx 0) (:fy 1) (:fz 2)
