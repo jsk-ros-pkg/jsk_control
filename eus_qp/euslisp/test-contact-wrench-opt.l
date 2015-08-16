@@ -132,11 +132,14 @@
     ret))
 
 (defun demo-robot-contact-wrench-distribution-common
-  (&key (func #'test-wrench-distribute-by-qp) (press-enter-p t) (mu-trans 0.5))
+  (&key (func #'test-wrench-distribute-by-qp) (press-enter-p t) (mu-trans 0.5) (ret-list nil)
+        (use-no-contact nil))
   (let ((ret))
     (send *robot* :put :contact-constraint-list
           (mapcar #'(lambda (l)
-                      (instance* default-contact-constraint
+                      (if (and (eq l :lleg) use-no-contact)
+                          (instance no-contact-constraint :init)
+                        (instance* default-contact-constraint
                                  :init
                                  :mu-trans mu-trans
                                  :mu-rot 0.05
@@ -145,7 +148,7 @@
                                          :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
                                          :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
                                          :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
-                                         ))))
+                                         )))))
                   '(:rleg :lleg)))
     (send *robot* :reset-pose)
     (send *robot* :fix-leg-to-coords (make-coords))
@@ -178,7 +181,9 @@
     (send *robot* :move-centroid-on-foot :both '(:rleg :lleg))
     (send *irtviewer* :draw-objects)
     (push (funcall func) ret)
-    (every #'identity (reverse ret))))
+    (if ret-list
+        (reverse ret)
+      (every #'identity (reverse ret)))))
 
 (defun demo-robot-contact-wrench-distribution-1
   (&key (press-enter-p t))
@@ -205,6 +210,13 @@
   "Demo for robot contact wrench and joint torque distribution by QP. Originally infeasible solution, but obtain solution by allowing min inequality boundary violation."
   (demo-robot-contact-wrench-distribution-common :func #'(lambda (&rest args) (apply #'test-wrench-torque-distribute-by-qp :min-inequality-violation-weight 1 args))
                                                  :mu-trans 0.01 :press-enter-p press-enter-p))
+
+(defun demo-robot-contact-wrench-distribution-6
+  (&key (press-enter-p t))
+  "Demo for robot contact wrench distribution with no-contact constraint. Only the second example successes."
+  (let ((ret (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-qp :press-enter-p press-enter-p :use-no-contact t :ret-list t)))
+    (and (not (elt ret 0)) (elt ret 1) (not (elt ret 2)) (not (elt ret 3)))
+    ))
 
 (defun demo-robot-contact-wrench-distribution-all
   (&key (press-enter-p t))
