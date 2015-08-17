@@ -113,7 +113,7 @@
 (defun-c-callable check-loss-thre ((v1 :string) (v2 :string)) :integer
   (let* ((dif (_target-loss v1 v2))
 	 (thre (concatenate float-vector
-			    (scale 0.1 (float-vector 1 1 1))
+			    (scale (* 1000 0.1) (float-vector 1 1 1))
 			    (scale (deg2rad 10) (float-vector 1 1 1 1)))))
     (dotimes (i (length v2))
       (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
