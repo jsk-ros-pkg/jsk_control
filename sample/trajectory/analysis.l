@@ -174,9 +174,18 @@
 	ret dif tm (avtm 0) dif-l tm-l
 	(variance (float-vector 0 0 0 0 0 0 0))
 	(tm-variance 0)
+	;;
+	(print-step (/ size 100))
+	(print-cnt 0)
 	)
   (format log "~A~%" :raw)
   (dotimes (i size)
+    ;;
+    (cond
+     ((> (incf print-cnt) print-step)
+      (format t "~A/~A = ~A~%" i size (/ (* i 1.0) size))
+      (setq print-cnt 0)))
+    ;;
     (setq ret (funcall func i))
     (setq dif (cdr (assoc :diff ret)))
     (setq tm (cdr (assoc :time ret)))
