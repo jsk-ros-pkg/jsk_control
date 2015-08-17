@@ -84,8 +84,10 @@
    float-vector
    (progn
      (_update_traj 1.0)
-     (v- (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords))
-	 (coords2vector (send *goal* :copy-worldcoords))))
+     (scale
+      1000.0
+      (v- (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords))
+	  (coords2vector (send *goal* :copy-worldcoords)))))
    (progn
      (_update_traj 0.0)
      (v- (map float-vector 'deg2rad (send-all *rarm-joints1* :joint-angle))
