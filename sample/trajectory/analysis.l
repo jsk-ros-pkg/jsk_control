@@ -35,117 +35,193 @@
 (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
 
 (defvar *input*)
+(defvar *traj-bspline* (instance partition-spline-vector :init :dimension (length *rarm-joints1*) :id-max 8 :recursive-order (make-list (length *rarm-joints1*) :initial-element 3) :x-min 0.0 :x-max 1.0))
 
-(defun _target-loss (v1 v2)
-  (let* ((input (concatenate float-vector *input* v1))
-	 (joint-list (butlast (send *robot* :rarm :joint-list)))
+(defun _update_redundancy (redundancy
+			   &key (update-models? nil))
+  (let* ((input (concatenate float-vector *input* (float-vector redundancy)))
 	 (output
 	  (caffe::calc-forward-double
-	   :isize (length input) :osize (length joint-list)
+	   :isize (length input) :osize 32
 	   :num 1 :channels (length input) :width 1 :height 1
 	   :input input))
 	 c)
     ;;
-    (map cons '(lambda (j av) (send j :joint-angle (- (rad2deg av) (send j :joint-angle))
-				    :relative t))
-	 joint-list output)
-    (send-all (send *robot* :links) :worldcoords)
-    (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
-			 :rot (matrix-exponent (subseq input 3 6))))
-    (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
-		  :transform c :local))
-    ;;
-    (concatenate float-vector
-		 (scale 1e-1
-			(send c :difference-position
-			      (send *robot* :rarm :end-coords)))
-		 (send c :difference-rotation
-		       (send *robot* :rarm :end-coords)))
-    ))
+    (cond
+     (update-models?
+      (map cons
+	   #'(lambda (j s)
+	       (send j :joint-angle
+		     (- (+ (send j :min-angle)
+			   (* s (- (send j :max-angle) (send j :min-angle))))
+			(send j :joint-angle))
+		     :relative t))
+	   *rarm-joints2* (subseq input 3))
+      (send-all (send-all *rarm-joints2* :child-link) :worldcoords)
+      ;;
+      (setq c (vector2coords (subseq input 0 3)))
+      (send *goal* :newcoords c)
+      ))
+    (send *traj-bspline* :convert-gain-vector-to-gain-matrix output)
+    output))
 
-(defun _normal-target-loss (v1 v2)
-  (let* ((joint-list (butlast (send *robot* :rarm :joint-list)))
-	 c)
-    ;;
-    (map cons '(lambda (j av) (send j :joint-angle (- (rad2deg av) (send j :joint-angle))
-				    :relative t))
-	 joint-list v1)
-    (send-all (send *robot* :links) :worldcoords)
-    (setq c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
-			 :rot (matrix-exponent (subseq *input* 3 6))))
-    (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
-		  :transform c :local))
-    ;; (send *viewer*  :draw-objects)
-    ;;
-    (concatenate float-vector
-		 (scale 1e-1
-			(send c :difference-position
-			      (send *robot* :rarm :end-coords)))
-		 (send c :difference-rotation
-		       (send *robot* :rarm :end-coords)))
-    ))
+(defun _update_traj (x)
+  (let* ((ret))
+    (map cons
+	 #'(lambda (j av)
+	     (send j :joint-angle
+		   (- (+ (send j :min-angle)
+			 (* av (- (send j :max-angle) (send j :min-angle))))
+		      (send j :joint-angle))
+		   :relative t))
+	 *rarm-joints1* (setq ret (send *traj-bspline* :calc x)))
+    (send-all (send-all *rarm-joints1* :child-link) :worldcoords)
+    ret))
+
+(defun _target-loss (v1 v2)
+  (_update_redundancy (aref v1 0) :update-models? nil)
+  (concatenate
+   float-vector
+   (progn
+     (_update_traj 1.0)
+     (v- (coords2vector (send *robot* :rarm :end-coords :copy-worldcoords))
+	 (coords2vector (send *goal* :copy-worldcoords))))
+   (progn
+     (_update_traj 0.0)
+     (v- (map float-vector 'deg2rad (send-all *rarm-joints1* :joint-angle))
+	 (map float-vector 'deg2rad (send-all *rarm-joints2* :joint-angle)))))
+  ;; (v-
+  ;;  (concatenate float-vector
+  ;; 		(progn (_update_traj 1.0)
+  ;; 		       (coords2vector (send *robot* :rarm :end-coords
+  ;; 					    :copy-worldcoords)))
+  ;; 		(_update_traj 0))
+  ;;  (traj-input-vector))
+  )
 
 (defun-c-callable target-loss ((v1 :string) (v2 :string)) :integer
   (let* ((dif (_target-loss v1 v2)))
-    (setf (aref v2 0)
-	  ;; (apply 'max (map cons 'abs dif))
-	  (norm dif)
-	  )
-    0
-    ))
-
-(defun-c-callable normal-target-loss ((v1 :string) (v2 :string)) :integer
-  (let* ((dif (_normal-target-loss v1 v2)))
-    (setf (aref v2 0)
-	  ;; (apply 'max (map cons 'abs dif))
-	  (norm dif)
-	  )
-    0
-    ))
-
-(defun-c-callable torque-objective ((v1 :string) (v2 :string)) :integer
-  (let* ((joint-list (butlast (send *robot* :rarm :joint-list))))
-    (_target-loss v1 v2)
-    ;;
-    (send *robot* :calc-torque :force-list (list (float-vector 0 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
-    ;;
-    (setf
-     (aref v2 0)
-     ;; (* 1e-3 (apply 'max (mapcar 'abs (send-all joint-list :joint-torque))))
-     (* 1e-3 (norm (coerce (send-all joint-list :joint-torque) float-vector)))
-     )
-    0
-    ))
-
-(defun-c-callable normal-torque-objective ((v1 :string) (v2 :string)) :integer
-  (let* ((joint-list (butlast (send *robot* :rarm :joint-list))))
-    (_normal-target-loss v1 v2)
-    ;;
-    (send *robot* :calc-torque :force-list (list (float-vector 0 0 0)) :moment-list (list (float-vector 0 0 0)) :target-coords (list (send *robot* :rarm :end-coords)))
-    ;;
-    (setf
-     (aref v2 0)
-     ;; (* 1e-3 (apply 'max (mapcar 'abs (send-all joint-list :joint-torque))))
-     (* 1e-3 (norm (coerce (send-all joint-list :joint-torque) float-vector)))
-     )
+    (setf (aref v2 0) (norm dif))
     0
     ))
 
 (defun-c-callable nop ((v1 :string) (v2 :string)) :integer
   0)
 
-(defun-c-callable check-ik-thre ((v1 :string) (v2 :string)) :integer
+(defun-c-callable check-loss-thre ((v1 :string) (v2 :string)) :integer
   (let* ((dif (_target-loss v1 v2))
-	 (thre (float-vector 5 5 5 0.5 0.5 0.5)))
-    (dotimes (i 6)
+	 (thre (concatenate float-vector
+			    (scale 0.1 (float-vector 1 1 1))
+			    (scale (deg2rad 10) (float-vector 1 1 1 1)))))
+    (dotimes (i (length v2))
       (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
     )
   0)
 
-(defun-c-callable normal-check-ik-thre ((v1 :string) (v2 :string)) :integer
-  (let* ((dif (_normal-target-loss v1 v2))
-	 (thre (float-vector 5 5 5 0.5 0.5 0.5)))
-    (dotimes (i 6)
-      (setf (aref v2 i) (- (abs (aref dif i)) (aref thre i))))
+(defun redundancy-traj-search
+  (&key (input (random-traj-input-vector))
+	(time-buf (float-vector 0))
+	(draw? t)
+	;;
+	(objective 'target-loss) ;; torque-objective
+	(inequality-dimension 7) ;; 7
+	)
+  (setq *input* input)
+  (_update_redundancy 0 :update-models? t)
+  (if draw? (send *viewer* :draw-objects))
+  (let* (x (f (float-vector 0)))
+    (setq
+     x
+     (nlopt-optimize
+      :initial-state (float-vector 0)
+      :state-min-vector (float-vector 0)
+      :state-max-vector (float-vector 1)
+      :evaluation-function objective
+      :evaluation-function-gradient 'nop
+      :equality-function 'nop
+      :equality-function-gradient 'nop
+      :inequality-function 'check-loss-thre ;;'nop
+      :inequality-function-gradient 'nop
+      :alg DIRECT
+      :ftol 1e-3
+      :xtol 1e-3
+      :eqthre 1e-3
+      :max-eval 300
+      :max-time 3.0
+      :timebuf time-buf
+      :log? draw?
+      :equality-dimension 0
+      :inequality-dimension inequality-dimension
+      ))
+    (funcall objective x f)
+    (cond
+     (draw? (check-trajectory :gain (_update_redundancy (aref x 0) :update-models? nil))))
+    ;;
+    (list
+     (cons :diff (_target-loss x nil))
+     (cons :x x) (cons :f (aref f 0))
+     (cons :time (aref time-buf 0)))
+    ))
+
+(defun redundancy-traj-search-analysis
+  (&key (output-path "redundancy_traj_search_analysis.log")
+	(log (open output-path :direction :output))
+	(func '(lambda (i) (redundancy-traj-search :draw? nil :inequality-dimension 0)))
+	;;
+	(size (expt 3 7))
+	(dif-max (float-vector 0 0 0 0 0 0 0))
+	(dif-sum (float-vector 0 0 0 0 0 0 0))
+	ret dif tm (avtm 0) dif-l tm-l
+	(variance (float-vector 0 0 0 0 0 0 0))
+	(tm-variance 0)
+	)
+  (format log "~A~%" :raw)
+  (dotimes (i size)
+    (setq ret (funcall func i))
+    (setq dif (cdr (assoc :diff ret)))
+    (setq tm (cdr (assoc :time ret)))
+    ;;
+    (format log "~A" tm)
+    (dotimes (j (length dif))
+      (format log " ~A" (aref dif j))
+      (setf (aref dif-max j)
+	    (max (abs (aref dif j)) (aref dif-max j)))
+      (setf (aref dif-sum j)
+	    (+ (/ (aref dif j) size)
+	       (aref dif-sum j))))
+    (format log " ~%")
+    ;;
+    (setq avtm (+ avtm (/ tm size)))
+    ;; (format t "tm: ~A, maxd: ~A, sumd: ~A~%" avtm dif-max dif-sum)
+    (push dif dif-l)
+    (push tm tm-l)
+    ;;
     )
-  0)
+  (dolist (dif dif-l)
+    (dotimes (j (length dif))
+      (setf (aref variance j)
+	    (+ (aref variance j)
+	       (/ (expt (- (aref dif j) (aref dif-sum j)) 2) size)))))
+  (dotimes (j (length dif))
+    (setf (aref variance j) (sqrt (aref variance j))))
+  ;;
+  (dolist (tm tm-l)
+    (setq tm-variance (+ tm-variance (/ (expt (- tm avtm) 2) size))))
+  (setq tm-variance (sqrt tm-variance))
+  ;;
+  (format log "~A~%" :average)
+  (format log "~A" avtm)
+  (dotimes (j (length dif))
+    (format log " ~A" (aref dif-sum j)))
+  (format log "~%")
+  ;;
+  (format log "~A~%" :variance)
+  (format log "~A" tm-variance)
+  (dotimes (j (length variance))
+    (format log " ~A" (aref variance j)))
+  (format log "~%")
+  (close log)
+  ;;
+  (format t "tm: ~A, maxd: ~A, sumd: ~A, var: ~A~%" avtm dif-max dif-sum variance)
+  (list avtm dif-max dif-sum)
+  )
