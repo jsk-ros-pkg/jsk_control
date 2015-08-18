@@ -402,6 +402,8 @@
       (coerce gain-list float-vector)))
    ret tmp
    (draw? t)
+   (draw-stick? nil)
+   &allow-other-keys
    )
   (send bspline :convert-gain-vector-to-gain-matrix gain)
   (while (<= x-buf x-max)
@@ -418,11 +420,15 @@
 		(copy-seq tmp)) ret)
     (setq x-buf (+ x-buf x-step))
     (cond
+     (draw-stick?
+      (apply 'draw-arm-line (if (listp draw-stick?) draw-stick? nil))
+      )
      (draw?
       (send *viewer* :draw-objects)
       (x::window-main-one)
       (if (<= x-buf x-max) (unix:usleep (round (* 0.05 1000 1000))))
-      ))
+      )
+     )
     ;; (if (eq x-min x-buf) (read-line))
     )
   ret
@@ -456,7 +462,9 @@
   (apply 'traj-test (append args (list :input (random-traj-input-vector)))))
 
 (defun traj-test
-  (&key
+  (&rest
+   args
+   &key
    (id (random 10000))
    (input-path "input_lmdb_traj")
    (target-path "target_lmdb_coords")
@@ -479,6 +487,7 @@
    ;;
    (draw? t)
    (draw-last? nil)
+   &allow-other-keys
    )
   ;;
   (setq c (vector2coords (subseq input 0 3)))
@@ -504,14 +513,18 @@
 	 :input input))
   ;;
   (send *goal* :newcoords c)
-  (setq ret (check-trajectory
-	     :gain output
-	     :cnt (cond
-		   ((numberp draw?) draw?)
-		   (draw? 10)
-		   (t nil))
-	     :x-buf (if draw-last? 1.0 0.0)
-	     :draw? draw?))
+  (setq ret (apply
+	     'check-trajectory
+	     (append
+	      args
+	      (list
+	       :gain output
+	       :cnt (cond
+		     ((numberp draw?) draw?)
+		     (draw? 10)
+		     (t nil))
+	       :x-buf (if draw-last? 1.0 0.0)
+	       :draw? draw?))))
   ;;
   (list
    (cons :diff
@@ -554,6 +567,9 @@
    (draw-last? nil)
    (draw-step (/ 1 step))
    (draw-cnt 0)
+   ;;
+   prev-output
+   (output-thre 0.3)
    )
   (dotimes (i (round (/ 1.0 step)))
     (setq buf (traj-test :id id :input input :redundancy (* i step)
@@ -563,9 +579,14 @@
 				       (setq draw-cnt 0)) nil)))
     (cond
      ((v< (map float-vector 'abs (cdr (assoc :diff buf))) thre)
-      (if draw? (traj-test :id id :input input :redundancy (* i step)
-			   :draw-last? draw-last? :draw? draw?))
-      (push buf ret))))
+      (cond
+       ((or (not prev-output)
+	    (> (norm (v- prev-output (cdr (assoc :output buf))))
+	       output-thre))
+	(setq prev-output (cdr (assoc :output buf)))
+	(if draw? (traj-test :id id :input input :redundancy (* i step)
+			     :draw-last? draw-last? :draw? draw?))
+	(push buf ret))))))
   (setq ret (sort ret #'(lambda (a b) (< (norm (Cdr (assoc :diff a)))
 					 (norm (cdr (assoc :diff b)))))))
   (print (car ret))
