@@ -253,8 +253,10 @@
   (send *viewer* :viewsurface :flush)
   ret)
 
-(unix::system "rm -rf gather_traj")
-(unix::system "mkdir gather_traj")
+#|
+
+(unix::system "rm -rf gather_log")
+(unix::system "mkdir gather_log")
 (dotimes (j 10)
   (let* ((td (gather-traj-test :step 0.01 :draw? nil
 			       :thre (float-vector 0.15 0.15 0.15
@@ -262,12 +264,12 @@
 	 (i -1))
     (setq td (sort td '(lambda (a b) (< (cdr (assoc :redundancy a))
 					(cdr (assoc :redundancy b))))))
-    (unix::system (format nil "mkdir gather_traj/~A" j))
+    (unix::system (format nil "mkdir gather_log/~A" j))
     (dolist (d td)
       (format t "~A/~A~%" (incf i) (length td))
       (draw-candidate :input (subseq (cdr (assoc :input d)) 0 7)
 		      :redundancy (cdr (assoc :redundancy d)))
       (unix:usleep 500000)
       (send *viewer* :viewsurface :write-to-image-file
-	    (format nil "gather_traj/~A/~A.jpg" j i))
+	    (format nil "gather_log/~A/~A.jpg" j i))
       )))

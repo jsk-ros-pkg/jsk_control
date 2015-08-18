@@ -36,6 +36,10 @@
 
 (defvar *input*)
 (defvar *traj-bspline* (instance partition-spline-vector :init :dimension (length *rarm-joints1*) :id-max 8 :recursive-order (make-list (length *rarm-joints1*) :initial-element 3) :x-min 0.0 :x-max 1.0))
+(defvar *traj-bspline-jerk-gain*
+  (mapcar
+   '(lambda (b) (send b :calc-integral-objective-coeff-matrix :n 3))
+   (send *traj-bspline* :partition-spline-list)))
 
 (defun _update_redundancy (redundancy
 			   &key (update-models? nil))
@@ -106,6 +110,23 @@
     (setf (aref v2 0) (norm dif))
     0
     ))
+
+(defvar *jerk-objective-scale* 1)
+(defun-c-callable jerk-objective ((v1 :string) (v2 :string)) :integer
+  (let* ((dif (_target-loss v1 v2)))
+    (setf
+     (aref v2 0)
+     (*
+      *jerk-objective-scale*
+      (apply
+       '+
+       (let*((id -1) g)
+	 (mapcar
+	  #'(lambda(b m)
+	      (setq g (matrix-row (send *traj-bspline* :gain-matrix) (incf id)))
+	      (v. g (transform m g)))
+	  (send *traj-bspline* :partition-spline-list)
+	  *traj-bspline-jerk-gain*)))))))
 
 (defun-c-callable nop ((v1 :string) (v2 :string)) :integer
   0)
@@ -235,4 +256,49 @@
   ;;
   (format t "tm: ~A, maxd: ~A, sumd: ~A, var: ~A~%" avtm dif-max dif-sum variance)
   (list avtm dif-max dif-sum)
+  )
+
+(defun redundancy-minjerk-traj-search-analysis-once
+  (&rest
+   args
+   &key
+   (input (random-traj-input-vector))
+   ret1 ret2
+   &allow-other-keys
+   )
+  ;;
+  (setq *jerk-objective-scale* 1)
+  (setq
+   ret1
+   (redundancy-traj-search
+    :draw? nil
+    :objective 'jerk-objective
+    :inequality-dimension 7))
+  ;;
+  (setq *jerk-objective-scale* -1)
+  (setq
+   ret2
+   (redundancy-traj-search
+    :draw? nil
+    :objective 'jerk-objective
+    :inequality-dimension 7))
+  (list
+   (cons :diff
+	 (float-vector (cdr (assoc :time ret1))
+		       (cdr (assoc :time ret2))
+		       (cdr (assoc :f ret1))
+		       (cdr (assoc :f ret2))))
+   (cons :x (cdr (assoc :x ret1)))
+   (cons :time 0)))
+
+(defun redundancy-minjerk-traj-search-analysis
+  (&rest
+   args
+   &key (output-path "redundancy_mijerk_traj_search_analysis.log")
+   ;; (log (open output-path :direction :output))
+   (func '(lambda (i) (redundancy-minjerk-traj-search-analysis-once)))
+   )
+  (apply 'redundancy-traj-search-analysis
+	 (append args
+		 (list :func func :output-path output-path)))
   )
