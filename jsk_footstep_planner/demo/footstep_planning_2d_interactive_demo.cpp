@@ -172,7 +172,7 @@ int main(int argc, char** argv)
   pub_start.publish(ros_start);
   interactive_markers::InteractiveMarkerServer server("footstep_projection_demo");
 
-    visualization_msgs::InteractiveMarker int_marker;
+  visualization_msgs::InteractiveMarker int_marker;
   int_marker.header.frame_id = "/odom";
   int_marker.header.stamp=ros::Time::now();
   int_marker.name = "footstep marker";
