@@ -38,7 +38,6 @@
 (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
 
 (defvar *input*)
-(defvar *local-planner-alg* COBYLA)
 
 (defun _target-loss (v1 v2)
   (let* ((input (concatenate float-vector *input* v1))
@@ -98,6 +97,9 @@
     0
     ))
 
+(defun-c-callable target-loss-grad ((v1 :string) (v2 :string)) :integer
+  (simple-jacobian v1 v2 'target-loss) 0)
+
 (defun-c-callable normal-target-loss ((v1 :string) (v2 :string)) :integer
   (let* ((dif (_normal-target-loss v1 v2)))
     (setf (aref v2 0)
@@ -106,6 +108,9 @@
 	  )
     0
     ))
+
+(defun-c-callable normal-target-loss-grad ((v1 :string) (v2 :string)) :integer
+  (simple-jacobian v1 v2 'normal-target-loss) 0)
 
 (defun-c-callable torque-objective ((v1 :string) (v2 :string)) :integer
   (let* ((joint-list (butlast (send *robot* :rarm :joint-list))))
@@ -121,6 +126,9 @@
     0
     ))
 
+(defun-c-callable torque-objective-grad ((v1 :string) (v2 :string)) :integer
+  (simple-jacobian v1 v2 'torque-objective) 0)
+
 (defun-c-callable normal-torque-objective ((v1 :string) (v2 :string)) :integer
   (let* ((joint-list (butlast (send *robot* :rarm :joint-list))))
     (_normal-target-loss v1 v2)
@@ -134,6 +142,9 @@
      )
     0
     ))
+
+(defun-c-callable normal-torque-objective-grad ((v1 :string) (v2 :string)) :integer
+  (simple-jacobian v1 v2 'normal-torque-objective) 0)
 
 (defun-c-callable nop ((v1 :string) (v2 :string)) :integer
   0)
@@ -155,17 +166,29 @@
   0)
 
 ;; (defvar *ret*)
-(defun-c-callable torque-objective-with-local-planner ((v1 :string) (v2 :string)) :integer
-  ;; (defun _torque-objective-with-local-planner (v1 v2)
+(defvar *local-planner-alg* COBYLA) ;; SLSQP
+(defvar *local-planner-ret*)
+(defun _torque-objective-with-local-planner (v1 v2)
   (let* ((joint-list (butlast (send *robot* :rarm :joint-list)))
+	 x
 	 ret
 	 )
     (_target-loss v1 v2)
+    (setq x (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
+    ;;
+    (if (and *local-planner-ret*
+	     (vectorp (cdr (assoc :orgx *local-planner-ret*)))
+	     (eq (length (cdr (assoc :orgx *local-planner-ret*)))
+		 (length x))
+	     (< (norm (v- x (cdr (assoc :orgx *local-planner-ret*)))) 1e-3))
+	(return-from _torque-objective-with-local-planner *local-planner-ret*))
     ;;
     (setq
      ret
      (normal-ik-search :target *input*
 		       :objective 'normal-torque-objective
+		       :nlopt-args
+		       (list :initial-state (copy-seq x))
 		       :state-min-vector
 		       (map float-vector
 			    #'(lambda (j) (deg2rad (- (send j :joint-angle) 10)))
@@ -174,28 +197,44 @@
 		       (map float-vector
 			    #'(lambda (j) (deg2rad (+ (send j :joint-angle) 10)))
 			    joint-list)
+		       ;; :inequality-function 'normal-target-loss
+		       ;; :inequality-function-gradient 'normal-target-loss-grad
+		       ;; :inequality-dimension 6
 		       :alg *local-planner-alg* ;; DIRECT
-		       :stop 15
+		       :stop 10
 		       :draw? nil
 		       ))
+    (setq *local-planner-ret*
+	  (cons (cons :orgx x) ret))
+    ret))
+
+(defun-c-callable torque-objective-with-local-planner ((v1 :string) (v2 :string)) :integer
+  ;; (defun _torque-objective-with-local-planner (v1 v2)
+  (let* (;;(joint-list (butlast (send *robot* :rarm :joint-list)))
+	 ret
+	 )
+    (setq ret (_torque-objective-with-local-planner v1 v2))
     ;;
-    ;; (dotimes (i (length v1))
-    ;; (setf (aref v1 i) (aref (cdr (assoc :x ret)) i)))
     (setf (aref v2 0) (cdr (assoc :f ret)))
-    ;;
-    (let* ((dif (float-vector 0 0 0 0 0 0)))
-      (normal-check-ik-thre (cdr (assoc :x ret)) dif)
-      (cond
-       ((> (apply 'max (coerce dif cons)) 1e-5)
-	(check-ik-thre v1 dif)
-	(cond
-	 ((> (apply 'max (coerce dif cons)) 1e-5)
-	  (setf (aref v2 0) (+ (aref v2 0) 1.0)))
-	 (t (torque-objective v1 v2))))
-       (t 'nop)))
-    ;; (print v2)
+    ;; ;;
+    ;; (let* ((dif (float-vector 0 0 0 0 0 0)))
+    ;;   (normal-check-ik-thre (cdr (assoc :x ret)) dif)
+    ;;   (cond
+    ;;    ((> (apply 'max (coerce dif cons)) 1e-5)
+    ;; 	(check-ik-thre v1 dif)
+    ;; 	(cond
+    ;; 	 ((> (apply 'max (coerce dif cons)) 1e-5)
+    ;; 	  (setf (aref v2 0) (+ (aref v2 0) 1.0)))
+    ;; 	 (t (torque-objective v1 v2))))
+    ;;    (t 'nop)))
     0
     ))
+
+(defun-c-callable check-ik-thre-with-local-planner
+  ((v1 :string) (v2 :string)) :integer
+  (let* ((ret (_torque-objective-with-local-planner v1 v2)))
+    (normal-check-ik-thre (cdr (assoc :x ret)) v2)
+    0))
 
 (defun redundancy-ik-search
   (&key (target
@@ -215,17 +254,19 @@
 			       :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
 		  (send (send (car (send *robot* :links)) :copy-worldcoords)
 			:difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords))))))
-	(time-buf (float-vector 0))
-	(draw? t)
-	;;
-	(objective 'target-loss) ;; torque-objective
-	(last-objective objective)
-	(inequality-dimension 6)
-	;;
-	(stop 100)
-	(ftol 1e-5)
-	(max-time 0.5)
-	)
+   (time-buf (float-vector 0))
+   (draw? t)
+   ;;
+   (objective 'target-loss) ;; torque-objective
+   (last-objective objective)
+   (inequality-dimension 6)
+   ;;
+   (stop 100)
+   (ftol 1e-5)
+   (max-time 0.5)
+   ;;
+   (nlopt-args)
+   )
   (setq *input* target)
   (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
 			 :rot (matrix-exponent (subseq *input* 3 6))))
@@ -234,27 +275,31 @@
 		  :transform c :local))
     (setq
      x
-     (nlopt-optimize
-      :initial-state (float-vector 0)
-      :state-min-vector (float-vector 0)
-      :state-max-vector (float-vector 1)
-      :evaluation-function objective
-      :evaluation-function-gradient 'nop
-      :equality-function 'nop
-      :equality-function-gradient 'nop
-      :inequality-function 'check-ik-thre ;;'nop
-      :inequality-function-gradient 'nop
-      :alg DIRECT
-      :ftol ftol
-      :xtol 1e-5
-      :eqthre 1e-5
-      :max-eval stop
-      :max-time max-time
-      :timebuf time-buf
-      :log? draw?
-      :equality-dimension 0
-      :inequality-dimension inequality-dimension
-      ))
+     (apply
+      'nlopt-optimize
+      (append
+       nlopt-args
+       (list
+	:initial-state (float-vector 0)
+	:state-min-vector (float-vector 0)
+	:state-max-vector (float-vector 1)
+	:evaluation-function objective
+	:evaluation-function-gradient 'nop
+	:equality-function 'nop
+	:equality-function-gradient 'nop
+	:inequality-function 'check-ik-thre ;;'nop
+	:inequality-function-gradient 'nop
+	:alg DIRECT
+	:ftol ftol
+	:xtol 1e-5
+	:eqthre 1e-5
+	:max-eval stop
+	:max-time max-time
+	:timebuf time-buf
+	:log? draw?
+	:equality-dimension 0
+	:inequality-dimension inequality-dimension
+	))))
     (funcall last-objective x f)
     (cond
      (draw?
@@ -294,17 +339,18 @@
 			       :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
 		  (send (send (car (send *robot* :links)) :copy-worldcoords)
 			:difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords))))))
-	(joint-list (butlast (send *robot* :rarm :joint-list)))
-	(time-buf (float-vector 0))
-	(draw? t)
-	;;
-	(objective 'normal-target-loss) ;; 'normal-torque-objective
-	(state-min-vector (map float-vector 'deg2rad (send-all joint-list :min-angle)))
-	(state-max-vector (map float-vector 'deg2rad (send-all joint-list :max-angle)))
-	(inequality-dimension 6)
-	(alg DIRECT)
-	(stop 10000000)
-	)
+   (joint-list (butlast (send *robot* :rarm :joint-list)))
+   (time-buf (float-vector 0))
+   (draw? t)
+   ;;
+   (objective 'normal-target-loss) ;; 'normal-torque-objective
+   (state-min-vector (map float-vector 'deg2rad (send-all joint-list :min-angle)))
+   (state-max-vector (map float-vector 'deg2rad (send-all joint-list :max-angle)))
+   (inequality-dimension 6)
+   (alg DIRECT)
+   (stop 10000000)
+   (nlopt-args)
+   )
   (setq *input* target)
   (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
 			 :rot (matrix-exponent (subseq *input* 3 6))))
@@ -314,27 +360,31 @@
     (send *arrow* :newcoords (send c :copy-worldcoords))
     (setq
      x
-     (nlopt-optimize
-      :initial-state (map float-vector 'deg2rad (send-all joint-list :joint-angle))
-      :state-min-vector state-min-vector
-      :state-max-vector state-max-vector
-      :evaluation-function objective
-      :evaluation-function-gradient 'nop
-      :equality-function 'nop
-      :equality-function-gradient 'nop
-      :inequality-function 'normal-check-ik-thre ;;'nop
-      :inequality-function-gradient 'nop
-      :alg alg
-      :ftol 1e-32
-      :xtol 1e-32
-      :eqthre 1e-5
-      :max-eval stop
-      :max-time (* 60 5)
-      :timebuf time-buf
-      :log? draw?
-      :equality-dimension 0
-      :inequality-dimension inequality-dimension
-      ))
+     (apply
+      'nlopt-optimize
+      (append
+       nlopt-args
+       (list
+	:initial-state (map float-vector 'deg2rad (send-all joint-list :joint-angle))
+	:state-min-vector state-min-vector
+	:state-max-vector state-max-vector
+	:evaluation-function objective
+	:evaluation-function-gradient 'nop
+	:equality-function 'nop
+	:equality-function-gradient 'nop
+	:inequality-function 'normal-check-ik-thre ;;'nop
+	:inequality-function-gradient 'nop
+	:alg alg
+	:ftol 1e-32
+	:xtol 1e-32
+	:eqthre 1e-5
+	:max-eval stop
+	:max-time (* 60 5)
+	:timebuf time-buf
+	:log? draw?
+	:equality-dimension 0
+	:inequality-dimension inequality-dimension
+	))))
     (funcall objective x f)
     (cond
      (draw?
@@ -472,10 +522,12 @@
 		  (setq buf3 (redundancy-ik-search
 			      :target *input*
 			      :objective 'torque-objective-with-local-planner
-			      ;; :last-objective '_torque-objective-with-local-planner
-			      ;; :inequality-dimension 0
+			      :nlopt-args (list :inequality-function
+						'check-ik-thre-with-local-planner)
+			      :inequality-dimension 6
 			      :ftol 1e-30
-			      :max-time 5.0))
+			      :max-time 5.0
+			      ))
 		  )
 	    ret)
       (push (list (/ (cdr (assoc :f buf1)) (cdr (assoc :f buf)))
@@ -850,6 +902,9 @@
   (close log))
 
 
-(redundancy-ik-search :objective 'torque-objective-with-local-planner :inequality-dimension 0 :ftol 1e-30 :max-time 5.0 :target #f(0.341853 -0.486249 0.629781 -0.630605 -0.513033 -1.15057))
-		      #f(0.082547 -0.834522 0.698417 0.582521 -0.748864 -1.04408))
-(redundancy-ik-search :objective 'torque-objective :target #f(0.082547 -0.834522 0.698417 0.582521 -0.748864 -1.04408))
+(redundancy-ik-search :objective 'torque-objective-with-local-planner :nlopt-args (list :inequality-function 'check-ik-thre-with-local-planner)  :inequality-dimension 6 :ftol 1e-30 :max-time 5.0 :target #f(-0.228518 -0.672158 0.581484 -0.774568 2.85465 -0.337059))
+(redundancy-ik-search :objective 'torque-objective :target #f(-0.228518 -0.672158 0.581484 -0.774568 2.85465 -0.337059))
+
+(do-until-key
+ (setq ret (redundancy-ik-search :objective 'torque-objective-with-local-planner :inequality-dimension 0 :ftol 1e-30 :max-time 5.0 :target #f(0.341853 -0.486249 0.629781 -0.630605 -0.513033 -1.15057)))
+ (if (> (cdr (assoc :f ret)) 1.0) (return-from nil nil)))
