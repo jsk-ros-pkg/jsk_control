@@ -271,7 +271,7 @@
   (setq
    ret1
    (redundancy-traj-search
-    :draw? nil
+    :draw? nil :input input
     :objective 'jerk-objective
     :inequality-dimension 7))
   ;;
@@ -279,7 +279,7 @@
   (setq
    ret2
    (redundancy-traj-search
-    :draw? nil
+    :draw? nil :input input
     :objective 'jerk-objective
     :inequality-dimension 7))
   (list
@@ -294,7 +294,7 @@
 (defun redundancy-minjerk-traj-search-analysis
   (&rest
    args
-   &key (output-path "redundancy_mijerk_traj_search_analysis.log")
+   &key (output-path "redundancy_minjerk_traj_search_analysis.log")
    ;; (log (open output-path :direction :output))
    (func '(lambda (i) (redundancy-minjerk-traj-search-analysis-once)))
    )
