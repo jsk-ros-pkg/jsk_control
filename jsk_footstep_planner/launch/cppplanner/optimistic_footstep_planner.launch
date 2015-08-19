@@ -1,5 +1,6 @@
 <launch>
   <arg name="USE_JOY" default="false" />
+  <arg name="USE_SIMPLE_FOOTSTEP_CONTROLLER" default="true" />
   <node pkg="dynamic_tf_publisher" type="tf_publish.py" name="dynamic_tf_publisher"
         output="log">
     <param name="use_cache" value="false"/>
@@ -91,7 +92,7 @@
     <!-- <param name="wait_snapit_server" value="false" /> -->
     <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
     <remap from="project_footprint" to="/footstep_planner/project_footprint_with_local_search" />
-    <remap from="/footstep_controller" to="simple_footstep_controller" />
+    <remap from="/footstep_controller" to="simple_footstep_controller" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)"/>
     <rosparam>
         use_plane_snap: true
         use_projection_service: true
@@ -161,7 +162,14 @@
     <remap from="~set_pose" to="/footstep_marker/current_pose" />
   </node>
   <node pkg="jsk_footstep_controller" type="simple-footstep-controller.l" name="simple_footstep_controller"
-        output="screen">
+        output="screen" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)">
+  </node>
+  <node pkg="jsk_footstep_controller" type="footstep-controller.l" name="footstep_controller"
+        output="screen" unless="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)">
+    <rosparam subst_value="true">
+      interruptible_mode: ":semi-interruptible"
+      auto_lookground: false
+    </rosparam>
   </node>
   <node pkg="jsk_footstep_controller" type="footstep-refinement.l"
         name="footstep_refinement">
@@ -200,9 +208,10 @@
                execute: '/footstep_marker/execute'
                resume: '/footstep_marker/resume'
                frame_id: odom
+               lock_furutaractive: true
       </rosparam>
       <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
-      <remap from="/footstep_controller/status" to="/simple_footstep_controller/status" />
+      <remap from="/footstep_controller/status" to="/simple_footstep_controller/status" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)"/>
   </node>
   </group>
   <node pkg="jsk_footstep_controller" type="gui-client.l" name="gui_client">

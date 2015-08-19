@@ -12,6 +12,7 @@ from actionlib_msgs.msg import GoalStatusArray
 from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray, ExecFootstepsAction, ExecFootstepsGoal
 from jsk_rviz_plugins.msg import OverlayMenu, OverlayText
 from std_msgs.msg import UInt8, Empty
+from std_srvs.srv import Empty as EmptySrv
 import std_srvs.srv
 import tf
 from tf.transformations import *
@@ -41,7 +42,8 @@ class JoyFootstepPlanner(JoyPose6D):
     self.rfoot_frame_id = rospy.get_param('~rfoot_frame_id', '/RLEG_LINK5')
     self.lfoot_offset = tf_ext.xyzxyzwToMatrix(rospy.get_param('~lfoot_offset'))
     self.rfoot_offset = tf_ext.xyzxyzwToMatrix(rospy.get_param('~rfoot_offset'))
-    
+    self.lock_furutaractive = self.getArg("lock_furutaractive", False)
+    self.furutaractive_namespace = self.getArg("furutaractive_namespace", "urdf_model_marker")
     self.command_pub = rospy.Publisher('/menu_command', UInt8)
     self.execute_pub = rospy.Publisher(self.getArg('execute', 'execute'), Empty)
     self.resume_pub = rospy.Publisher(self.getArg('resume', 'resume'), Empty)
@@ -67,6 +69,18 @@ class JoyFootstepPlanner(JoyPose6D):
     self.status_lock = threading.Lock()
     self.current_selecting_index = 0
     self.resetGoalPose()
+  def lockFurutaractive(self):
+    try:
+      lock = rospy.ServiceProxy(self.furutaractive_namespace + '/lock_joint_states', EmptySrv)
+      lock()
+    except rospy.ServiceException, e:
+      rospy.logerror("failed to call service: %s" % (e.message))
+  def unlockFurutaractive(self):
+    try:
+      unlock = rospy.ServiceProxy(self.furutaractive_namespace + '/unlock_joint_states', EmptySrv)
+      unlock()
+    except rospy.ServiceException, e:
+      rospy.logerror("failed to call service: %s" % (e.message))
   def cancelMenuCB(self, msg):
     with self.status_lock:
       self.mode = self.CANCELED
@@ -83,6 +97,8 @@ class JoyFootstepPlanner(JoyPose6D):
         self.ignore_next_status_flag = False
       else:
         self.mode = self.PLANNING
+        if self.lock_furutaractive:
+          self.unlockFurutaractive()
     elif self.mode == self.WAIT_FOR_CANCEL and msg.status_list[0].status == 0:
       self.mode = self.CANCELED
     self.status_lock.release()
@@ -202,6 +218,8 @@ up/down    : Move menu cursors
       if history.new(status, "circle"):
         self.status_lock.acquire()
         self.mode = self.EXECUTING
+        if self.lock_furutaractive:
+          self.lockFurutaractive()
         self.executePlan()
         self.ignore_next_status_flag = True
         self.status_lock.release()
