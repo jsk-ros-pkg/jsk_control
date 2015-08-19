@@ -145,6 +145,7 @@
   (&key (input (random-traj-input-vector))
 	(time-buf (float-vector 0))
 	(draw? t)
+	(check-trajectory-args nil)
 	;;
 	(objective 'target-loss) ;; torque-objective
 	(inequality-dimension 7) ;; 7
@@ -178,7 +179,12 @@
       ))
     (funcall objective x f)
     (cond
-     (draw? (check-trajectory :gain (_update_redundancy (aref x 0) :update-models? nil))))
+     ((or draw? check-trajectory-args)
+      (apply
+       'check-trajectory
+       (append
+	(if (listp check-trajectory-args) check-trajectory-args)
+	(list :gain (_update_redundancy (aref x 0) :update-models? nil))))))
     ;;
     (list
      (cons :diff (_target-loss x nil))

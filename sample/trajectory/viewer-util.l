@@ -273,3 +273,32 @@
       (send *viewer* :viewsurface :write-to-image-file
 	    (format nil "gather_log/~A/~A.jpg" j i))
       )))
+
+
+;;
+
+(send *viewer* :draw-objects :flush nil)
+(setq *jerk-objective-scale* 1)
+(setq
+ ret1
+ (redundancy-traj-search
+  :draw? nil
+  :check-trajectory-args (list :draw-stick? (list (float-vector 1 0 0)))
+  :input #f(0.297867 -0.768477 0.587254 0.989254 0.095675 0.588501 0.305343)
+  :objective 'jerk-objective
+  :inequality-dimension 7))
+(send *viewer* :viewsurface :flush)
+
+(send *viewer* :draw-objects :flush nil)
+;;
+(setq *jerk-objective-scale* -1)
+(setq
+ ret2
+ (redundancy-traj-search
+  :draw? nil
+  :check-trajectory-args (list :draw-stick? (list (float-vector 0 1 0)))
+  :input #f(0.297867 -0.768477 0.587254 0.989254 0.095675 0.588501 0.305343)
+  :objective 'jerk-objective
+  :inequality-dimension 7))
+;;
+(send *viewer* :viewsurface :flush)
