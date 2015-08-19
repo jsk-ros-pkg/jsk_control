@@ -38,6 +38,7 @@
 (random 1.0 (integer-vector (car (unix::gettimeofday)) 0))
 
 (defvar *input*)
+(defvar *local-planner-alg* COBYLA)
 
 (defun _target-loss (v1 v2)
   (let* ((input (concatenate float-vector *input* v1))
@@ -153,6 +154,49 @@
     )
   0)
 
+;; (defvar *ret*)
+(defun-c-callable torque-objective-with-local-planner ((v1 :string) (v2 :string)) :integer
+  ;; (defun _torque-objective-with-local-planner (v1 v2)
+  (let* ((joint-list (butlast (send *robot* :rarm :joint-list)))
+	 ret
+	 )
+    (_target-loss v1 v2)
+    ;;
+    (setq
+     ret
+     (normal-ik-search :target *input*
+		       :objective 'normal-torque-objective
+		       :state-min-vector
+		       (map float-vector
+			    #'(lambda (j) (deg2rad (- (send j :joint-angle) 10)))
+			    joint-list)
+		       :state-max-vector
+		       (map float-vector
+			    #'(lambda (j) (deg2rad (+ (send j :joint-angle) 10)))
+			    joint-list)
+		       :alg *local-planner-alg* ;; DIRECT
+		       :stop 15
+		       :draw? nil
+		       ))
+    ;;
+    ;; (dotimes (i (length v1))
+    ;; (setf (aref v1 i) (aref (cdr (assoc :x ret)) i)))
+    (setf (aref v2 0) (cdr (assoc :f ret)))
+    ;;
+    (let* ((dif (float-vector 0 0 0 0 0 0)))
+      (normal-check-ik-thre (cdr (assoc :x ret)) dif)
+      (cond
+       ((> (apply 'max (coerce dif cons)) 1e-5)
+	(check-ik-thre v1 dif)
+	(cond
+	 ((> (apply 'max (coerce dif cons)) 1e-5)
+	  (setf (aref v2 0) (+ (aref v2 0) 1.0)))
+	 (t (torque-objective v1 v2))))
+       (t 'nop)))
+    ;; (print v2)
+    0
+    ))
+
 (defun redundancy-ik-search
   (&key (target
 	 (setq *input*
@@ -175,7 +219,12 @@
 	(draw? t)
 	;;
 	(objective 'target-loss) ;; torque-objective
+	(last-objective objective)
 	(inequality-dimension 6)
+	;;
+	(stop 100)
+	(ftol 1e-5)
+	(max-time 0.5)
 	)
   (setq *input* target)
   (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
@@ -196,17 +245,17 @@
       :inequality-function 'check-ik-thre ;;'nop
       :inequality-function-gradient 'nop
       :alg DIRECT
-      :ftol 1e-5
+      :ftol ftol
       :xtol 1e-5
       :eqthre 1e-5
-      :max-eval 100
-      :max-time 0.5
+      :max-eval stop
+      :max-time max-time
       :timebuf time-buf
       :log? draw?
       :equality-dimension 0
       :inequality-dimension inequality-dimension
       ))
-    (funcall objective x f)
+    (funcall last-objective x f)
     (cond
      (draw?
       ;; (send *viewer* :draw-objects :flush nil)
@@ -250,7 +299,11 @@
 	(draw? t)
 	;;
 	(objective 'normal-target-loss) ;; 'normal-torque-objective
+	(state-min-vector (map float-vector 'deg2rad (send-all joint-list :min-angle)))
+	(state-max-vector (map float-vector 'deg2rad (send-all joint-list :max-angle)))
+	(inequality-dimension 6)
 	(alg DIRECT)
+	(stop 10000000)
 	)
   (setq *input* target)
   (let* ((c (make-coords :pos (scale 1e+3 (subseq *input* 0 3))
@@ -263,8 +316,8 @@
      x
      (nlopt-optimize
       :initial-state (map float-vector 'deg2rad (send-all joint-list :joint-angle))
-      :state-min-vector (map float-vector 'deg2rad (send-all joint-list :min-angle))
-      :state-max-vector (map float-vector 'deg2rad (send-all joint-list :max-angle))
+      :state-min-vector state-min-vector
+      :state-max-vector state-max-vector
       :evaluation-function objective
       :evaluation-function-gradient 'nop
       :equality-function 'nop
@@ -275,12 +328,12 @@
       :ftol 1e-32
       :xtol 1e-32
       :eqthre 1e-5
-      :max-eval 10000000
+      :max-eval stop
       :max-time (* 60 5)
       :timebuf time-buf
       :log? draw?
       :equality-dimension 0
-      :inequality-dimension 6
+      :inequality-dimension inequality-dimension
       ))
     (funcall objective x f)
     (cond
@@ -365,7 +418,7 @@
 	(data-set-path (format nil "torque_analysis.~A.~A.log.~A.dataset" net-size alg output))
 	(data-set-log
 	 (if (probe-file data-set-path) (open data-set-path :direction :input)))
-	buf buf1 buf2 ret rate
+	buf buf1 buf2 buf3 ret rate
 	;;
 	(joint-list (butlast (send *robot* :rarm :joint-list)))
 	;;
@@ -374,76 +427,89 @@
   ;; :netproto (format nil "ik_net_~A_predict.prototxt" net-size)
   ;; :caffemodel (format nil "ik_net_~A_~A_iter_1000000.caffemodel" net-size alg))
   ;;
-  (format log ":raw~%")
-  ;;
-  (dotimes (i size)
-    (cond
-     (data-set-log
-      (if (or (not (setq buf (read-line data-set-log nil)))
-	      (zerop (length buf))
-	      (not (setq buf (read-from-string (format nil "(~A)" buf))))
-	      (not (eq (length buf) (+ 6 1 (length joint-list) 1))))
-	  (return-from nil nil))
-      (setq buf (list (cons :input (subseq buf 0 6))
-		      (cons :f (nth 6 buf))
-		      (cons :x (subseq buf 7 (+ 7 (length joint-list))))
-		      (cons :time (nth (+ 6 1 (length joint-list)) buf))))
-      (setq *input* (coerce (cdr (assoc :input buf)) float-vector))
-      )
-     (t
-      ;; random target
-      (setq *input*
-	    (progn
-	      (mapcar #'(lambda (j)
-			  (send j :joint-angle
-				(+ (send j :min-angle)
-				   (* (random 1.0)
-				      (- (send j :max-angle) (send j :min-angle))))))
-		      (butlast (send *robot* :rarm :joint-list)))
-	      (send-all (send *robot* :links) :worldcoords)
-	      (concatenate
-	       float-vector
-	       (scale 1e-3
-		      (send (send (car (send *robot* :links)) :copy-worldcoords)
-			    :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
-	       (send (send (car (send *robot* :links)) :copy-worldcoords)
-		     :difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords)))))
-      (setq buf (normal-ik-search :target *input* :objective 'normal-torque-objective
-				  :alg DIRECT))))
+  (labels ((format-list (str l) (format str "~A" (car l)) (dolist (d (cdr l)) (format str " ~A" d)) (format str "~%")))
+    (format log ":raw~%")
     ;;
-    (push (list buf
-		(setq buf1 (torque-eval-once :target *input*))
-		(setq buf2 (redundancy-ik-search
-			    :target *input* :objective 'torque-objective)))
-	  ret)
-    (push (list (/ (cdr (assoc :f buf1)) (cdr (assoc :f buf)))
-		(/ (cdr (assoc :f buf2)) (cdr (assoc :f buf)))
-		(/ (cdr (assoc :f buf2)) (cdr (assoc :f buf1)))) rate)
-    (format log "~A ~A ~A~%" (nth 0 (car rate)) (nth 1 (car rate)) (nth 2 (car rate)))
-    )
-  ;;
-  (let* ((average (mapcar
-		   #'(lambda (func)
-		       (/ (apply '+ (mapcar func rate)) (length rate)))
-		   '(car cadr caddr)))
-	 (variance
-	  (mapcar
-	   #'(lambda (func)
-	       (sqrt
-		(/ (apply '+
-			  (mapcar #'(lambda (d) (expt (- d (funcall func average)) 2))
-				  (mapcar func rate)))
-		   (length rate))))
-	   '(car cadr caddr))))
-    (format log ":average~%")
-    (format log "~A ~A ~A~%" (nth 0 average) (nth 1 average) (nth 2 average))
-    (format log ":variance~%")
-    (format log "~A ~A ~A~%" (nth 0 variance) (nth 1 variance) (nth 2 variance)))
-  ;;
-  (close log)
-  (if data-set-log (close data-set-log))
-  ret
-  )
+    (dotimes (i size)
+      (cond
+       (data-set-log
+	(if (or (not (setq buf (read-line data-set-log nil)))
+		(zerop (length buf))
+		(not (setq buf (read-from-string (format nil "(~A)" buf))))
+		(not (eq (length buf) (+ 6 1 (length joint-list) 1))))
+	    (return-from nil nil))
+	(setq buf (list (cons :input (subseq buf 0 6))
+			(cons :f (nth 6 buf))
+			(cons :x (subseq buf 7 (+ 7 (length joint-list))))
+			(cons :time (nth (+ 6 1 (length joint-list)) buf))))
+	(setq *input* (coerce (cdr (assoc :input buf)) float-vector))
+	)
+       (t
+	;; random target
+	(setq *input*
+	      (progn
+		(mapcar #'(lambda (j)
+			    (send j :joint-angle
+				  (+ (send j :min-angle)
+				     (* (random 1.0)
+					(- (send j :max-angle) (send j :min-angle))))))
+			(butlast (send *robot* :rarm :joint-list)))
+		(send-all (send *robot* :links) :worldcoords)
+		(concatenate
+		 float-vector
+		 (scale 1e-3
+			(send (send (car (send *robot* :links)) :copy-worldcoords)
+			      :difference-position (send *robot* :rarm :end-coords :copy-worldcoords)))
+		 (send (send (car (send *robot* :links)) :copy-worldcoords)
+		       :difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords)))))
+	(setq buf (normal-ik-search :target *input* :objective 'normal-torque-objective
+				    :alg DIRECT))))
+      ;;
+      (push (list buf
+		  (setq buf1 (torque-eval-once :target *input*))
+		  (setq buf2 (redundancy-ik-search
+			      :target *input* :objective 'torque-objective))
+		  (setq buf3 (redundancy-ik-search
+			      :target *input*
+			      :objective 'torque-objective-with-local-planner
+			      ;; :last-objective '_torque-objective-with-local-planner
+			      ;; :inequality-dimension 0
+			      :ftol 1e-30
+			      :max-time 5.0))
+		  )
+	    ret)
+      (push (list (/ (cdr (assoc :f buf1)) (cdr (assoc :f buf)))
+		  (/ (cdr (assoc :f buf2)) (cdr (assoc :f buf)))
+		  (/ (cdr (assoc :f buf3)) (cdr (assoc :f buf)))
+		  (/ (cdr (assoc :f buf2)) (cdr (assoc :f buf1))))
+	    rate)
+      (format-list log (car rate))
+      ;; (format log "~A ~A ~A ~A~%"
+      ;; (nth 0 (car rate)) (nth 1 (car rate)) (nth 2 (car rate)) (nth 3 (car rate)))
+      )
+    ;;
+    (let* ((average (mapcar
+		     #'(lambda (func)
+			 (/ (apply '+ (mapcar func rate)) (length rate)))
+		     '(car cadr caddr cadddr)))
+	   (variance
+	    (mapcar
+	     #'(lambda (func)
+		 (sqrt
+		  (/ (apply '+
+			    (mapcar #'(lambda (d) (expt (- d (funcall func average)) 2))
+				    (mapcar func rate)))
+		     (length rate))))
+	     '(car cadr caddr cadddr))))
+      (format log ":average~%")
+      (format-list log average)
+      (format log ":variance~%")
+      (format-list log variance))
+    ;;
+    (close log)
+    (if data-set-log (close data-set-log))
+    ret
+    ))
 
 (defun gen-torque-ik-analysis-dataset
   (&key (output "test")
@@ -622,7 +688,7 @@
 		  (send (send (car (send *robot* :links)) :copy-worldcoords)
 			:difference-rotation (send *robot* :rarm :end-coords :copy-worldcoords))))))
 	(cnt 0)
-	(step 0.003)
+	(step 0.001)
 	(draw-step 100)
 	(draw-cnt 0)
 	(thre (float-vector 0.05 0.05 0.05 0.5 0.5 0.5))
@@ -782,3 +848,8 @@
 (let* ((log (open "/tmp/buf" :direction :output)))
   (mapcar #'(lambda (d) (format log "~A~%" d)) rate-data2) ;;(mapcar 'cadr rate-data))
   (close log))
+
+
+(redundancy-ik-search :objective 'torque-objective-with-local-planner :inequality-dimension 0 :ftol 1e-30 :max-time 5.0 :target #f(0.341853 -0.486249 0.629781 -0.630605 -0.513033 -1.15057))
+		      #f(0.082547 -0.834522 0.698417 0.582521 -0.748864 -1.04408))
+(redundancy-ik-search :objective 'torque-objective :target #f(0.082547 -0.834522 0.698417 0.582521 -0.748864 -1.04408))
