@@ -58,6 +58,11 @@
   (send *ri* :angle-vector (send *robot* :angle-vector) 3000)
   (send req :response))
 
+(defun start-abc-callback (req)
+  (send *ri* :start-auto-balancer)
+  (send req :response))
+
 (ros::advertise-service "/footstep_command/reset_walking_pose" std_srvs::Empty #'reset-walking-pose-callback)
 (ros::advertise-service "/footstep_command/reset_pose" std_srvs::Empty #'reset-pose-callback)
+(ros::advertise-service "/footstep_command/start_abc" std_srvs::Empty #'start-abc-callback)
 (ros::spin)
