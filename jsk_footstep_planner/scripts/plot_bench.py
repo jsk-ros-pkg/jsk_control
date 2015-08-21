@@ -6,46 +6,19 @@ import csv
 import sys
 from itertools import chain
 from math import pi
-# from the docs:
 
-# If interpolation is None, default to rc image.interpolation. See also
-# the filternorm and filterrad parameters. If interpolation is 'none', then
-# no interpolation is performed on the Agg, ps and pdf backends. Other
-# backends will fall back to 'nearest'.
-#
-# http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.imshow
-csv_files = sys.argv[1:]
-# methods = [None, 'none', 'nearest', 'bilinear', 'bicubic', 'spline16',
-#            'spline36', 'hanning', 'hamming', 'hermite', 'kaiser', 'quadric',
-#            'catrom', 'gaussian', 'bessel', 'mitchell', 'sinc', 'lanczos']
+csv_file = sys.argv[1]
 methods = ['none']
-# grid = np.random.rand(4, 4)
-
-# fig, axes = plt.subplots(3, 6, figsize=(12, 6),
-#                          subplot_kw={'xticks': [], 'yticks': []})
-
 dx = 3
 dy = 3
 
-def plot(csv_file, ax):
+def plot(theta, one_data, ax):
     global im
-    reader = csv.reader(open(csv_file))
-    xs = []
-    ys = []
-    ts = []
-    zs = dict()
-    
-    for row in reader:
-        if row:
-            x = float(row[0])
-            y = float(row[1])
-            theta = float(row[2])
-            z = float(row[3])
-            if x not in xs:
-                xs.append(x)
-            if y not in ys:
-                ys.append(y)
-            zs[(x, y)] = z
+    xs = [data[0] for data in one_data]
+    ys = [data[1] for data in one_data]
+    zs = {}
+    for x, y, i in zip(xs, ys, range(len(xs))):
+        zs[(x, y)] = one_data[i][2]
     xs.sort()
     ys.sort()
 
@@ -66,19 +39,44 @@ def plot(csv_file, ax):
     ax.set_title('$\\theta$ = %f deg' % (theta / pi * 180.0))
 
 
-if len(csv_files) % 3 == 0:
-    xnum = len(csv_files) / 3
-else:
-    xnum = len(csv_files) / 3 + 1
+reader = csv.reader(open(csv_file))
+fields = reader.next()
 
-fig, axes = plt.subplots(xnum, 3)
-for csv_file, ax in zip(csv_files, axes.flat):
-    plot(csv_file, ax)
-for a in axes.flat[len(csv_files):]:
+initialized = False
+
+data = {}
+# theta -> x, y, time
+
+for row in reader:
+    # Initialization
+    if not initialized:
+        figure_num = int(row[fields.index("n_theta")])
+        if figure_num % 3 == 0:
+            xnum = figure_num / 3
+        else:
+            xnum = figure_num / 3 + 1
+        fig, axes = plt.subplots(xnum, 3)
+        initialized = True
+    theta_str = row[fields.index("theta")]
+    theta = float(theta_str)
+    if not data.has_key(theta_str):
+        data[theta_str] = []
+    data[theta_str].append((float(row[fields.index("x")]), float(row[fields.index("y")]), float(row[fields.index("one_time")])))
+
+counter = 0
+for theta, one_data in data.items():
+    print "Plotting theta=", theta
+    plot(float(theta), one_data, axes.flat[counter])
+    counter = counter + 1
+    
+for a in axes.flat[counter:]:
     fig.delaxes(a)
 plt.tight_layout()
 fig.subplots_adjust(right = 0.8)
 cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
 cb = fig.colorbar(im, cax=cbar_ax)
 cb.set_label("Time [sec]")
+plt.interactive(True)
 plt.show()
+while True:
+    plt.pause(1)

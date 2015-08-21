@@ -57,6 +57,15 @@ namespace jsk_footstep_planner
     virtual void generate(const std::string& model_name,
                           pcl::PointCloud<PointT>& output,
                           double hole_rate = 0.0);
+    
+    static std::vector<std::string> supportedModels() {
+      std::vector<std::string> ret;
+      ret.push_back("flat");
+      ret.push_back("stairs");
+      ret.push_back("flat");
+      ret.push_back("gaussian");
+      return ret;
+    }
   protected:
     virtual void flat(pcl::PointCloud<PointT>& output,
                       double hole_rate);
