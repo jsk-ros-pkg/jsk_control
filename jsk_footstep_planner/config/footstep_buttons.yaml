@@ -5,3 +5,6 @@ robot_command_buttons:
   - name: "Reset Pose"
     type: emptysrv
     srv: "/footstep_command/reset_pose"
+  - name: "Start ABC"
+    type: emptysrv
+    srv: "/footstep_command/start_abc"
