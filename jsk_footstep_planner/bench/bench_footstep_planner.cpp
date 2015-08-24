@@ -137,7 +137,7 @@ inline void progressBar(int x, int n, int w)
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "bench_footstep_planner");
+  ros::init(argc, argv, "bench_footstep_planner", ros::init_options::AnonymousName);
   ros::NodeHandle nh("~");
   boost::program_options::options_description opt("Options");
   opt.add_options()
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
     ("resolution_y", OPTION_DEFAULT_VALUE(double, 0.05), "y resolution of local grid")
     ("resolution_theta", OPTION_DEFAULT_VALUE(double, 0.08), "theta resolution of local grid")
     ("n_theta", OPTION_DEFAULT_VALUE(int, 8), "theta resolution.")
-    ("heuristic", OPTION_DEFAULT_VALUE(std::string, std::string("stepcost")),
+    ("heuristic", OPTION_DEFAULT_VALUE(std::string, std::string("step_cost")),
      "heuristic function (zero, straight, straight_rotation, step_cost)")
     ("first_rotation_weight", OPTION_DEFAULT_VALUE(double, 1.0),
      "first rotation weight of step_cost heuristic")
