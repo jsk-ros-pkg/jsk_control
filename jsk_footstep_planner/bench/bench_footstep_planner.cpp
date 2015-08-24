@@ -78,7 +78,7 @@ void setupGraph(FootstepGraph::Ptr graph, Eigen::Vector3f res)
   graph->setBasicSuccessors(successors);
 }
 
-inline void planBench(double x, double y, double yaw,
+inline bool planBench(double x, double y, double yaw,
                       FootstepGraph::Ptr graph,
                       Eigen::Vector3f footstep_size,
                       const std::string heuristic,
@@ -96,6 +96,13 @@ inline void planBench(double x, double y, double yaw,
                                                   footstep_size,
                                                   res));
   graph->setGoalState(left_goal, right_goal);
+  // Project goal and start
+  if (graph->usePointCloudModel()) {
+    if (!graph->projectGoal()) {
+      ROS_FATAL("Failed to project goal");
+      return false;
+    }
+  }
   //AStarSolver<FootstepGraph> solver(graph);
   FootstepAStarSolver<FootstepGraph> solver(graph, 100, 100, 100);
   if (heuristic == "step_cost") {
@@ -111,6 +118,7 @@ inline void planBench(double x, double y, double yaw,
     solver.setHeuristic(&footstepHeuristicStraightRotation);
   }
   std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(ros::WallDuration(10.0));
+  return true;
 }
 
 inline void progressBar(int x, int n, int w)
@@ -224,9 +232,15 @@ int main(int argc, char** argv)
   FootstepGraph::Ptr graph(new FootstepGraph(res, enable_perception, enable_local_movement));
   if (enable_perception) {
     graph->setPointCloudModel(cloud);
+    
   }
   setupGraph(graph, res);
-
+  if (enable_perception) {
+    if (!graph->projectStart()) {
+      ROS_FATAL("Failed to project start state");
+      return 1;
+    }
+  }
   std::ofstream ofs(output_filename.c_str());
   int test_num = n_theta * ceil((max_x - min_x) / dx + 1) * ceil((max_y - min_y) / dy + 1);
   int count = 0;
@@ -246,18 +260,24 @@ int main(int argc, char** argv)
         progressBar(count, test_num, 80);
         ros::WallTime start = ros::WallTime::now();
         // Run plan function for test_count
+        bool success = false;
         for (size_t i = 0; i < test_count; i++) {
-          planBench(x, y, theta, graph, footstep_size, heuristic, second_rotation_weight, second_rotation_weight, res);
+          success = planBench(x, y, theta, graph, footstep_size, heuristic, second_rotation_weight, second_rotation_weight, res);
         }
         ros::WallTime end = ros::WallTime::now();
-        double time_to_solve = (end - start).toSec() / test_count;
-        ofs << x << "," << y << "," << theta << "," << time_to_solve
-            << "," << min_x << "," << max_x << "," << dx << "," << min_y << "," << max_y << "," << dy
-            << "," << resolution_x << "," << resolution_y << "," << resolution_theta << "," << n_theta
-            << "," << heuristic << "," << first_rotation_weight << "," << second_rotation_weight
-            << "," << model
-            << "," << enable_lazy_perception << "," << enable_local_movement
-            << "," << test_count << std::endl;
+        if (success) {
+          double time_to_solve = (end - start).toSec() / test_count;
+          ofs << x << "," << y << "," << theta << "," << time_to_solve
+              << "," << min_x << "," << max_x << "," << dx << "," << min_y << "," << max_y << "," << dy
+              << "," << resolution_x << "," << resolution_y << "," << resolution_theta << "," << n_theta
+              << "," << heuristic << "," << first_rotation_weight << "," << second_rotation_weight
+              << "," << model
+              << "," << enable_lazy_perception << "," << enable_local_movement
+              << "," << test_count << std::endl;
+        }
+        else {
+          ROS_FATAL("Failed to plan");
+        }
       }
       //std::cout << std::endl;
     }
