@@ -84,7 +84,9 @@ namespace jsk_footstep_planner
     out_indices.indices.clear();
     for (size_t i = 0; i < cell_indices.size(); i++) {
       ANNGridCell::Ptr cell = getCell(cell_indices[i].x, cell_indices[i].y);
-      cell->fill(out_indices.indices);
+      if (cell) {
+        cell->fill(out_indices.indices);
+      }
     }
     //out_indices.indices = std::vector<int>(point_indices.begin(), point_indices.end());
   }
