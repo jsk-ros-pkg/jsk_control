@@ -122,7 +122,18 @@ namespace jsk_footstep_planner
 
     inline ANNGridCell::Ptr getCell(size_t i, size_t j)
     {
-      return cells_[i][j];
+      // TODO: is this check correct?
+      if (cells_.size() > i) {
+        if (cells_[i].size() > j) {
+          return cells_[i][j];
+        }
+        else {
+          return ANNGridCell::Ptr();
+        }
+      }
+      else {
+        return ANNGridCell::Ptr();
+      }
     }
     
     virtual void approximateSearch(const Eigen::Vector3f& v, pcl::PointIndices& indices);
