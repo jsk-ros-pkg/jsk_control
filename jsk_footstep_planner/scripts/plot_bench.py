@@ -4,10 +4,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import csv
 import sys
+import os
 from itertools import chain
 from math import pi
+import argparse
 
-csv_file = sys.argv[1]
+parser = argparse.ArgumentParser(description="Plot benchmark result csv")
+parser.add_argument("csv_file", help="csv file")
+parser.add_argument("--image-suffix", default="eps", help="suffix to save image")
+parser.add_argument("--min", default=0, type=float, help="minimum value")
+parser.add_argument("--max", default=0.2, type=float, help="maximum value")
+args = parser.parse_args()
+csv_file = args.csv_file
 methods = ['none']
 dx = 3
 dy = 3
@@ -22,8 +30,8 @@ def plot(theta, one_data, ax):
     xs.sort()
     ys.sort()
 
-    minz = 0
-    maxz = 0.2
+    minz = args.min
+    maxz = args.max
 
     img = np.arange(0, len(xs) * len(ys), 1.0).reshape((len(xs), len(ys)))
     for x, i in zip(xs, range(len(xs))):
@@ -34,9 +42,9 @@ def plot(theta, one_data, ax):
     im = ax.imshow(img, vmin=minz, vmax=maxz, cmap="gnuplot")
     ax.set_xticklabels(np.arange(-dx - 1, dx+1))
     ax.set_yticklabels(np.arange(-dy - 1, dy+1))
-    ax.set_xlabel("x [m]")
-    ax.set_ylabel("y [m]")
-    ax.set_title('$\\theta$ = %f deg' % (theta / pi * 180.0))
+    ax.set_xlabel("$x$ [m]")
+    ax.set_ylabel("$y$ [m]")
+    ax.set_title('$\\theta = %.0f$ deg' % (theta / pi * 180.0))
 
 
 reader = csv.reader(open(csv_file))
@@ -64,7 +72,9 @@ for row in reader:
     data[theta_str].append((float(row[fields.index("x")]), float(row[fields.index("y")]), float(row[fields.index("one_time")])))
 
 counter = 0
-for theta, one_data in data.items():
+#for theta, one_data in data.items():
+for theta in sorted(data.keys()):
+    one_data = data[theta]
     print "Plotting theta=", theta
     plot(float(theta), one_data, axes.flat[counter])
     counter = counter + 1
@@ -78,5 +88,9 @@ cb = fig.colorbar(im, cax=cbar_ax)
 cb.set_label("Time [sec]")
 plt.interactive(True)
 plt.show()
+# save figure
+eps_file = os.path.basename(csv_file) + "." + args.image_suffix
+print "Saving to %s file: " % (args.image_suffix), eps_file
+plt.savefig(eps_file)
 while True:
     plt.pause(1)
