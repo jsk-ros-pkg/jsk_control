@@ -66,8 +66,8 @@ namespace jsk_footstep_planner
       boost::mt19937&, boost::uniform_real<>
       > rand( gen, dst );
 
-    for (double y = -2; y < 2; y = y + 0.01) {
-      for (double x = -2; x < 2; x = x + 0.01) {
+    for (double y = -4; y < 4; y = y + 0.01) {
+      for (double x = -4; x < 4; x = x + 0.01) {
         if (rand() >= hole_rate) {
           pcl::PointNormal p;
           p.x = x;
@@ -87,8 +87,8 @@ namespace jsk_footstep_planner
       > rand( gen, dst );
 
     const double height = 0.1;
-    for (double y = -2; y < 2; y = y + 0.01) {
-      for (double x = -2; x < 2; x = x + 0.01) {
+    for (double y = -4; y < 4; y = y + 0.01) {
+      for (double x = -4; x < 4; x = x + 0.01) {
         if (rand() >= hole_rate) {
           pcl::PointNormal p;
           p.x = x;
@@ -109,8 +109,8 @@ namespace jsk_footstep_planner
       > rand( gen, dst );
     const double height = 1.0;
     const double sigma = 0.3;
-    for (double y = -2; y < 2; y = y + 0.01) {
-      for (double x = -2; x < 2; x = x + 0.01) {
+    for (double y = -4; y < 4; y = y + 0.01) {
+      for (double x = -4; x < 4; x = x + 0.01) {
         if (rand() >= hole_rate) {
           pcl::PointNormal p;
           p.x = x;
@@ -131,8 +131,8 @@ namespace jsk_footstep_planner
       boost::mt19937&, boost::uniform_real<>
       > rand( gen, dst );
 
-    for (double y = -2; y < 2; y = y + 0.01) {
-      for (double x = -1; x < 0; x = x + 0.01) {
+    for (double y = -4; y < 4; y = y + 0.01) {
+      for (double x = -4; x < 0; x = x + 0.01) {
         if (rand() >= hole_rate) {
           pcl::PointNormal p;
           p.x = x;
