@@ -12,6 +12,7 @@ import argparse
 parser = argparse.ArgumentParser(description="Plot benchmark result csv")
 parser.add_argument("csv_file", help="csv file")
 parser.add_argument("--image-suffix", default="eps", help="suffix to save image")
+parser.add_argument("--only-save-image", action="store_true", help="die right after saving image")
 parser.add_argument("--min", default=0, type=float, help="minimum value")
 parser.add_argument("--max", default=0.2, type=float, help="maximum value")
 args = parser.parse_args()
@@ -92,5 +93,7 @@ plt.show()
 eps_file = os.path.basename(csv_file) + "." + args.image_suffix
 print "Saving to %s file: " % (args.image_suffix), eps_file
 plt.savefig(eps_file)
+if args.only_save_image:
+    sys.exit(0)
 while True:
     plt.pause(1)
