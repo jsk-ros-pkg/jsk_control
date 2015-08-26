@@ -128,7 +128,7 @@ inline void progressBar(int x, int n, int w)
     int   c     = ratio * w;
  
     // Show the percentage complete.
-    printf("%d/%d (%d%) [", x,n,(int)(ratio*100) );
+    printf("%d/%d (%d%) [", x, n, (int)(ratio*100) );
  
     // Show the load bar.
     for (int x=0; x<c; x++)
@@ -171,6 +171,7 @@ int main(int argc, char** argv)
     ("enable_local_movement", "Enable Local Movement")
     ("test_count", OPTION_DEFAULT_VALUE(int, 10), "the number of test times to take average")
     ("output,o", OPTION_DEFAULT_VALUE(std::string, std::string("output.csv")), "output file")
+    ("verbose,v", "verbose")
     ("help,h", "Show help");
   
   boost::program_options::variables_map vm;
@@ -199,6 +200,7 @@ int main(int argc, char** argv)
   const bool enable_perception = vm["model"].as<std::string>() != "none";
   const bool enable_lazy_perception = vm.count("enable_lazy_perception") > 0;
   const bool enable_local_movement = vm.count("enable_local_movement") > 0;
+  const bool verbose = vm.count("verbose") > 0;
   const int test_count = vm["test_count"].as<int>();
   const std::string output_filename = vm["output"].as<std::string>();
 
@@ -222,6 +224,7 @@ int main(int argc, char** argv)
   std::cout << "  enable_local_movement: " << enable_local_movement << std::endl;
   std::cout << "  test_count: " << test_count << std::endl;
   std::cout << "  output: " << output_filename << std::endl;
+  std::cout << "  verbose: " << verbose << std::endl;
   
   PointCloudModelGenerator generator;
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud (new pcl::PointCloud<pcl::PointNormal>);
@@ -265,6 +268,9 @@ int main(int argc, char** argv)
           success = planBench(x, y, theta, graph, footstep_size, heuristic, second_rotation_weight, second_rotation_weight, res);
         }
         ros::WallTime end = ros::WallTime::now();
+        if (verbose) {
+          std::cout << "Planning took " << (end-start).toSec()/test_count << " sec" << std::endl;
+        }
         if (success) {
           double time_to_solve = (end - start).toSec() / test_count;
           ofs << x << "," << y << "," << theta << "," << time_to_solve
@@ -278,6 +284,7 @@ int main(int argc, char** argv)
         else {
           ROS_FATAL("Failed to plan");
         }
+        
       }
       //std::cout << std::endl;
     }
