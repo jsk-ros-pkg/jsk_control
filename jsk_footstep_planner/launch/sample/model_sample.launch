@@ -1,0 +1,13 @@
+<launch>
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find jsk_footstep_planner)/config/model_sample.rviz" />
+  <node pkg="jsk_footstep_planner" type="pointcloud_model_generator_node" name="pointcloud_model" />
+  <node pkg="jsk_pcl_ros" type="heightmap_converter" name="heightmap">
+    <remap from="~input" to="pointcloud_model/output" />
+  </node>
+  <node pkg="jsk_perception" type="colorize_float_image" name="heightmap_color">
+    <remap from="~input" to="heightmap/output" />
+  </node>
+  <node pkg="image_view" type="image_view" name="heightmap_view">
+    <remap from="image" to="heightmap_color/output"/>
+  </node>
+</launch>
