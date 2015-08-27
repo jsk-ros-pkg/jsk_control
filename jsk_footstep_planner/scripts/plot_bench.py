@@ -37,7 +37,10 @@ def plot(theta, one_data, ax):
     img = np.arange(0, len(xs) * len(ys), 1.0).reshape((len(xs), len(ys)))
     for x, i in zip(xs, range(len(xs))):
         for y, j in zip(ys, range(len(ys))):
-            z = zs[(x, y)]
+            try:
+                z = zs[(x, y)]
+            except:
+                print >> sys.stderr, "Failed to find (%f, %f)" % (x, y)
             img[j][i] = z
     #im = ax.pcolor(img, vmin=minz, vmax=maxz, cmap="gnuplot")
     im = ax.imshow(img, vmin=minz, vmax=maxz, cmap="gnuplot")
