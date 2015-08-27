@@ -77,7 +77,7 @@
 (defun calc-torque-manipulability-index ;; smaller is better
   (&optional (limb :lleg))
   (let* ((manipulability-gain 1.0)
-         (torque-gain 0.00005) ;; make smaller if you want knee to be more stretched
+         (torque-gain 0.00005) ;; make larger if you want knee to be more stretched
          )
     (+ (- (* manipulability-gain (calc-manipulability-from-limb limb)))
        (* torque-gain (calc-joint-torque-from-limb limb)))
@@ -128,8 +128,8 @@
    )
   )
 
-;; return best weight height from current robot pose
-(defun determine-best-weight-height-from-footcoords
+;; return best root height from current robot pose
+(defun determine-best-root-height-from-footcoords
     (robot lleg-coords rleg-coords &key (draw? nil) (debug? nil))
   ;; First move robot model to midcoords
   (let ((mid-coords (midcoords 0.5 lleg-coords rleg-coords)))
@@ -138,7 +138,7 @@
   (when (not (and (send robot :lleg :inverse-kinematics lleg-coords)
                   (send robot :rleg :inverse-kinematics rleg-coords)))
     (warning-message 2 "Failed to solve ik")
-    (return-from determine-best-weight-height-from-footcoords nil))
+    (return-from determine-best-root-height-from-footcoords nil))
   (let ((step 10) (i 0)
         (min-index 1e10) (min-pos 0)
         index
@@ -189,7 +189,7 @@
 (defun test-root-height0
   ()
   (send *robot* :init-pose)
-  (determine-best-weight-height-from-footcoords
+  (determine-best-root-height-from-footcoords
    *robot*
    (send *robot* :lleg :end-coords :copy-worldcoords)
    (send *robot* :rleg :end-coords :copy-worldcoords)
@@ -199,14 +199,14 @@
 (defun test-root-height1
   ()
   (send *robot* :reset-pose)
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height2
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 100 100 0))
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height3
@@ -214,7 +214,7 @@
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 100 100 0))
   (send *robot* :lleg :move-end-rot 20 :z :local)
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height4
@@ -224,35 +224,35 @@
   (send *robot* :lleg :move-end-rot 20 :z :local)
   (send *robot* :rleg :move-end-pos (float-vector -100 -100 0))
   (send *robot* :rleg :move-end-rot -20 :z :local)
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height5
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 0 0 100))
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height6
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 0 0 200))
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height7
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 0 0 300))
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height8
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 200 0 200))
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height9
@@ -261,7 +261,7 @@
   (send *robot* :lleg :move-end-pos (float-vector 200 0 200))
   (send *robot* :lleg :move-end-rot 20 :z :local)
   (send *robot* :rleg :move-end-rot -20 :z :local)
-  (determine-best-weight-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height-all
