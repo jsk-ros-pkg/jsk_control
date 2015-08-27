@@ -232,7 +232,7 @@ int main(int argc, char** argv)
     generator.generate(model, *cloud);
   }
   Eigen::Vector3f res(resolution_x, resolution_y, resolution_theta);
-  FootstepGraph::Ptr graph(new FootstepGraph(res, enable_perception, enable_local_movement));
+  FootstepGraph::Ptr graph(new FootstepGraph(res, enable_perception, enable_lazy_perception, enable_local_movement));
   if (enable_perception) {
     graph->setPointCloudModel(cloud);
     
@@ -244,6 +244,7 @@ int main(int argc, char** argv)
       return 1;
     }
   }
+  std::cout << graph->infoString() << std::endl;
   std::ofstream ofs(output_filename.c_str());
   int test_num = n_theta * ceil((max_x - min_x) / dx + 1) * ceil((max_y - min_y) / dy + 1);
   int count = 0;
@@ -255,6 +256,7 @@ int main(int argc, char** argv)
       << "model,"
       << "enable_lazy_perception,enable_local_movement,"
       << "test_count" << std::endl;
+  
   for (size_t ti = 0; ti < n_theta; ti++) {
     double theta = 2.0 * M_PI / 8 * ti ;
     for (double x = min_x; x <= max_x; x += dx) {
@@ -268,6 +270,9 @@ int main(int argc, char** argv)
           success = planBench(x, y, theta, graph, footstep_size, heuristic, second_rotation_weight, second_rotation_weight, res);
         }
         ros::WallTime end = ros::WallTime::now();
+        if (!ros::ok()) {
+          return 0;
+        }
         if (verbose) {
           std::cout << "Planning took " << (end-start).toSec()/test_count << " sec" << std::endl;
         }
