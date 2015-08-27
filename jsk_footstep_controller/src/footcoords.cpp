@@ -115,7 +115,7 @@ namespace jsk_footstep_controller
     pub_leg_odometory_ = pnh.advertise<geometry_msgs::PoseStamped>("leg_odometry", 1);
     pub_twist_ = pnh.advertise<geometry_msgs::TwistStamped>("base_vel", 1);
     before_on_the_air_ = true;
-    pnh.param("use_imu", use_imu_, true);
+    pnh.param("use_imu", use_imu_, false);
     pnh.param("use_imu_yaw", use_imu_yaw_, true);
     if (publish_odom_tf_) {
       odom_sub_.subscribe(pnh, "/odom", 50);
