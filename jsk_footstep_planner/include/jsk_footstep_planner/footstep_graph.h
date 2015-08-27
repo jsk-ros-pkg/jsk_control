@@ -96,6 +96,12 @@ namespace jsk_footstep_planner
       right_goal_state_ = goal;
     }
 
+    /**
+     * @brief
+     * return string about graph information.
+     */
+    virtual std::string infoString() const;
+    
     virtual FootstepState::Ptr getGoal(int leg)
     {
       if (leg == jsk_footstep_msgs::Footstep::LEFT) {
