@@ -34,6 +34,7 @@
  *********************************************************************/
 
 #include "jsk_footstep_planner/footstep_graph.h"
+#include <sstream>
 
 namespace jsk_footstep_planner
 {
@@ -83,6 +84,37 @@ namespace jsk_footstep_planner
       (rot_goal_thr_ > std::abs(Eigen::AngleAxisf(transformation.rotation()).angle()));
   }
 
+  std::string FootstepGraph::infoString() const
+  {
+    std::stringstream ss;
+    ss << "footstep_graph" << std::endl;
+    ss << "  pos_goal_thr: " << pos_goal_thr_ << std::endl;
+    ss << "  rot_goal_thr: " << rot_goal_thr_ << std::endl;
+    ss << "  use_pointcloud_model: " << use_pointcloud_model_ << std::endl;
+    ss << "  lazy_projection: " << lazy_projection_ << std::endl;
+    ss << "  local_movement: " << local_movement_ << std::endl;
+    ss << "  transition_limit: " << transition_limit_ << std::endl;
+    ss << "  local_move_x: " << local_move_x_ << std::endl;
+    ss << "  local_move_y: " << local_move_y_ << std::endl;
+    ss << "  local_move_theta: " << local_move_theta_ << std::endl;
+    ss << "  local_move_x_num: " << local_move_x_num_ << std::endl;
+    ss << "  local_move_y_num: " << local_move_y_num_ << std::endl;
+    ss << "  local_move_theta_num: " << local_move_theta_num_ << std::endl;
+    ss << "  resolution: ["
+       << resolution_[0] << ", "
+       << resolution_[1] << ", "
+       << resolution_[2] << "]"
+       << std::endl;
+    ss << "  plane_estimation_max_iterations: " << plane_estimation_max_iterations_ << std::endl;
+    ss << "  plane_estimation_min_inliers: " << plane_estimation_min_inliers_ << std::endl;
+    ss << "  plane_estimation_outlier_threshold: " << plane_estimation_outlier_threshold_ << std::endl;
+    ss << "  support_check_x_sampling: " << support_check_x_sampling_ << std::endl;
+    ss << "  support_check_y_sampling: " << support_check_y_sampling_ << std::endl;
+    ss << "  support_check_vertex_neighbor_threshold: " << support_check_vertex_neighbor_threshold_ << std::endl;
+    
+    return ss.str();
+  }
+  
   std::vector<FootstepState::Ptr>
   FootstepGraph::localMoveFootstepState(FootstepState::Ptr in)
   {
