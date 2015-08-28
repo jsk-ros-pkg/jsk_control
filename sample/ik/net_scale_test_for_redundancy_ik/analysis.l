@@ -908,3 +908,10 @@
 (do-until-key
  (setq ret (redundancy-ik-search :objective 'torque-objective-with-local-planner :inequality-dimension 0 :ftol 1e-30 :max-time 5.0 :target #f(0.341853 -0.486249 0.629781 -0.630605 -0.513033 -1.15057)))
  (if (> (cdr (assoc :f ret)) 1.0) (return-from nil nil)))
+
+(mapcar
+ #'(lambda (f)
+     (/ (apply '+
+	       (mapcar #'(lambda (d) (cdr (assoc :time d))) (mapcar f a)))
+	(length a)))
+ '(car cadr caddr cadddr))

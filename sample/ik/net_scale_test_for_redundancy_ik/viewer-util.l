@@ -283,9 +283,11 @@
     ;; (send *irtviewer* :objects objects-buf)
     ret))
 
+#|
+
 (unix::system "rm -rf gather_log")
 (unix::system "mkdir gather_log")
-(dotimes (i 10)
+(dotimes (i 5)
   (send *irtviewer* :objects *arm-objects*)
   (unix::system (format nil "mkdir gather_log/~A" i))
   (let* ((d (draw-candidates :step 0.001)) (j -1) prev)
@@ -295,9 +297,9 @@
     ;; (read-line)
     (send *irtviewer* :objects (cons *arrow* *arm-objects*)) ;;*stick-man-obj*))
     (dolist (output d)
-      (if (not prev) (setq prev (map float-vector '(lambda (d) (+ d (rad2deg 5))) output)))
+      (if (not prev) (setq prev (map float-vector '(lambda (d) (+ d (rad2deg 20))) output)))
       (cond
-       ((< (norm (v- prev output)) (deg2rad 5))
+       ((< (norm (v- prev output)) (deg2rad 20))
 	(incf j) 'nop)
        (t
 	(setq prev output)
