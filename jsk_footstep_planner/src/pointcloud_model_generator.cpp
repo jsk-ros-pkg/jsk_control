@@ -132,21 +132,26 @@ namespace jsk_footstep_planner
       > rand( gen, dst );
 
     for (double y = -4; y < 4; y = y + 0.01) {
-      for (double x = -4; x < 0; x = x + 0.01) {
+      // for (double x = -4; x < 0; x = x + 0.01) {
+      //   if (rand() >= hole_rate) {
+      //     pcl::PointNormal p;
+      //     p.x = x;
+      //     p.y = y;
+      //     p.z = 0;
+      //     output.points.push_back(p);
+      //   }
+      // }
+      for (double x = -4; x < 5; x = x + 0.01) {
         if (rand() >= hole_rate) {
           pcl::PointNormal p;
           p.x = x;
           p.y = y;
-          p.z = 0;
-          output.points.push_back(p);
-        }
-      }
-      for (double x = 0; x < 5; x = x + 0.01) {
-        if (rand() >= hole_rate) {
-          pcl::PointNormal p;
-          p.x = x;
-          p.y = y;
-          p.z = floor(x * 3) * 0.1;
+          if (x > 0) {
+            p.z = floor(x * 3) * 0.1;
+          }
+          else {
+            p.z = ceil(x * 3) * 0.1;
+          }
           output.points.push_back(p);
         }
       }
