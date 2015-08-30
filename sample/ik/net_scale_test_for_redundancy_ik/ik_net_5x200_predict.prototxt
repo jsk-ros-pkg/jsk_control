@@ -1,0 +1,192 @@
+name: "redundancy_ik_net"
+input: "input"
+input_dim: 1 ## num
+input_dim: 7 ## channel
+input_dim: 1 ## w
+input_dim: 1 ## h
+layer {
+  name: "_ip5"
+  type: "InnerProduct"
+  top: "_ip5"
+  bottom: "input"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 200
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid5"
+  type: "Sigmoid"
+  top: "_sigmoid5"
+  bottom: "_ip5"
+}
+layer {
+  name: "_ip4"
+  type: "InnerProduct"
+  top: "_ip4"
+  bottom: "_sigmoid5"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 160
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid4"
+  type: "Sigmoid"
+  top: "_sigmoid4"
+  bottom: "_ip4"
+}
+layer {
+  name: "_ip3"
+  type: "InnerProduct"
+  top: "_ip3"
+  bottom: "_sigmoid4"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 120
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid3"
+  type: "Sigmoid"
+  top: "_sigmoid3"
+  bottom: "_ip3"
+}
+layer {
+  name: "_ip2"
+  type: "InnerProduct"
+  top: "_ip2"
+  bottom: "_sigmoid3"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 80
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid2"
+  type: "Sigmoid"
+  top: "_sigmoid2"
+  bottom: "_ip2"
+}
+layer {
+  name: "_ip1"
+  type: "InnerProduct"
+  top: "_ip1"
+  bottom: "_sigmoid2"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 40
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_sigmoid1"
+  type: "Sigmoid"
+  top: "_sigmoid1"
+  bottom: "_ip1"
+}
+layer {
+  name: "output"
+  type: "InnerProduct"
+  top: "output"
+  bottom: "_sigmoid1"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 7
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
