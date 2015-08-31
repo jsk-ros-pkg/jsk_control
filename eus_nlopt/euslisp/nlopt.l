@@ -166,7 +166,7 @@
 
 (defun nlopt-optimize
   (&key
-   ((:initial-state x0) (float-vector 1 9))
+   ((:initial-state x0) (float-vector 0 0))
    ((:state-min-vector x-min) #F(0 0 ))
    ((:state-max-vector x-max) #F(10 10))
    ((:state-dimension m-x) (length x0))
@@ -248,7 +248,7 @@
 	     Sbplx
 	     ))
     (nlopt-optimize :ftol 1e-10 :xtol 1e-10 :eqthre 1e-10
-		   :max-time 10
-		   :alg alg)))
+		    :max-time 1
+		    :alg alg)))
 
 ;(nlopt-optmize)

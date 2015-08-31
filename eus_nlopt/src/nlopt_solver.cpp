@@ -35,9 +35,11 @@ NLoptSolver::NLoptSolver(double* x,
 	for ( uint i=0 ; i<m_h ; i++ ) this->hbuf[i] = 0 ;
 	this->dhbuf = (double*)malloc(sizeof(double)*m_h*m_x) ;
 	for ( uint i=0 ; i<m_x*m_h ; i++ ) this->dhbuf[i] = 0 ;
+	//
 	// ラグランジュ法を用いて全てのアルゴリズムで制約条件を扱えるようにする
 	if(algorithm == Optimization::NLopt::ISRES || algorithm == Optimization::NLopt::SLSQP)
 	{
+	  core_solver = nlopt_create(NLOPT_LD_CCSAQ, m_x); // dummy
 		if(algorithm == Optimization::NLopt::ISRES)
 		{
 			solver = nlopt_create(NLOPT_GN_ISRES, m_x);
@@ -54,7 +56,7 @@ NLoptSolver::NLoptSolver(double* x,
 	}
 	else if(algorithm == Optimization::NLopt::G_DIRECT || algorithm == Optimization::NLopt::G_DIRECT_L || algorithm == Optimization::NLopt::CCSA)
 	{
-		nlopt_opt core_solver;
+	  // nlopt_opt core_solver;
 		if(algorithm == Optimization::NLopt::CCSA)
 		{
 			core_solver = nlopt_create(NLOPT_LD_CCSAQ, m_x);
@@ -74,17 +76,19 @@ NLoptSolver::NLoptSolver(double* x,
 			}
 			nlopt_set_maxeval(core_solver, 1e6);
 			nlopt_set_maxtime(core_solver, 24*60*60);
+			nlopt_set_ftol_rel(core_solver, ftol);
+			nlopt_set_xtol_rel(core_solver, xtol);
 		}
 		solver = nlopt_create(NLOPT_AUGLAG_EQ, m_x);
 		nlopt_set_local_optimizer(solver, core_solver);
 		nlopt_set_ftol_rel(solver, ftol);
 		nlopt_set_xtol_rel(solver, xtol);
 		nlopt_set_maxeval(solver, 1e6);
-		nlopt_destroy(core_solver);
+		// nlopt_destroy(core_solver);
 	}
 	else if(algorithm == Optimization::NLopt::DIRECT || algorithm == Optimization::NLopt::DIRECT_L || algorithm == Optimization::NLopt::CRS || algorithm == Optimization::NLopt::STOGO || algorithm == Optimization::NLopt::L_BFGS || algorithm == Optimization::NLopt::TN || algorithm == Optimization::NLopt::SL_VM)
 	{
-		nlopt_opt core_solver;
+	  // nlopt_opt core_solver;
 		if(algorithm == Optimization::NLopt::DIRECT || algorithm == Optimization::NLopt::DIRECT_L || algorithm == Optimization::NLopt::CRS || algorithm == Optimization::NLopt::STOGO)
 		{
 			if(algorithm == Optimization::NLopt::DIRECT)
@@ -105,6 +109,8 @@ NLoptSolver::NLoptSolver(double* x,
 			}
 			nlopt_set_maxeval(core_solver, 1e6);
 			nlopt_set_maxtime(core_solver, 24*60*60);
+			nlopt_set_ftol_rel(core_solver, ftol);
+			nlopt_set_xtol_rel(core_solver, xtol);
 		}
 		else
 		{
@@ -129,13 +135,14 @@ NLoptSolver::NLoptSolver(double* x,
 		nlopt_set_ftol_rel(solver, ftol);
 		nlopt_set_xtol_rel(solver, xtol);
 		//nlopt_set_maxeval(solver, 1e3);
-		nlopt_destroy(core_solver);
+		//		nlopt_destroy(core_solver);
 	} else if ( algorithm == Optimization::NLopt::COBYLA ||
 			algorithm == Optimization::NLopt::BOBYQA ||
 			algorithm == Optimization::NLopt::NEWUOA ||
 			algorithm == Optimization::NLopt::PRAXIS ||
 			algorithm == Optimization::NLopt::NelderMeadSimplex ||
 			algorithm == Optimization::NLopt::Sbplx ){
+	  core_solver = nlopt_create(NLOPT_LD_CCSAQ, m_x); // dummy
 		if(algorithm == Optimization::NLopt::COBYLA)
 		{
 			solver = nlopt_create(NLOPT_LN_COBYLA, m_x);
@@ -198,6 +205,10 @@ NLoptSolver::NLoptSolver(double* x,
 NLoptSolver::~NLoptSolver()
 {
 	nlopt_destroy(solver);
+	if ( core_solver ) {
+	  nlopt_destroy(core_solver);
+	  core_solver = NULL;
+	}
 }
 
 double NLoptSolver::ObjectiveFunctionWrapper(unsigned int n, const double* x, double* df, void* self)
@@ -270,7 +281,7 @@ void NLoptSolver::EqualityConstraintWrapper(unsigned int m, double* g, unsigned 
 void NLoptSolver::EqualityConstraintCost(double* gbuf)
 {
 	this->n_g++;
-	if ( this->g ) (*(this->g))(this->x,gbuf) ;
+	if ( this->g && this->m_g>0 ) (*(this->g))(this->x,gbuf) ;
 	//this->gbuf = gbuf ;
 	// 等式制約条件を縦に並べる
 }
@@ -279,7 +290,7 @@ void NLoptSolver::EqualityConstraintCost(double* gbuf)
 void NLoptSolver::EqualityConstraintGradient(double* dgbuf)
 {
 	this->n_dg++;
-	if ( this->dg ) (*(this->dg))(this->x,dgbuf) ;
+	if ( this->dg && this->m_g>0 ) (*(this->dg))(this->x,dgbuf) ;
 }
 
 void NLoptSolver::InequalityConstraintWrapper(unsigned int m, double* h, unsigned int n, const double* x, double* dh, void* self)
@@ -306,7 +317,7 @@ void NLoptSolver::InequalityConstraintWrapper(unsigned int m, double* h, unsigne
 void NLoptSolver::InequalityConstraintCost(double* hbuf)
 {
 	this->n_h++;
-	if ( this->h ) (*(this->h))(this->x,hbuf) ;
+	if ( this->h && this->m_h>0 ) (*(this->h))(this->x,hbuf) ;
 	//this->hbuf = hbuf ;
 }
 
@@ -314,7 +325,7 @@ void NLoptSolver::InequalityConstraintCost(double* hbuf)
 void NLoptSolver::InequalityConstraintGradient(double* dhbuf)
 {
 	this->n_dh++;
-	if ( this->dh ) (*(this->dh))(this->x,dhbuf) ;
+	if ( this->dh && this->m_h>0) (*(this->dh))(this->x,dhbuf) ;
 }
 
 // 最適化計算
@@ -324,5 +335,6 @@ int NLoptSolver::Optimize()
 	double cost;
 	nlopt_result result=nlopt_optimize(this->solver, this->x, &cost);
 	//this->output_result(result) ;
+	this->fbuf[0] = cost;
 	return result ;
 }
