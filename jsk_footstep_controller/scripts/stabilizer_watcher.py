@@ -29,7 +29,16 @@ def isChangedControllerMode(actual_from, actual_to, expected_from, expected_to):
     else:
         return False
 
-
+def trig():
+    g_odom_init_trigger_pub.publish(Empty())
+    # Say something
+    sound = SoundRequest()
+    sound.sound = SoundRequest.SAY
+    sound.command = SoundRequest.PLAY_ONCE
+    sound.arg = "Robot stans on the ground."
+    g_robotsound_pub.publish(sound)
+    
+    
 def watch(event):
     global g_get_parameter_srv, g_previous_st_controller_mode
     global g_odom_init_trigger_pub, g_robotsound_pub
@@ -40,18 +49,14 @@ def watch(event):
         controller_mode == "MODE_ST"):
         if g_previous_st_controller_mode == None:
             g_previous_st_controller_mode = controller_mode
+            if controller_mode == "MODE_ST":
+                trig()
         else:
             if isChangedControllerMode(g_previous_st_controller_mode,
                                        controller_mode,
                                        ["MODE_AIR", "MODE_IDLE"],
                                        "MODE_ST"):
-                g_odom_init_trigger_pub.publish(Empty())
-                # Say something
-                sound = SoundRequest()
-                sound.sound = SoundRequest.SAY
-                sound.command = SoundRequest.PLAY_ONCE
-                sound.arg = "Robot stans on the ground."
-                g_robotsound_pub.publish(sound)
+                trig()
             g_previous_st_controller_mode = controller_mode
 
 if __name__ == "__main__":
