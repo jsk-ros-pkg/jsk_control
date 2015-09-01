@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="jsk_footstep_controller" type="sample-root-height.l" name="sample_root_height" />
+  <node pkg="jsk_rqt_plugins" type="rqt_2d_plot" name="joint_plot"
+        args="/joint_plot --xtitle 'Root Height [mm]' --ytitle 'Joint Likelihood' --no-legend --line --sort-x"/>
+  <node pkg="jsk_rqt_plugins" type="rqt_2d_plot" name="torque_plot"
+        args="/torque_plot --xtitle 'Root Height [mm]' --ytitle 'Torque [Nm]' --no-legend --line --sort-x"/>
+  <node pkg="jsk_rqt_plugins" type="rqt_2d_plot" name="manipulability_plot"
+        args="/manipulability_plot --xtitle 'Root Height [mm]' --ytitle 'Manipulability' --no-legend --line --sort-x"/>
+</launch>
