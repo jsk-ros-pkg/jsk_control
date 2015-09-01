@@ -34,9 +34,12 @@ double* optimize(double* x,
 		int log,
 		Optimization::NLopt::Algorithm algorithm,
 		double* fbuf, double* dfbuf, double* gbuf, double* dgbuf, double* hbuf, double* dhbuf) {
+  // if ( ! nos_buf ) {
 	NLoptSolver nos(x, x_min, x_max, f, df, g, dg, h, dh, m_x, m_g, m_h, ftol,xtol,eqthre,max_eval,max_time,
 			(Optimization::NLopt::Algorithm) algorithm);
 	nos_buf = &nos ;
+	free(nos.fbuf); free(nos.dfbuf); free(nos.gbuf);
+	free(nos.dgbuf); free(nos.hbuf); free(nos.dhbuf);
 	nos.fbuf = fbuf ; nos.dfbuf = dfbuf ;
 	nos.gbuf = gbuf ; nos.dgbuf = dgbuf ;
 	nos.hbuf = hbuf ; nos.dhbuf = dhbuf ;

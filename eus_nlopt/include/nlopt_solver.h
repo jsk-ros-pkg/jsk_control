@@ -34,7 +34,7 @@ public:
 	 */
 	void InequalityConstraintCost(double* h);
 	//
-	double *fbuf, *gbuf, *hbuf, *dfbuf, *dgbuf, *dhbuf ;
+	double *fbuf, *gbuf, *hbuf, *dfbuf, *dgbuf, *dhbuf, *x ;
 	//
 	//
 	// util functions vv
@@ -104,12 +104,18 @@ public:
 			my_log("Fail: Roundoff errors limited progress.");
 		}
 
+		//
+		// if ( this->f ) (*(this->f))(this->x,fbuf) ;
+		// if ( this->g ) (*(this->g))(this->x,gbuf) ;
+		// if ( this->h ) (*(this->h))(this->x,hbuf) ;
+		//
 		my_log("Number of iteration.:	", this->iteration - 1);
+		this->ObjectiveFunctionCost();
 		my_log("object function: ", this->fbuf[0]) ;
 		my_log("  | where     x: ", this->x, this->m_x) ;
-		//this->EqualityConstraintCost(this->gbuf) ;
+		this->EqualityConstraintCost(this->gbuf) ;
 		my_log("  |   eq constt: ", this->gbuf, this->m_g) ;
-		//this->InequalityConstraintCost(this->hbuf) ;
+		this->InequalityConstraintCost(this->hbuf) ;
 		my_log("  |  neq constt: ", this->hbuf, this->m_h) ;
 	}
 
@@ -119,7 +125,8 @@ public:
 
 private:
 		nlopt_opt solver;
-		double* x;
+		nlopt_opt core_solver;
+		// double* x;
 		int (*f)(double*,double*), (*df)(double*,double*);
 		//! 等式制約条件
 		int (*g)(double*,double*), (*dg)(double*,double*);
