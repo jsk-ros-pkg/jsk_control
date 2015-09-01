@@ -1,3 +1,5 @@
+(ros::roseus-add-msgs "jsk_recognition_msgs")
+
 ;; manipulability ;;;;;;;;;;;;;;;;;;
 (defun calc-manipulability-from-limb
   (&optional (limb :lleg))
@@ -75,12 +77,16 @@
 
 ;; index ;;;;;;;;;;;;;;;;;;
 (defun calc-torque-manipulability-index ;; smaller is better
-  (&optional (limb :lleg))
+    (&optional (limb :lleg))
+  "(joint-value manipulability-value torque-value)"
   (let* ((manipulability-gain 1.0)
          (torque-gain 0.00005) ;; make larger if you want knee to be more stretched
          )
-    (+ (- (* manipulability-gain (calc-manipulability-from-limb limb)))
-       (* torque-gain (calc-joint-torque-from-limb limb)))
+    (list
+     (+ (- (* manipulability-gain (calc-manipulability-from-limb limb)))
+        (* torque-gain (calc-joint-torque-from-limb limb)))
+     (calc-manipulability-from-limb limb)
+     (calc-joint-torque-from-limb limb))
     )
   )
 
@@ -122,11 +128,21 @@
 ;; calc best pose considering both legs ;;;;;;;;;;;;;;;;;;
 (defun calc-torque-manipulability-index-for-legs
   ()
-  (+
-   (calc-torque-manipulability-index :lleg)
-   (calc-torque-manipulability-index :rleg)
+  (mapcar #'+
+          (calc-torque-manipulability-index :lleg)
+          (calc-torque-manipulability-index :rleg))
    )
-  )
+
+(defun determine-best-root-height-from-footcoords-with-publish
+    (robot lleg-coords rleg-coords &key (draw? nil) (debug? nil))
+  (multiple-value-bind
+   (joint-plot-data torque-plot-data manipulability-plot-data)
+   (determine-best-root-height-from-footcoords robot lleg-coords rleg-coords
+                                               :draw? draw? :debug? debug?)
+   (ros::publish "/joint_plot" joint-plot-data)
+   (ros::publish "/torque_plot" torque-plot-data)
+   (ros::publish "/manipulability_plot" manipulability-plot-data)
+   ))
 
 ;; return best root height from current robot pose
 (defun determine-best-root-height-from-footcoords
@@ -141,6 +157,9 @@
     (return-from determine-best-root-height-from-footcoords nil))
   (let ((step 10) (i 0)
         (min-index 1e10) (min-pos 0)
+        (joint-plot-data (instance jsk_recognition_msgs::PlotData :init))
+        (torque-plot-data (instance jsk_recognition_msgs::PlotData :init))
+        (manipulability-plot-data (instance jsk_recognition_msgs::PlotData :init))
         index
         (original-av (copy-seq (send robot :angle-vector)))
         (original-foot-midcoords (send (send robot :foot-midcoords) :copy-worldcoords))
@@ -148,7 +167,27 @@
     ;; loop for bending direction
     (while t
       (when draw? (send *irtviewer* :draw-objects))
-      (setq index (calc-torque-manipulability-index-for-legs))
+      ;; build data for plotting
+      (let ((tmp (calc-torque-manipulability-index-for-legs)))
+        (let ((height (elt (send (send (send *robot* :body_lk) :transformation
+                                       (send *robot* :foot-midcoords))
+                                 :worldpos) 2)))
+          (send joint-plot-data :ys
+                (append (send joint-plot-data :ys)
+                        (list (car tmp))))
+          (send torque-plot-data :ys
+                (append (send torque-plot-data :ys)
+                        (list (caddr tmp))))
+          (send manipulability-plot-data :ys
+                (append (send manipulability-plot-data :ys)
+                        (list (cadr tmp))))
+          (send joint-plot-data :xs
+                (append (send joint-plot-data :xs) (list height)))
+          (send manipulability-plot-data :xs
+                (append (send manipulability-plot-data :xs) (list height)))
+          (send torque-plot-data :xs
+                (append (send torque-plot-data :xs) (list height)))
+          (setq index (car tmp))))
       (when (< index min-index)
         (setq min-index index)
         (setq min-pos (* i step))
@@ -166,7 +205,27 @@
     (setq step (- step))
     (while t
       (when draw? (send *irtviewer* :draw-objects))
-      (setq index (calc-torque-manipulability-index-for-legs))
+            ;; build data for plotting
+      (let ((tmp (calc-torque-manipulability-index-for-legs)))
+        (let ((height (elt (send (send (send *robot* :body_lk) :transformation
+                                       (send *robot* :foot-midcoords))
+                                 :worldpos) 2)))
+          (send joint-plot-data :ys
+                (append (send joint-plot-data :ys)
+                        (list (car tmp))))
+          (send torque-plot-data :ys
+                (append (send torque-plot-data :ys)
+                        (list (caddr tmp))))
+          (send manipulability-plot-data :ys
+                (append (send manipulability-plot-data :ys)
+                        (list (cadr tmp))))
+          (send joint-plot-data :xs
+                (append (send joint-plot-data :xs) (list height)))
+          (send manipulability-plot-data :xs
+                (append (send manipulability-plot-data :xs) (list height)))
+          (send torque-plot-data :xs
+                (append (send torque-plot-data :xs) (list height)))
+          (setq index (car tmp))))
       (when (< index min-index)
         (setq min-index index)
         (setq min-pos (* i step))
@@ -183,13 +242,20 @@
     (when draw? (send *irtviewer* :draw-objects))
     (warning-message 1 "min-pos: ~a  min-index: ~a~%"
                      min-pos min-index)
-    )
+    ;; sort plot data
+    (list joint-plot-data torque-plot-data manipulability-plot-data)))
+
+(defun test-root-height-init ()
+  (ros::roseus "test_root_height")
+  (ros::advertise "/joint_plot" jsk_recognition_msgs::PlotData)
+  (ros::advertise "/torque_plot" jsk_recognition_msgs::PlotData)
+  (ros::advertise "/manipulability_plot" jsk_recognition_msgs::PlotData)
   )
 
 (defun test-root-height0
   ()
   (send *robot* :init-pose)
-  (determine-best-root-height-from-footcoords
+  (determine-best-root-height-from-footcoords-with-publish
    *robot*
    (send *robot* :lleg :end-coords :copy-worldcoords)
    (send *robot* :rleg :end-coords :copy-worldcoords)
@@ -199,14 +265,14 @@
 (defun test-root-height1
   ()
   (send *robot* :reset-pose)
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height2
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 100 100 0))
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height3
@@ -214,7 +280,7 @@
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 100 100 0))
   (send *robot* :lleg :move-end-rot 20 :z :local)
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height4
@@ -224,35 +290,35 @@
   (send *robot* :lleg :move-end-rot 20 :z :local)
   (send *robot* :rleg :move-end-pos (float-vector -100 -100 0))
   (send *robot* :rleg :move-end-rot -20 :z :local)
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height5
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 0 0 100))
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height6
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 0 0 200))
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height7
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 0 0 300))
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height8
   ()
   (send *robot* :reset-pose)
   (send *robot* :lleg :move-end-pos (float-vector 200 0 200))
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height9
@@ -261,7 +327,7 @@
   (send *robot* :lleg :move-end-pos (float-vector 200 0 200))
   (send *robot* :lleg :move-end-rot 20 :z :local)
   (send *robot* :rleg :move-end-rot -20 :z :local)
-  (determine-best-root-height-from-footcoords *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
+  (determine-best-root-height-from-footcoords-with-publish *robot* (send *robot* :lleg :end-coords :copy-worldcoords) (send *robot* :rleg :end-coords :copy-worldcoords) :draw? t)
   )
 
 (defun test-root-height-all
@@ -280,4 +346,9 @@
 ;; (load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
 ;; (setq *robot* (instance hrp2jsknt-robot :init))
 ;; (objects (list *robot*))
+;; (test-root-height-init)
 ;; (test-root-height-all)
+;; In order to plot data, please run following command in other terminals:
+;;   $ rosrun jsk_rqt_plugins rqt_2d_plot /joint_plot
+;;   $ rosrun jsk_rqt_plugins rqt_2d_plot /torque_plot
+;;   $ rosrun jsk_rqt_plugins rqt_2d_plot /manipulability_plot
