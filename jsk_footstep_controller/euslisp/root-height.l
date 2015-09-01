@@ -38,8 +38,10 @@
          (link-list (send *robot* :link-list (send move-target :parent)))
          (joint-list (send-all link-list :joint))
          (torque-list (send-all joint-list :joint-torque))
+         (normalized-torque-list (mapcar #'(lambda (v j) (/ v (send j :max-joint-torque))) torque-list
+                                         joint-list))
          )
-    (norm (coerce torque-list float-vector))
+    (expt (norm (coerce normalized-torque-list float-vector)) 2)
     )
   )
 
