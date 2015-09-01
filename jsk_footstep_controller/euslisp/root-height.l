@@ -169,9 +169,9 @@
       (when draw? (send *irtviewer* :draw-objects))
       ;; build data for plotting
       (let ((tmp (calc-torque-manipulability-index-for-legs)))
-        (let ((height (elt (send (send (send *robot* :body_lk) :transformation
-                                       (send *robot* :foot-midcoords))
-                                 :worldpos) 2)))
+        (let ((height (abs (elt (send (send (send *robot* :body_lk) :transformation
+                                            (send *robot* :foot-midcoords))
+                                      :worldpos) 2))))
           (send joint-plot-data :ys
                 (append (send joint-plot-data :ys)
                         (list (car tmp))))
@@ -207,9 +207,9 @@
       (when draw? (send *irtviewer* :draw-objects))
             ;; build data for plotting
       (let ((tmp (calc-torque-manipulability-index-for-legs)))
-        (let ((height (elt (send (send (send *robot* :body_lk) :transformation
-                                       (send *robot* :foot-midcoords))
-                                 :worldpos) 2)))
+        (let ((height (abs (elt (send (send (send *robot* :body_lk) :transformation
+                                            (send *robot* :foot-midcoords))
+                                      :worldpos) 2))))
           (send joint-plot-data :ys
                 (append (send joint-plot-data :ys)
                         (list (car tmp))))
@@ -331,11 +331,11 @@
   )
 
 (defun test-root-height-all
-  ()
+  (&optional (read-line t))
   (dotimes (i 10)
     (warning-message 2 "try (~a)~%" (format nil "test-root-height~a" i))
     (funcall (read-from-string (format nil "test-root-height~a" i)))
-    (read-line)
+    (if read-line (read-line))
     )
   )
 
