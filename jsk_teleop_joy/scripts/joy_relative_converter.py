@@ -6,6 +6,7 @@ try:
 except:
   roslib.load_manifest('jsk_teleop_joy')
   from sensor_msgs.msg import Joy, JoyFeedbackArray
+from std_msgs.msg import Int8
 
 class AxesConverter:
   def __init__(self, axes):
@@ -38,22 +39,44 @@ class AxesConverter:
       rel_axis = (((abs_axis - in_origin) /  (1.0 - in_origin)) * (1.0 - out_origin)) + out_origin
     return rel_axis
 
+class AxesConverterArray:
+  def __init__(self, axes, max_page=1):
+    self.ac = [AxesConverter(axes) for i in range(max_page)]
+    self.crt_page = 0
+
+  def convert(self, abs_axes, page=None):
+    if page is None:
+      return self.ac[self.crt_page].convert(abs_axes)
+    else:
+      return self.ac[page].convert(abs_axes)
+
+  def switch_page(self, page):
+    if page >= 0 and page < len(self.ac):
+      self.crt_page = page
+      return page
+    else:
+      return -1
+
 def joy_callback(data):
-  global ac
+  global aca
   try:
-    ac
+    aca
   except NameError:
-    ac = AxesConverter(data.axes)
-  joy_pub = rospy.Publisher("/joy_relative", Joy)
+    aca = AxesConverterArray(data.axes, 2)
+  joy_pub = rospy.Publisher("/joy_relative/page_" + str(aca.crt_page), Joy)
   joy = Joy()
   joy.header.stamp = rospy.Time.now()
-  joy.axes = ac.convert(data.axes)
+  joy.axes = aca.convert(data.axes)
   joy.buttons = data.buttons
   joy_pub.publish(joy)
+
+def switch_page_cmd_cb(msg):
+  aca.switch_page(msg.data)
 
 def main():
   rospy.init_node('joy_relative_converter')
   rospy.Subscriber("/joy", Joy, joy_callback)
+  rospy.Subscriber("/midi_relative_converter/command/switch_page", Int8, switch_page_cmd_cb)
   rospy.spin()
 
 if __name__ == '__main__':
