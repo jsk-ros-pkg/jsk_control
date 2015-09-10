@@ -12,15 +12,28 @@ class AxesConverter:
   def __init__(self, axes):
     self.input_origins = [None] * len(axes)
     self.output_origins = [0.5] * len(axes)
+    self.prev_output_axes = [i for i in self.output_origins]
 
   def convert(self, abs_axes):
-    self.__updateInputOrigins(abs_axes)
-    return self.__convertAxes(abs_axes, self.input_origins, self.output_origins)
+    self.updateInputOrigins(abs_axes)
+    rel_axes = self.__convertAxes(abs_axes, self.input_origins, self.output_origins)
+    self.__updatePrevOutputAxes(rel_axes)
+    return rel_axes
 
-  def __updateInputOrigins(self, abs_axes):
+  def resetInputOrigins(self):
+    for i in range(len(self.input_origins)):
+      self.input_origins[i] = None
+
+  def updateInputOrigins(self, abs_axes):
     for i in range(len(abs_axes)):
       if self.input_origins[i] is None and abs_axes[i] != 0 and abs_axes[i] != 1:
         self.input_origins[i] = abs_axes[i]
+
+  def __updatePrevOutputAxes(self, rel_axes):
+    self.prev_output_axes = list(rel_axes)
+
+  def updateOutputOrigins(self):
+    self.output_origins = list(self.prev_output_axes)
 
   def __convertAxes(self, abs_axes, in_origins, out_origins):
     rel_axes = [None] * len(abs_axes)
@@ -43,19 +56,29 @@ class AxesConverterArray:
   def __init__(self, axes, max_page=1):
     self.ac = [AxesConverter(axes) for i in range(max_page)]
     self.crt_page = 0
+    self.prev_input_axes = [0.0] * (len(axes))
 
-  def convert(self, abs_axes, page=None):
-    if page is None:
-      return self.ac[self.crt_page].convert(abs_axes)
-    else:
-      return self.ac[page].convert(abs_axes)
+  def convert(self, abs_axes):
+    return self.ac[self.crt_page].convert(abs_axes)
 
   def switch_page(self, page):
     if page >= 0 and page < len(self.ac):
-      self.crt_page = page
+      if page != self.crt_page:
+        self.__updateReserveInputOrigins(self.prev_input_axes)
+        self.__updateCurrentOutputOrigins()
+        self.crt_page = page
       return page
     else:
       return -1
+
+  def __updateReserveInputOrigins(self, abs_axes):
+    for i in range(len(self.ac)):
+      if i != self.crt_page:
+        self.ac[i].resetInputOrigins()
+        self.ac[i].updateInputOrigins(abs_axes)
+
+  def __updateCurrentOutputOrigins(self):
+    self.ac[self.crt_page].updateOutputOrigins()
 
 def joy_callback(data):
   global aca
@@ -67,6 +90,7 @@ def joy_callback(data):
   joy = Joy()
   joy.header.stamp = rospy.Time.now()
   joy.axes = aca.convert(data.axes)
+  aca.prev_input_axes = list(data.axes)
   joy.buttons = data.buttons
   joy_pub.publish(joy)
 
