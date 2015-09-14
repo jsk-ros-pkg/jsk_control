@@ -36,7 +36,7 @@
 #include "jsk_footstep_planner/footstep_planner.h"
 #include <jsk_topic_tools/log_utils.h>
 #include <jsk_topic_tools/rosparam_utils.h>
-#include <jsk_pcl_ros/pcl_conversion_util.h>
+#include <jsk_recognition_utils/pcl_conversion_util.h>
 #include <pcl/common/angles.h>
 #include <boost/format.hpp>
 

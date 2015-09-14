@@ -37,8 +37,8 @@
 
 #include <eigen_conversions/eigen_msg.h>
 
-#include <jsk_pcl_ros/pcl_conversion_util.h>
-#include <jsk_pcl_ros/geo_util.h>
+#include <jsk_recognition_utils/pcl_conversion_util.h>
+#include <jsk_recognition_utils/geo_util.h>
 #include "jsk_footstep_planner/line2d.h"
 
 namespace jsk_footstep_planner
@@ -243,7 +243,7 @@ namespace jsk_footstep_planner
       return FootstepState::Ptr();
     }
     else {
-      jsk_pcl_ros::Plane plane(coefficients->values);
+      jsk_recognition_utils::Plane plane(coefficients->values);
       if (!plane.isSameDirection(z)) {
         plane = plane.flip();
       }
