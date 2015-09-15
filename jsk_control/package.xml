@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package>
+  <name>jsk_control</name>
+  <version>0.1.6</version>
+  <description>The jsk_control package</description>
+  <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <run_depend>eus_nlopt</run_depend>
+  <run_depend>eus_qp</run_depend>
+  <run_depend>eus_qpoases</run_depend>
+  <run_depend>joy_mouse</run_depend>
+  <run_depend>jsk_calibration</run_depend>
+  <run_depend>jsk_footstep_controller</run_depend>
+  <run_depend>jsk_footstep_planner</run_depend>
+  <run_depend>jsk_ik_server</run_depend>
+  <run_depend>jsk_teleop_joy</run_depend>
+
+  <export>
+    <metapackage/>
+  </export>
+</package>
