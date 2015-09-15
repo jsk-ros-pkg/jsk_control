@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(jsk_footstep_planner)
 
-find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_pcl_ros
+find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_recognition_utils
   message_generation jsk_topic_tools roscpp pcl_ros
   jsk_interactive_marker visualization_msgs dynamic_reconfigure)
 find_package(PCL REQUIRED)
@@ -13,7 +13,7 @@ generate_messages()
 #catkin_python_setup()
 catkin_package(
   DEPENDS
-  CATKIN_DEPENDS  jsk_footstep_msgs jsk_pcl_ros jsk_interactive_marker
+  CATKIN_DEPENDS jsk_footstep_msgs jsk_recognition_utils jsk_interactive_marker
   INCLUDE_DIRS include # TODO include
   LIBRARIES jsk_footstep_planner # TODO
   )

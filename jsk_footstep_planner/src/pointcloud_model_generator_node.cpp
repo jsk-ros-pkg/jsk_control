@@ -36,7 +36,7 @@
 #include "jsk_footstep_planner/pointcloud_model_generator.h"
 #include <jsk_footstep_planner/PointCloudModelGeneratorConfig.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <jsk_pcl_ros/pcl_conversion_util.h>
+#include <jsk_recognition_utils/pcl_conversion_util.h>
 #include <dynamic_reconfigure/server.h>
 
 using namespace jsk_footstep_planner;
