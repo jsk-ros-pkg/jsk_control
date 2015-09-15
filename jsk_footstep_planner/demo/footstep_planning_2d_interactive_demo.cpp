@@ -40,7 +40,7 @@
 #include <boost/random.hpp>
 #include <interactive_markers/tools.h>
 #include <interactive_markers/interactive_marker_server.h>
-#include <jsk_pcl_ros/pcl_conversion_util.h>
+#include <jsk_recognition_utils/pcl_conversion_util.h>
 #include <jsk_rviz_plugins/OverlayText.h>
 #include <boost/format.hpp>
 using namespace jsk_footstep_planner;
