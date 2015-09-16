@@ -95,13 +95,16 @@ for k, counter in zip(data_by_k, range(k_num)):             # need to sort by k?
     ax.set_title("$z = {0}$mm".format(data_array[0]["z"]))
     ax.set_xlabel("$x$ [mm]")
     ax.set_ylabel("$y$ [mm]")
+    ax.tick_params(labelsize=8)
     im = ax.imshow(image, vmin=min_value, vmax=max_value, cmap="gnuplot", interpolation="none",
                    aspect="auto",
                    extent=[min_x-step/2, max_x+step/2, min_y-step/2, max_y+step/2])
 # cbar_ax = fig.add_axes([0.95, 0.15, 0.01, 0.7])
 # cb = fig.colorbar(im, cax=cbar_ax)
 print "{0} reached regions".format(non_zero_counter)
+fig.suptitle("{0} reached regions".format(non_zero_counter), fontsize=8)
 plt.tight_layout()
+
 if image_file:
     plt.savefig(image_file)
 else:
