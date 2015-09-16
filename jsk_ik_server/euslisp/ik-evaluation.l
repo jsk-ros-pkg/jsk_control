@@ -52,6 +52,7 @@
   (:sphere ()
     (let ((s (make-sphere (/ dimension 2.0))))
       (send s :locate center-pos :world)
+      (send s :worldpos)
       s)
     )
   )
@@ -59,10 +60,11 @@
 (defclass ik-grid
   :super propertied-object
   :slots (min-x max-x min-y max-y min-z max-z grid-step cells
-                numx numy numz))
+                numx numy numz origin))
 
 (defmethod ik-grid
-  (:init (min-max-x min-max-y min-max-z &key ((:grid-step agrid-step) 100))
+  (:init (min-max-x min-max-y min-max-z
+          &key ((:grid-step agrid-step) 100) ((:origin aorigin) (make-coords)))
     (setq min-x (car min-max-x))
     (setq max-x (cdr min-max-x))
     (setq min-y (car min-max-y))
@@ -70,6 +72,7 @@
     (setq min-z (car min-max-z))
     (setq max-z (cdr min-max-z))
     (setq grid-step agrid-step)
+    (setq origin aorigin)
     (setq numx (ceiling (/ (- max-x min-x) grid-step)))
     (setq numy (ceiling (/ (- max-y min-y) grid-step)))
     (setq numz (ceiling (/ (- max-z min-z) grid-step)))
@@ -163,6 +166,7 @@
             (let ((c (send self :get-cell (list i j k))))
               (if (and c (> (send c :get-value) 0.0))
                   (let ((f (send (send self :get-cell (list i j k)) :face max-value)))
+                    (send f :transform origin)
                     (setq faces (append faces (list f)))
                     )))))
           )
@@ -200,8 +204,8 @@
       (let ((cells (send self :max-cells-per-z)))
         (dotimes (i (1- (length cells)))
           (push (instance line :init
-                          :pvertex (send (elt cells i) :center-pos)
-                          :nvertex (send (elt cells (1+ i)) :center-pos))
+                          :pvertex (send origin :transform-vector (send (elt cells i) :center-pos))
+                          :nvertex (send origin :transform-vector (send (elt cells (1+ i)) :center-pos)))
                 lines))
         lines)))
   (:dump-to-file (fname)
@@ -211,8 +215,14 @@
           (floor (/ (- (elt pos 1) min-y) grid-step))
           (floor (/ (- (elt pos 2) min-z) grid-step)))
     )
+  (:move-origin (org)
+    (setq origin org))
   (:lookup-stand-location (cset
                            &key
+                           (computation-level :position)
+                           ;; one of :position or :position-rotation
+                           (collision nil) ;take into account collision or not
+                           
                            (theta-range (deg2rad 90))
                            (theta-num 10)
                            (x-range 1000)
@@ -222,16 +232,22 @@
     "compute transform of cset to maximize cell value"
     ;; x-y-theta
     (let ((midpoint (send cset :midpoint)))
-      (let ((z-index (caddr (send self :pos-to-indices))))
-        (let ((initial-transform (make-coords :post (send (send self :max-cell-in-z-plane z-index) :center-pos))))
-          
+      (let ((z-index (caddr (send self :pos-to-indices midpoint))))
+        (let ((initial-transform (make-coords :pos (vz0 (v- midpoint (send (send self :max-cell-in-z-plane z-index) :center-pos))))))
+          initial-transform
           )))
     )
   )
 
+(defun vz0 (vec)
+  (float-vector (elt vec 0) (elt vec 1) 0))
+  
+
 (defun load-ik-grid-from-file (fname)
   (with-open-file (f fname)
-    (read f)))
+    (let ((tmp (read f)))
+      (send tmp :move-origin (make-coords)) ;reset origin
+      tmp)))
 
 (defclass coordinates-set
   :super propertied-object
@@ -449,6 +465,25 @@
                    (send cell :indices)))
     ))
 
+(defun test-stand-location-planning (target-coordinates)
+  (let ((arrow (instance arrow-object :init :pos (send target-coordinates :worldpos)
+                         :rot (send target-coordinates :worldrot))))
+    (let ((pose (bench (send *grid* :lookup-stand-location (instance coordinates-set :init (list target-coordinates))))))
+      (send *robot* :reset-pose)
+      (send *robot* :fix-leg-to-coords pose)
+      (send *grid* :move-origin pose)
+      (send *robot* :larm :inverse-kinematics target-coordinates :rotation-axis :z)
+      (progn
+        (send *irtviewer* :objects
+              (append ;;(send *grid* :visualize-objects)
+                      (list *robot* arrow)))
+        (send *irtviewer* :viewpoint (float-vector 5000 5000 5000))
+        (send *irtviewer* :look1 (float-vector 0 0 800) 130 30)
+        (send *irtviewer* :draw-objects)
+        t)
+      )))
+
+
 ;; (load "ik-evaluation.l")
 ;; (progn (test-with-hrp2jsknt-zup) (iterate-and-save-images))
 ;; (progn (test-with-hrp2jsknt-yup) (iterate-and-save-images))
@@ -457,5 +492,6 @@
 ;; (progn (test-with-jaxon-xup) (iterate-and-save-images))
 ;; (progn (test-with-pr2-zup) (iterate-and-save-images))
 ;; (progn     (send *grid* :sum-filter) (objects (append (send *grid* :visualize-objects) (list *robot*))) t)
+;; (do-until-key (test-stand-location-planning (make-coords :pos (float-vector (random 1000.0) (random 1000.0) (+ 900 (random 1000.0))))))
 
 
