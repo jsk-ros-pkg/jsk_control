@@ -272,11 +272,38 @@
       (send *irtviewer* :draw-objects)
       (x::window-main-one))
     (incf counter)
-    (if (= (mod counter 100) 0)
-        (format t "~A/~A~%" counter (length (send grid :cells))))
+    (when (= (mod counter 10) 0)
+      (format t "~c~0,4d/~A" #x0d counter (length (send grid :cells)))
+      (let* ((percentage (/ (* 100 counter) (length (send grid :cells))))
+             (max-bar-length 60)
+             (bar-num (/ (* max-bar-length percentage) 100)))
+        (dotimes (i bar-num)
+          (format t "=")))
+      (finish-output))
     )
   (send grid :normalize-cells)
   ))
+
+(defun generate-ik-grid-for-robot (robot file-prefix min-max-x min-max-y min-max-z grid-step
+                                         ik-arg
+                                         rot-matrix)
+  (format t "Generate reachability map for ~A with rotation ~A~%" (send robot :name) rot-matrix)
+  (setq *grid* (instance ik-grid :init
+                         min-max-x min-max-y min-max-z
+                         :grid-step grid-step))
+  (ik-evaluation *robot* *grid* :larm ik-arg :update-view nil
+                 :rotation rot-matrix)
+  (send *grid* :dump-to-csv (format nil "~A-input.csv" file-prefix))
+  (dotimes (i 10)
+    (send *grid* :sum-filter)
+    ;; (progn (objects (append (send *grid* :visualize-objects)
+    ;;                         (list *robot*)))
+    ;;        t)
+    ;; (send (send (send *irtviewer* :viewer) :viewsurface)
+    ;;       :write-to-image-file (format nil "jaxon-iterate~0,3d.png" i))
+    (send *grid* :dump-to-csv (format nil "~A-iterate~0,3d.csv" file-prefix i))
+    )
+  )
 
 (defun test-with-jaxon-yup ()
   (require "package://hrpsys_ros_bridge_tutorials/euslisp/jaxon-interface.l")
