@@ -284,24 +284,52 @@
   (send grid :normalize-cells)
   ))
 
+(defun save-4-views (file-prefix)
+    ;; slant
+  (send *irtviewer* :viewpoint (float-vector 5000 5000 5000))
+  (send *irtviewer* :look1 (float-vector 0 0 800) 30 30)
+  (send *irtviewer* :draw-objects)
+  (send *irtviewer* :viewer :viewsurface :write-to-image-file (format nil "~A-slant.png" file-prefix))
+  ;; up
+  (send *irtviewer* :viewpoint (float-vector 0 0 10000))
+  (send *irtviewer* :look1 (float-vector 0 0 800) 180 90)
+  (send *irtviewer* :draw-objects)
+  (send *irtviewer* :viewer :viewsurface :write-to-image-file (format nil "~A-up.png" file-prefix))
+  ;; side
+  (send *irtviewer* :viewpoint (float-vector 0 10000 0))
+  (send *irtviewer* :look1 (float-vector 0 0 800) 90 0)
+  (send *irtviewer* :draw-objects)
+  (send *irtviewer* :viewer :viewsurface :write-to-image-file (format nil "~A-side.png" file-prefix))
+
+  ;; front
+  (send *irtviewer* :viewpoint (float-vector 10000 0 0))
+  (send *irtviewer* :look1 (float-vector 0 0 800) 0 0)
+  (send *irtviewer* :draw-objects)
+  (send *irtviewer* :viewer :viewsurface :write-to-image-file (format nil "~A-front.png" file-prefix))
+ )
+
 (defun generate-ik-grid-for-robot (robot file-prefix min-max-x min-max-y min-max-z grid-step
                                          ik-arg
-                                         rot-matrix)
+                                         rot-matrix
+                                         output-directory)
   (format t "Generate reachability map for ~A with rotation ~A~%" (send robot :name) rot-matrix)
   (setq *grid* (instance ik-grid :init
                          min-max-x min-max-y min-max-z
                          :grid-step grid-step))
   (ik-evaluation *robot* *grid* :larm ik-arg :update-view nil
                  :rotation rot-matrix)
-  (send *grid* :dump-to-csv (format nil "~A-input.csv" file-prefix))
+  (send *grid* :dump-to-csv (format nil "~A/~A-input.csv" output-directory file-prefix))
+  (progn (objects (append (send *grid* :visualize-objects)
+                          (list *robot*)))
+         t)
+  (save-4-views (format nil "~A/~A-input" output-directory file-prefix))
   (dotimes (i 10)
     (send *grid* :sum-filter)
-    ;; (progn (objects (append (send *grid* :visualize-objects)
-    ;;                         (list *robot*)))
-    ;;        t)
-    ;; (send (send (send *irtviewer* :viewer) :viewsurface)
-    ;;       :write-to-image-file (format nil "jaxon-iterate~0,3d.png" i))
-    (send *grid* :dump-to-csv (format nil "~A-iterate~0,3d.csv" file-prefix i))
+    (progn (objects (append (send *grid* :visualize-objects)
+                            (list *robot*)))
+           t)
+    (save-4-views (format nil "~A/~A-iterate~0,3d" output-directory file-prefix i))
+    (send *grid* :dump-to-csv (format nil "~A/~A-iterate~0,3d.csv" output-directory file-prefix i))
     )
   )
 
