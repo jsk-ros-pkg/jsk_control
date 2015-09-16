@@ -11,6 +11,11 @@ import numpy as np
 import math
 
 csvfile = sys.argv[1]
+if len(sys.argv) == 3:
+    image_file = sys.argv[2]
+else:
+    image_file = None
+
 
 data_by_k = dict()
 # read data from csv file
@@ -97,4 +102,7 @@ for k, counter in zip(data_by_k, range(k_num)):             # need to sort by k?
 # cb = fig.colorbar(im, cax=cbar_ax)
 print "{0} reached regions".format(non_zero_counter)
 plt.tight_layout()
-plt.show()
+if image_file:
+    plt.savefig(image_file)
+else:
+    plt.show()
