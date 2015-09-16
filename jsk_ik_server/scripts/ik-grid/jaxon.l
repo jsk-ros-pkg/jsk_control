@@ -31,7 +31,3 @@
                             *output-directory*)
 
 (sys::exit 0)
-
-
-(defun irtviewer-4-views ()
-  )

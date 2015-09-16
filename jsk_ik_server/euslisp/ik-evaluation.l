@@ -319,6 +319,7 @@
   (ik-evaluation *robot* *grid* :larm ik-arg :update-view nil
                  :rotation rot-matrix)
   (send *grid* :dump-to-csv (format nil "~A/~A-input.csv" output-directory file-prefix))
+  (send *grid* :dump-to-file (format nil "~A/~A-input.l" output-directory file-prefix))
   (progn (objects (append (send *grid* :visualize-objects)
                           (list *robot*)))
          t)
@@ -330,6 +331,7 @@
            t)
     (save-4-views (format nil "~A/~A-iterate~0,3d" output-directory file-prefix i))
     (send *grid* :dump-to-csv (format nil "~A/~A-iterate~0,3d.csv" output-directory file-prefix i))
+    (send *grid* :dump-to-file (format nil "~A/~A-iterate~0,3d.l" output-directory file-prefix i))
     )
   )
 
