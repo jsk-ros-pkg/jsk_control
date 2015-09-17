@@ -97,7 +97,9 @@
   ;;(send *robot* :torso :waist-p :joint-angle 35) ; it's not working because of model bug
   (send *ri* :angle-vector (send *robot* :angle-vector) 5000)
   (send *ri* :wait-interpolation)
-  (call-empty-service "/tilt_laser_listener/clear_cache")
+  (if (ros::service-exists "/tilt_laser_listener/clear_cache")
+      (call-empty-service "/tilt_laser_listener/clear_cache")
+    )
   ;; Call /locomotion/input/request
   (call-empty-service "/locomotion/input/request")
   ;; Wait for next publish
@@ -142,7 +144,9 @@
          (send *ri* :wait-interpolation)
          ;; (unix:sleep 5)
          ;; Call /tilt_laser_listener/clear_cache
-         (call-empty-service "/tilt_laser_listener/clear_cache")
+         (if (ros::service-exists "/tilt_laser_listener/clear_cache")
+             (call-empty-service "/tilt_laser_listener/clear_cache")
+           )
          ;; Call /locomotion/input/request
          (call-empty-service "/locomotion/input/request")
          ;; Wait for next publish
