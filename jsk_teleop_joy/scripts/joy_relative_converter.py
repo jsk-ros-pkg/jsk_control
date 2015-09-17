@@ -9,12 +9,22 @@ except:
 from std_msgs.msg import Int8
 
 class AxesConverter:
-  def __init__(self, axes):
-    self.input_origins = [None] * len(axes)
-    self.output_origins = [0.5] * len(axes)
+  def __init__(self):
+    self.input_origins = []
+    self.output_origins = []
     self.prev_output_axes = [i for i in self.output_origins]
 
+  def adjustAxesSize(self, axes_size):
+    if len(self.input_origins) != axes_size:
+      if len(self.input_origins) == 0:
+        self.input_origins = [None] * axes_size
+        self.output_origins = [0.5] * axes_size
+        rospy.loginfo("[midi_relative_converter] adjust axes size.")
+      else:
+        rospy.logwarn("[midi_relative_converter] different axes size!!")
+
   def convert(self, abs_axes):
+    self.adjustAxesSize(len(abs_axes))
     self.updateInputOrigins(abs_axes)
     rel_axes = self.__convertAxes(abs_axes, self.input_origins, self.output_origins)
     self.__updatePrevOutputAxes(rel_axes)
@@ -53,10 +63,10 @@ class AxesConverter:
     return rel_axis
 
 class AxesConverterArray:
-  def __init__(self, axes, max_page=1):
-    self.ac = [AxesConverter(axes) for i in range(max_page)]
+  def __init__(self, max_page=1):
+    self.ac = [AxesConverter() for i in range(max_page)]
     self.crt_page = 0
-    self.prev_input_axes = [0.0] * (len(axes))
+    self.prev_input_axes = []
 
   def convert(self, abs_axes):
     return self.ac[self.crt_page].convert(abs_axes)
@@ -74,6 +84,7 @@ class AxesConverterArray:
   def __updateReserveInputOrigins(self, abs_axes):
     for i in range(len(self.ac)):
       if i != self.crt_page:
+        self.ac[i].adjustAxesSize(len(abs_axes))
         self.ac[i].resetInputOrigins()
         self.ac[i].updateInputOrigins(abs_axes)
 
@@ -81,11 +92,6 @@ class AxesConverterArray:
     self.ac[self.crt_page].updateOutputOrigins()
 
 def joy_callback(data):
-  global aca
-  try:
-    aca
-  except NameError:
-    aca = AxesConverterArray(data.axes, 2)
   joy_pub = rospy.Publisher("/joy_relative/page_" + str(aca.crt_page), Joy)
   joy = Joy()
   joy.header.stamp = rospy.Time.now()
@@ -98,7 +104,9 @@ def switch_page_cmd_cb(msg):
   aca.switch_page(msg.data)
 
 def main():
+  global aca
   rospy.init_node('joy_relative_converter')
+  aca = AxesConverterArray(3)
   rospy.Subscriber("/joy", Joy, joy_callback)
   rospy.Subscriber("/midi_relative_converter/command/switch_page", Int8, switch_page_cmd_cb)
   rospy.spin()
