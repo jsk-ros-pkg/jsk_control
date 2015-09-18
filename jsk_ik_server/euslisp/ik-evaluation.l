@@ -227,6 +227,8 @@
     (setq origin org))
   (:lookup-stand-location (cset
                            &key
+                           (analysis-level :center)
+                           ;; :center of :set
                            (computation-level :position)
                            ;; one of :position or :position-rotation
                            (collision nil) ;take into account collision or not
@@ -279,6 +281,7 @@
       (gl::glPopAttrib)
       )
   (:vertices ()
+    "Return vertices of bounding box of the grid"
     (list (send self :indices-to-pos (list 0 0 0))
           (send self :indices-to-pos (list 0 0 numz))
           (send self :indices-to-pos (list 0 numy 0))
@@ -293,10 +296,27 @@
   
 
 (defun vz0 (vec)
-  (float-vector (elt vec 0) (elt vec 1) 0))
+  "force to set z element of `vec' as 0"
+  (vzset vec 0))
+
+(defun vzset (vec z)
+  "replace z element of `vec' with `z'"
+  (float-vector (elt vec 0) (elt vec 1) z))
+
+(defun random-coordinates (num mean sigma
+                           &key
+                           (fixed-z nil)
+                           (rotation (unit-matrix)))
+  (let ((points nil))
+    (dotimes (i num)
+      (if fixed-z
+          (setq points (append (list (vzset (gaussian-random 3 mean sigma) fixed-z)) points)))
+      (setq points (append (list (gaussian-random 3 mean sigma)) points)))
+    (mapcar #'(lambda (p) (make-coords :pos p :rot (copy-matrix rotation))) points)))
   
 
 (defun load-ik-grid-from-file (fname)
+  "Load and instantiate ik-grid object from dumped file `fname'"
   (with-open-file (f fname)
     (let ((tmp (read f)))
       (send tmp :move-origin (make-coords)) ;reset origin
@@ -313,8 +333,10 @@
     (setq coordinates-list (append coordinates-list (list c))))
   (:transform-copy (c)
     (instance coordinates-set (send-all (send-all coordinates-list :copy-worldcoords) :transrofm c)))
-  (:coordinate ()
+  (:coordinates ()
     coordinates-list)
+  (:midcoords ()
+    (make-coords :pos (send self :midpoint)))
   (:midpoint ()
     (scale (/ 1.0 (length coordinates-list)) (reduce #'v+ (send-all coordinates-list :worldpos))))
   )
@@ -536,8 +558,29 @@
         t)
       )))
 
+(defun test-stand-location-planning2 ()
+  (let ((target (instance coordinates-set :init (random-coordinates 10 1000 30 :fixed-z 900))))
+    (setq *grid* (load-ik-grid-from-file (ros::resolve-ros-path "package://jsk_ik_server/data/jaxon-xup-iterate009.l")))
+    (let ((pose (bench (send *grid* :lookup-stand-location target))))
+      
+      (send-all (send target :coordinates) :draw-on :flush t)
+      (send *robot* :reset-pose)
+      (send *robot* :fix-leg-to-coords pose)
+      (send *grid* :move-origin pose)
+      (send *robot* :larm :inverse-kinematics (send target :midcoords) :rotation-axis :z)
+      (progn
+        (send *irtviewer* :objects *robot*)
+        ;; (send *irtviewer* :viewpoint (float-vector 5000 5000 5000))
+        ;; (send *irtviewer* :look1 (float-vector 0 0 800) 130 30)
+        (send *irtviewer* :draw-objects)
+        (x::window-main-one)
+        t)
+      )))
 
 ;; (load "ik-evaluation.l")
+;; (require "package://hrpsys_ros_bridge_tutorials/euslisp/jaxon-interface.l")
+;; (setq *robot* (make-robot-model-from-name "jaxon"))
+;; (objects (list *robot*))
 ;; (progn (test-with-hrp2jsknt-zup) (iterate-and-save-images))
 ;; (progn (test-with-hrp2jsknt-yup) (iterate-and-save-images))
 ;; (progn (test-with-jaxon-yup) (iterate-and-save-images))
@@ -546,5 +589,4 @@
 ;; (progn (test-with-pr2-zup) (iterate-and-save-images))
 ;; (progn     (send *grid* :sum-filter) (objects (append (send *grid* :visualize-objects) (list *robot*))) t)
 ;; (do-until-key (test-stand-location-planning (make-coords :pos (float-vector (random 1000.0) (random 1000.0) (+ 900 (random 1000.0))))))
-
-
+;; (do-until-key (test-stand-location-planning2))
