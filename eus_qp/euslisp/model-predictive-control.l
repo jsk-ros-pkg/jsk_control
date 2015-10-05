@@ -323,18 +323,20 @@
        (push (subseq tmp-input-value (+ (* i 6) 3) (+ (* i 6) 6)) moment-list))
      (setq force-list (reverse force-list) moment-list (reverse moment-list))
      (list
-      (mapcar #'(lambda (l)
+      (mapcar #'(lambda (l c)
                   (let ((idx (position l contact-limbs)))
-                    (if idx
-                        (elt force-list idx)
-                      (float-vector 0 0 0))))
-              all-limbs)
-      (mapcar #'(lambda (l)
+                    (send c :rotate-vector
+                          (if idx
+                              (elt force-list idx)
+                            (float-vector 0 0 0)))))
+              all-limbs all-end-coords-list)
+      (mapcar #'(lambda (l c)
                   (let ((idx (position l contact-limbs)))
-                    (if idx
-                        (elt moment-list idx)
-                      (float-vector 0 0 0))))
-              all-limbs))
+                    (send c :rotate-vector
+                          (if idx
+                              (elt moment-list idx)
+                            (float-vector 0 0 0)))))
+              all-limbs all-end-coords-list))
      ))
   )
 
