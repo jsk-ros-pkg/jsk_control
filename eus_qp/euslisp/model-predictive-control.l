@@ -294,9 +294,9 @@
   (:calc-contact-constraint-matrix
    ()
    (apply #'concatenate-matrix-diagonal
-          (mapcar #'(lambda (c-constraint c-coords)
-                      (send c-constraint :calc-constraint-matrix c-coords))
-                  contact-constraint-list contact-coords-list)))
+          (mapcar #'(lambda (c-constraint)
+                      (send c-constraint :get-constraint-matrix))
+                  contact-constraint-list)))
   (:calc-contact-constraint-vector
    ()
    (apply #'concatenate float-vector
@@ -509,7 +509,7 @@
 (defmethod MPC-horizontal-cog-motion-generator
   (:init
    (tmp-preview-window
-    &key (error-momentum-integral-weight 2.5e1) (error-momentum-weight 1e-1) (error-angular-momentum-weight 1e3)
+    &key (error-momentum-integral-weight 1.0e1) (error-momentum-weight 1e-1) (error-angular-momentum-weight 1e3)
          (initial-state (instantiate float-vector state-dim))
          (state-dim 6)
          (error-weight-vector (let ((ww (instantiate float-vector state-dim)))

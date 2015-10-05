@@ -6,12 +6,14 @@
              :init
              :mu-trans 1.0
              :mu-rot 0.05
-             (let* ((vs (mapcar #'(lambda (v) (send *robot* l :end-coords :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
-               (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
-                     :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
-                     :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
-                     :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
-                     )))
+             (if (send *robot* :support-polygon l)
+                 (let* ((vs (mapcar #'(lambda (v) (send *robot* l :end-coords :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
+                   (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
+                         :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
+                         :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
+                         :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
+                         ))
+               (list :l-min-x 0 :l-max-x 0 :l-min-y 0 :l-max-y 0)))
   )
 
 (defun setup ()
@@ -23,9 +25,21 @@
     (objects (list (setq *robot* (instance sample-robot :init)))))
   )
 
-(defun demo-MPC-gen-motion-1 (&key (limbs '(:rleg :lleg)))
+(defun demo-MPC-gen-motion-1
+  (&key (limbs '(:rleg :lleg))
+        (foot-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
+        (foot-rot-diff (list (list 0 0 0) (list 0 0 0))))
   "COG XY MPC test. Move COG in X and Y axes."
   (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+  (mapcar #'(lambda (l d)
+              (send *robot* l :move-end-pos d :world))
+          limbs foot-pos-diff)
+  (mapcar #'(lambda (l d)
+              (mapcar #'(lambda (dd a)
+                          (send *robot* l :move-end-rot dd a))
+                      d '(:x :y :z)))
+          limbs foot-rot-diff)
   (send *robot* :fix-leg-to-coords (make-coords))
   (send *robot* :move-centroid-on-foot (if (> (length limbs) 1) :both (car limbs)) '(:rleg :lleg))
   (let* ((preview-window 10)
@@ -198,11 +212,23 @@
                           (mapcar #'(lambda (x) (elt (cadr (memq :refcog x)) 2)) cog-ret))))
     cog-ret))
 
-(defun demo-MPC-gen-motion-3 ()
+(defun demo-MPC-gen-motion-3
+  (&key (limbs '(:rleg :lleg))
+        (foot-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
+        (foot-rot-diff (list (list 0 0 0) (list 0 0 0))))
   "COG XY MPC test. Walking by changing contact constraints"
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
-  (send *robot* :move-centroid-on-foot :both '(:rleg :lleg))
+  (mapcar #'(lambda (l d)
+              (send *robot* l :move-end-pos d :world))
+          limbs foot-pos-diff)
+  (mapcar #'(lambda (l d)
+              (mapcar #'(lambda (dd a)
+                          (send *robot* l :move-end-rot dd a))
+                      d '(:x :y :z)))
+          limbs foot-rot-diff)
+  (send *robot* :fix-leg-to-coords (make-coords))
+  (send *robot* :move-centroid-on-foot (if (> (length limbs) 1) :both (car limbs)) '(:rleg :lleg))
   (let* ((limbs '(:rleg :lleg))
          (preview-window 10)
          (dt 0.05) ;; [s]
@@ -294,6 +320,143 @@
             :min-loop 2 :cog-null-space nil)
       (send *irtviewer* :draw-objects :flush nil)
       (draw-force-value r))
+    (if (boundp 'gnuplot)
+        (graph-view (list (mapcar #'(lambda (x) (elt (cadr (memq :cog x)) 0)) cog-ret)
+                          (mapcar #'(lambda (x) (elt (cadr (memq :cog x)) 1)) cog-ret)
+                          (mapcar #'(lambda (x) (elt (cadr (memq :refcog x)) 0)) cog-ret)
+                          (mapcar #'(lambda (x) (elt (cadr (memq :refcog x)) 1)) cog-ret))))
+    cog-ret))
+
+(defun demo-MPC-gen-motion-4
+  (&key (limbs '(:rleg :lleg :rarm :larm))
+        (ee-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
+        (ee-rot-diff (list (list 0 0 0) (list 0 0 0))))
+  "COG XY MPC test. Walking by changing contact constraints trot 4leg."
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+  (send *robot* :move-coords
+        (make-coords :rpy (list 0 pi/2 0)
+                     :pos (float-vector 0 0 300))
+        (car (send *robot* :links)))
+  (setq tc (list
+            (make-coords :pos #f(-200 -120 0))
+            (make-coords :pos #f(-200 120 0))
+            ;; (make-coords :pos #f(200 -120 0) :rpy (list 0 pi/2 0))
+            ;; (make-coords :pos #f(200 120 0) :rpy (list 0 pi/2 0))
+            (make-coords :pos #f(200 -120 0) :rpy (list 0 0 0))
+            (make-coords :pos #f(200 120 0) :rpy (list 0 0 0))
+            ))
+  (send *robot* :fullbody-inverse-kinematics
+        tc
+        :joint-args '(:absolute-p t)
+        :min (float-vector -1e10 -1e10 -1e10 -180 -180 -180)
+        :max (float-vector  1e10  1e10  1e10  180  180  180)
+        :move-target (mapcar #'(lambda (l) (send *robot* l :end-coords)) limbs)
+        :link-list (mapcar #'(lambda (l) (send *robot* :link-list (send *robot* l :end-coords :parent))) limbs)
+        :target-centroid-pos (vector-mean (send-all tc :worldpos)))
+  (let* ((preview-window 10)
+         (dt 0.05) ;; [s]
+         (total-mass (* 1e-3 (send *robot* :weight)))
+         (mg (* total-mass 1e-3 (elt *g-vec* 2)))
+         (cog-z (* 1e-3 (elt (send *robot* :centroid) 2)))
+         (initial-state
+          (float-vector (* total-mass 1e-3 (elt (send *robot* :centroid) 0))
+                        0
+                        (* total-mass 1e-3 (elt (send *robot* :centroid) 1))
+                        0
+                        0 0))
+         (mpc (instance MPC-horizontal-cog-motion-generator
+                        :init preview-window
+                        :initial-state initial-state))
+         (prm-list) (cog-ret)
+         (count -1))
+    (setq prm-list
+          (append
+           (mapcar #'(lambda (x)
+                       (instance MPC-horizontal-cog-motion-generator-param
+                                 :init
+                                 dt
+                                 (copy-object initial-state)
+                                 (mapcar #'(lambda (l) (send *robot* l :end-coords :copy-worldcoords)) limbs)
+                                 (mapcar #'(lambda (l) (gen-default-contact-constraint l)) limbs)
+                                 limbs
+                                 mg cog-z total-mass
+                                 :all-limbs limbs
+                                 ))
+                   (make-list (* 1 preview-window)))
+           (mapcar #'(lambda (x)
+                       (instance MPC-horizontal-cog-motion-generator-param
+                                 :init
+                                 dt
+                                 (v+ (float-vector 0 0 (* total-mass 1e-3 (elt (send *robot* :rleg :end-coords :worldpos) 1)) 0 0 0) (copy-object initial-state))
+                                 (mapcar #'(lambda (l) (send *robot* l :end-coords :copy-worldcoords)) limbs)
+                                 (list (gen-default-contact-constraint :rleg) (gen-default-contact-constraint :larm))
+                                 (list :rleg :larm)
+                                 mg cog-z total-mass
+                                 :all-limbs limbs
+                                 ))
+                   (make-list (round (* 1.6 preview-window))))
+           (mapcar #'(lambda (x)
+                       (instance MPC-horizontal-cog-motion-generator-param
+                                 :init
+                                 dt
+                                 (v+ (float-vector 0 0 (* total-mass 1e-3 (elt (send *robot* :lleg :end-coords :worldpos) 1)) 0 0 0) (copy-object initial-state))
+                                 (mapcar #'(lambda (l) (send *robot* l :end-coords :copy-worldcoords)) limbs)
+                                 (list (gen-default-contact-constraint :lleg) (gen-default-contact-constraint :rarm))
+                                 (list :lleg :rarm)
+                                 mg cog-z total-mass
+                                 :all-limbs limbs
+                                 ))
+                   (make-list (round (* 1.6 preview-window))))
+           (mapcar #'(lambda (x)
+                       (instance MPC-horizontal-cog-motion-generator-param
+                                 :init
+                                 dt
+                                 (v+ (float-vector 0 0 (* total-mass 1e-3 (elt (send *robot* :rleg :end-coords :worldpos) 1)) 0 0 0) (copy-object initial-state))
+                                 (mapcar #'(lambda (l) (send *robot* l :end-coords :copy-worldcoords)) limbs)
+                                 (list (gen-default-contact-constraint :rleg) (gen-default-contact-constraint :larm))
+                                 (list :rleg :larm)
+                                 mg cog-z total-mass
+                                 :all-limbs limbs
+                                 ))
+                   (make-list (round (* 1.6 preview-window))))
+           (mapcar #'(lambda (x)
+                       (instance MPC-horizontal-cog-motion-generator-param
+                                 :init
+                                 dt
+                                 (copy-object initial-state)
+                                 (mapcar #'(lambda (l) (send *robot* l :end-coords :copy-worldcoords)) limbs)
+                                 (mapcar #'(lambda (l) (gen-default-contact-constraint l)) limbs)
+                                 limbs
+                                 mg cog-z total-mass
+                                 :all-limbs limbs
+                                 ))
+                   (make-list (* 2 preview-window)))))
+    (dolist (prm prm-list)
+      (let ((r (send mpc :append-param prm)))
+        ;;(print (list (position prm prm-list) r))
+        (when r
+          (format t ";; initial state~%")
+          (format t ";;   state = ~A~%" (mpc . current-state))
+          (send mpc :proc-model-predictive-control)
+          (format t ";;   input = ~A~%" (elt (send mpc :input-value-list) 0))
+          (push (list :cog (send mpc :get-cog-from-preview-index) :refcog (send mpc :get-ref-cog-from-preview-index)
+                      :end-coords (send mpc :get-all-end-coords-from-preview-index)
+                      :wrench-list (send mpc :calc-wrench-list-from-result-input-value)
+                      :contact-constraint-list (send mpc :get-contact-constraint-list-from-preview-index))
+                cog-ret)
+          )))
+    (setq cog-ret (reverse cog-ret))
+    (dolist (r cog-ret)
+      (send *robot* :fullbody-inverse-kinematics
+            (cadr (memq :end-coords r))
+            :move-target (mapcar #'(lambda (x) (send *robot* x :end-coords)) limbs)
+            :link-list (mapcar #'(lambda (x) (send *robot* :link-list (send *robot* x :end-coords :parent))) limbs)
+            :target-centroid-pos (cadr (memq :cog r))
+            :min-loop 2 :cog-null-space nil)
+      (send *irtviewer* :draw-objects :flush nil)
+      (draw-force-value r)
+      )
     (if (boundp 'gnuplot)
         (graph-view (list (mapcar #'(lambda (x) (elt (cadr (memq :cog x)) 0)) cog-ret)
                           (mapcar #'(lambda (x) (elt (cadr (memq :cog x)) 1)) cog-ret)
