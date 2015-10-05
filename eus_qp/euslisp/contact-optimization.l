@@ -328,6 +328,7 @@
       (send contact-coords :worldrot) (send contact-coords :worldrot))))
    )
   (:get-constraint-vector () constraint-vector)
+  (:get-constraint-matrix () constraint-matrix)
   )
 
 (defclass 2D-translational-friction-contact-constraint
