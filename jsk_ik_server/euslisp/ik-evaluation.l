@@ -3,6 +3,9 @@
 ;;
 
 
+;; ik-grid-cell
+;; ik-grid-cell is a class to represent each cell of
+;; ik-grid.
 (defclass ik-grid-cell
   :super propertied-object
   :slots (center-pos indices value time-value dimension))
@@ -123,9 +126,23 @@
         (if (and (> index 0) (< index (length cells)))
             (elt cells index)
           nil))))
+  (:get-cell-value (indices)
+    (let ((c (send self :get-cell indices)))
+      (if c (send c :get-value)
+        0)))
   (:max-value ()
-    (apply #'max (send-all cells :get-value))
-    )
+    (apply #'max (send-all cells :get-value)))
+  (:get-value-for-coordinates-set (cs offset-coords)
+    (reduce #'+ (mapcar #'(lambda (c)
+                            (let ((offsetted-coords (send (send offset-coords :inverse-transformation)
+                                                          :transform (send c :copy-worldcoords))))
+
+                            ;; (let ((offsetted-coords (send (send c :copy-worldcoords)
+                            ;;                                :transform (send offset-coords :inverse-transformation))))
+                              ;;(send offsetted-coords :draw-on :flush t)
+                              (send self :get-cell-value
+                                    (send self :pos-to-indices (send offsetted-coords :worldpos)))))
+                        (send cs :coordinates))))
   (:sum-filter ()
     ;; Update destructively
     (let ((new-cells nil))
@@ -227,26 +244,52 @@
     (setq origin org))
   (:lookup-stand-location (cset
                            &key
-                           (analysis-level :center)
-                           ;; :center of :set
-                           (computation-level :position)
-                           ;; one of :position or :position-rotation
-                           (collision nil) ;take into account collision or not
-                           
+                           (analysis-level :center) ; :center or :cet
+                           (collision nil) ;take into account collision or not. not implemented yet
                            (theta-range (deg2rad 90))
                            (theta-num 10)
-                           (x-range 1000)
-                           (y-range 1000)
+                           (x-range 1000.0)
+                           (y-range 1000.0)
                            (x-num 10)
                            (y-num 10))
     "compute transform of cset to maximize cell value"
     ;; x-y-theta
     (let ((midpoint (send cset :midpoint)))
       (let ((z-index (caddr (send self :pos-to-indices midpoint))))
-        (let ((initial-transform (make-coords :pos (vz0 (v- midpoint (send (send self :max-cell-in-z-plane z-index) :center-pos))))))
-          initial-transform
-          )))
-    )
+        (let ((initial-transform (make-coords :pos
+                                              (vz0 (v- midpoint
+                                                       (send (send self :max-cell-in-z-plane z-index)
+                                                             :center-pos))))))
+          (print initial-transform)
+          (let ((max-evaluate 0)
+                (max-evaluate-offset initial-transform)
+                (dx (/ x-range x-num))
+                (dy (/ y-range y-num))
+                (dtheta (/ theta-range theta-num)))
+            (dotimes (ix x-num)
+              (dotimes (iy y-num)
+                (dotimes (it theta-num)
+                  ;; TODO
+                  (let ((offset
+                         (make-coords :pos
+                                      (float-vector (* dx (- ix (/ x-num 2.0)))
+                                                    (* dy (- iy (/ y-num 2.0)))
+                                                    0))))
+                    (send offset :rotate (* dtheta (- it (/ theta-num 2.0))) :z :local)
+                    (setq offset (send (send initial-transform :copy-worldcoords)
+                                       :transform offset))
+                    ;;(send *robot* :newcoords (send offset :copy-worldcoords))
+                    (let ((v (send self :get-value-for-coordinates-set cset offset)))
+                      (when (> v max-evaluate)
+                        (setq max-evaluate v)
+                        (setq max-evaluate-offset offset)
+                        ;;(send *max-robot* :newcoords (send offset :copy-worldcoords))
+                        ))
+                    ;;(send *irtviewer* :draw-objects)
+                    ;; (send-all (send cset :coordinates) :draw-on :flush t)
+                    ))))
+          ;;initial-transform
+            max-evaluate-offset)))))
   (:draw (vwer)
       (gl::glPushAttrib gl::GL_ALL_ATTRIB_BITS)
       (gl::glDisable gl::GL_LIGHTING)
@@ -310,9 +353,13 @@
   (let ((points nil))
     (dotimes (i num)
       (if fixed-z
-          (setq points (append (list (vzset (gaussian-random 3 mean sigma) fixed-z)) points)))
-      (setq points (append (list (gaussian-random 3 mean sigma)) points)))
-    (mapcar #'(lambda (p) (make-coords :pos p :rot (copy-matrix rotation))) points)))
+          (setq points
+                (append (list (vzset (gaussian-random 3 mean sigma) fixed-z))
+                        points))
+        (setq points
+              (append (list (gaussian-random 3 mean sigma)) points))))
+    (mapcar #'(lambda (p) (make-coords :pos p :rot (copy-matrix rotation)))
+            points)))
   
 
 (defun load-ik-grid-from-file (fname)
