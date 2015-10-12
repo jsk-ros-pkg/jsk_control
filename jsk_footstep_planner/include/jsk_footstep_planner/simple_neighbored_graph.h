@@ -37,6 +37,7 @@
 #ifndef JSK_FOOTSTEP_PLANNER_SIMPLE_NEIGHBORED_GRAPH_
 #define JSK_FOOTSTEP_PLANNER_SIMPLE_NEIGHBORED_GRAPH_
 
+#include <string>
 #include "jsk_footstep_planner/graph.h"
 
 namespace jsk_footstep_planner
