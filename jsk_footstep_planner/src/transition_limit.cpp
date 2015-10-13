@@ -38,6 +38,23 @@
 
 namespace jsk_footstep_planner
 {
+  TransitionLimitRP::TransitionLimitRP(
+    double roll_max,
+    double pitch_max):
+    roll_max_(roll_max), pitch_max_(pitch_max)
+  {
+  }
+
+  bool TransitionLimitRP::check(FootstepState::Ptr from,
+                                FootstepState::Ptr to) const
+  {
+    const Eigen::Affine3f diff = to->getPose() * from->getPose().inverse();
+    float roll, pitch, yaw;
+    pcl::getEulerAngles(diff, roll, pitch, yaw);
+    return (std::abs(roll) < roll_max_ &&
+            std::abs(pitch) < pitch_max_);
+  }
+  
   TransitionLimitXYZRPY::TransitionLimitXYZRPY(
     double x_max,
     double y_max,
@@ -49,6 +66,7 @@ namespace jsk_footstep_planner
     roll_max_(roll_max), pitch_max_(pitch_max), yaw_max_(yaw_max)
   {
   }
+  
   bool TransitionLimitXYZRPY::check(FootstepState::Ptr from,
                                     FootstepState::Ptr to) const
   {

@@ -134,6 +134,7 @@ namespace jsk_footstep_planner
     bool use_lazy_perception_;
     bool use_local_movement_;
     bool use_transition_limit_;
+    bool use_global_transition_limit_;
     bool project_start_state_;
     bool project_goal_state_;
     double local_move_x_;
@@ -148,6 +149,9 @@ namespace jsk_footstep_planner
     double transition_limit_roll_;
     double transition_limit_pitch_;
     double transition_limit_yaw_;
+    double global_transition_limit_roll_;
+    double global_transition_limit_pitch_;
+    
     double goal_pos_thr_;
     double goal_rot_thr_;
     int plane_estimation_max_iterations_;

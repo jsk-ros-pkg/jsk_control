@@ -358,6 +358,16 @@ namespace jsk_footstep_planner
     else {
       graph_->setTransitionLimit(TransitionLimitXYZRPY::Ptr());
     }
+    if (use_global_transition_limit_) {
+      graph_->setGlobalTransitionLimit(
+        TransitionLimitRP::Ptr(new TransitionLimitRP(
+                                     global_transition_limit_roll_,
+                                     global_transition_limit_pitch_)));
+
+    }
+    else {
+      graph_->setGlobalTransitionLimit(TransitionLimitRP::Ptr());
+    }
     graph_->setLocalXMovement(local_move_x_);
     graph_->setLocalYMovement(local_move_y_);
     graph_->setLocalThetaMovement(local_move_theta_);
@@ -576,6 +586,7 @@ namespace jsk_footstep_planner
     }
     rich_profiling_ = config.rich_profiling;
     use_transition_limit_ = config.use_transition_limit;
+    use_global_transition_limit_ = config.use_global_transition_limit;
     local_move_x_ = config.local_move_x;
     local_move_y_ = config.local_move_y;
     local_move_theta_ = config.local_move_theta;
@@ -588,6 +599,8 @@ namespace jsk_footstep_planner
     transition_limit_roll_ = config.transition_limit_roll;
     transition_limit_pitch_ = config.transition_limit_pitch;
     transition_limit_yaw_ = config.transition_limit_yaw;
+    global_transition_limit_roll_ = config.global_transition_limit_roll;
+    global_transition_limit_pitch_ = config.global_transition_limit_pitch;
     goal_pos_thr_ = config.goal_pos_thr;
     goal_rot_thr_ = config.goal_rot_thr;
     plane_estimation_max_iterations_ = config.plane_estimation_max_iterations;
