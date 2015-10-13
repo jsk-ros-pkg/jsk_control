@@ -251,6 +251,13 @@ namespace jsk_footstep_planner
     FootstepState::Ptr left_projected = projectFootstep(left_goal_state_);
     FootstepState::Ptr right_projected = projectFootstep(right_goal_state_);
     if (left_projected && right_projected) {
+      if (global_transition_limit_) {
+        if (!global_transition_limit_->check(zero_state_, left_projected) ||
+            !global_transition_limit_->check(zero_state_, right_projected)) {
+          return false;
+        }
+      }
+
       left_goal_state_ = left_projected;
       right_goal_state_ = right_projected;
       return true;
@@ -264,6 +271,11 @@ namespace jsk_footstep_planner
   {
     unsigned int error_state;
     FootstepState::Ptr projected = projectFootstep(start_state_);
+    if (global_transition_limit_) {
+      if (!global_transition_limit_->check(zero_state_, projected)) {
+        return false;
+      }
+    }
     if (projected) {
       start_state_ = projected;
       return true;
