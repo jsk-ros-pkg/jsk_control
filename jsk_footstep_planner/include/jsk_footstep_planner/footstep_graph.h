@@ -72,8 +72,13 @@ namespace jsk_footstep_planner
       plane_estimation_outlier_threshold_(0.02),
       support_check_x_sampling_(3),
       support_check_y_sampling_(3),
-      support_check_vertex_neighbor_threshold_(0.02)
-      {}
+      support_check_vertex_neighbor_threshold_(0.02),
+      zero_state_(new FootstepState(0,
+                                    Eigen::Affine3f::Identity(),
+                                    Eigen::Vector3f::UnitX(),
+                                    resolution_))
+    {
+    }
     virtual std::vector<StatePtr> successors(StatePtr target_state);
     virtual bool isGoal(StatePtr state);
     virtual void setBasicSuccessors(
@@ -169,6 +174,8 @@ namespace jsk_footstep_planner
     virtual void setSupportCheckVertexNeighborThreshold(double d) { support_check_vertex_neighbor_threshold_ = d; }
     virtual void setTransitionLimit(TransitionLimit::Ptr limit) { transition_limit_ = limit; }
     virtual TransitionLimit::Ptr getTransitionLimit() { return transition_limit_; }
+    virtual void setGlobalTransitionLimit(TransitionLimit::Ptr limit) { global_transition_limit_ = limit; }
+    virtual TransitionLimit::Ptr getGlobalTransitionLimit() { return global_transition_limit_; }
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in);
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in, unsigned int& state);
 
@@ -184,6 +191,11 @@ namespace jsk_footstep_planner
     std::vector<Eigen::Affine3f> successors_from_right_to_left_;
     FootstepState::Ptr left_goal_state_;
     FootstepState::Ptr right_goal_state_;
+    /**
+     * @brief
+     * zero_state is used only for global transition limit
+     */
+    FootstepState::Ptr zero_state_;
     double max_successor_distance_;
     double max_successor_rotation_;
     double pos_goal_thr_;
@@ -193,6 +205,7 @@ namespace jsk_footstep_planner
     const bool lazy_projection_;
     const bool local_movement_;
     TransitionLimit::Ptr transition_limit_;
+    TransitionLimit::Ptr global_transition_limit_;
     double local_move_x_;
     double local_move_y_;
     double local_move_theta_;

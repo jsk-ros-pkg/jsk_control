@@ -94,6 +94,12 @@ namespace jsk_footstep_planner
     ss << "  lazy_projection: " << lazy_projection_ << std::endl;
     ss << "  local_movement: " << local_movement_ << std::endl;
     ss << "  transition_limit: " << transition_limit_ << std::endl;
+    if (global_transition_limit_) {
+      ss << "  global_transition_limit: " << global_transition_limit_ << std::endl;
+    }
+    else {
+      ss << "  global_transition_limit: None" << std::endl;
+    }
     ss << "  local_move_x: " << local_move_x_ << std::endl;
     ss << "  local_move_y: " << local_move_y_ << std::endl;
     ss << "  local_move_theta: " << local_move_theta_ << std::endl;
@@ -172,6 +178,13 @@ namespace jsk_footstep_planner
           std::vector<StatePtr> locally_moved_nodes
             = localMoveFootstepState(next);
           for (size_t j = 0; j < locally_moved_nodes.size(); j++) {
+            if (global_transition_limit_) {
+              if (!global_transition_limit_->check(zero_state_, locally_moved_nodes[j])) {
+                // New footstep does not satisfy global transition limit,
+                // so we go back to the beginning of the loop
+                continue;
+              }
+            }
             if (transition_limit_) {
               if (transition_limit_->check(target_state, locally_moved_nodes[j])) {
                 ret.push_back(locally_moved_nodes[j]);
@@ -184,6 +197,13 @@ namespace jsk_footstep_planner
         }
       }
       if (next) {
+        if (global_transition_limit_) {
+          if (!global_transition_limit_->check(zero_state_, next)) {
+            // New footstep does not satisfy global transition limit,
+            // so we go back to the beginning of the loop
+            continue;       
+          }
+        }
         if (transition_limit_) {
           if (transition_limit_->check(target_state, next)) {
             ret.push_back(next);

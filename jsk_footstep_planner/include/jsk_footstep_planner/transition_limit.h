@@ -41,6 +41,11 @@
 
 namespace jsk_footstep_planner
 {
+
+  /**
+   * @brief
+   * virtual class to provide limit of transition of footstep.
+   */
   class TransitionLimit
   {
   public:
@@ -52,7 +57,31 @@ namespace jsk_footstep_planner
   private:
     
   };
+  
+  /**
+   * @brief
+   * Class to provide limit of transition of footstep about Roll and Pitch.
+   * This class is designed for global soundness of footstep.
+   */
+  class TransitionLimitRP: public TransitionLimit
+  {
+  public:
+    typedef boost::shared_ptr<TransitionLimitRP> Ptr;
+    TransitionLimitRP(double roll_max,
+                      double pitch_max);
+    virtual bool check(FootstepState::Ptr from,
+                       FootstepState::Ptr to) const;
+  protected:
+    const double roll_max_;
+    const double pitch_max_;
 
+  private:
+  };
+
+  /**
+   * @brief
+   * class to provide limit of transition of footstep with 6 Full parameters.
+   */
   class TransitionLimitXYZRPY: public TransitionLimit
   {
   public:
