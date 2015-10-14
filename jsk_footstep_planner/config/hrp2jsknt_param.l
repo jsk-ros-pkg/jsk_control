@@ -15,7 +15,7 @@
           (:z . 230)
           (:roll . 17)
           (:pitch . 17)
-          (:x . 260))
+          (:x . 300))
         (:transition-first-successors
           (:transform (:x . 220) (:y . 210) (:theta . 0))
           (:transform (:x . 220) (:y . 210) (:theta . 5))
