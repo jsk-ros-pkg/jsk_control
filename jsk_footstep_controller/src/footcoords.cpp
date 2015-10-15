@@ -77,6 +77,7 @@ namespace jsk_footstep_controller
     pnh.param("root_frame_id", root_frame_id_, std::string("BODY"));
     pnh.param("body_on_odom_frame", body_on_odom_frame_, std::string("body_on_odom"));
     pnh.param("odom_init_frame_id", odom_init_frame_id_, std::string("odom_init"));
+    pnh.param("invert_odom_init", invert_odom_init_, true);
     pnh.param("lfoot_frame_id", lfoot_frame_id_,
               std::string("lleg_end_coords"));
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
@@ -968,8 +969,13 @@ namespace jsk_footstep_controller
     ros_body_on_odom_coords.header.frame_id = root_frame_id_;
     ros_body_on_odom_coords.child_frame_id = body_on_odom_frame_;
     ros_odom_init_coords.header.stamp = stamp;
-    ros_odom_init_coords.header.frame_id = parent_frame_id_;
-    ros_odom_init_coords.child_frame_id = odom_init_frame_id_;
+    if (invert_odom_init_) {
+      ros_odom_init_coords.header.frame_id = odom_init_frame_id_;
+      ros_odom_init_coords.child_frame_id = parent_frame_id_;
+    } else {
+      ros_odom_init_coords.header.frame_id = parent_frame_id_;
+      ros_odom_init_coords.child_frame_id = odom_init_frame_id_;
+    }
     Eigen::Affine3d identity = Eigen::Affine3d::Identity();
     float roll, pitch;
     getRollPitch(odom_pose_, roll, pitch);
@@ -988,7 +994,11 @@ namespace jsk_footstep_controller
     tf::transformEigenToMsg(identity, ros_ground_coords.transform);
     tf::transformEigenToMsg(body_on_odom_pose.inverse(), ros_body_on_odom_coords.transform);
     tf::transformEigenToMsg(odom_pose_, ros_odom_to_body_coords.transform);
-    tf::transformEigenToMsg(odom_init_pose, ros_odom_init_coords.transform);
+    if (invert_odom_init_) {
+      tf::transformEigenToMsg(odom_init_pose.inverse(), ros_odom_init_coords.transform);
+    } else {
+      tf::transformEigenToMsg(odom_init_pose, ros_odom_init_coords.transform);
+    }
     std::vector<geometry_msgs::TransformStamped> tf_transforms;
     tf_transforms.push_back(ros_midcoords);
     tf_transforms.push_back(ros_ground_coords);

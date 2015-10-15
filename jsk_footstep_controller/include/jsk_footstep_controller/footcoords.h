@@ -225,6 +225,7 @@ namespace jsk_footstep_controller
     std::string root_frame_id_;
     std::string body_on_odom_frame_;
     std::string odom_init_frame_id_;
+    bool invert_odom_init_;
     tf::Transform ground_transform_;
     tf::Transform midcoords_;
     tf::Transform root_link_pose_;
