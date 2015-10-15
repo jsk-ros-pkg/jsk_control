@@ -1,0 +1,11 @@
+<launch>
+  <arg name="ROBOT_NAME"/>
+  <node pkg="contact_states_observer" type="contact-states-observer.l"
+        name="contact_state_sample">
+    <param name="robot_name" value="$(arg ROBOT_NAME)"/>
+  </node>
+  <node pkg="jsk_rviz_plugins" type="contact_state_marker.py"
+        name="contact_state_marker">
+    <remap from="~input" to="/contact_grasp_states" />
+  </node>
+</launch>
