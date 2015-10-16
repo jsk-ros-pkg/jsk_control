@@ -3,12 +3,14 @@
 
 ## footcoords
 ![footcoords.png](images/footcoords.png)
+![jaxon_odom_init.png](images/jaxon_odom_init.png)
 
-footcoords publishes two tf frames usefule for biped robots.
+footcoords publishes three tf frames usefule for biped robots.
 * `/ground`: the middle coordinate of two legs. Two legs are specified
 by `~lleg_end_coords` and `~rleg_end_coords`.
 * `/odom_on_ground`: The coordinate computing by projecting `/odom` on the plane which is defined by `/ground` frame. The transformation is updated only if the robot on the floow by checking
 both of `lfsensor` and `rfsensor` provides enough force (the threshold is `~force_threshold`).
+* `/init_odom`: The coordinate of `/odom` when the robot lands on the ground most recent.
 
 ### Subscribing Topics
 * `lfsensosor` (`geometry_msgs/WrenchStamped`)
@@ -42,3 +44,6 @@ both of `lfsensor` and `rfsensor` provides enough force (the threshold is `~forc
 
    Transform force sensor rotation respected to these frame ids when evaluating force value.
    You need to choose reasonable frame_ids which gives positive z-force value when robot stands.
+
+* `~invert_init_odom` (Bool, default: `true`)
+   Broadcast tf of init_odom as parent of odom if `~invert_init_odom` is true (init_odom -> odom).
