@@ -4,13 +4,11 @@
 ;; method and have actionlib server interface
 (ros::roseus "footstep_controller")
 (ros::roseus-add-msgs "jsk_footstep_msgs")
+(load "package://jsk_footstep_controller/euslisp/util.l")
 ;; (load "package://jsk_robot_utils/euslisp/robot-interface-utils.l")
-;; (setq *robot-name* (ros::get-param "/robot/type" (unix::getenv "ROBOT")))
-;; (load (robot-file *robot-name*))
-;; (init-robot-from-name *robot-name*)
-(load "package://hrpsys_ros_bridge_tutorials/euslisp/jaxon-interface.l")
-(jaxon-init)
-(setq *robot* *jaxon*)
+(setq *robot-name* (ros::get-param "/robot/type" (unix::getenv "ROBOT")))
+(load (robot-interface-file *robot-name*))
+(init-robot-from-name *robot-name*)
 
 (defun footstep->coords (f)
   (let ((c (ros::tf-pose->coords (send f :pose))))

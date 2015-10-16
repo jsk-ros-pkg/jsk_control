@@ -4,9 +4,10 @@
 ;; method and have actionlib server interface
 (ros::roseus "simple_footstep_controller")
 (ros::roseus-add-msgs "jsk_footstep_msgs")
-(load "package://jsk_robot_utils/euslisp/robot-interface-utils.l")
+(load "package://jsk_footstep_controller/euslisp/util.l")
+;; (load "package://jsk_robot_utils/euslisp/robot-interface-utils.l")
 (setq *robot-name* (ros::get-param "/robot/type" (unix::getenv "ROBOT")))
-(load (robot-file *robot-name*))
+(load (robot-interface-file *robot-name*))
 (init-robot-from-name *robot-name*)
 
 (defun footstep->coords (f)
