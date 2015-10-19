@@ -84,11 +84,11 @@
         (setf (elt angle-vector-list j) (send robot :angle-vector))
         )
       )
-    (setq standpos (send *robot* :foot-midcoords))
+    (setq standpos (send robot :foot-midcoords))
     (if move-centroid
         (dotimes (i coords-list-length)
           (send robot :angle-vector (elt angle-vector-list i))
-          (send *robot* :fix-leg-to-coords standpos)
+          (send robot :fix-leg-to-coords standpos)
           (unless (send robot :move-centroid-on-foot :both (list arm :rleg :lleg))
             (return-from inverse-kinematics-with-standcoords nil))
           (setf (elt angle-vector-list i) (send robot :angle-vector))
