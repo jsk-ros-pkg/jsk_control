@@ -13,6 +13,7 @@ notifications:
 env:
   - ROS_DISTRO=hydro  ROSWS=wstool BUILDER=catkin    USE_DEB=true
   - ROS_DISTRO=indigo  ROSWS=wstool BUILDER=catkin   USE_DEB=true
+  - ROS_DISTRO=jade  ROSWS=wstool BUILDER=catkin   USE_DEB=true
 script: source .travis/travis.sh
 before_script:
   - export ROS_PARALLEL_JOBS="-j2 -l2"
