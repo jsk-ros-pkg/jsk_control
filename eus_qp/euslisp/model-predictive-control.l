@@ -7,10 +7,12 @@
 ;;     x_{k+1} = A_k x_k + B_k u_k + g_k
 ;;     C_k u_k >= D_k
 ;;     E_k u_k = F_k
+;;     y_k = H_k x_k
 ;;   Total state equation
 ;;     X = Phi x0 + Psi U + Lambda G
 ;;     C U >= D
 ;;     E U = F
+;;     Y = H X
 ;;       X = [x1^T, ..., x_N]^T
 ;;       U = [u_0^T, ..., u_{N-1}^T]^T
 ;;       G = [g_0^T, ..., g_{N-1}^T]^T
@@ -18,9 +20,13 @@
 ;;       E = diag(E_0, ..., E_{N-1})
 ;;       D = [D_0, ..., D_{N-1}]
 ;;       F = [F_0, ..., F_{N-1}]
+;;       H = diag(H_0, ..., H_{N-1})
 ;; Optimization
 ;;   min_U  (X-X^{ref})^T W1 (X-X^{ref}) + U^T W2 U
 ;;    (= min_U U^T (Psi^T W1 Psi + W2) U + 2 (Psi^T W1 (Phi x0 - X^{ref} + Lambda G))^T U )
+;;   min_U  (X-X^{ref})^T W1 (X-X^{ref}) + U^T W2 U + (Y-Y^{ref})^T W3 (Y-Y^{ref})
+;;    (= min_U U^T (Psi^T W1 Psi + W2 + Psi^T H^T W3 H Psi) U +
+;;                  2 [ (Psi^T W1 (Phi x0 - X^{ref} + Lambda G))^T + (Psi^T H^T W3 (H Phi x0 - Y^{ref} + H Lambda G))^T ] U )
 ;;   s.t.
 ;;     C U >= D
 ;;     E U = F
@@ -29,8 +35,11 @@
   :super propertied-object
   :slots (dt ;; Control loop time [s]
           reference-state ;; Reference state X^{ref}
+          reference-output ;; Reference output Y^{ref}. If no output, nil
           system-matrix ;; System matrix Ak
           input-matrix ;; Input matrix Bk. If no input, nil
+          output-matrix ;; Output matrix Hk. If no output, nil
+          feedforward-matrix ;; Feedforward matrix. If no output, nil
           inequality-matrix inequality-min-vector ;; Inequality constraints
           equality-matrix equality-vector ;; Equality constraints
           drift-coeff ;; Drift coefficient g_k. nil by default
@@ -46,25 +55,30 @@
     tmp-inequality-matrix tmp-inequality-min-vector
     tmp-equality-matrix tmp-equality-vector
     tmp-input-weight-vector
-    &optional (tmp-drift-coeff))
+    &optional (tmp-drift-coeff) (tmp-reference-output) (tmp-output-matrix) (tmp-feedforward-matrix))
    "Parameters at the time k"
    (setq system-matrix tmp-system-matrix input-matrix tmp-input-matrix dt tmp-dt
+         output-matrix tmp-output-matrix feedforward-matrix tmp-feedforward-matrix
          inequality-matrix tmp-inequality-matrix
          inequality-min-vector tmp-inequality-min-vector
          equality-matrix tmp-equality-matrix
          equality-vector tmp-equality-vector
          reference-state tmp-reference-state
+         reference-output tmp-reference-output
          drift-coeff tmp-drift-coeff
          input-dim (if input-matrix (array-dimension input-matrix 1) 0)
          input-weight-matrix (if input-matrix (diagonal tmp-input-weight-vector)))
    self)
   (:system-matrix () system-matrix)
   (:input-matrix () input-matrix)
+  (:output-matrix () output-matrix)
+  (:feedforward-matrix () feedforward-matrix)
   (:inequality-matrix () inequality-matrix)
   (:inequality-min-vector () inequality-min-vector)
   (:equality-vector () equality-vector)
   (:equality-matrix () equality-matrix)
   (:reference-state () reference-state)
+  (:reference-output () reference-output)
   (:drift-coeff () drift-coeff)
   (:input-dim () input-dim)
   (:input-weight-matrix () input-weight-matrix)
@@ -74,6 +88,7 @@
   :super propertied-object
   :slots (preview-window ;; Preview window size
           state-dim ;; Dimension of state
+          output-dim ;; Dimension of output
           param-list ;; Parameter list of constraints
           current-state ;; current state (x_0)
           input-value-list ;; Result input value list
@@ -86,13 +101,16 @@
   (:init
    (tmp-preview-window tmp-state-dim
     &key (initial-state (instantiate float-vector tmp-state-dim))
+         ((:output-dim tmp-output-dim) 0)
          (error-weight-vector (fill (instantiate float-vector tmp-state-dim) 1.0))
+         (output-weight-vector (fill (instantiate float-vector tmp-output-dim) 1.0))
          )
    "Model Predictive Control initialization for linear time-variant system."
    (setq preview-window tmp-preview-window
-         state-dim tmp-state-dim)
+         state-dim tmp-state-dim output-dim tmp-output-dim)
    (setq current-state initial-state)
    (setq error-weight-matrix (send self :calc-weight-matrix-for-preview-window error-weight-vector preview-window))
+   (setq output-weight-matrix (send self :calc-weight-matrix-for-preview-window output-weight-vector preview-window))
    self)
   (:calc-phi-matrix
    (Ak-list) ;; Ak = system matrix
@@ -159,16 +177,21 @@
    ;; Parameter list for all k = 0, ..., N-1
    (let* ((system-matrix-list (mapcar #'(lambda (x) (send x :system-matrix)) param-list))
           (input-matrix-list (mapcar #'(lambda (x) (send x :input-matrix)) param-list))
+          (output-matrix-list (mapcar #'(lambda (x) (send x :output-matrix)) param-list))
+          (feedforward-matrix-list (mapcar #'(lambda (x) (send x :feedforward-matrix)) param-list))
           (equality-matrix-list (mapcar #'(lambda (x) (send x :equality-matrix)) param-list))
           (equality-vector-list (mapcar #'(lambda (x) (send x :equality-vector)) param-list))
           (inequality-min-vector-list (mapcar #'(lambda (x) (send x :inequality-min-vector)) param-list))
           (inequality-matrix-list (mapcar #'(lambda (x) (send x :inequality-matrix)) param-list))
           (reference-state-list (mapcar #'(lambda (x) (send x :reference-state)) param-list))
+          (reference-output-list (mapcar #'(lambda (x) (send x :reference-output)) param-list))
           (input-weight-matrix-list (mapcar #'(lambda (x) (send x :input-weight-matrix)) param-list))
           (drift-coeff-list
            (if (send (car param-list) :drift-coeff)
                (mapcar #'(lambda (x) (send x :drift-coeff)) param-list)))
-          (use-drift-coeff (and drift-coeff-list (every #'identity drift-coeff-list))))
+          (use-drift-coeff (and drift-coeff-list (every #'identity drift-coeff-list)))
+          (use-output-matrix (and (send (car param-list) :output-matrix) (send (car param-list) :reference-output)))
+          )
      ;; Concatenate all parameter list for one matrix or one vector
      (let* (;; Phi
             (phi-matrix (send self :calc-phi-matrix system-matrix-list))
@@ -178,16 +201,26 @@
             (all-input-value-vector)
             ;; G
             (drift-coeff (if use-drift-coeff (apply #'concatenate float-vector drift-coeff-list)))
+            ;; H
+            (output-matrix (if use-output-matrix (apply #'concatenate-matrix-diagonal output-matrix-list)))
+            ;; I
+            (feedforward-matrix (if use-output-matrix (apply #'concatenate-matrix-diagonal feedforward-matrix-list)))
             (no-input-value (every #'null input-matrix-list)) ;; e.g., in the air
             (tmp-input-state-value))
        (unless no-input-value
-         (let (;; Psi
+         (let* (;; Psi
                (psi-matrix (send self :calc-psi-matrix system-matrix-list input-matrix-list))
                ;; X^{ref}
                (reference-state
                 (if use-drift-coeff
                     (v- (apply #'concatenate float-vector reference-state-list) (transform lambda-matrix drift-coeff))
                   (apply #'concatenate float-vector reference-state-list)))
+               ;; Y^{ref}
+               (reference-output
+                (if use-output-matrix
+                    (if use-drift-coeff
+                        (v- (apply #'concatenate float-vector reference-output-list) (transform output-matrix (transform lambda-matrix drift-coeff)))
+                      (apply #'concatenate float-vector reference-output-list))))
                ;; C
                (inequality-matrix (if (every #'identity inequality-matrix-list)
                                       (apply #'concatenate-matrix-diagonal inequality-matrix-list)))
@@ -201,13 +234,38 @@
                (equality-vector (if (every #'identity equality-vector-list)
                                     (apply #'concatenate float-vector equality-vector-list)))
                ;; W2
-               (input-weight-matrix (apply #'concatenate-matrix-diagonal input-weight-matrix-list)))
+               (input-weight-matrix (apply #'concatenate-matrix-diagonal input-weight-matrix-list))
+               ;; Psi^T W1
+               (projected-error-weight-matrix (m* (transpose psi-matrix) error-weight-matrix))
+               ;; Psi x0
+               (projected-current-state (transform phi-matrix current-state))
+               ;; error component in eval-coeff-vector
+               (error-eval-coeff-vector (transform projected-error-weight-matrix (v- projected-current-state reference-state)))
+               ;; error component in eval-weight-matrix
+               (error-eval-weight-matrix (m* projected-error-weight-matrix psi-matrix))
+               ;; (H Psi + I)^T
+               (projected-output-weight-matrix
+                (if use-output-matrix
+                    (m* (transpose (m+ (m* output-matrix psi-matrix) feedforward-matrix)) output-weight-matrix)))
+               ;; output component in eval-coeff-vector
+               (output-eval-coeff-vector
+                (if use-output-matrix
+                    (transform projected-output-weight-matrix (v- (transform output-matrix projected-current-state) reference-output))))
+               ;; output component in eval-weight-matrix
+               (output-eval-weight-matrix
+                (if use-output-matrix
+                    (m* projected-output-weight-matrix (m+ (m* output-matrix psi-matrix) feedforward-matrix))))
+               )
            (setq all-input-value-vector
                  (solve-qpoases-qp
                   :eval-weight-matrix
-                  (m+ (m* (m* (transpose psi-matrix) error-weight-matrix) psi-matrix) input-weight-matrix)
+                  (if use-output-matrix
+                      (m+ (m+ error-eval-weight-matrix input-weight-matrix) output-eval-weight-matrix)
+                    (m+ error-eval-weight-matrix input-weight-matrix))
                   :eval-coeff-vector
-                  (transform (m* (transpose psi-matrix) error-weight-matrix) (v- (transform phi-matrix current-state) reference-state))
+                  (if use-output-matrix
+                      (v+ error-eval-coeff-vector output-eval-coeff-vector)
+                    error-eval-coeff-vector)
                   :inequality-matrix inequality-matrix
                   :inequality-min-vector inequality-min-vector
                   :equality-matrix equality-matrix
@@ -272,7 +330,8 @@
                                 (dotimes (i (length c-const-l))
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) j)) input-force-weight))
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) (+ 3 j))) input-moment-weight)))
-                                ww)))
+                                ww))
+         ((:reference-output tmp-reference-output)))
    (setq dt tmp-dt total-mass t-mass
          all-end-coords-list all-ec-list
          all-limbs a-limbs
@@ -289,7 +348,10 @@
                (send self :calc-equality-matrix)
                (send self :calc-equality-vector)
                input-weight-vector
-               (send self :calc-drift-coeff))
+               (send self :calc-drift-coeff)
+               tmp-reference-output
+               (send self :calc-output-matrix)
+               (send self :calc-feedforward-matrix))
    self)
   (:calc-contact-constraint-matrix
    ()
@@ -338,6 +400,8 @@
                             (float-vector 0 0 0)))))
               all-limbs all-end-coords-list))
      ))
+  (:calc-output-matrix () nil)
+  (:calc-feedforward-matrix () nil)
   )
 
 (defclass MPC-horizontal-cog-motion-generator-param
@@ -358,7 +422,8 @@
                                 (dotimes (i (length c-const-l))
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) j)) input-force-weight))
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) (+ 3 j))) input-moment-weight)))
-                                ww)))
+                                ww))
+         ((:reference-output tmp-reference-output)))
    (setq total-fz t-force
          cog-z tmp-cog-z)
    (send-super :init
@@ -369,7 +434,8 @@
                c-limbs
                a-limbs
                t-mass
-               :input-weight-vector input-weight-vector)
+               :input-weight-vector input-weight-vector
+               :reference-output tmp-reference-output)
    self)
   (:calc-fz-mat
    ()
@@ -522,13 +588,16 @@
                                 (setf (elt ww 4) error-angular-momentum-weight)
                                 (setf (elt ww 5) error-angular-momentum-weight)
                                 ww))
+         (output-dim 0) (output-weight-vector)
          )
    "Model Predictive Control for COG X Y (trans, rot) motion from Ngasaka 2012 paper.
     tmp-preview-window is preview window size."
    (send-super :init
                tmp-preview-window state-dim
                :initial-state initial-state
-               :error-weight-vector error-weight-vector)
+               :error-weight-vector error-weight-vector
+               :output-dim output-dim
+               :output-weight-vector output-weight-vector)
    )
   (:get-cog-from-preview-index
    (&optional (preview-index 0))
