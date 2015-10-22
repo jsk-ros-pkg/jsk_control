@@ -52,7 +52,9 @@ class AxesConverter:
     return rel_axes
 
   def __convertAxis(self, abs_axis, in_origin, out_origin):
-    if in_origin is None:
+    if abs_axis == 0.0 or abs_axis == 1.0:
+      rel_axis = abs_axis
+    elif in_origin is None:
       rel_axis = out_origin
     elif abs_axis < in_origin:
       rel_axis = (((abs_axis - 0.0) /  (in_origin - 0.0)) * (out_origin - 0.0)) + 0.0
