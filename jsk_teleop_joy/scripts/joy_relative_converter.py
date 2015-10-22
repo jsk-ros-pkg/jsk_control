@@ -36,7 +36,7 @@ class AxesConverter:
 
   def updateInputOrigins(self, abs_axes):
     for i in range(len(abs_axes)):
-      if self.input_origins[i] is None and abs_axes[i] != 0 and abs_axes[i] != 1:
+      if self.input_origins[i] is None and abs_axes[i] != 0:
         self.input_origins[i] = abs_axes[i]
 
   def __updatePrevOutputAxes(self, rel_axes):
@@ -52,7 +52,7 @@ class AxesConverter:
     return rel_axes
 
   def __convertAxis(self, abs_axis, in_origin, out_origin):
-    if abs_axis == 0.0 or abs_axis == 1.0:
+    if abs_axis == 1:
       rel_axis = abs_axis
     elif in_origin is None:
       rel_axis = out_origin
