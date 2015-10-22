@@ -31,7 +31,7 @@ calibration process has two steps.
   ```sh
   rosrun rviz rviz -d view_results/pose_guesses.rviz
   ```
-  ![pose_guesses](imaegs/pose_guesses.png)
+  ![pose_guesses](images/pose_guesses.png)
 
 3. If calibration takes a lot of time, please use initial_pose.yaml.
 Update your system.yaml by adding `initial_poses: /path/to/initial_pose.yaml`.
