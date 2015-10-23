@@ -7,5 +7,6 @@
   <node pkg="jsk_rviz_plugins" type="contact_state_marker.py"
         name="contact_state_marker">
     <remap from="~input" to="/contact_grasp_states" />
+    <param name="visualize_off" value="true"/>
   </node>
 </launch>
