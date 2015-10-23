@@ -6,7 +6,7 @@ try:
 except:
   roslib.load_manifest('jsk_teleop_joy')
   from sensor_msgs.msg import Joy, JoyFeedbackArray
-from std_msgs.msg import Int8
+from std_msgs.msg import Int8, Empty
 
 class AxesConverter:
   def __init__(self):
@@ -29,6 +29,11 @@ class AxesConverter:
     rel_axes = self.__convertAxes(abs_axes, self.input_origins, self.output_origins)
     self.__updatePrevOutputAxes(rel_axes)
     return rel_axes
+
+  def resetAllOrigins(self):
+    self.input_origins = []
+    self.output_origins = []
+    self.prev_output_axes = [i for i in self.output_origins]
 
   def resetInputOrigins(self):
     for i in range(len(self.input_origins)):
@@ -73,6 +78,7 @@ class AxesConverterArray:
       joy_pub = rospy.Publisher("/joy_relative/page_" + str(page), Joy)
     rospy.Subscriber("/joy", Joy, self.joy_callback)
     rospy.Subscriber("/midi_relative_converter/command/switch_page", Int8, self.switch_page_cmd_cb)
+    rospy.Subscriber("/midi_relative_converter/command/reset", Empty, self.reset_cmd_cb)
 
   def convert(self, abs_axes):
     return self.ac[self.crt_page].convert(abs_axes)
@@ -86,6 +92,10 @@ class AxesConverterArray:
       return page
     else:
       return -1
+
+  def resetAllOrigins(self):
+    for i in range(len(self.ac)):
+      self.ac[i].resetAllOrigins()
 
   def __updateReserveInputOrigins(self, abs_axes):
     for i in range(len(self.ac)):
@@ -108,6 +118,9 @@ class AxesConverterArray:
 
   def switch_page_cmd_cb(self, msg):
     self.switchPage(msg.data)
+
+  def reset_cmd_cb(self, msg):
+    self.resetAllOrigins()
 
 def main():
   rospy.init_node('joy_relative_converter')
