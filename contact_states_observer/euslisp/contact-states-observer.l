@@ -267,7 +267,7 @@
  roseus::stringstring
  #'obj-env-state-set-param-cb)
 
-(let ((robot-name (ros::get-param "/robot_name")))
+(let ((robot-name (ros::get-param "~robot_name")))
   (cond
    ((string= robot-name "HRP2JSKNT")
     (require :hrp2jsknt-interface "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
