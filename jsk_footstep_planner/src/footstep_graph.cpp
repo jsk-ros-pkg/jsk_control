@@ -318,6 +318,7 @@ namespace jsk_footstep_planner
     FootstepState::Ptr goal = graph->getGoal(state->getLeg());
     Eigen::Vector3f goal_pos(goal->getPose().translation());
     Eigen::Vector3f diff_pos(goal_pos - state->getPose().translation());
+    diff_pos[2] = 0.0;          // Ignore z distance
     Eigen::Quaternionf first_rot;
     // Eigen::Affine3f::rotation is too slow because it calls SVD decomposition
     first_rot.setFromTwoVectors(state->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX(),
