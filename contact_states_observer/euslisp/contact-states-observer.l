@@ -290,7 +290,7 @@
 ;;(setup-sensor-viewer)
 (setup-grasp-states)
 (do-until-key
- (let ((hav (send (send *ri* :hand-state) :potentio)))
+ (let ((hav (and (find-method *ri* :hand-state) (send (send *ri* :hand-state) :potentio))))
    (when hav
      (null-output (send *robot* :hand-angle-vector hav))
      (mapcar #'(lambda (gs hd)
