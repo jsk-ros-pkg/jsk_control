@@ -50,7 +50,8 @@
      ))
   (:get-result
    ()
-   (eq :success result)
+   "return t if result is one of :success, :success0, and so on"
+   (substringp (string :success) (string result))
    )
   )
 
