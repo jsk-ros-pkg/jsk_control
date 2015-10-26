@@ -12,7 +12,7 @@
          )
     (dotimes (i (length base-coords-list))
       (if (consp target-coords)
-          (progn 
+          (progn
             (dotimes (j (length target-coords))
               
               (setq target-coords-transformed (append target-coords-transformed (send (send (send (elt target-coords j) :copy-worldcoords) :transformation (elt base-coords-list i) :local) :transformation (make-coords) :local)))
@@ -53,11 +53,17 @@
      &key
      (rotation-axis nil)
      (arm :rarm)
+     (limb arm)
+     (limbs (list limb))
+     (move-target (mapcar #'(lambda (l) (send robot l :end-coords)) limbs))
+     (link-list (mapcar #'(lambda (m) (send *robot* :link-list (send m :parent))) move-target))
+     (root-link-virtual-joint-weight #f(0.1 0.1 0 0 0 0.05)) ;; for moving foot with root
      (stop 30)
      (debug nil)
-     (move-centroid t))
+     (move-centroid t)
+     &rest args)
   (unless (consp coords-list) (setq coords-list (list coords-list)))
-  (unless rotation-axis (setq rotation-axis t))
+  (unless rotation-axis (setq rotation-axis (make-list (length move-target) t)))
   (let (
         standpos
         angle-vector-list
@@ -68,18 +74,17 @@
       (dotimes (j coords-list-length)
         (send robot :angle-vector (elt angle-vector-list j))
         (prog1
-            (send robot :fullbody-inverse-kinematics
+            (send* robot :fullbody-inverse-kinematics
                   (send (elt coords-list j) :copy-worldcoords)
-                  :link-list (send robot :link-list (send robot arm
-                                                          :end-coords :parent))
-                  :move-target (send robot arm :end-coords)
+                  :link-list link-list
+                  :move-target move-target
                   :target-centroid-pos nil
-                  :root-link-virtual-joint-weight #f(0.1 0.1 0 0 0 0.05)
-                  :look-at-target t
-                  :rotation-axis (list t)
+                  :root-link-virtual-joint-weight root-link-virtual-joint-weight
+                  :rotation-axis rotation-axis
                   :stop 2
                   :revert-if-fail nil
-                  :debug-view (if debug :no-message nil))
+                  :debug-view (if debug :no-message nil)
+                  args)
           )
         (setf (elt angle-vector-list j) (send robot :angle-vector))
         )
@@ -89,8 +94,8 @@
         (dotimes (i coords-list-length)
           (send robot :angle-vector (elt angle-vector-list i))
           (send robot :fix-leg-to-coords standpos)
-          (unless (send robot :move-centroid-on-foot :both (list arm :rleg :lleg))
-            (return-from inverse-kinematics-with-standcoords nil))
+          (unless (send robot :move-centroid-on-foot :both (append (list :rarm :larm :rleg :lleg))) ;; do not move
+            (return-from fullbody-inverse-kinematics-with-standcoords nil))
           (setf (elt angle-vector-list i) (send robot :angle-vector))
           )
       )
