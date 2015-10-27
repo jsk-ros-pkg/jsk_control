@@ -63,7 +63,7 @@
      (move-centroid t)
      &rest args)
   (unless (consp coords-list) (setq coords-list (list coords-list)))
-  (unless rotation-axis (setq rotation-axis (make-list (length move-target) t)))
+  (unless rotation-axis (setq rotation-axis (make-list (length move-target) :initial-element t)))
   (let (
         standpos
         angle-vector-list
@@ -75,7 +75,7 @@
         (send robot :angle-vector (elt angle-vector-list j))
         (prog1
             (send* robot :fullbody-inverse-kinematics
-                  (send (elt coords-list j) :copy-worldcoords)
+                  (send-all (elt coords-list j) :copy-worldcoords)
                   :link-list link-list
                   :move-target move-target
                   :target-centroid-pos nil
@@ -95,6 +95,7 @@
           (send robot :angle-vector (elt angle-vector-list i))
           (send robot :fix-leg-to-coords standpos)
           (unless (send robot :move-centroid-on-foot :both (append (list :rarm :larm :rleg :lleg))) ;; do not move
+            (warn "fullbody-inverse-kinematics-with-standcoords failed.~%")
             (return-from fullbody-inverse-kinematics-with-standcoords nil))
           (setf (elt angle-vector-list i) (send robot :angle-vector))
           )
