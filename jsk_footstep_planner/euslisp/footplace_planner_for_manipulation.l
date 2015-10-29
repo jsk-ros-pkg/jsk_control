@@ -60,34 +60,74 @@
      (root-link-virtual-joint-weight #f(0.1 0.1 0 0 0 0.05)) ;; for moving foot with root
      (stop 30)
      (debug nil)
+     (warnp t)
      (move-centroid t)
      &rest args)
   (unless (consp coords-list) (setq coords-list (list coords-list)))
+  (dotimes (i (length coords-list))
+    (unless (consp (elt coords-list i)) (setf (elt coords-list i) (list (elt coords-list i)))) ;; have to be list of list
+    )
   (unless rotation-axis (setq rotation-axis (make-list (length move-target) :initial-element t)))
   (let (
         standpos
         angle-vector-list
         (coords-list-length (length coords-list))
+        (success nil)
         )
     (dotimes (i coords-list-length) (setq angle-vector-list (append angle-vector-list (list (send robot :angle-vector)))))
-    (dotimes (i stop)
-      (dotimes (j coords-list-length)
-        (send robot :angle-vector (elt angle-vector-list j))
-        (prog1
-            (send* robot :fullbody-inverse-kinematics
-                  (send-all (elt coords-list j) :copy-worldcoords)
-                  :link-list link-list
-                  :move-target move-target
-                  :target-centroid-pos nil
-                  :root-link-virtual-joint-weight root-link-virtual-joint-weight
-                  :rotation-axis rotation-axis
-                  :stop 2
-                  :revert-if-fail nil
-                  :debug-view (if debug :no-message nil)
-                  args)
-          )
-        (setf (elt angle-vector-list j) (send robot :angle-vector))
-        )
+    (block
+     :ik-loop
+     (dotimes (i stop)
+       (let ((success-loop t))
+         (dotimes (j coords-list-length)
+           (send robot :angle-vector (elt angle-vector-list j))
+           (prog1
+               (let ((rest-args-for-ik
+                      (append
+                       (list
+                        :link-list link-list
+                        :move-target move-target
+                        :target-centroid-pos nil
+                        :root-link-virtual-joint-weight root-link-virtual-joint-weight
+                        :rotation-axis rotation-axis
+                        ) args)
+                      ))
+                 (send* robot :fullbody-inverse-kinematics
+                        (send-all (elt coords-list j) :copy-worldcoords)
+                        :stop 2
+                        :revert-if-fail nil
+                        :debug-view (if debug :no-message nil)
+                        rest-args-for-ik
+                        )
+                 (setq success-loop
+                       (and
+                        success-loop
+                        (send* robot :fullbody-inverse-kinematics
+                               (send-all (elt coords-list j) :copy-worldcoords)
+                               :stop 1
+                               :revert-if-fail t
+                               :debug-view nil
+                               :warnp (and warnp (equal i (- stop 1)))
+                               rest-args-for-ik
+                               )
+                        ))
+                 )
+             )
+           (setf (elt angle-vector-list j) (send robot :angle-vector))
+           )
+         (if success-loop
+             (progn
+               (setq success t)
+               (return-from :ik-loop :ik-succeeded)
+               )
+           )
+         )
+       )
+      )
+    (if (not success) 
+        (progn
+          (warn "fullbody-inverse-kinematics-with-standcoords failed.~%")
+          (return-from fullbody-inverse-kinematics-with-standcoords nil))
       )
     (setq standpos (send robot :foot-midcoords))
     (if move-centroid
@@ -95,7 +135,7 @@
           (send robot :angle-vector (elt angle-vector-list i))
           (send robot :fix-leg-to-coords standpos)
           (unless (send robot :move-centroid-on-foot :both (append (list :rarm :larm :rleg :lleg))) ;; do not move
-            (warn "fullbody-inverse-kinematics-with-standcoords failed.~%")
+            (warn "fullbody-inverse-kinematics-with-standcoords failed because of move-centroid.~%")
             (return-from fullbody-inverse-kinematics-with-standcoords nil))
           (setf (elt angle-vector-list i) (send robot :angle-vector))
           )
