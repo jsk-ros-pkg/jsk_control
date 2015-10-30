@@ -388,37 +388,47 @@
     (scale (/ 1.0 (length coordinates-list)) (reduce #'v+ (send-all coordinates-list :worldpos))))
   )
 
+(defun distance2d (a b)
+  (norm (v- (float-vector (elt a 0) (elt a 1))
+            (float-vector (elt b 0) (elt b 1)))))
+
 (defun ik-evaluation (robot grid limb ik-args
                       &key
                       (update-view nil)
-                      (rotation (unit-matrix)))
+                      (rotation (unit-matrix))
+                      (min-distance 0.0))
   (send robot :fix-leg-to-coords (make-coords))
   (let ((counter 0))
   (dolist (cell (send grid :cells))
     (send robot :reset-pose)
-    (if (send* robot limb :inverse-kinematics
-               (make-coords :pos (send cell :center-pos)
-                            :rot rotation)
-               :dump-command nil
-               :warnp nil
-               ik-args)
-        (send cell :set-value 1)
-      (send cell :set-value 0))
-    (when update-view
-      (if (= (send cell :get-value) 1)
-          (objects (send cell :cube)))
-      (send *irtviewer* :draw-objects)
-      (x::window-main-one))
-    (incf counter)
-    (when (= (mod counter 10) 0)
-      (format t "~c~0,4d/~A" #x0d counter (length (send grid :cells)))
-      (let* ((percentage (/ (* 100 counter) (length (send grid :cells))))
-             (max-bar-length 60)
-             (bar-num (/ (* max-bar-length percentage) 100)))
-        (dotimes (i bar-num)
-          (format t "=")))
-      (finish-output))
-    )
+    (if (< (distance2d (send robot :worldpos) (send cell :center-pos)) min-distance)
+        (progn
+          (warn "skip because it violtates min-distance~%")
+          (send cell :set-value 0))
+      (progn
+        (if (send* robot limb :inverse-kinematics
+                   (make-coords :pos (send cell :center-pos)
+                                :rot rotation)
+                   :dump-command nil
+                   :warnp nil
+                   ik-args)
+            (send cell :set-value 1)
+          (send cell :set-value 0))
+        (when update-view
+          (if (= (send cell :get-value) 1)
+              (objects (send cell :cube)))
+          (send *irtviewer* :draw-objects)
+          (x::window-main-one))
+        (incf counter)
+        (when (= (mod counter 10) 0)
+          (format t "~c~0,4d/~A" #x0d counter (length (send grid :cells)))
+          (let* ((percentage (/ (* 100 counter) (length (send grid :cells))))
+                 (max-bar-length 60)
+                 (bar-num (/ (* max-bar-length percentage) 100)))
+            (dotimes (i bar-num)
+              (format t "=")))
+          (finish-output))
+        )))
   (send grid :normalize-cells)
   ))
 
@@ -449,13 +459,15 @@
 (defun generate-ik-grid-for-robot (robot file-prefix min-max-x min-max-y min-max-z grid-step
                                          ik-arg
                                          rot-matrix
-                                         output-directory)
+                                         output-directory
+                                         &key (min-distance 0))
   (format t "Generate reachability map for ~A with rotation ~A~%" (send robot :name) rot-matrix)
   (setq *grid* (instance ik-grid :init
                          min-max-x min-max-y min-max-z
                          :grid-step grid-step))
   (ik-evaluation *robot* *grid* :larm ik-arg :update-view nil
-                 :rotation rot-matrix)
+                 :rotation rot-matrix
+                 :min-distance min-distance)
   (send *grid* :dump-to-csv (format nil "~A/~A-input.csv" output-directory file-prefix))
   (send *grid* :dump-to-file (format nil "~A/~A-input.l" output-directory file-prefix))
   (progn (objects (append (send *grid* :visualize-objects)
