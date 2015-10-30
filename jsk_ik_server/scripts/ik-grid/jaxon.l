@@ -16,18 +16,21 @@
                             100
                             '(:rotation-axis :z)
                             (unit-matrix)
-                            *output-directory*)
+                            *output-directory*
+                            :min-distance 400)
 (generate-ik-grid-for-robot *robot* "jaxon-yup"
                             *xrange* *yrange* *zrange*
                             100
                             '(:rotation-axis :z)
                             (send (make-coords :rpy (list 0 0 pi/2)) :worldrot)
-                            *output-directory*)
+                            *output-directory*
+                            :min-distance 400)
 (generate-ik-grid-for-robot *robot* "jaxon-xup"
                             *xrange* *yrange* *zrange*
                             100
                             '(:rotation-axis :z)
                             (send (make-coords :rpy (list 0 -pi/2 0)) :worldrot)
-                            *output-directory*)
+                            *output-directory*
+                            :min-distance 400)
 
 (sys::exit 0)
