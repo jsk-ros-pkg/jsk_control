@@ -50,6 +50,7 @@
 (defun fullbody-inverse-kinematics-with-standcoords
     (robot
      coords-list
+     &rest args
      &key
      (rotation-axis nil)
      (arm :rarm)
@@ -62,7 +63,7 @@
      (debug nil)
      (warnp t)
      (move-centroid t)
-     &rest args)
+     &allow-other-keys)
   (unless (consp coords-list) (setq coords-list (list coords-list)))
   (dotimes (i (length coords-list))
     (unless (consp (elt coords-list i)) (setf (elt coords-list i) (list (elt coords-list i)))) ;; have to be list of list
