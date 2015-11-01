@@ -18,6 +18,6 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 catkin_package()
 
-add_executable(test src/example.cpp)
+add_executable(euq_qp_test src/example.cpp)
 add_library(eus_qp SHARED src/qp_lib.cpp)
 add_rostest(test/test_contact_wrench_opt.test)

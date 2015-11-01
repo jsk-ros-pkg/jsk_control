@@ -91,20 +91,20 @@ template<typename Scalar>
 inline Scalar distance(Scalar a, Scalar b)
 {
 	Scalar a1, b1, t;
-	a1 = internal::abs(a);
-	b1 = internal::abs(b);
+	a1 = std::abs(a);
+	b1 = std::abs(b);
 	if (a1 > b1) 
 	{
 		t = (b1 / a1);
-		return a1 * internal::sqrt(1.0 + t * t);
+		return a1 * std::sqrt(1.0 + t * t);
 	}
 	else
 		if (b1 > a1)
 		{
 			t = (a1 / b1);
-			return b1 * internal::sqrt(1.0 + t * t);
+			return b1 * std::sqrt(1.0 + t * t);
 		}
-	return a1 * internal::sqrt(2.0);
+	return a1 * std::sqrt(2.0);
 }
 
 // }
@@ -213,7 +213,7 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
     /* compute full step length t2: i.e., the minimum step in primal space s.t. the contraint 
       becomes feasible */
     t2 = 0.0;
-    if (internal::abs(z.dot(z)) > std::numeric_limits<double>::epsilon()) // i.e. z != 0
+    if (std::abs(z.dot(z)) > std::numeric_limits<double>::epsilon()) // i.e. z != 0
       t2 = (-np.dot(x) - ce0(i)) / z.dot(np);
     
     x += t2 * z;
@@ -265,7 +265,7 @@ l1:	iter++;
 #endif
 
     
-	if (internal::abs(psi) <= mi * std::numeric_limits<double>::epsilon() * c1 * c2* 100.0)
+	if (std::abs(psi) <= mi * std::numeric_limits<double>::epsilon() * c1 * c2* 100.0)
 	{
     /* numerically there are not infeasibilities anymore */
     q = iq;
@@ -334,7 +334,7 @@ l2a:/* Step 2a: determine step direction */
     }
   }
   /* Compute t2: full step length (minimum step in primal space such that the constraint ip becomes feasible */
-  if (internal::abs(z.dot(z))  > std::numeric_limits<double>::epsilon()) // i.e. z != 0
+  if (std::abs(z.dot(z))  > std::numeric_limits<double>::epsilon()) // i.e. z != 0
     t2 = -s(ip) / z.dot(np);
   else
     t2 = inf; /* +inf */
@@ -506,10 +506,10 @@ inline bool add_constraint(MatrixXd& R, MatrixXd& J, VectorXd& d, int& iq, doubl
   std::cerr << iq << std::endl;
 #endif
   
-	if (internal::abs(d(iq - 1)) <= std::numeric_limits<double>::epsilon() * R_norm)
+	if (std::abs(d(iq - 1)) <= std::numeric_limits<double>::epsilon() * R_norm)
 		// problem degenerate
 		return false;
-	R_norm = std::max<double>(R_norm, internal::abs(d(iq - 1)));
+	R_norm = std::max<double>(R_norm, std::abs(d(iq - 1)));
 	return true;
 }
 
