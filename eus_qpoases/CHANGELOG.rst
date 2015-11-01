@@ -2,6 +2,27 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [eus_qpoases] use ExternalProject instead of mk
+* [eus_qpoases/euslisp/eus-qpoases.l] Check equality usage and use state-dim and inequality-dim.
+* [../../eus_qp/euslisp/contact-optimization.l,test-eus-qpoases.l,eus-qpoases.l] Rename solve-qpoases => solve-qpoases-qp and remain solve-qpoases for backward compatibility with warning.
+* [../src/eus_qpoases.cpp,../test/eus-qpoases.test.l,test-eus-qpoases.l,eus-qpoases.l] Add LP solver using qpOASES and add samples and tests.
+* [../src/eus_qpoases.cpp,../test/eus-qpoases.test.l,test-eus-qpoases.l,eus-qpoases.l] Add LP solver using qpOASES and add samples and tests.
+* [eus_qpoases/euslisp/eus-qpoases.l] Add argument matrix size check
+* Remove manifest.xml and Makefile and use catkin style filesystem
+* Add comments for qp functions
+* Add demo-eus-qpOASES4 for force infeasible problem.
+* Print debug message by default. If you want to disable it, :debug nil
+* Add debug print check
+* Added install rules for qpoases headers and libs to catkin cmake-file.
+* require rostest in cmake files
+* add rostest declaration
+* intial commit of test dir and test files, check euslisp/test-eus-qpoases.l all functions, and if there are at least one failure, then test would be failed
+* test functions return test results
+* [eus_qpoases] add dependencies to linqpOASES
+* Contributors: Yuki Furuta, Georg Bartels, Ryohei Ueda, Shunichi Nozawa, Shintaro Noda
+
 0.1.6 (2015-06-11)
 ------------------
 * [eus_qpoases] Ignore bin directory

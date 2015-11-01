@@ -2,6 +2,69 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [jsk_footstep_controller] Fix typo: init_odom -> odom_init
+* [jsk_footstep_controller] Updated README.md for init_odom
+* [jsk_footstep_controller] Fix model file loading
+* [jsk_footstep_controller] Add invert_tf option to broadcast odom_init as parent of odom
+* not call tf if tilt is absent
+* [jsk_footstep_controller] Normalize torque with max-joint-torque and use
+  squared norm to be propotional to temperature
+* [jsk_footstep_controller] Add sample launch file for root-height.l
+* [jsk_footstep_controller] Publish plotting data when computing root height
+* [jsk_footstep_controller] Publish /odom_init_trigger when robot stands
+  on the ground at the first frame
+* [jsk_footstep_controller] Compute root-link height according to torque
+  and manipulability. Original version is implemented by Masaki Murooka
+  and interface of function is modified to use as library.
+* fix function name. weight -> root
+* change footcoords param use_imu->false
+* [jsk_footstep_planner] Add start-abc button for planner gui using with simulator
+* [jsk_footstep_controller] Cleanup and omit a lot of features of footstep controller and confirmed with
+  hrpsys/gazebo simulation
+* [jsk_footstep_controller/footcoords] Add ~use_imu and ~use_imu_yaw to take
+  into account orientation from IMU as well as translation of /odom
+* [jsk_footstep_controller] Say something when robot stands on the ground
+* [jsk_footstep_planner, controller] Add rviz GUI set for playing with footstep planner
+* [jsk_footstep_controller] Launch stabilizer_watcher on HRP2 and JAXON
+* [jsk_footstep_controller/footcoords] Use correct timestamp for zmp tf frame
+* [jsk_footstep_controller/footcoords] Publish zmp as tf for visualization.
+  DO NOT USE THIS FRAME FOR PERCEPTION AND PLANNING because the timestamp is not reliable
+* [jsk_footstep_controller/footcoords] Add odom_init frame which holds the pose when robot is put on the ground
+* [jsk_footstep_controller/footcoords] Publish body_on_odom frame, which should be useful to represent
+  sensordate in "Robot-centric-perspective"
+* [jsk_footstep_controller] Add simple-footstep-controller as the most simplest footstep controller using
+  :set-foot-steps
+* [jsk_footstep_controller/footcoords] Remove odom_root frame
+* [jsk_control/footcoords] Use lfsensor and rfsensor
+* [jsk_footstep_controller] Add odometry estimation based on leg kinematics.
+  Three types of naive algorithm are implemented:
+  1) Estimate support leg from force sensors and keep support leg during double stance phase
+  2) Estimate support leg from force sensors and change support leg during double stance phase by leg forces
+  3) Estimate support leg from force sensors and change support leg during double stance phase by zmp
+* [jsk_footstep_controller] Remove catkin.cmake and use CMakeLists.txt only
+* [jsk_footstep_controller] Publish synchronized forces from foot_coords and
+  subscribe it from foot_coords internally.
+  Update alpha (low pass filter parameter) to 0.1 from 0.5.
+  Update queu length not to drop messages.
+* [jsk_footstep_controller] Update parmeter files about footstep configuration
+* [jsk_footstep_controller] Add script to generate footstep parameter from
+  euslisp models
+* [jsk_footstep_controller/footstep_visualizer] Visualize zmp
+* [jsk_footstep_planner, jsk_footstep_controller] Support HRP2JSKNT
+* [jsk_footstep_planner, jsk_footstep_controller] Add USE_JOY option
+* [jsk_footstep_planner, jsk_footstep_controller] Refactor launch file and
+  add no_recog.launch
+* [jsk_footstep_controller] Move robot-boundingbox.l from drc_task_common
+* [jsk_footstep_controller/footstep_visualizer] Reverse position of left
+  and right
+* [jsk_footstep_controller/footstep_visualizer] Use BGRA8 to represent
+  footstep location and COP position
+* [jsk_footstep_controller] Add new script to visualize cop of each leg
+* [jsk_footstep_controller] Add script to dump mocap output
+* Contributors: MasakiMurooka, Ryohei Ueda, Yu Ohara, Iori Kumagai
+
 0.1.6 (2015-06-11)
 ------------------
 * [jsk_footstep_controller] Fix typo

@@ -2,6 +2,11 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [jsk_calibration] Fix typo in README
+* Contributors: Ryohei Ueda
+
 0.1.6 (2015-06-11)
 ------------------
 * rename url

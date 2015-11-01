@@ -2,6 +2,29 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [jsk_ik_server] Remove grids which are too near to robot
+  in stand location planning
+* [jsk_ik_server] Add script to generate reachability images for pr2 and hrp2
+* [jsk_ik_server] Implement Brute-force stand location search.
+* [jsk_ik_server] Implement stand location planning with taking into
+  account range of targets
+* [jsk_ik_server] Visualize ik-grid by irtviewer
+* [jsk_ik_server] Implement stand location planning based on continuous ik
+  grid.
+  Currently only position and mean of pdf is taken into account
+* [jsk_ik_server] Fix jaxon_ik_evaluation.md to render properly on github
+* [jsk_ik_server] Add markdown to visualize ik-grid evaluate
+* [jsk_ik_server] Pretty-printing of progress of generating ik grid like
+  min-max table generation
+* [jsk_ik_server/plot_ik_grid.py] Add second argumment to save image file
+  instad of showing plot on GUI
+* [jsk_ik_server] Script to visualize reachability in heatmap manner
+* [jsk_ik_server] Add ik-evaluation.l to evaluate spacial ik quarity
+* Remove manifest.xml and Makefile and use catkin style filesystem
+* Contributors: Ryohei Ueda
+
 0.1.6 (2015-06-11)
 ------------------
 * add files for jaxonred
@@ -15,7 +38,7 @@ Changelog for package jsk_ik_server
 * Merge branch 'master' into update-samplerobot-in-ik-server
 * use unix:usleep because hrpsys stops clock
 * use hrpsys sample robot for ik server
-* Contributors: HRP2, leus, tarukosu
+* Contributors: JSK Lab Member, leus, Yusuke Furuta
 
 0.1.4 (2014-10-21)
 ------------------

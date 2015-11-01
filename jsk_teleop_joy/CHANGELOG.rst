@@ -2,6 +2,27 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [jsk_teleop_joy/joy_relative_converter.py] add reset command
+* [jsk_teleop_joy/scripts/joy_relative_converter.py] fix bug to support buttons
+* Revert "[jsk_teleop_joy/scripts/joy_relative_converter.py] fix bug to support buttons"
+  This reverts commit 1704b24d2b96aae962e4c87968f68078442417a2.
+* [jsk_teleop_joy/scripts/joy_relative_converter.py] fix bug to support buttons
+* put most process into class method
+  Conflicts:
+  jsk_teleop_joy/scripts/joy_relative_converter.py
+* instantiate before subscribe
+  Conflicts:
+  jsk_teleop_joy/scripts/joy_relative_converter.py
+* fix bug around page-change
+* implement page-change
+* add joy_relative_converter
+* [jsk_footstep_controller, jsk_teleop_joy] Use footstep-controller.l and lock/unlock furutaractive
+  model during exeucuting footsteps
+* Remove manifest.xml and Makefile and use catkin style filesystem
+* Contributors: Ryohei Ueda, Satoshi Iwaishi
+
 0.1.6 (2015-06-11)
 ------------------
 * [drc_task_common] Modify threshold of brake: 0.9 -> 0.5
