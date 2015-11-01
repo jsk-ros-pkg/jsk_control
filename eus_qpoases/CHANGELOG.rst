@@ -2,8 +2,8 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.7 (2015-11-01)
+------------------
 * [eus_qpoases] use ExternalProject instead of mk
 * [eus_qpoases/euslisp/eus-qpoases.l] Check equality usage and use state-dim and inequality-dim.
 * [../../eus_qp/euslisp/contact-optimization.l,test-eus-qpoases.l,eus-qpoases.l] Rename solve-qpoases => solve-qpoases-qp and remain solve-qpoases for backward compatibility with warning.

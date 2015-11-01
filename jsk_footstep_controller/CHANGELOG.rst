@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.7 (2015-11-01)
+------------------
 * [jsk_footstep_controller] Fix typo: init_odom -> odom_init
 * [jsk_footstep_controller] Updated README.md for init_odom
 * [jsk_footstep_controller] Fix model file loading

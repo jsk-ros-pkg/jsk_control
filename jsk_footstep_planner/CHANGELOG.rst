@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.7 (2015-11-01)
+------------------
 * [jsk_footstep_planner] Add &allow-other-keys to
   fullbody-inverse-kinematics-with-standcoords.
   You can add :collision-check-robot-link-list and so on

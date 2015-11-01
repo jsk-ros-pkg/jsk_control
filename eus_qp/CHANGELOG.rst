@@ -2,8 +2,8 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.7 (2015-11-01)
+------------------
 * [3rdparty/eiquadprog.hpp] using std::abs instead of internal::abs
 * CMakeLists.txt: using test as execute name may confuse system
 * [eus_qp/euslisp/model-predictive-control.l] Support output variables in evaluation
