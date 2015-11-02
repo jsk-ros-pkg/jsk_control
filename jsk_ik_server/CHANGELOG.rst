@@ -2,6 +2,9 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.7 (2015-11-01)
 ------------------
 * [jsk_ik_server] Remove grids which are too near to robot

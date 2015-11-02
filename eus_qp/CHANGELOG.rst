@@ -2,6 +2,13 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge pull request `#512 <https://github.com/jsk-ros-pkg/jsk_control/issues/512>`_ from k-okada/fix_error
+  package.xml: add rostest to build_depend of eus_qp
+* package.xml: add rostest to build_depend of eus_qp
+* Contributors: Kei Okada
+
 0.1.7 (2015-11-01)
 ------------------
 * [3rdparty/eiquadprog.hpp] using std::abs instead of internal::abs

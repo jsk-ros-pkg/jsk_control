@@ -2,6 +2,9 @@
 Changelog for package eus_nlopt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.7 (2015-11-01)
 ------------------
 * use ftol xtol values in coresolver initialization

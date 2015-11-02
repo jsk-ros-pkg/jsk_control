@@ -2,6 +2,9 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.7 (2015-11-01)
 ------------------
 * [jsk_teleop_joy/joy_relative_converter.py] add reset command

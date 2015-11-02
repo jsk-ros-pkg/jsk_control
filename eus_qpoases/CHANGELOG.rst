@@ -2,6 +2,9 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.7 (2015-11-01)
 ------------------
 * [eus_qpoases] use ExternalProject instead of mk
