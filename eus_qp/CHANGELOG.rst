@@ -2,8 +2,8 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.8 (2015-11-02)
+------------------
 * Merge pull request `#512 <https://github.com/jsk-ros-pkg/jsk_control/issues/512>`_ from k-okada/fix_error
   package.xml: add rostest to build_depend of eus_qp
 * package.xml: add rostest to build_depend of eus_qp
