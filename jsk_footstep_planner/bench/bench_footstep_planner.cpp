@@ -258,7 +258,7 @@ int main(int argc, char** argv)
       << "test_count" << std::endl;
   
   for (size_t ti = 0; ti < n_theta; ti++) {
-    double theta = 2.0 * M_PI / 8 * ti ;
+    double theta = 2.0 * M_PI / n_theta * ti ;
     for (double x = min_x; x <= max_x; x += dx) {
       for (double y = min_y; y <= max_y; y += dy) {
         ++count;
