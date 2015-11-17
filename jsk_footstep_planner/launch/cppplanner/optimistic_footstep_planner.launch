@@ -8,14 +8,14 @@
     <param name="use_cache" value="false"/>
   </node>
 
-  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="log"
+  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen"
         respawn="true">
     <remap from="~pointcloud_model" to="accumulated_heightmap_pointcloud_static/output" />
-    <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" />
+    <!-- <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" /> -->
     <rosparam subst_value="true">
       use_pointcloud_model: $(arg USE_PERCEPTION)
       use_lazy_perception: true
-      use_local_movement: true
+      use_local_movement: false
       use_transition_limit: true
       project_start_state: $(arg USE_PERCEPTION)
       project_goal_state: $(arg USE_PERCEPTION)
@@ -24,8 +24,8 @@
       resolution_x: 0.1
       resolution_y: 0.1
       resolution_theta: 0.1
-      footstep_size_x: 0.2
-      footstep_size_y: 0.1
+      footstep_size_x: 0.24
+      footstep_size_y: 0.14
     </rosparam>
     <!-- successors -->
     <rosparam>
@@ -39,12 +39,12 @@
       - x: 0
         y: -0.15
         theta: 0
-#      - x: 0.2
-#        y: -0.2
-#        theta: 0
-#      - x: 0.25
-#        y: -0.2
-#        theta: 0
+      - x: 0.2
+        y: -0.2
+        theta: 0
+      - x: 0.25
+        y: -0.2
+        theta: 0
       - x: 0.1
         y: -0.2
         theta: 0
@@ -57,12 +57,12 @@
       - x: 0
         y: -0.3
         theta: 0.17
-#      - x: 0.2
-#        y: -0.2
-#        theta: 0.17
-#      - x: 0.25
-#        y: -0.2
-#        theta: 0.17
+      - x: 0.2
+        y: -0.2
+        theta: 0.17
+      - x: 0.25
+        y: -0.2
+        theta: 0.17
       - x: 0.1
         y: -0.2
         theta: 0.17
@@ -72,15 +72,59 @@
       - x: 0
         y: -0.3
         theta: -0.17
-#      - x: 0.2
-#        y: -0.2
-#        theta: -0.17
-#      - x: 0.25
-#        y: -0.2
-#        theta: -0.17
+      - x: 0.2
+        y: -0.2
+        theta: -0.17
+      - x: 0.25
+        y: -0.2
+        theta: -0.17
+      - x: 0.3
+        y: -0.2
+        theta: -0.17
+      - x: 0.3
+        y: -0.2
+        theta: -0
+      - x: 0.3
+        y: -0.2
+        theta: 0.17
+      - x: 0.35
+        y: -0.2
+        theta: -0.17
+      - x: 0.35
+        y: -0.2
+        theta: -0
+      - x: 0.35
+        y: -0.2
+        theta: 0.17
       - x: 0.1
         y: -0.2
         theta: -0.17
+
+      - x: 0.2
+        y: -0.3
+        theta: -0.17
+      - x: 0.25
+        y: -0.3
+        theta: -0.17
+      - x: 0.3
+        y: -0.3
+        theta: -0.17
+      - x: 0.3
+        y: -0.3
+        theta: -0
+      - x: 0.3
+        y: -0.3
+        theta: 0.17
+      - x: 0.35
+        y: -0.3
+        theta: -0.17
+      - x: 0.35
+        y: -0.3
+        theta: -0
+      - x: 0.35
+        y: -0.3
+        theta: 0.17
+
     </rosparam>
   </node>
 
@@ -174,7 +218,7 @@
     </rosparam>
   </node>
   <node pkg="jsk_footstep_controller" type="footstep-refinement.l"
-        name="footstep_refinement">
+        name="footstep_refinement" if="false">
     <remap from="planner_result" to="footstep_planner/result_non_refined"/>
     <remap from="refined_footstep_result" to="footstep_planner/result" />
   </node>
