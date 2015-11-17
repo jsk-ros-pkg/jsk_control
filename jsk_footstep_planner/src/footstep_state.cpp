@@ -192,6 +192,7 @@ namespace jsk_footstep_planner
                                 double vertex_threshold,
                                 const bool skip_cropping)
   {
+    std::cout << "skip cropping: " << skip_cropping << std::endl;
     // TODO: z is ignored
     // extract candidate points
     //pcl::PointIndices::Ptr indices = cropPointCloud(cloud_2d, tree_2d);
@@ -208,8 +209,7 @@ namespace jsk_footstep_planner
       error_state = projection_state::no_enough_inliers;
       return FootstepState::Ptr();
     }
-
-    else {
+    if (!skip_cropping) {
       presupport_state = isSupportedByPointCloud(
         pose_, cloud, tree,
         indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
@@ -226,14 +226,14 @@ namespace jsk_footstep_planner
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
     pcl::SACSegmentation<pcl::PointNormal> seg;
     seg.setOptimizeCoefficients (true);
-    seg.setRadiusLimits(0.3, std::numeric_limits<double>::max ());
+    seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
     seg.setMethodType(pcl::SAC_RANSAC);
     seg.setDistanceThreshold(outlier_threshold);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setInputCloud(cloud);
     seg.setIndices(indices);
     seg.setMaxIterations(max_iterations);
-    seg.segment (*inliers, *coefficients);
+    seg.segment(*inliers, *coefficients);
     if (inliers->indices.size() == 0) {
       error_state = projection_state::no_plane;
       return FootstepState::Ptr();
@@ -253,7 +253,7 @@ namespace jsk_footstep_planner
         error_state = projection_state::vertical_footstep;
         return FootstepState::Ptr();
       }
-      Eigen::Vector3f rotation_axis = n.cross(x);
+      Eigen::Vector3f rotation_axis = n.cross(x).normalized();
       Eigen::Vector3f new_x = Eigen::AngleAxisf(M_PI / 2.0, rotation_axis) * n;
       if (acos(new_x.dot(x)) > M_PI / 2.0) {
         new_x = - new_x;
@@ -265,7 +265,12 @@ namespace jsk_footstep_planner
       Eigen::Vector3f p(pose_.translation());
       double alpha = (- plane.getD() - n.dot(p)) / (n.dot(z));
       Eigen::Vector3f q = p + alpha * z;
+      
       Eigen::Affine3f new_pose = Eigen::Translation3f(q) * new_rot;
+      std::cout << "new_pose: " << std::endl << new_pose.matrix() << std::endl;
+      std::cout << "q: " << std::endl << q << std::endl;
+      std::cout << "new_rot_mat: " << std::endl << new_rot_mat << std::endl;
+      //Eigen::Affine3f new_pose = new_rot * Eigen::Translation3f(q);
       // check is it enough points to support the footstep
       FootstepSupportState support_state;
       if (skip_cropping) {
@@ -306,6 +311,7 @@ namespace jsk_footstep_planner
                                          const int foot_y_sampling_num,
                                          const double vertex_threshold)
   {
+    ROS_INFO("hogeeeeeeeeeeeeeeeeee");
     const double dx = dimensions_[0] / foot_x_sampling_num;
     const double dy = dimensions_[1] / foot_y_sampling_num;
     // vertices
@@ -330,9 +336,10 @@ namespace jsk_footstep_planner
       const Eigen::Vector3f local_p = inv_pose * p;
       const int nx = floor(local_p[0] / dx);
       const int ny = floor(local_p[1] / dy);
-      
+      //std::cout << "abs_local_p2: " << std::abs(local_p[2]) << "/" << vertex_threshold << std::endl;
       if (0 <= nx && nx < foot_x_sampling_num &&
-          0 <= ny && ny < foot_y_sampling_num) {
+          0 <= ny && ny < foot_y_sampling_num &&
+          std::abs(local_p[2]) < vertex_threshold) {
         occupiedp[nx][ny] = true;
       }
     }
@@ -412,9 +419,9 @@ namespace jsk_footstep_planner
     if (success_count == 5) {
       return SUPPORTED;
     }
-    else if (success_count > 0) {
-      return CLOSE_TO_SUPPORTED;
-    }
+    // else if (success_count > 0) {
+    //   return CLOSE_TO_SUPPORTED;
+    // }
     else {
       return NOT_SUPPORTED;
     }

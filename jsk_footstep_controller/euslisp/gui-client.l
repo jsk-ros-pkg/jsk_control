@@ -2,9 +2,9 @@
 
 (ros::roseus "gui_client")
 (ros::roseus-add-srvs "std_srvs")
-(load "package://jsk_robot_utils/euslisp/robot-interface-utils.l")
+(load "package://jsk_footstep_controller/euslisp/util.l")
 (setq *robot-name* (ros::get-param "/robot/type" (unix::getenv "ROBOT")))
-(load (robot-file *robot-name*))
+(load (robot-interface-file *robot-name*))
 (init-robot-from-name *robot-name*)
 
 (defun walking-pose
