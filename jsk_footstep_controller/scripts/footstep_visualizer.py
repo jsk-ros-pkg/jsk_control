@@ -11,6 +11,10 @@ import cv2 as cv
 import numpy as np
 from threading import Lock
 from math import pi
+# hrpsys robot only
+from hrpsys_ros_bridge.msg import ContactStatesStamped, ContactStateStamped, ContactState
+
+
 msg_lock = Lock()
 def matrixFromTranslationQuaternion(trans, q):
     return  concatenate_matrices(translation_matrix(trans),
@@ -34,9 +38,18 @@ def transformToMatrix(transform):
                                             transform.rotation.z,
                                             transform.rotation.w])
 
+ACT_CP_COLOR=(192, 202, 164)
+REF_CP_COLOR=(167, 60, 151)
+
+def drawPoint(image, point, size, color, text):
+    cv.circle(image, point, 7, color + (255,), -1)
+    cv.putText(image, text, (point[0] + 5, point[1] + 5),
+               cv.FONT_HERSHEY_PLAIN, 1.0,  color + (255,))
+
+
 #def cop_callback(lleg_cop, rleg_cop):
 def periodicCallback(event):
-    global tf_buffer, lleg_cop_msg, rleg_cop_msg, zmp_msg, act_cp_msg, ref_cp_msg
+    global tf_buffer, lleg_cop_msg, rleg_cop_msg, zmp_msg, act_cp_msg, ref_cp_msg, act_contact_states_msg
     try:
         msg_lock.acquire()
         _lleg_pose = tf_buffer.lookup_transform(root_link, lleg_end_coords, rospy.Time())
@@ -98,23 +111,49 @@ def periodicCallback(event):
         lleg_points = verticesPoints(lleg_vertices, lleg_from_mid, scale, image_size)
         rleg_points = verticesPoints(rleg_vertices, rleg_from_mid, scale, image_size)
         image = np.zeros((image_size, image_size, 4), dtype=np.uint8)
-        cv.line(image, lleg_points[0], lleg_points[1], (0, 255, 0, 255), 2)
-        cv.line(image, lleg_points[1], lleg_points[2], (0, 255, 0, 255), 2)
-        cv.line(image, lleg_points[2], lleg_points[3], (0, 255, 0, 255), 2)
-        cv.line(image, lleg_points[3], lleg_points[0], (0, 255, 0, 255), 2)
-        cv.line(image, rleg_points[0], rleg_points[1], (0, 0, 255, 255), 2)
-        cv.line(image, rleg_points[1], rleg_points[2], (0, 0, 255, 255), 2)
-        cv.line(image, rleg_points[2], rleg_points[3], (0, 0, 255, 255), 2)
-        cv.line(image, rleg_points[3], rleg_points[0], (0, 0, 255, 255), 2)
+        lleg_contact = False
+        rleg_contact = False
+        lleg_color = (0, 255, 0, 255)
+        rleg_color = (0, 0, 255, 255)
+        lleg_width = 2
+        rleg_width = 2
+        if act_contact_states_msg:
+            for state in act_contact_states_msg.states:
+                if state.header.frame_id == "lfsensor":
+                    if state.state.state == ContactState.ON:
+                        lleg_color = (0, 255, 0, 255)
+                        lleg_width = 3
+                        lleg_contact = True
+                    else:
+                        lleg_color = (150, 255, 150, 255)
+                        lleg_width = 1
+                if state.header.frame_id == "rfsensor":
+                    if state.state.state == ContactState.ON:
+                        rleg_color = (0, 0, 255, 255)
+                        rleg_width = 3
+                        rleg_contact = True
+                    else:
+                        rleg_color = (150, 150, 255, 255)
+                        rleg_width = 1
+            act_contact_states_msg = None
+        cv.line(image, lleg_points[0], lleg_points[1], lleg_color, lleg_width)
+        cv.line(image, lleg_points[1], lleg_points[2], lleg_color, lleg_width)
+        cv.line(image, lleg_points[2], lleg_points[3], lleg_color, lleg_width)
+        cv.line(image, lleg_points[3], lleg_points[0], lleg_color, lleg_width)
+        cv.line(image, rleg_points[0], rleg_points[1], rleg_color, rleg_width)
+        cv.line(image, rleg_points[1], rleg_points[2], rleg_color, rleg_width)
+        cv.line(image, rleg_points[2], rleg_points[3], rleg_color, rleg_width)
+        cv.line(image, rleg_points[3], rleg_points[0], rleg_color, rleg_width)
+        if lleg_contact and rleg_contact:
+            hull = cv.convexHull(np.array(lleg_points + rleg_points))
+            cv.drawContours(image, [hull], -1, (155, 155, 155, 255), 2)
         if lleg_cop_msg:
             lleg_cop_point_2d = verticesPoints([lleg_cop_point],
                                                concatenate_matrices(inverse_matrix(mid_coords),
                                                                     lleg_cop_origin),
                                                scale,
                                                image_size)[0]
-            cv.circle(image, lleg_cop_point_2d, 5, (0, 255, 0, 255), -1)
-            cv.putText(image, "LCoP", (lleg_cop_point_2d[0] + 5, lleg_cop_point_2d[1] + 5),
-                       cv.FONT_HERSHEY_PLAIN, 1.0, (0, 255, 0, 255))
+            drawPoint(image, lleg_cop_point_2d, 5, (0, 255, 0), "LCoP")
             lleg_cop_msg = None
         if rleg_cop_msg:
             rleg_cop_point_2d = verticesPoints([rleg_cop_point],
@@ -122,9 +161,7 @@ def periodicCallback(event):
                                                                     rleg_cop_origin),
                                                scale,
                                                image_size)[0]
-            cv.circle(image, rleg_cop_point_2d, 5, (0, 0, 255, 255), -1)
-            cv.putText(image, "RCoP", (rleg_cop_point_2d[0] + 5, rleg_cop_point_2d[1] + 5),
-                       cv.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 255, 255))
+            drawPoint(image, rleg_cop_point_2d, 5, (0, 0, 255), "RCoP")
             rleg_cop_msg = None
         if zmp_msg:
             zmp_point_2d = verticesPoints([zmp_point],
@@ -132,9 +169,7 @@ def periodicCallback(event):
                                                                     zmp_origin),
                                                scale,
                                                image_size)[0]
-            cv.circle(image, zmp_point_2d, 5, (0, 255, 255, 255), -1)
-            cv.putText(image, "ZMP", (zmp_point_2d[0] + 5, zmp_point_2d[1] - 10),
-                       cv.FONT_HERSHEY_PLAIN, 1.0, (0, 255, 255, 255))
+            drawPoint(image, zmp_point_2d, 5, (0, 255, 255), "ZMP")
             zmp_msg = None
         if ref_cp_msg:
             ref_cp_point_2d = verticesPoints([ref_cp_point],
@@ -142,10 +177,7 @@ def periodicCallback(event):
                                                                     ref_cp_origin),
                                                scale,
                                                image_size)[0]
-            # rgb bgr
-            cv.circle(image, ref_cp_point_2d, 5, (224, 204, 157, 255), -1)
-            cv.putText(image, "RCP", (ref_cp_point_2d[0] + 5, ref_cp_point_2d[1] - 5),
-                       cv.FONT_HERSHEY_PLAIN, 1.0, (224, 204, 157, 255))
+            drawPoint(image, ref_cp_point_2d, 7, REF_CP_COLOR, "RCP")
             ref_cp_msg = None
         if act_cp_msg:
             act_cp_point_2d = verticesPoints([act_cp_point],
@@ -153,9 +185,7 @@ def periodicCallback(event):
                                                                     act_cp_origin),
                                                scale,
                                                image_size)[0]
-            cv.circle(image, act_cp_point_2d, 5, (204, 0, 0, 255), -1)
-            cv.putText(image, "ACP", (act_cp_point_2d[0] + 5, act_cp_point_2d[1] + 5),
-                       cv.FONT_HERSHEY_PLAIN, 1.0, (204, 0, 0, 255))
+            drawPoint(image, act_cp_point_2d, 7, ACT_CP_COLOR, "ACP")
             act_cp_msg = None
         bridge = CvBridge()
         pub.publish(bridge.cv2_to_imgmsg(image, "bgra8"))
@@ -170,6 +200,7 @@ rleg_cop_msg = None
 zmp_msg = None
 act_cp_msg = None
 ref_cp_msg = None
+act_contact_states_msg = None
 def llegCopCallback(msg):
     global lleg_cop_msg
     with msg_lock:
@@ -185,11 +216,16 @@ def actCPCallback(msg):
     global act_cp_msg
     with msg_lock:
         act_cp_msg = msg
+
 def refCPCallback(msg):
     global ref_cp_msg
     with msg_lock:
         ref_cp_msg = msg
 
+def contactStatesCallback(msg):
+    global act_contact_states_msg
+    with msg_lock:
+        act_contact_states_msg = msg
 
 def zmpCallback(msg):
     global zmp_msg
@@ -219,6 +255,7 @@ if __name__ == "__main__":
     zmp_sub = rospy.Subscriber("/zmp", PointStamped, zmpCallback)
     act_cp_point_sub = rospy.Subscriber("/act_capture_point", PointStamped, actCPCallback)
     ref_cp_point_sub = rospy.Subscriber("/ref_capture_point", PointStamped, refCPCallback)
+    contact_states_sub = rospy.Subscriber("/act_contact_states", ContactStatesStamped, contactStatesCallback)
     # lleg_cop_sub = Subscriber("/lfsensor_cop", PointStamped)
     # rleg_cop_sub = Subscriber("/rfsensor_cop", PointStamped)
     # ts = TimeSynchronizer([lleg_cop_sub, rleg_cop_sub], 10)
