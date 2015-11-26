@@ -78,7 +78,7 @@ namespace jsk_footstep_planner
     const sensor_msgs::PointCloud2::ConstPtr& msg)
   {
     boost::mutex::scoped_lock lock(mutex_);
-    JSK_ROS_INFO("pointcloud model is updated");
+    JSK_ROS_DEBUG("pointcloud model is updated");
     pointcloud_model_.reset(new pcl::PointCloud<pcl::PointNormal>);
     pcl::fromROSMsg(*msg, *pointcloud_model_);
     if (graph_ && use_pointcloud_model_) {
@@ -405,6 +405,7 @@ namespace jsk_footstep_planner
       as_.setPreempted();
       return;
     }
+    graph_->clearPerceptionDuration();
     solver.setProfileFunction(boost::bind(&FootstepPlanner::profile, this, _1, _2));
     ros::WallTime start_time = ros::WallTime::now();
     std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(timeout);
@@ -444,8 +445,11 @@ namespace jsk_footstep_planner
     publishPointCloud(close_list_cloud, pub_close_list_, goal->goal_footstep.header);
     publishPointCloud(open_list_cloud, pub_open_list_, goal->goal_footstep.header);
     publishText(pub_text_,
-                (boost::format("Planning took %f sec\n%lu path\nopen list: %lu\nclose list:%lu")
-                 % planning_duration % path.size()
+                (boost::format("Took %f sec\nPerception took %f sec\nPlanning took %f sec\n%lu path\nopen list: %lu\nclose list:%lu")
+                 % planning_duration 
+                 % graph_->getPerceptionDuration().toSec()
+                 % (planning_duration - graph_->getPerceptionDuration().toSec())
+                 % path.size()
                  % open_list_cloud.points.size()
                  % close_list_cloud.points.size()).str(),
                 OK);

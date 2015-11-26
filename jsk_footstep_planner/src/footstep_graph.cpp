@@ -227,6 +227,7 @@ namespace jsk_footstep_planner
   FootstepState::Ptr FootstepGraph::projectFootstep(FootstepState::Ptr in,
                                                     unsigned int& error_state)
   {
+    ros::WallTime start_time = ros::WallTime::now();
     FootstepState::Ptr projected_footstep = in->projectToCloud(
       *tree_model_,
       pointcloud_model_,
@@ -241,7 +242,8 @@ namespace jsk_footstep_planner
       support_check_x_sampling_,
       support_check_y_sampling_,
       support_check_vertex_neighbor_threshold_);
-    
+    ros::WallTime end_time = ros::WallTime::now();
+    perception_duration_ = perception_duration_ + (end_time  - start_time);
     return projected_footstep;
   }
   
