@@ -20,11 +20,11 @@ def controllerModeToString(msg):
                 is_lleg_contact = True
             else:
                 is_lleg_contact = False
-            if state.header.frame_id == "rfsensor":
-                if state.state.state == ContactState.ON:
-                    is_rleg_contact = True
-                else:
-                    is_rleg_contact = False
+        if state.header.frame_id == "rfsensor":
+            if state.state.state == ContactState.ON:
+                is_rleg_contact = True
+            else:
+                is_rleg_contact = False
     if is_lleg_contact or is_rleg_contact:
         return "MODE_ST"
     else:
@@ -67,7 +67,7 @@ def contactStatesCallback(msg):
 
 if __name__ == "__main__":
     rospy.init_node("stabilizer_watcher")
-    contact_states_sub = rospy.Subscriber("/act_contact_states", ContactStatesStamped, contactStatesCallback)
+    contact_states_sub = rospy.Subscriber("/act_contact_states", ContactStatesStamped, contactStatesCallback, queue_size=1)
     g_odom_init_trigger_pub = rospy.Publisher("/odom_init_trigger", Empty)
     g_robotsound_pub = rospy.Publisher("/robotsound", SoundRequest)
     rospy.spin()
