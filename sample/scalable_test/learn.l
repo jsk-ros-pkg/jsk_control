@@ -1,0 +1,349 @@
+#!/usr/bin/env roseus
+
+(require "package://eus_caffe/euslisp/eus-caffe.l")
+(require "package://eus_caffe/euslisp/eus-caffe-db.l")
+(require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
+(require "models/arrow-object.l")
+
+(defvar *arrow* (arrow))
+(defvar *robot* (hrp2jsknt))
+(defvar *joint-list1* (append (send *robot* :rarm :joint-list)
+			      (send *robot* :torso :joint-list)))
+(defvar *joint-list2* (append (send *robot* :rarm :joint-list)
+			      (send *robot* :larm :joint-list)
+			      (send *robot* :torso :joint-list)))
+(defvar *joint-list3* (append (send *robot* :rarm :joint-list)
+			      (send *robot* :larm :joint-list)
+			      (send *robot* :rleg :joint-list)
+			      (send *robot* :lleg :joint-list)
+			      (send *robot* :torso :joint-list)))
+(objects (flatten (list (car (send *robot* :links))
+			(reverse (send-all *joint-list3* :child-link))
+			*arrow*)))
+
+(defvar *ef-coords* (send *robot* :arms :end-coords))
+
+(defvar *sample-points* (expt 10 6))
+(defvar *angle-vector-map*)
+(defvar *ef-coords-map*)
+
+(defun shuffle-random-vector-map
+  (&key
+   (sample-points *sample-points*)
+   (joint-list *joint-list1*)
+   (ef-coords *ef-coords*)
+   (av-map *angle-vector-map*)
+   (cc-map *ef-coords-map*)
+   )
+  (labels
+   ((swap (a i j)
+	  (let* ((c (aref a i)))
+	    (setf (aref a i) (aref a j))
+	    (setf (aref a j) c))))
+   (dotimes (i sample-points)
+     (let* ((r (random sample-points)))
+       (dotimes (j (length joint-list))
+	 (swap av-map
+	       (+ j (* (length joint-list) i))
+	       (+ j (* (length joint-list) r))))
+       (dotimes (j (length ef-coords))
+	 (dotimes (k 6)
+	   (swap cc-map
+		 (+ k (* 6 (length ef-coords) i))
+		 (+ k (* 6 (length ef-coords) r)))))))))
+
+(defun gen-ik-learning-data
+  (&key (sample-points *sample-points*)
+	(joint-list *joint-list1*)
+	(sep (round (expt sample-points (/ 1.0 (length joint-list)))))
+	(i 0)
+	(draw? nil))
+  (setq *sample-points* sample-points)
+  (if (not (eq (length *angle-vector-map*)
+	       (* (length *rarm-joints*) sample-points)))
+      (setq *angle-vector-map*
+	    (instantiate float-vector (* (length *rarm-joints*) sample-points))))
+  (if (not (eq (length *ef-coords-map*) (* 6 sample-points)))
+      (setq *ef-coords-map*
+	    (instantiate float-vector (* 6 sample-points))))
+  (labels ((itter
+	    (jlist)
+	    (cond
+	     ((null jlist)
+	      (let* (pos rot)
+		(send-all *rarm-links* :worldcoords)
+		(send *robot* :rarm :end-coords :worldcoords)
+		(cond
+		 (draw?
+		  (send *viewer* :draw-objects :flush nil)
+		  (send (send *robot* :rarm :end-coords :worldcoords) :draw-on :flush nil
+			:color (float-vector 1 0 0) :size 100)
+		  (send *viewer* :viewsurface :flush)))
+		(setq pos (send (send (car (send *robot* :links)) :worldcoords)
+		      :difference-position
+		      (send *robot* :rarm :end-coords)))
+		(setq rot (send (send (car (send *robot* :links)) :worldcoords)
+				:difference-rotation
+				(send *robot* :rarm :end-coords)))
+		(dotimes (j (length *rarm-joints*))
+		  (setf (aref *angle-vector-map* (+ j (* i (length *rarm-joints*))))
+			(deg2rad (send (nth j *rarm-joints*) :joint-angle))))
+		(dotimes (j 3)
+		  (setf (aref *ef-coords-map* (+ j (* i 6))) (* 1e-3 (aref pos j))))
+		(dotimes (j 3)
+		  (setf (aref *ef-coords-map* (+ 3 j (* i 6))) (aref rot j)))
+		(setq i (+ i 1))))
+	     (t
+	      (dotimes (j sep)
+		(send (car jlist) :joint-angle
+		      (+ (send (car jlist) :min-angle)
+			 (* (/ j (- sep 1.0))
+			    (- (send (car jlist) :max-angle)
+			       (send (car jlist) :min-angle)))))
+		(itter (cdr jlist))))
+	     )))
+    (itter *rarm-joints*)
+    (shuffle-random-vector-map)
+    (dump-ik-learning-data)
+    ))
+
+(defun gen-random-ik-learning-data
+  nil
+  (if (not (eq (length *angle-vector-map*)
+	       (* (length *rarm-joints*) *sample-points*)))
+      (setq *angle-vector-map*
+	    (instantiate float-vector (* (length *rarm-joints*) *sample-points*))))
+  (if (not (eq (length *ef-coords-map*) (* 6 *sample-points*)))
+      (setq *ef-coords-map*
+	    (instantiate float-vector (* 6 *sample-points*))))
+  (let* (pos rot)
+    (dotimes (i *sample-points*)
+      (dolist (j *rarm-joints*)
+	(send j :joint-angle
+	      (+ (send j :min-angle)
+		 (* (random 1.0)
+		    (- (send j :max-angle) (send j :min-angle))))))
+      (send-all *rarm-links* :worldcoords)
+      (setq pos (send (send (car (send *robot* :links)) :worldcoords)
+		      :difference-position
+		      (send *robot* :rarm :end-coords)))
+      (setq rot (send (send (car (send *robot* :links)) :worldcoords)
+		      :difference-rotation
+		      (send *robot* :rarm :end-coords)))
+      (dotimes (j (length *rarm-joints*))
+	(setf (aref *angle-vector-map* (+ j (* i (length *rarm-joints*))))
+	      (deg2rad (send (nth j *rarm-joints*) :joint-angle))))
+      (dotimes (j 3)
+	(setf (aref *ef-coords-map* (+ j (* i 6))) (* 1e-3 (aref pos j))))
+      (dotimes (j 3)
+	(setf (aref *ef-coords-map* (+ 3 j (* i 6))) (aref rot j)))
+      )
+    ;; (dump-loadable-structure "ef-coords-map.l" *ef-coords-map*)
+    ;; (dump-loadable-structure "angle-vector-map.l" *angle-vector-map*)
+    (dump-ik-learning-data)
+    ))
+
+(defun load-ik-learning-data
+  nil
+  (if (probe-file "ik_learning.dat")
+      (let* ((op (open "ik_learning.dat" :direction :input)) buf)
+	(if (not (setq buf (read-line op nil))) (throw :load-ik-learning-data-error nil))
+	(setq buf (read-from-string buf))
+	(if (not (eq (length *angle-vector-map*) buf))
+	    (setq *angle-vector-map* (instantiate float-vector buf)))
+	(dotimes (i (length *angle-vector-map*))
+	  (setq buf (read-from-string (read-line op nil)))
+	  (setf (aref *angle-vector-map* i) buf))
+	;;
+	(if (not (setq buf (read-line op nil))) (throw :load-ik-learning-data-error nil))
+	(setq buf (read-from-string buf))
+	(if (not (eq (length *ef-coords-map*) buf))
+	    (setq *ef-coords-map* (instantiate float-vector buf)))
+	(dotimes (i (length *ef-coords-map*))
+	  (setq buf (read-from-string (read-line op nil)))
+	  (setf (aref *ef-coords-map* i) buf))
+	(close op))))
+
+(defun dump-ik-learning-data
+  nil
+  (let* ((op (open "ik_learning.dat" :direction :output)))
+    (format op "~A~%" (length *angle-vector-map*))
+    (dotimes (i (length *angle-vector-map*))
+      (format op "~A~%" (aref *angle-vector-map* i)))
+    (format op "~A~%" (length *ef-coords-map*))
+    (dotimes (i (length *ef-coords-map*))
+      (format op "~A~%" (aref *ef-coords-map* i)))
+    (close op)))
+
+(defun ik-learn
+  (&key (solver "ik_solver.prototxt"))
+  (if (or (zerop (length *ef-coords-map*))
+	  (zerop (length *angle-vector-map*)))
+      (load-ik-learning-data))
+  (caffe::learn
+   :solver solver
+   :size *sample-points*
+   :idata *ef-coords-map*
+   :ddata *angle-vector-map*
+   ))
+
+(defun check-test-data
+  (&optional
+   (i 0)
+   (input (instantiate float-vector 6))
+   (output (instantiate float-vector 6))
+   c
+   )
+  (dotimes (j 6) (setf (aref input j) (aref *ef-coords-map* (+ (* i 6) j))))
+  (dotimes (j (length *rarm-joints*))
+    (setf (aref output j)
+	  (aref *angle-vector-map* (+ (* i (length *rarm-joints*)) j))))
+  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
+		       :rot (matrix-exponent (subseq input 3 6))))
+  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		:transform c :local))
+  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
+       *rarm-joints* output)
+  ;; (send *viewer* :draw-objects :flush nil)
+  ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+  (send *arrow* :newcoords (send c :copy-worldcoords))
+  (send *viewer* :draw-objects :flush nil)
+  (send *viewer* :viewsurface :flush)
+  (print (concatenate
+	  float-vector
+	  (send c :difference-position (send *robot* :rarm :end-coords))
+	  (send c :difference-rotation (send *robot* :rarm :end-coords))))
+  )
+
+(defun ik-test
+  (&optional
+   (i 0)
+   (calc-forward 'caffe::calc-forward-double)
+   (draw? t)
+   ;;
+   (input (instantiate float-vector 6))
+   (output (instantiate float-vector 6))
+   c tm
+   )
+  (dotimes (j 6) (setf (aref input j) (aref *ef-coords-map* (+ (* i 6) j))))
+  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
+		       :rot (matrix-exponent (subseq input 3 6))))
+  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		:transform c :local))
+  (setq
+   tm
+   (bench2
+    (bench
+     (apply calc-forward
+	    (list :isize (length input) :input input
+		  :osize (length output) :output output)))))
+  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
+       *rarm-joints* output)
+  (cond
+   (draw?
+    ;; (send *viewer* :draw-objects :flush nil)
+    ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+    (send *arrow* :newcoords (send c :copy-worldcoords))
+    (send *viewer* :draw-objects :flush nil)
+    (send *viewer* :viewsurface :flush)))
+  (list
+   (cons :time tm)
+   (cons :diff
+	 (print (concatenate
+		 float-vector
+		 (send c :difference-position (send *robot* :rarm :end-coords))
+		 (send c :difference-rotation (send *robot* :rarm :end-coords))))))
+  )
+
+(defun ik-random-test
+  (&key (calc-forward 'caffe::calc-forward-double) (draw? t) tm)
+  (let* ((joint-list (butlast (send *robot* :rarm :joint-list)))
+	 (random-angle
+	  (mapcar '(lambda (j) (send j :joint-angle
+				     (+ (send j :min-angle)
+					(* (random 1.0)
+					   (- (send j :max-angle)
+					      (send j :min-angle))))))
+		  joint-list))
+	 (lc (send-all (send *robot* :links) :worldcoords))
+	 (c (send *robot* :rarm :end-coords :copy-worldcoords))
+	 ;; (make-coords :pos (v+ (float-vector 436.244 -210.8 766.991)
+	  ;; (random-vector 500.0))
+	 ;;:rpy (random-vector 3.14)))
+	 (b (send (car (send *robot* :links)) :copy-worldcoords))
+	 (av (instantiate float-vector (length *rarm-joints*)))
+	 (input (concatenate float-vector
+			     (scale 1e-3 (send b :difference-position c))
+			     (send b :difference-rotation c)))
+	 )
+    ;; (send *robot* :rarm :inverse-kinematics c
+    ;; :link-list (send-all joint-list :child-link)
+    ;; :revert-if-fail nil)
+    ;; (send c :newcoords (send *robot* :rarm :end-coords :copy-worldcoords))
+    (setq
+     tm
+     (bench2
+      (bench
+       (apply calc-forward
+	      (list :isize (length input) :input input
+		    :osize (length av) :output av))
+       )))
+    (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
+    (cond
+     (draw?
+      ;; (send *viewer* :draw-objects :flush nil)
+      ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+      (send *arrow* :newcoords (send c :copy-worldcoords))
+      (send *viewer* :draw-objects :flush nil)
+      (send *viewer* :viewsurface :flush)))
+    (list
+     (cons :time tm)
+     (cons :diff
+	   (print (concatenate float-vector
+			       (send c :difference-position (send *robot* :rarm :end-coords))
+			       (send c :difference-rotation (send *robot* :rarm :end-coords))))
+	   ))))
+
+;;
+
+(defun random-index-vector
+  (size
+   &key
+   (ret (instantiate integer-vector size))
+   (cnt (* 10 size)))
+  (dotimes (i size) (setf (aref ret i) i))
+  (dotimes (i cnt)
+    (let* ((x (random size))
+	   (y (random size))
+	   (buf (aref ret x)))
+      (setf (aref ret x) (aref ret y))
+      (setf (aref ret y) buf)))
+  ret)
+
+#|
+
+(caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
+		     :caffemodel "redundancy_ik_net_x6_iter_60000000.caffemodel")
+(let* ((id2 (random 1000)) (id 0.0) (step 0.01) (max 1.0) (min 0.0)
+       (min-dif *inf*) (min-dif-id id) buf)
+  (do-until-key
+   (format t "[param] (db_id, rd_id) = (~A, ~A)~%" id2 id)
+   (format t "        (min_dif, rd_id) = (~A, ~A)~%" min-dif min-dif-id)
+   (setq id (+ id step))
+   (if (> min-dif
+	  (setq buf (apply 'max (map cons 'abs (test-redundancy-ik :id id2 :redundancy id)))))
+       (setq min-dif buf min-dif-id id))
+   (cond
+    ((> id max)
+     (test-redundancy-ik :id id2 :redundancy min-dif-id)
+     (return-from nil (print min-dif))))
+   (if (or (> id max) (< id min)) (setq step (* -1 step)))))
+
+(caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
+		     :caffemodel "redundancy_ik_net_iter_50000000.caffemodel")
+
+(caffe::calc-forward-double
+ :isize 7 :osize 7
+ :num 1 :channels 7 :width 1 :height 1
+ :input (float-vector -0.105524 0.0936122 0.250577 -0.603332 0.946547 1.00249
+		      0))
