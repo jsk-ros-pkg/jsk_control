@@ -23,7 +23,11 @@
 
 (defvar *ef-coords* (send *robot* :arms :end-coords))
 
-(defvar *sample-points* (expt 10 6))
+(defvar *sample-points*
+  (expt (max
+	 (min (round (expt 1e+8 (/ 1.0 (length *joint-list1*))))
+	      5) 2) (length *joint-list1*)))
+
 (defvar *angle-vector-map*)
 (defvar *ef-coords-map*)
 
@@ -55,43 +59,54 @@
 (defun gen-ik-learning-data
   (&key (sample-points *sample-points*)
 	(joint-list *joint-list1*)
+	(ef-coords *ef-coords*)
 	(sep (round (expt sample-points (/ 1.0 (length joint-list)))))
+	(root-link (car (send *robot* :links)))
 	(i 0)
 	(draw? nil))
   (setq *sample-points* sample-points)
   (if (not (eq (length *angle-vector-map*)
-	       (* (length *rarm-joints*) sample-points)))
+	       (* (length joint-list) sample-points)))
       (setq *angle-vector-map*
-	    (instantiate float-vector (* (length *rarm-joints*) sample-points))))
-  (if (not (eq (length *ef-coords-map*) (* 6 sample-points)))
+	    (instantiate float-vector
+			 (* (length joint-list) sample-points))))
+  (if (not (eq (length *ef-coords-map*)
+	       (* 6 (length ef-coords) sample-points)))
       (setq *ef-coords-map*
-	    (instantiate float-vector (* 6 sample-points))))
+	    (instantiate float-vector
+			 (* 6 (length ef-coords) sample-points))))
   (labels ((itter
 	    (jlist)
 	    (cond
 	     ((null jlist)
 	      (let* (pos rot)
-		(send-all *rarm-links* :worldcoords)
-		(send *robot* :rarm :end-coords :worldcoords)
+		(send-all (send-all joint-list :child-link) :worldcoords)
+		(send-all ef-coords :worldcoords)
 		(cond
 		 (draw?
 		  (send *viewer* :draw-objects :flush nil)
-		  (send (send *robot* :rarm :end-coords :worldcoords) :draw-on :flush nil
-			:color (float-vector 1 0 0) :size 100)
+		  (send-all ef-coords :draw-on :flush nil
+			    :color (float-vector 1 0 0) :size 100)
 		  (send *viewer* :viewsurface :flush)))
-		(setq pos (send (send (car (send *robot* :links)) :worldcoords)
-		      :difference-position
-		      (send *robot* :rarm :end-coords)))
-		(setq rot (send (send (car (send *robot* :links)) :worldcoords)
-				:difference-rotation
-				(send *robot* :rarm :end-coords)))
-		(dotimes (j (length *rarm-joints*))
-		  (setf (aref *angle-vector-map* (+ j (* i (length *rarm-joints*))))
-			(deg2rad (send (nth j *rarm-joints*) :joint-angle))))
-		(dotimes (j 3)
-		  (setf (aref *ef-coords-map* (+ j (* i 6))) (* 1e-3 (aref pos j))))
-		(dotimes (j 3)
-		  (setf (aref *ef-coords-map* (+ 3 j (* i 6))) (aref rot j)))
+		(dotimes (j (length joint-list))
+		  (setf (aref *angle-vector-map* (+ j (* i (length joint-list))))
+			(deg2rad (send (nth j joint-list) :joint-angle))))
+		(dotimes (j (length ef-coords))
+		  (setq pos (send (send root-link :worldcoords)
+				  :difference-position
+				  (send (nth j ef-coords) :worldcoords)))
+		  (setq rot (send (send root-link :worldcoords)
+				  :difference-rotation
+				  (send (nth j ef-coords) :worldcoords)))
+		  (dotimes (k 3)
+		    (setf (aref *ef-coords-map*
+				(+ k (* j 6) (* i (length ef-coords) 6)))
+			  (* 1e-3 (aref pos k))))
+		  (dotimes (k 3)
+		    (setf (aref *ef-coords-map*
+				(+ 3 k (* j 6) (* i (length ef-coords) 6)))
+			  (aref rot j)))
+		  )
 		(setq i (+ i 1))))
 	     (t
 	      (dotimes (j sep)
@@ -102,78 +117,71 @@
 			       (send (car jlist) :min-angle)))))
 		(itter (cdr jlist))))
 	     )))
-    (itter *rarm-joints*)
-    (shuffle-random-vector-map)
-    (dump-ik-learning-data)
-    ))
+	  (itter joint-list)
+	  (shuffle-random-vector-map)
+	  (dump-ik-learning-data)
+	  ))
 
 (defun gen-random-ik-learning-data
-  nil
+  (&key (sample-points *sample-points*)
+	(joint-list *joint-list1*)
+	(ef-coords *ef-coords*)
+	(sep (round (expt sample-points (/ 1.0 (length joint-list)))))
+	(root-link (car (send *robot* :links)))
+	(i 0)
+	(draw? nil))
+  (setq *sample-points* sample-points)
   (if (not (eq (length *angle-vector-map*)
-	       (* (length *rarm-joints*) *sample-points*)))
+	       (* (length joint-list) sample-points)))
       (setq *angle-vector-map*
-	    (instantiate float-vector (* (length *rarm-joints*) *sample-points*))))
-  (if (not (eq (length *ef-coords-map*) (* 6 *sample-points*)))
+	    (instantiate float-vector
+			 (* (length joint-list) sample-points))))
+  (if (not (eq (length *ef-coords-map*)
+	       (* 6 (length ef-coords) sample-points)))
       (setq *ef-coords-map*
-	    (instantiate float-vector (* 6 *sample-points*))))
+	    (instantiate float-vector
+			 (* 6 (length ef-coords) sample-points))))
+  ;;
   (let* (pos rot)
-    (dotimes (i *sample-points*)
-      (dolist (j *rarm-joints*)
+    (dotimes (i sample-points)
+      (dolist (j joint-list)
 	(send j :joint-angle
 	      (+ (send j :min-angle)
 		 (* (random 1.0)
 		    (- (send j :max-angle) (send j :min-angle))))))
-      (send-all *rarm-links* :worldcoords)
-      (setq pos (send (send (car (send *robot* :links)) :worldcoords)
-		      :difference-position
-		      (send *robot* :rarm :end-coords)))
-      (setq rot (send (send (car (send *robot* :links)) :worldcoords)
-		      :difference-rotation
-		      (send *robot* :rarm :end-coords)))
-      (dotimes (j (length *rarm-joints*))
-	(setf (aref *angle-vector-map* (+ j (* i (length *rarm-joints*))))
-	      (deg2rad (send (nth j *rarm-joints*) :joint-angle))))
-      (dotimes (j 3)
-	(setf (aref *ef-coords-map* (+ j (* i 6))) (* 1e-3 (aref pos j))))
-      (dotimes (j 3)
-	(setf (aref *ef-coords-map* (+ 3 j (* i 6))) (aref rot j)))
-      )
-    ;; (dump-loadable-structure "ef-coords-map.l" *ef-coords-map*)
-    ;; (dump-loadable-structure "angle-vector-map.l" *angle-vector-map*)
+      (send-all (send-all joint-list :child-link) :worldcoords)
+      (send-all ef-coords :worldcoords)
+      (dotimes (j (length joint-list))
+	(setf (aref *angle-vector-map* (+ j (* i (length joint-list))))
+	      (deg2rad (send (nth j joint-list) :joint-angle))))
+      (dotimes (j (length ef-coords))
+	(setq pos (send (send root-link :worldcoords)
+			:difference-position
+			(send (nth j ef-coords) :worldcoords)))
+	(setq rot (send (send root-link :worldcoords)
+			:difference-rotation
+			(send (nth j ef-coords) :worldcoords)))
+	(dotimes (k 3)
+	  (setf (aref *ef-coords-map*
+		      (+ k (* j 6) (* i (length ef-coords) 6)))
+		(* 1e-3 (aref pos j))))
+	(dotimes (k 3)
+	  (setf (aref *ef-coords-map*
+		      (+ 3 k (* j 6) (* i (length ef-coords) 6)))
+		(aref rot j)))
+	))
     (dump-ik-learning-data)
     ))
 
 (defun load-ik-learning-data
   nil
-  (if (probe-file "ik_learning.dat")
-      (let* ((op (open "ik_learning.dat" :direction :input)) buf)
-	(if (not (setq buf (read-line op nil))) (throw :load-ik-learning-data-error nil))
-	(setq buf (read-from-string buf))
-	(if (not (eq (length *angle-vector-map*) buf))
-	    (setq *angle-vector-map* (instantiate float-vector buf)))
-	(dotimes (i (length *angle-vector-map*))
-	  (setq buf (read-from-string (read-line op nil)))
-	  (setf (aref *angle-vector-map* i) buf))
-	;;
-	(if (not (setq buf (read-line op nil))) (throw :load-ik-learning-data-error nil))
-	(setq buf (read-from-string buf))
-	(if (not (eq (length *ef-coords-map*) buf))
-	    (setq *ef-coords-map* (instantiate float-vector buf)))
-	(dotimes (i (length *ef-coords-map*))
-	  (setq buf (read-from-string (read-line op nil)))
-	  (setf (aref *ef-coords-map* i) buf))
-	(close op))))
+  (load "angle-vector-map.l")
+  (load "ef-coords-map.l"))
 
 (defun dump-ik-learning-data
   nil
-  (let* ((op (open "ik_learning.dat" :direction :output)))
-    (format op "~A~%" (length *angle-vector-map*))
-    (dotimes (i (length *angle-vector-map*))
-      (format op "~A~%" (aref *angle-vector-map* i)))
-    (format op "~A~%" (length *ef-coords-map*))
-    (dotimes (i (length *ef-coords-map*))
-      (format op "~A~%" (aref *ef-coords-map* i)))
-    (close op)))
+  (dump-loadable-structure *angle-vector-map* "angle-vector-map.l")
+  (dump-loadable-structure *ef-coords-map* "ef-coords-map.l"))
 
 (defun ik-learn
   (&key (solver "ik_solver.prototxt"))
