@@ -21,7 +21,7 @@
 			(reverse (send-all *joint-list3* :child-link))
 			*arrow*)))
 
-(defvar *ef-coords* (send *robot* :arms :end-coords))
+(defvar *ef-coords* (list (send *robot* :rarm :end-coords)))
 
 (defvar *sample-points*
   (expt (max
@@ -174,14 +174,17 @@
     ))
 
 (defun load-ik-learning-data
-  nil
-  (load "angle-vector-map.l")
-  (load "ef-coords-map.l"))
+  (&key (root "teacher"))
+  (load (format nil "~A/angle-vector-map.l" root))
+  (load (format nil "~A/ef-coords-map.l" root)))
 
 (defun dump-ik-learning-data
-  nil
-  (dump-loadable-structure *angle-vector-map* "angle-vector-map.l")
-  (dump-loadable-structure *ef-coords-map* "ef-coords-map.l"))
+  (&key (root "teacher"))
+  (unix::system (format nil "mkdir -p ~A" root))
+  (dump-loadable-structure (format nil "~A/angle-vector-map.l" root)
+			   *angle-vector-map*)
+  (dump-loadable-structure (format nil "~A/ef-coords-map.l" root)
+			   *ef-coords-map*))
 
 (defun ik-learn
   (&key (solver "ik_solver.prototxt"))
