@@ -2,6 +2,7 @@
 
 (require "package://eus_caffe/euslisp/eus-caffe.l")
 (require "package://eus_caffe/euslisp/eus-caffe-db.l")
+(require "package://eus_caffe/euslisp/eus-log.l")
 (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
 (require "models/arrow-object.l")
 
@@ -173,28 +174,19 @@
     (dump-ik-learning-data)
     ))
 
-(defun dump-float-vector
-  (path sym)
-  (let* ((p (open path :direction :output))
-	 (val (eval sym)))
-    (format p "(setq ~A #F(~A" sym (aref val 0))
-    (dotimes (i (- (length val) 1))
-      (format p " ~A" (aref val (+ 1 i))))
-    (format p "))~%")
-    (close p)))
-
 (defun load-ik-learning-data
   (&key (root "teacher"))
-  (load (format nil "~A/angle-vector-map.l" root))
-  (load (format nil "~A/ef-coords-map.l" root)))
+  (setq *angle-vector-map* (cpplog::read-vector (format nil "~A/angle-vector-map.dat" root)))
+  (setq *ef-coords-map* (cpplog::read-vector (format nil "~A/ef-coords-map.dat" root)))
+  (length *angle-vector-map*))
 
 (defun dump-ik-learning-data
   (&key (root "teacher"))
   (unix::system (format nil "mkdir -p ~A" root))
-  (dump-float-vector (format nil "~A/angle-vector-map.l" root)
-		     '*angle-vector-map*)
-  (dump-float-vector (format nil "~A/ef-coords-map.l" root)
-		     '*ef-coords-map*))
+  (cpplog::write-vector (format nil "~A/angle-vector-map.dat" root)
+			*angle-vector-map*)
+  (cpplog::write-vector (format nil "~A/ef-coords-map.dat" root)
+			*ef-coords-map*))
 
 (defun ik-learn
   (&key (solver "ik_solver.prototxt"))
