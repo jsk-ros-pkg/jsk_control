@@ -173,6 +173,16 @@
     (dump-ik-learning-data)
     ))
 
+(defun dump-float-vector
+  (path sym)
+  (let* ((p (open path :direction :output))
+	 (val (eval sym)))
+    (format p "(setq ~A #F(~A" sym (aref val 0))
+    (dotimes (i (- (length val) 1))
+      (format p " ~A" (aref val (+ 1 i))))
+    (format p "))~%")
+    (close p)))
+
 (defun load-ik-learning-data
   (&key (root "teacher"))
   (load (format nil "~A/angle-vector-map.l" root))
@@ -181,10 +191,10 @@
 (defun dump-ik-learning-data
   (&key (root "teacher"))
   (unix::system (format nil "mkdir -p ~A" root))
-  (dump-loadable-structure (format nil "~A/angle-vector-map.l" root)
-			   *angle-vector-map*)
-  (dump-loadable-structure (format nil "~A/ef-coords-map.l" root)
-			   *ef-coords-map*))
+  (dump-float-vector (format nil "~A/angle-vector-map.l" root)
+		     '*angle-vector-map*)
+  (dump-float-vector (format nil "~A/ef-coords-map.l" root)
+		     '*ef-coords-map*))
 
 (defun ik-learn
   (&key (solver "ik_solver.prototxt"))
