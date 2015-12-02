@@ -191,9 +191,13 @@
 
 (defun ik-learn
   (&key (solver "ik_solver.prototxt"))
-  (if (or (zerop (length *ef-coords-map*))
-	  (zerop (length *angle-vector-map*)))
-      (load-ik-learning-data))
+  (cond
+   ((or (zerop (length *ef-coords-map*))
+	(zerop (length *angle-vector-map*)))
+    (load-ik-learning-data)
+    (setq *sample-points* (/ (length *angle-vector-map*)
+			     (length *joint-list1*)))
+    ))
   ;; (caffe::create-solver :solver solver :solverstate "")
   ;; (caffe::reset-memory-layer :name "input"
   ;; 			     :size (length *angle-vector-map*)
