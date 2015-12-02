@@ -194,6 +194,13 @@
   (if (or (zerop (length *ef-coords-map*))
 	  (zerop (length *angle-vector-map*)))
       (load-ik-learning-data))
+  ;; (caffe::create-solver :solver solver :solverstate "")
+  ;; (caffe::reset-memory-layer :name "input"
+  ;; 			     :size (length *angle-vector-map*)
+  ;; 			     :data *angle-vector-map*)
+  ;; (caffe::reset-memory-layer :name "target"
+  ;; 			     :size (length *ef-coords-map*)
+  ;; 			     :data *ef-coords-map*)
   (caffe::learn
    :solver solver
    :size *sample-points*
