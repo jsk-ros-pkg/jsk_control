@@ -6,23 +6,24 @@
 (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
 (require "models/arrow-object.l")
 
-(defvar *arrow* (arrow))
 (defvar *robot* (hrp2jsknt))
-(defvar *joint-list1* (append (send *robot* :rarm :joint-list)
+(defvar *joint-list1* (append (butlast (send *robot* :rarm :joint-list))
 			      (send *robot* :torso :joint-list)))
-(defvar *joint-list2* (append (send *robot* :rarm :joint-list)
-			      (send *robot* :larm :joint-list)
+(defvar *joint-list2* (append (butlast (send *robot* :rarm :joint-list))
+			      (butlast (send *robot* :larm :joint-list))
 			      (send *robot* :torso :joint-list)))
-(defvar *joint-list3* (append (send *robot* :rarm :joint-list)
-			      (send *robot* :larm :joint-list)
-			      (send *robot* :rleg :joint-list)
-			      (send *robot* :lleg :joint-list)
+(defvar *joint-list3* (append (butlast (send *robot* :rarm :joint-list))
+			      (butlast (send *robot* :larm :joint-list))
+			      (butlast (send *robot* :rleg :joint-list))
+			      (butlast (send *robot* :lleg :joint-list))
 			      (send *robot* :torso :joint-list)))
+
+(defvar *ef-coords* (list (send *robot* :rarm :end-coords)))
+(defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
+
 (objects (flatten (list (car (send *robot* :links))
 			(reverse (send-all *joint-list3* :child-link))
 			*arrow*)))
-
-(defvar *ef-coords* (list (send *robot* :rarm :end-coords)))
 
 (defvar *sample-points*
   (expt (max
@@ -106,7 +107,7 @@
 		  (dotimes (k 3)
 		    (setf (aref *ef-coords-map*
 				(+ 3 k (* j 6) (* i (length ef-coords) 6)))
-			  (aref rot j)))
+			  (aref rot k)))
 		  )
 		(setq i (+ i 1))))
 	     (t
@@ -165,11 +166,11 @@
 	(dotimes (k 3)
 	  (setf (aref *ef-coords-map*
 		      (+ k (* j 6) (* i (length ef-coords) 6)))
-		(* 1e-3 (aref pos j))))
+		(* 1e-3 (aref pos k))))
 	(dotimes (k 3)
 	  (setf (aref *ef-coords-map*
 		      (+ 3 k (* j 6) (* i (length ef-coords) 6)))
-		(aref rot j)))
+		(aref rot k)))
 	))
     (dump-ik-learning-data)
     ))
@@ -202,30 +203,39 @@
 
 (defun check-test-data
   (&optional
-   (i 0)
-   (input (instantiate float-vector 6))
-   (output (instantiate float-vector 6))
-   c
+   (i (random *sample-points*)) ;;0)
+   (joint-list *joint-list1*)
+   (ef-coords *ef-coords*)
+   (input (instantiate float-vector (* (length ef-coords) 6)))
+   (output (instantiate float-vector (length joint-list)))
+   c c-buf
    )
-  (dotimes (j 6) (setf (aref input j) (aref *ef-coords-map* (+ (* i 6) j))))
-  (dotimes (j (length *rarm-joints*))
+  (dotimes (j (length ef-coords))
+    (dotimes (k 6)
+      (setf (aref input (+ k (* j 6)))
+	    (aref *ef-coords-map* (+ k (* i (length input)) (* j 6)))))
+    (setq c (make-coords
+	     :pos (scale 1e+3 (subseq input (+ 0 (* j 6)) (+ 3 (* j 6))))
+	     :rot (matrix-exponent (subseq input (+ 3 (* j 6)) (+ 6 (* j 6))))))
+    (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+		  :transform c :local))
+    (push c c-buf)
+    )
+  (setq c-buf (reverse c-buf))
+  (dotimes (j (length joint-list))
     (setf (aref output j)
-	  (aref *angle-vector-map* (+ (* i (length *rarm-joints*)) j))))
-  (setq c (make-coords :pos (scale 1e+3 (subseq input 0 3))
-		       :rot (matrix-exponent (subseq input 3 6))))
-  (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
-		:transform c :local))
+	  (aref *angle-vector-map* (+ (* i (length joint-list)) j))))
   (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
-       *rarm-joints* output)
-  ;; (send *viewer* :draw-objects :flush nil)
-  ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
-  (send *arrow* :newcoords (send c :copy-worldcoords))
+       joint-list output)
+  (send-all (send-all joint-list :child-link) :worldcoords)
+  (send-all ef-coords :worldcoords)
+  (mapcar
+   '(lambda (ar c)
+      (send ar :newcoords (send c :copy-worldcoords)))
+   *arrow* c-buf)
   (send *viewer* :draw-objects :flush nil)
   (send *viewer* :viewsurface :flush)
-  (print (concatenate
-	  float-vector
-	  (send c :difference-position (send *robot* :rarm :end-coords))
-	  (send c :difference-rotation (send *robot* :rarm :end-coords))))
+  (print (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (send c :difference-position ec) (send c :difference-rotation ec))) ef-coords c-buf)))))
   )
 
 (defun ik-test
@@ -317,7 +327,7 @@
 			       (send c :difference-rotation (send *robot* :rarm :end-coords))))
 	   ))))
 
-;;
+#|
 
 (defun random-index-vector
   (size
@@ -333,7 +343,6 @@
       (setf (aref ret y) buf)))
   ret)
 
-#|
 
 (caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
 		     :caffemodel "redundancy_ik_net_x6_iter_60000000.caffemodel")
