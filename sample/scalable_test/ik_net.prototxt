@@ -3,9 +3,9 @@ layer {
   name: "input"
   type: "MemoryData"
   top: "input"
-  top: "dummy_label1"
+  top: "__dummy_label1"
   memory_data_param {
-    batch_size: 25
+    batch_size: 5
     channels: 9
     height: 1
     width: 1
@@ -137,9 +137,9 @@ layer {
   name: "target"
   type: "MemoryData"
   top: "target"
-  top: "dummy_label2"
+  top: "__dummy_label2"
   memory_data_param {
-    batch_size: 25
+    batch_size: 5
     channels: 6
     height: 1
     width: 1
@@ -150,6 +150,12 @@ layer {
   type: "Sigmoid"
   bottom: "redundancy"
   top: "normalized_redundancy"
+}
+layer {
+  name: "_debug_redundancy"
+  type: "Sigmoid"
+  bottom: "redundancy"
+  top: "_debug_redundancy"
 }
 layer {
   name: "reshape"
