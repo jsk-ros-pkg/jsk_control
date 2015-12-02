@@ -285,54 +285,77 @@
 		 (send c :difference-rotation (send *robot* :rarm :end-coords))))))
   )
 
+
 (defun ik-random-test
-  (&key (calc-forward 'caffe::calc-forward-double) (draw? t) tm)
-  (let* ((joint-list (butlast (send *robot* :rarm :joint-list)))
-	 (random-angle
-	  (mapcar '(lambda (j) (send j :joint-angle
-				     (+ (send j :min-angle)
-					(* (random 1.0)
-					   (- (send j :max-angle)
-					      (send j :min-angle))))))
-		  joint-list))
-	 (lc (send-all (send *robot* :links) :worldcoords))
-	 (c (send *robot* :rarm :end-coords :copy-worldcoords))
-	 ;; (make-coords :pos (v+ (float-vector 436.244 -210.8 766.991)
-	  ;; (random-vector 500.0))
-	 ;;:rpy (random-vector 3.14)))
-	 (b (send (car (send *robot* :links)) :copy-worldcoords))
-	 (av (instantiate float-vector (length *rarm-joints*)))
-	 (input (concatenate float-vector
-			     (scale 1e-3 (send b :difference-position c))
-			     (send b :difference-rotation c)))
-	 )
-    ;; (send *robot* :rarm :inverse-kinematics c
-    ;; :link-list (send-all joint-list :child-link)
-    ;; :revert-if-fail nil)
-    ;; (send c :newcoords (send *robot* :rarm :end-coords :copy-worldcoords))
-    (setq
-     tm
-     (bench2
-      (bench
-       (apply calc-forward
-	      (list :isize (length input) :input input
-		    :osize (length av) :output av))
-       )))
-    (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) *rarm-joints* av)
-    (cond
-     (draw?
-      ;; (send *viewer* :draw-objects :flush nil)
-      ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
-      (send *arrow* :newcoords (send c :copy-worldcoords))
-      (send *viewer* :draw-objects :flush nil)
-      (send *viewer* :viewsurface :flush)))
-    (list
-     (cons :time tm)
-     (cons :diff
-	   (print (concatenate float-vector
-			       (send c :difference-position (send *robot* :rarm :end-coords))
-			       (send c :difference-rotation (send *robot* :rarm :end-coords))))
-	   ))))
+  (&key (calc-forward 'caffe::calc-forward-double) ;;'caffe::memory-calc-forward)
+	(draw? t)
+	tm
+	(joint-list *joint-list1*)
+	(ef-coords *ef-coords*)
+	(random-angle
+	 (mapcar '(lambda (j) (send j :joint-angle
+				    (+ (send j :min-angle)
+				       (* (random 1.0)
+					  (- (send j :max-angle)
+					     (send j :min-angle))))))
+		 joint-list))
+	(update-coords
+	 (progn (send-all (send-all joint-list :child-link) :worldcoords)
+		(send-all ef-coords :worldcoords)))
+	(c (send-all ef-coords :copy-worldcoords))
+	(b (send (car (send *robot* :links)) :copy-worldcoords))
+	(av (instantiate float-vector (length joint-list)))
+	(input
+	 (apply 'concatenate
+		(cons float-vector
+		      (flatten
+		       (mapcar #'(lambda (c)
+				   (list
+				    (scale 1e-3 (send b :difference-position c))
+				    (send b :difference-rotation c))) c)))))
+	(redundancy (float-vector 0))
+	)
+  (setq input (concatenate float-vector input redundancy))
+  (caffe::gen-test-net :netproto "predict_ik_net.prototxt"
+		       :caffemodel
+		       (read-line
+			(piped-fork
+			 "ls -t | grep -e \"caffemodel$\" | head -n 1")))
+  ;; (caffe::create-solver :solver "ik_solver_batch1.prototxt"
+  ;; 			:solverstate
+  ;; 			(read-line
+  ;; 			 (piped-fork
+  ;; 			  "ls -t | grep -e \"solverstate$\" | head -n 1")))
+  ;; (caffe::reset-memory-layer :name "input"
+  ;; 			     :size (length av)
+  ;; 			     :data (copy-seq av))
+  ;; (caffe::reset-memory-layer :name "target"
+  ;; 			     :size (length input)
+  ;; 			     :data (copy-seq input))
+  (setq
+   tm
+   (bench2
+    (bench
+     (apply calc-forward
+	    (list :isize (length input) :input input
+		  :osize (length av) :output av))
+     )))
+  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) joint-list av)
+  (cond
+   (draw?
+    ;; (send *viewer* :draw-objects :flush nil)
+    ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+    (mapcar
+     '(lambda (ar c)
+	(send ar :newcoords (send c :copy-worldcoords)))
+     *arrow* c)
+    (send *viewer* :draw-objects :flush nil)
+    (send *viewer* :viewsurface :flush)))
+  (list
+   (cons :time tm)
+   (cons :diff
+	 (print (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (send c :difference-position ec) (send c :difference-rotation ec))) ef-coords c)))))
+	 )))
 
 #|
 
