@@ -28,7 +28,7 @@
 (defvar *sample-points*
   (expt (max
 	 (min (round (expt 1e+8 (/ 1.0 (length *joint-list1*))))
-	      5) 2) (length *joint-list1*)))
+	      4) 2) (length *joint-list1*)))
 
 (defvar *angle-vector-map*)
 (defvar *ef-coords-map*)
@@ -208,8 +208,8 @@
   (caffe::learn
    :solver solver
    :size *sample-points*
-   :idata *ef-coords-map*
-   :ddata *angle-vector-map*
+   :ddata *ef-coords-map*
+   :idata *angle-vector-map*
    ))
 
 (defun check-test-data
@@ -403,3 +403,6 @@
  :num 1 :channels 7 :width 1 :height 1
  :input (float-vector -0.105524 0.0936122 0.250577 -0.603332 0.946547 1.00249
 		      0))
+
+(dotimes (i *sample-points*)
+  (print (norm (subseq *ef-coords* (* i 6) (* (+ i 1) 6)))))
