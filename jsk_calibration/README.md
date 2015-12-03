@@ -56,7 +56,7 @@ $ (generate-hrp2jsknt-calibration)
 10. Get collision-free and different poses
 
 
-# Utility scripts
+## Utility scripts
 * `joint_states_appender.py`
 
 ros calibration software is not designed to handle multiple joint states.

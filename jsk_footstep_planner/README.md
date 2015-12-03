@@ -1,9 +1,9 @@
-`jsk_footstep_planner`
+jsk_footstep_planner
 =====================
 
 
-Use with simulator (gazebo + hrpsys)
-==================
+## Use with simulator (gazebo + hrpsys)
+
 ![](images/jaxon_footstep_planner_gazebo_no_perception.png)
 * `roslaunch hrpsys_gazebo_tutorials gazebo_jaxon_no_controllers.launch`
 * `rtmlaunch hrpsys_gazebo_tutorials jaxon_hrpsys_bringup.launch KINEMATICS_MODE:=true`
