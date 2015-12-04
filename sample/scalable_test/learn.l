@@ -317,7 +317,7 @@
 				   (list
 				    (scale 1e-3 (send b :difference-position c))
 				    (send b :difference-rotation c))) c)))))
-	(redundancy (float-vector 0))
+	(redundancy (float-vector 0.5))
 	)
   (setq input (concatenate float-vector input redundancy))
   (caffe::gen-test-net :netproto "predict_ik_net.prototxt"
@@ -406,3 +406,5 @@
 
 (dotimes (i *sample-points*)
   (print (norm (subseq *ef-coords* (* i 6) (* (+ i 1) 6)))))
+
+roseus learn.l "(progn (ik-learn) (exit))" > log.learn 2>&1
