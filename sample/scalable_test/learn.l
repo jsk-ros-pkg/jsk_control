@@ -314,7 +314,19 @@
     ;; (ik-learn :solver solver :solverstate state)
     (warning-message 3 "done~%")
     (link-best-settings "ik_solver.best.prototxt")
+    (warning-message 3 "evaluate network~%")
+    (ik-random-test-min-average)
     ))
+
+(defun ik-learn-best-loop
+  (&rest args &key (lp 10) &allow-other-keys)
+  (let* ((ret))
+    (dotimes (i lp)
+      (push (apply 'ik-learn-best args) ret)
+      (if (not ret) (return-from nil nil))
+      )
+    (setq *ret* ret))
+  ret)
 
 (defun check-test-data
   (&optional
@@ -393,6 +405,26 @@
 ;; 		 (send c :difference-rotation (send *robot* :rarm :end-coords))))))
 ;;   )
 
+(defun smart-initialize-net
+  nil
+  (caffe::gen-test-net :netproto "predict_ik_net.prototxt"
+		       :caffemodel
+		       (read-line
+			(piped-fork
+			 "ls -t | grep -e \"caffemodel$\" | head -n 1")))
+  ;; (caffe::create-solver :solver "ik_solver_batch1.prototxt"
+  ;; 			:solverstate
+  ;; 			(read-line
+  ;; 			 (piped-fork
+  ;; 			  "ls -t | grep -e \"solverstate$\" | head -n 1")))
+  ;; (caffe::reset-memory-layer :name "input"
+  ;; 			     :size (length av)
+  ;; 			     :data (copy-seq av))
+  ;; (caffe::reset-memory-layer :name "target"
+  ;; 			     :size (length input)
+  ;; 			     :data (copy-seq input))
+  )
+
 (defun ik-random-test
   (&key (calc-forward 'caffe::calc-forward-double) ;;'caffe::memory-calc-forward)
 	(draw? t)
@@ -421,24 +453,10 @@
 				    (scale 1e-3 (send b :difference-position c))
 				    (send b :difference-rotation c))) c)))))
 	(redundancy (float-vector 0.5))
+	(initialize? (smart-initialize-net))
+	&allow-other-keys
 	)
   (setq input (concatenate float-vector input redundancy))
-  (caffe::gen-test-net :netproto "predict_ik_net.prototxt"
-		       :caffemodel
-		       (read-line
-			(piped-fork
-			 "ls -t | grep -e \"caffemodel$\" | head -n 1")))
-  ;; (caffe::create-solver :solver "ik_solver_batch1.prototxt"
-  ;; 			:solverstate
-  ;; 			(read-line
-  ;; 			 (piped-fork
-  ;; 			  "ls -t | grep -e \"solverstate$\" | head -n 1")))
-  ;; (caffe::reset-memory-layer :name "input"
-  ;; 			     :size (length av)
-  ;; 			     :data (copy-seq av))
-  ;; (caffe::reset-memory-layer :name "target"
-  ;; 			     :size (length input)
-  ;; 			     :data (copy-seq input))
   (setq
    tm
    (bench2
@@ -460,9 +478,67 @@
     (send *viewer* :viewsurface :flush)))
   (list
    (cons :time tm)
-   (cons :diff
-	 (print (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (send c :difference-position ec) (send c :difference-rotation ec))) ef-coords c)))))
-	 )))
+   (cons :task-diff
+	 (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (scale 1e-3 (send c :difference-position ec)) (send c :difference-rotation ec))) ef-coords c))))
+	 )
+   (cons :state-diff
+	 (map float-vector '(lambda (a b) (- (deg2rad a) b))
+	      random-angle av))
+   (cons :state-diff-norm
+	 (norm (map float-vector '(lambda (a b) (- (deg2rad a) b))
+		    random-angle av)))
+   ))
+
+(defun ik-random-test-min
+  (&rest
+   args
+   &key
+   (joint-list *joint-list1*)
+   (ef-coords *ef-coords*)
+   (random-angle
+    (mapcar '(lambda (j) (send j :joint-angle
+			       (+ (send j :min-angle)
+				  (* (random 1.0)
+				     (- (send j :max-angle)
+					(send j :min-angle))))))
+	    joint-list))
+   (update-coords
+    (progn (send-all (send-all joint-list :child-link) :worldcoords)
+	   (send-all ef-coords :worldcoords)))
+   (c (send-all ef-coords :copy-worldcoords))
+   (b (send (car (send *robot* :links)) :copy-worldcoords))
+   (av (instantiate float-vector (length joint-list)))
+   (input
+    (apply 'concatenate
+	   (cons float-vector
+		 (flatten
+		  (mapcar #'(lambda (c)
+			      (list
+			       (scale 1e-3 (send b :difference-position c))
+			       (send b :difference-rotation c))) c)))))
+   (redundancy-step 0.1)
+   (redundancy (float-vector 0.0))
+   (initialize? (smart-initialize-net))
+   buf
+   )
+  (dotimes (i (length redundancy))
+    (dotimes (j (round (/ 1.0 redundancy-step)))
+      (setf (aref redundancy i) (* j redundancy-step))
+      (push (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil args) buf)))
+  (setq *ret* buf)
+  (car (sort buf #'(lambda (a b) (< (cdr (assoc :state-diff-norm a))
+				    (cdr (assoc :state-diff-norm b))))))
+  )
+
+(defun ik-random-test-min-average
+  (&optional (lp 100))
+  (let* ((ret))
+    (smart-initialize-net)
+    (dotimes (i lp)
+      (push (ik-random-test-min :initialize? nil) ret))
+    (setq *ret* ret)
+    (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :state-diff-norm d))) ret))
+       (length ret))))
 
 #|
 
