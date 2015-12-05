@@ -5,6 +5,7 @@
 (require "package://eus_caffe/euslisp/eus-log.l")
 (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
 (require "models/arrow-object.l")
+(require "package://eus_caffe/sample/scalable_test/gen-solver.l")
 
 (defvar *robot* (hrp2jsknt))
 (defvar *joint-list1* (append (butlast (send *robot* :rarm :joint-list))
@@ -150,9 +151,13 @@
     (dotimes (i sample-points)
       (dolist (j joint-list)
 	(send j :joint-angle
-	      (+ (send j :min-angle)
-		 (* (random 1.0)
-		    (- (send j :max-angle) (send j :min-angle))))))
+	      (-
+	       (+ (send j :min-angle)
+		  (* (random 1.0)
+		     (- (send j :max-angle) (send j :min-angle))))
+	       (send j :joint-angle))
+	      :relative t)
+	)
       (send-all (send-all joint-list :child-link) :worldcoords)
       (send-all ef-coords :worldcoords)
       (dotimes (j (length joint-list))
@@ -292,10 +297,21 @@
 	      (unix-command-line "ls -t ik*solverstate")
 	      ""))
     ;;
-    (if (not (and config state))
-	(throw :settings-not-found nil))
+    (warning-message 3 "config: ~A, state: ~A~%" config state)
+    ;;
+    (cond
+     ((not (and config state))
+      (warning-message 1 "empty setting files~%")
+      (throw :settings-not-found nil)))
+    (warning-message 3 "regenrate random traning DB~%")
     (gen-random-ik-learning-data)
-    (apply 'ik-learn :solver solver :solverstate state)
+    (warning-message 3 "update solver~%")
+    (let* ((p (update-solver :input "ik_solver.best.prototxt")))
+      (unix::system (format nil "ln -snf ~A ik_solver.best.prototxt" p)))
+    (warning-message 3 "start learning ... ~%")
+    (apply 'ik-learn :solver config :solverstate state args)
+    (ik-learn :solver solver :solverstate state)
+    (warning-message 3 "done~%")
     (link-best-settings "ik_solver.best.prototxt")
     ))
 
