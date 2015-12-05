@@ -74,4 +74,5 @@
 	       ((symbolp val) (send val :pname))
 	       (t val)))))
   (close p)
+  output
   ))
