@@ -41,5 +41,6 @@ echo -e "\e[33mrun learning ... \e[m";
 roseus learn.l "(progn (ik-learn) (exit))" > log.learn 2>&1;
 echo -e "\e[33m${TMP_DIR} done\e[m";
 tail log.learn;
+head ik_net.prototxt -n 1;
 
 cd $ORG_DIR;
