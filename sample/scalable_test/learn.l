@@ -115,10 +115,13 @@
 	     (t
 	      (dotimes (j sep)
 		(send (car jlist) :joint-angle
-		      (+ (send (car jlist) :min-angle)
-			 (* (/ j (- sep 1.0))
-			    (- (send (car jlist) :max-angle)
-			       (send (car jlist) :min-angle)))))
+		      (-
+		       (+ (send (car jlist) :min-angle)
+			  (* (/ j (- sep 1.0))
+			     (- (send (car jlist) :max-angle)
+				(send (car jlist) :min-angle))))
+		       (send (car jlist) :joint-angle))
+		      :relative t)
 		(itter (cdr jlist))))
 	     )))
 	  (itter joint-list)
@@ -316,7 +319,9 @@
     (warning-message 3 "done~%")
     (link-best-settings "ik_solver.best.prototxt")
     (warning-message 3 "evaluate network~%")
-    (ik-random-test-min-average)
+    (cpplog::change-output-stream "/dev/null")
+    (ik-random-test-min-average :draw? nil)
+    (cpplog::change-output-stream "")
     ))
 
 (defun ik-learn-best-loop
@@ -353,7 +358,9 @@
   (dotimes (j (length joint-list))
     (setf (aref output j)
 	  (aref *angle-vector-map* (+ (* i (length joint-list)) j))))
-  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a)))
+  (map cons #'(lambda (j a) (send j :joint-angle
+				  (- (rad2deg a) (send j :joint-angle))
+				  :relative t))
        joint-list output)
   (send-all (send-all joint-list :child-link) :worldcoords)
   (send-all ef-coords :worldcoords)
@@ -434,10 +441,13 @@
 	(ef-coords *ef-coords*)
 	(random-angle
 	 (mapcar '(lambda (j) (send j :joint-angle
-				    (+ (send j :min-angle)
-				       (* (random 1.0)
-					  (- (send j :max-angle)
-					     (send j :min-angle))))))
+				    (-
+				     (+ (send j :min-angle)
+					(* (random 1.0)
+					   (- (send j :max-angle)
+					      (send j :min-angle))))
+				     (send j :joint-angle))
+				    :relative t))
 		 joint-list))
 	(update-coords
 	 (progn (send-all (send-all joint-list :child-link) :worldcoords)
@@ -461,12 +471,14 @@
   (setq
    tm
    (bench2
-    (bench
-     (apply calc-forward
-	    (list :isize (length input) :input input
-		  :osize (length av) :output av))
-     )))
-  (map cons #'(lambda (j a) (send j :joint-angle (rad2deg a))) joint-list av)
+    (apply calc-forward
+	   (list :isize (length input) :input input
+		 :osize (length av) :output av))
+    ))
+  (map cons #'(lambda (j a) (send j :joint-angle
+				  (- (rad2deg a) (send j :joint-angle))
+				  :relative t))
+       joint-list av)
   (cond
    (draw?
     ;; (send *viewer* :draw-objects :flush nil)
@@ -486,10 +498,11 @@
 	 (map float-vector '(lambda (a b) (- (deg2rad a) b))
 	      random-angle av))
    (cons :state-diff-norm
-	 (/ (norm2 (map float-vector '(lambda (a b) (- (deg2rad a) b))
-			random-angle av)
-		   )
-	    (length av)))
+	 (sqrt
+	  (/ (norm2 (map float-vector '(lambda (a b) (- (deg2rad a) b))
+			 random-angle av)
+		    )
+	     (length av))))
    ))
 
 (defun ik-random-test-min
@@ -500,10 +513,13 @@
    (ef-coords *ef-coords*)
    (random-angle
     (mapcar '(lambda (j) (send j :joint-angle
-			       (+ (send j :min-angle)
-				  (* (random 1.0)
-				     (- (send j :max-angle)
-					(send j :min-angle))))))
+			       (-
+				(+ (send j :min-angle)
+				   (* (random 1.0)
+				      (- (send j :max-angle)
+					 (send j :min-angle))))
+				(send j :joint-angle))
+			       :relative t))
 	    joint-list))
    (update-coords
     (progn (send-all (send-all joint-list :child-link) :worldcoords)
@@ -519,10 +535,11 @@
 			      (list
 			       (scale 1e-3 (send b :difference-position c))
 			       (send b :difference-rotation c))) c)))))
-   (redundancy-step 0.1)
+   (redundancy-step 0.01)
    (redundancy (float-vector 0.0))
    (initialize? (smart-initialize-net))
    buf
+   &allow-other-keys
    )
   (dotimes (i (length redundancy))
     (dotimes (j (round (/ 1.0 redundancy-step)))
@@ -534,11 +551,11 @@
   )
 
 (defun ik-random-test-min-average
-  (&optional (lp 100))
+  (&rest args &key (lp 100) &allow-other-keys)
   (let* ((ret))
     (smart-initialize-net)
     (dotimes (i lp)
-      (push (ik-random-test-min :initialize? nil) ret))
+      (push (apply 'ik-random-test-min :initialize? nil args) ret))
     (setq *ret* ret)
     (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :state-diff-norm d))) ret))
        (length ret))))
