@@ -212,19 +212,51 @@
    :idata *angle-vector-map*
    ))
 
+(defun unix-command-line
+  (cmd)
+  (let* ((p (piped-fork cmd))
+	 (ret (read-line p)))
+    (close p)
+    ret))
+
+(defun gen-snapshot-prefix
+  (solver)
+  (unix-command-line
+   (concatenate string
+		(format nil "cat ~A" solver)
+		" | "
+		"grep \"snapshot_prefix\""
+		" | "
+		"sed -e \"s/^snapshot_prefix: \\\"\\\(.\\\+\\\)\\\"$/\\\1/g\""
+		)))
+
 (defun ik-learn-with-all-solver
   (&rest args)
-  (sort
-   (mapcar
-    #'(lambda (solver)
-	(cons
-	 solver
-	 (apply 'ik-learn :solver solver args)))
-    (remove-if-not
-     #'(lambda (str) (and (substringp "ik_solver" str)
-			  (substringp "prototxt" str)))
-     (directory)))
-   #'(lambda (a b) (< (cdr a) (cdr b)))))
+  (let* ((ret
+	  (sort
+	   (mapcar
+	    #'(lambda (solver)
+		(cons
+		 solver
+		 (apply 'ik-learn :solver solver args)))
+	    (remove-if-not
+	     #'(lambda (str) (and (substringp "ik_solver" str)
+				  (substringp "prototxt" str)))
+	     (directory)))
+	   #'(lambda (a b) (< (cdr a) (cdr b)))))
+	 (best-path (car (car ret)))
+	 (best-snap (gen-snapshot-prefix best-path))
+	 (caffe-snap
+	  (unix-command-line
+	   (format nil "ls ~A*caffemodel -t | head -n 1" best-snap)))
+	 (solver-snap
+	  (unix-command-line
+	   (format nil "ls ~A*solverstate -t | head -n 1" best-snap)))
+	 )
+    (unix::system (format nil "ln -snf ~A ik_solver.best.prototxt" best-path))
+    (unix::system (format nil "ln -snf ~A ik.best.caffemodel" caffe-snap))
+    (unix::system (format nil "ln -snf ~A ik.best.solverstate" solver-snap))
+    ret))
 
 (defun check-test-data
   (&optional
