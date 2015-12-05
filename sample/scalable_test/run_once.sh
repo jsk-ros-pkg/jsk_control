@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
-if [ ! -e "gen_test_dir.sh" ];
+if [ ! "`basename \`pwd\``" == "scalable_test" ]
 then
     if [ "`rospack find eus_caffe`" ];
     then
-	roscd eus_caffe;
+	cd "`rospack find eus_caffe`";
     elif [ "`locate eus_caffe | grep "src" | grep -e "eus_caffe$" | tail -1`" ];
     then
 	cd `locate eus_caffe | grep "src" | grep -e "eus_caffe$" | tail -1`
     fi
     ##
-    if [ ! -e "gen_test_dir.sh" ];
+    if [ ! "`basename \`pwd\``" == "scalable_test" ]
     then
 	echo -e "\e[31meus_caffe not found\e[m"
 	exit -1;
