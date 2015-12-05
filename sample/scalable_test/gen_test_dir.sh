@@ -39,6 +39,7 @@ cp $ORG_DIR/predict_ik_net.prototxt .;
 
 echo -e "\e[33mrun learning ... \e[m";
 roseus learn.l "(progn (ik-learn) (exit))" > log.learn 2>&1;
+echo -e "\e[33m${TMP_DIR} done\e[m";
 tail log.learn;
 
 cd $ORG_DIR;
