@@ -28,7 +28,7 @@
     (fileoutput-layer-string "predict_ik_net.prototxt"
 			     (apply 'gen-predict-ik-net param))
     (unix::system "./run_once.sh &")
-    (if (plusp (+ 1 (decf skip))) (unix::sleep 3)
+    (if (plusp (+ 1 (decf skip))) (unix::sleep 10)
       (progn (unix::sleep (* 3 60))
 	     (setq lav (get-load-average))
 	     (setq skip (round (- max lav)))))
