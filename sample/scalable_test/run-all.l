@@ -2,15 +2,32 @@
 
 (require "gen-ik-net.l")
 
+(defun get-load-average
+  nil
+  (let* ((p (piped-fork
+	     "uptime | sed -e \"s/^.\\\+load average: \\\([0-9\\\.]\\\+\\\), .\\\+$/\\\1/g\""))
+	 ret)
+    (setq ret (read-line p))
+    (if (plusp (length ret))
+	(setq ret (read-from-string ret)))
+    (if (not (numberp ret))
+	(progn (warning-message 1 "load-avaerage invalid string~A~%" ret)
+	       (setq ret 0)))
+    (close p)
+    ret))
+
 (dolist (param
-	 (list (list 9 100 2 3 6 2 100)
-	       (list 9 100 3 3 6 3 100)
-	       (list 9 100 4 3 6 4 100)
-	       (list 9 150 2 3 6 2 150)
-	       (list 9 150 3 3 6 3 150)
-	       (list 9 150 4 3 6 4 150)))
+	 (list (list 9 100 2 1 6 2 100)
+	       (list 9 100 3 1 6 3 100)
+	       (list 9 100 4 1 6 4 100)
+	       (list 9 70 2 1 6 2 70)
+	       (list 9 70 3 1 6 3 70)
+	       (list 9 70 4 1 6 4 70)))
   (fileoutput-layer-string "ik_net.prototxt" (apply 'gen-redundancy-ik-net param))
   (unix::system "./run_once.sh &")
-  (unix::sleep 3))
-
-
+  (unix::sleep 3)
+  (let* ((lav) (max 5.5))
+    (while (> (setq lav (get-load-average)) max)
+      (warning-message 3 "load avarage ~A > ~A~%" lav max)
+      (unix::sleep 3)))
+  )
