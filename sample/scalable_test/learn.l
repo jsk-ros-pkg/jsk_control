@@ -212,6 +212,16 @@
    :idata *angle-vector-map*
    ))
 
+(defun ik-learn-with-all-solver
+  (&rest args)
+  (mapcar
+   #'(lambda (solver)
+       (apply 'ik-learn :solver solver args))
+   (remove-if-not
+    #'(lambda (str) (and (substringp "ik_solver" str)
+			 (substringp "prototxt" str)))
+    (directory))))
+
 (defun check-test-data
   (&optional
    (i (random *sample-points*)) ;;0)
@@ -288,7 +298,6 @@
 		 (send c :difference-position (send *robot* :rarm :end-coords))
 		 (send c :difference-rotation (send *robot* :rarm :end-coords))))))
   )
-
 
 (defun ik-random-test
   (&key (calc-forward 'caffe::calc-forward-double) ;;'caffe::memory-calc-forward)
