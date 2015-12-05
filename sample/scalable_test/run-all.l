@@ -25,6 +25,8 @@
 		 (list 9 70 3 1 6 3 70)
 		 (list 9 70 4 1 6 4 70)))
     (fileoutput-layer-string "ik_net.prototxt" (apply 'gen-redundancy-ik-net param))
+    (fileoutput-layer-string "predict_ik_net.prototxt"
+			     (apply 'gen-predict-ik-net param))
     (unix::system "./run_once.sh &")
     (if (plusp (+ 1 (decf skip))) (unix::sleep 3)
       (progn (unix::sleep (* 3 60))
