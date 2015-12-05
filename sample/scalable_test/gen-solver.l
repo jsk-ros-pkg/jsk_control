@@ -55,7 +55,7 @@
    (max_iter (cdr (assoc 'max_iter data)))
    (stepsize (cdr (assoc 'stepsize data)))
    (gamma (cdr (assoc 'gamma data)))
-   (start_iter max_iter)
+   (start_iter (cdr (assoc 'max_iter data)))
    &allow-other-keys
    )
   (let* ((p (open output :direction :output)))
@@ -63,11 +63,11 @@
     (format p "~A: ~A~%" (car d)
 	    (let* ((val
 		    (cond
-		     ((assoc (car d) args) (cdr (assoc (car d) args)))
 		     ((eq (car d) 'max_iter)
 		      (+ max_iter start_iter))
 		     ((eq (car d) 'base_lr)
 		      (/ base_lr (expt gamma (/ (* max_iter 1.0) stepsize))))
+		     ((assoc (car d) args) (cdr (assoc (car d) args)))
 		     (t (cdr d)))))
 	      (cond
 	       ((stringp val) (format nil "\"~A\"" val))
