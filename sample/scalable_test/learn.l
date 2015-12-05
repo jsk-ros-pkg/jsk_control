@@ -198,7 +198,8 @@
 
 (defun ik-learn
   (&key (solver "ik_solver.prototxt")
-	(solverstate ""))
+	(solverstate "")
+	&allow-other-keys)
   (cond
    ((or (zerop (length *ef-coords-map*))
 	(zerop (length *angle-vector-map*)))
@@ -306,11 +307,11 @@
     (warning-message 3 "regenrate random traning DB~%")
     (gen-random-ik-learning-data)
     (warning-message 3 "update solver~%")
-    (let* ((p (update-solver :input "ik_solver.best.prototxt")))
+    (let* ((p (apply 'update-solver :input "ik_solver.best.prototxt" args)))
       (unix::system (format nil "ln -snf ~A ik_solver.best.prototxt" p)))
     (warning-message 3 "start learning ... ~%")
     (apply 'ik-learn :solver config :solverstate state args)
-    (ik-learn :solver solver :solverstate state)
+    ;; (ik-learn :solver solver :solverstate state)
     (warning-message 3 "done~%")
     (link-best-settings "ik_solver.best.prototxt")
     ))
