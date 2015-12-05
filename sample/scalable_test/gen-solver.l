@@ -6,7 +6,7 @@
    (solver_type "NESTEROV")
    (base_lr 0.1)
    (stop_lr (* base_lr 0.1))
-   (max_iter 10000)
+   (max_iter 100000)
    (stepsize 1000)
    (display stepsize)
    (snapshot max_iter)
