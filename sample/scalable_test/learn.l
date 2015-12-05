@@ -26,10 +26,10 @@
 			(reverse (send-all *joint-list3* :child-link))
 			*arrow*)))
 
-(defvar *sample-points*
+(defvar *sample-points* ;;96)
   (expt (max
-	 (min (round (expt 1e+8 (/ 1.0 (length *joint-list1*))))
-	      4) 2) (length *joint-list1*)))
+  	 (min (round (expt 1e+8 (/ 1.0 (length *joint-list1*))))
+  	      4) 2) (length *joint-list1*)))
 
 (defvar *angle-vector-map*)
 (defvar *ef-coords-map*)
@@ -204,8 +204,9 @@
    ((or (zerop (length *ef-coords-map*))
 	(zerop (length *angle-vector-map*)))
     (load-ik-learning-data)
-    (setq *sample-points* (/ (length *angle-vector-map*)
-			     (length *joint-list1*)))
+    (setq *sample-points* ;;96)
+	  (/ (length *angle-vector-map*)
+	     (length *joint-list1*)))
     ))
   ;; (caffe::create-solver :solver solver :solverstate "")
   ;; (caffe::reset-memory-layer :name "input"
@@ -325,8 +326,8 @@
       (push (apply 'ik-learn-best args) ret)
       (if (not ret) (return-from nil nil))
       )
-    (setq *ret* ret))
-  ret)
+    (setq *ret* ret)
+    ret))
 
 (defun check-test-data
   (&optional
