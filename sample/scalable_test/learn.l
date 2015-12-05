@@ -320,8 +320,9 @@
     (link-best-settings "ik_solver.best.prototxt")
     (warning-message 3 "evaluate network~%")
     (cpplog::change-output-stream "/dev/null")
-    (ik-random-test-min-average :draw? nil)
-    (cpplog::change-output-stream "")
+    (let* ((ret (ik-random-test-min-average :draw? nil)))
+      (cpplog::change-output-stream "")
+      ret)
     ))
 
 (defun ik-learn-best-loop
