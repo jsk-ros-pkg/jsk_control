@@ -181,6 +181,7 @@
   (if (numberp m1) (setq m1 (make-list d1 :initial-element m1)))
   (if (numberp m2) (setq m2 (make-list d2 :initial-element m2)))
   (let* ((id 0) tmp)
+    (setq id (+ 1 d1))
     (flatten
      (list
       (format nil
@@ -192,7 +193,6 @@
       (format nil "input_dim: 1 ## w")
       (format nil "input_dim: 1 ## h")
       ;;
-      (setq id (+ 1 d1))
       (mapcar
        #'(lambda (_m2)
 	   (setq
