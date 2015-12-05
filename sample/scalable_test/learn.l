@@ -65,7 +65,8 @@
 	(sep (round (expt sample-points (/ 1.0 (length joint-list)))))
 	(root-link (car (send *robot* :links)))
 	(i 0)
-	(draw? nil))
+	(draw? nil)
+	(surfix ""))
   (setq *sample-points* sample-points)
   (if (not (eq (length *angle-vector-map*)
 	       (* (length joint-list) sample-points)))
@@ -121,7 +122,7 @@
 	     )))
 	  (itter joint-list)
 	  (shuffle-random-vector-map)
-	  (dump-ik-learning-data)
+	  (dump-ik-learning-data :surfix surfix)
 	  ))
 
 (defun gen-random-ik-learning-data
@@ -131,7 +132,8 @@
 	(sep (round (expt sample-points (/ 1.0 (length joint-list)))))
 	(root-link (car (send *robot* :links)))
 	(i 0)
-	(draw? nil))
+	(draw? nil)
+	(surfix (format nil ".~A" (unix-command-line "basename `pwd`"))))
   (setq *sample-points* sample-points)
   (if (not (eq (length *angle-vector-map*)
 	       (* (length joint-list) sample-points)))
@@ -172,25 +174,26 @@
 		      (+ 3 k (* j 6) (* i (length ef-coords) 6)))
 		(aref rot k)))
 	))
-    (dump-ik-learning-data)
+    (dump-ik-learning-data :surfix surfix)
     ))
 
 (defun load-ik-learning-data
-  (&key (root "teacher"))
-  (setq *angle-vector-map* (cpplog::read-vector (format nil "~A/angle-vector-map.dat" root)))
-  (setq *ef-coords-map* (cpplog::read-vector (format nil "~A/ef-coords-map.dat" root)))
+  (&key (root "teacher") (surfix ""))
+  (setq *angle-vector-map* (cpplog::read-vector (format nil "~A/angle-vector-map.dat~A" root surfix)))
+  (setq *ef-coords-map* (cpplog::read-vector (format nil "~A/ef-coords-map.dat~A" root surfix)))
   (length *angle-vector-map*))
 
 (defun dump-ik-learning-data
-  (&key (root "teacher"))
+  (&key (root "teacher") (surfix ""))
   (unix::system (format nil "mkdir -p ~A" root))
-  (cpplog::write-vector (format nil "~A/angle-vector-map.dat" root)
+  (cpplog::write-vector (format nil "~A/angle-vector-map.dat~A" root surfix)
 			*angle-vector-map*)
-  (cpplog::write-vector (format nil "~A/ef-coords-map.dat" root)
+  (cpplog::write-vector (format nil "~A/ef-coords-map.dat~A" root surfix)
 			*ef-coords-map*))
 
 (defun ik-learn
-  (&key (solver "ik_solver.prototxt"))
+  (&key (solver "ik_solver.prototxt")
+	(solverstate ""))
   (cond
    ((or (zerop (length *ef-coords-map*))
 	(zerop (length *angle-vector-map*)))
@@ -207,6 +210,7 @@
   ;; 			     :data *ef-coords-map*)
   (caffe::learn
    :solver solver
+   :solverstate solverstate
    :size *sample-points*
    :ddata *ef-coords-map*
    :idata *angle-vector-map*
@@ -215,7 +219,7 @@
 (defun unix-command-line
   (cmd)
   (let* ((p (piped-fork cmd))
-	 (ret (read-line p)))
+	 (ret (read-line p nil)))
     (close p)
     ret))
 
@@ -229,6 +233,32 @@
 		" | "
 		"sed -e \"s/^snapshot_prefix: \\\"\\\(.\\\+\\\)\\\"$/\\\1/g\""
 		)))
+
+(defun link-best-settings
+  (solver)
+  (let* ((best-path solver)
+	 (best-snap (gen-snapshot-prefix best-path))
+	 (caffe-snap
+	  (unix-command-line
+	   (format nil "ls ~A*caffemodel -t | head -n 1" best-snap)))
+	 (solver-snap
+	  (unix-command-line
+	   (format nil "ls ~A*solverstate -t | head -n 1" best-snap)))
+	 (solver-lnk
+	  (format nil "ln -snf ~A ik_solver.best.prototxt" best-path))
+	 (caffe-lnk
+	  (format nil "ln -snf ~A ik.best.caffemodel" caffe-snap))
+	 (solverstate-lnk
+	  (format nil "ln -snf ~A ik.best.solverstate" solver-snap)))
+    (warning-message 3 (format nil "~A~%" solver-lnk))
+    (if (string-equal solver "ik_solver.best.prototxt")
+	(print 'skip)
+      (unix::system solver-lnk))
+    (warning-message 3 (format nil "~A~%" caffe-lnk))
+    (unix::system caffe-lnk)
+    (warning-message 3 (format nil "~A~%" solverstate-lnk))
+    (unix::system solverstate-lnk)
+    ))
 
 (defun ik-learn-with-all-solver
   (&rest args)
@@ -244,19 +274,30 @@
 				  (substringp "prototxt" str)))
 	     (directory)))
 	   #'(lambda (a b) (< (cdr a) (cdr b)))))
-	 (best-path (car (car ret)))
-	 (best-snap (gen-snapshot-prefix best-path))
-	 (caffe-snap
-	  (unix-command-line
-	   (format nil "ls ~A*caffemodel -t | head -n 1" best-snap)))
-	 (solver-snap
-	  (unix-command-line
-	   (format nil "ls ~A*solverstate -t | head -n 1" best-snap)))
 	 )
-    (unix::system (format nil "ln -snf ~A ik_solver.best.prototxt" best-path))
-    (unix::system (format nil "ln -snf ~A ik.best.caffemodel" caffe-snap))
-    (unix::system (format nil "ln -snf ~A ik.best.solverstate" solver-snap))
+    (link-best-settings (car (car ret)))
     ret))
+
+(defun ik-learn-best
+  (&rest args)
+  (let* (config state)
+    ;; detect solver config
+    (setq config
+	  (or (unix-command-line "ls ik_solver.best.prototxt")
+	      (unix-command-line "ls -t ik_solver*prototxt")))
+    ;;
+    ;; detect solver state
+    (setq state
+	  (or (unix-command-line "ls ik.best.solverstate")
+	      (unix-command-line "ls -t ik*solverstate")
+	      ""))
+    ;;
+    (if (not (and config state))
+	(throw :settings-not-found nil))
+    (gen-random-ik-learning-data)
+    (apply 'ik-learn :solver solver :solverstate state)
+    (link-best-settings "ik_solver.best.prototxt")
+    ))
 
 (defun check-test-data
   (&optional
