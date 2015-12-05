@@ -214,13 +214,17 @@
 
 (defun ik-learn-with-all-solver
   (&rest args)
-  (mapcar
-   #'(lambda (solver)
-       (apply 'ik-learn :solver solver args))
-   (remove-if-not
-    #'(lambda (str) (and (substringp "ik_solver" str)
-			 (substringp "prototxt" str)))
-    (directory))))
+  (sort
+   (mapcar
+    #'(lambda (solver)
+	(cons
+	 solver
+	 (apply 'ik-learn :solver solver args)))
+    (remove-if-not
+     #'(lambda (str) (and (substringp "ik_solver" str)
+			  (substringp "prototxt" str)))
+     (directory)))
+   #'(lambda (a b) (< (cdr a) (cdr b)))))
 
 (defun check-test-data
   (&optional
