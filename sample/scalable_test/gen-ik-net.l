@@ -176,6 +176,47 @@
        "loss" "output" "input" "loss")
       ))))
 
+(defun gen-predict-ik-net
+  (s m1 d1 i k d2 m2)
+  (if (numberp m1) (setq m1 (make-list d1 :initial-element m1)))
+  (if (numberp m2) (setq m2 (make-list d2 :initial-element m2)))
+  (let* ((id 0) tmp)
+    (flatten
+     (list
+      (format nil
+	      "name: \"redundancy_ik_net_~As_~Am1_~Ad1_~Ai_~Ak_~Ad2_~Am2\""
+	      s (car m1) d1 i k d2 (car m2))
+      (format nil "input: \"input\"")
+      (format nil "input_dim: 1 ## num")
+      (format nil "input_dim: ~A ## channel" (+ i k))
+      (format nil "input_dim: 1 ## w")
+      (format nil "input_dim: 1 ## h")
+      ;;
+      (setq id (+ 1 d1))
+      (mapcar
+       #'(lambda (_m2)
+	   (setq
+	    tmp
+	    (list
+	     (gen-ip-layer-string
+	      (format nil "ip~A" id)
+	      (if (eq id (+ 1 d1)) "input" (format nil "sig~A" id))
+	      (format nil "ip~A" id)
+	      _m2)
+	     (gen-sigmoid-layer-string
+	      (format nil "sig~A" id)
+	      (format nil "ip~A" id)
+	      (format nil "sig~A" (+ 1 id)))))
+	   (incf id)
+	   tmp)
+       m2)
+      ;;
+      (gen-ip-layer-string "output"
+			   (format nil "sig~A" id)
+			   "output" s)
+      ))))
+
+
 (defun fileoutput-layer-string
   (path lstr)
   (let* ((p (open path :direction :output)))
