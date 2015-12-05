@@ -486,10 +486,11 @@
 	 (map float-vector '(lambda (a b) (- (deg2rad a) b))
 	      random-angle av))
    (cons :state-diff-norm
-	 (/ (norm2 (map float-vector '(lambda (a b) (- (deg2rad a) b))
-			random-angle av)
-		   )
-	    (length av)))
+	 (sqrt
+	  (/ (norm2 (map float-vector '(lambda (a b) (- (deg2rad a) b))
+			 random-angle av)
+		    )
+	     (length av))))
    ))
 
 (defun ik-random-test-min
