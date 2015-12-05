@@ -10,7 +10,7 @@
 	       (list 9 150 3 3 6 3 150)
 	       (list 9 150 4 3 6 4 150)))
   (fileoutput-layer-string "ik_net.prototxt" (apply 'gen-redundancy-ik-net param))
-  (unix::system "./gen_test_dir.sh &")
+  (unix::system "./run_once.sh &")
   (unix::sleep 3))
 
 
