@@ -44,7 +44,7 @@ cp $ORG_DIR/predict_ik_net.prototxt .;
 echo -e "\e[33mgen solver ... \e[m";
 ./gen_solver.sh;
 echo -e "\e[33mrun learning ... \e[m";
-roseus learn.l "(bench (progn (print (ik-learn-with-all-solver)) (print (ik-learn-best-loop :max_iter 100000 :lp 15))))" "(exit)" > log.learn 2>&1;
+roseus learn.l "(bench (progn (print (ik-learn-with-all-solver)) (print (ik-learn-best-loop :max_iter 100000 :lp 10))))" "(exit)" > log.learn 2>&1;
 echo -e "\e[33m${TMP_DIR} done\e[m";
 tail log.learn;
 head ik_net.prototxt -n 1;
