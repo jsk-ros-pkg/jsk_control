@@ -334,14 +334,18 @@
 	 (eq-scale-thre 0.3)
 	 (base_lr-gain-update-scale 2.0)
 	 (vain-cnt 0)
-	 (vain-cnt-max (/ lp 2.0))
+	 (vain-cnt-max (/ lp 2.0)) prev now
 	 ;;
 	 &allow-other-keys)
   (let* ((ret))
     (dotimes (i lp)
       (push (apply 'ik-learn-best :base_lr-gain base_lr-gain args) ret)
+      (setq prev now)
+      (setq now (car ret))
       ;; update base_lr-gain
       (cond
+       ((or (not (numberp now)) (not (numberp prev)))
+	'skip)
        ((eps= now prev (* now eq-scale-thre))
 	(setq base_lr-gain (* base_lr-gain base_lr-gain-update-scale))
 	(incf vain-cnt)
