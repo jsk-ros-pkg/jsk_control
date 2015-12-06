@@ -245,30 +245,32 @@
 		)))
 
 (defun link-best-settings
-  (solver)
-  (let* ((best-path solver)
-	 (best-snap (gen-snapshot-prefix best-path))
-	 (caffe-snap
-	  (unix-command-line
-	   (format nil "ls ~A*caffemodel -t | head -n 1" best-snap)))
-	 (solver-snap
-	  (unix-command-line
-	   (format nil "ls ~A*solverstate -t | head -n 1" best-snap)))
-	 (solver-lnk
-	  (format nil "ln -snf ~A ik_solver.best.prototxt" best-path))
-	 (caffe-lnk
-	  (format nil "ln -snf ~A ik.best.caffemodel" caffe-snap))
-	 (solverstate-lnk
-	  (format nil "ln -snf ~A ik.best.solverstate" solver-snap)))
-    (warning-message 3 (format nil "~A~%" solver-lnk))
-    (if (string-equal solver "ik_solver.best.prototxt")
-	(print 'skip)
-      (unix::system solver-lnk))
-    (warning-message 3 (format nil "~A~%" caffe-lnk))
-    (unix::system caffe-lnk)
-    (warning-message 3 (format nil "~A~%" solverstate-lnk))
-    (unix::system solverstate-lnk)
-    ))
+  (solver
+   &key
+   (best-path solver)
+   (best-snap (gen-snapshot-prefix best-path))
+   (caffe-snap
+    (unix-command-line
+     (format nil "ls ~A*caffemodel -t | head -n 1" best-snap)))
+   (solver-snap
+    (unix-command-line
+     (format nil "ls ~A*solverstate -t | head -n 1" best-snap)))
+   (solver-lnk
+    (format nil "ln -snf ~A ik_solver.best.prototxt" best-path))
+   (caffe-lnk
+    (format nil "ln -snf ~A ik.best.caffemodel" caffe-snap))
+   (solverstate-lnk
+    (format nil "ln -snf ~A ik.best.solverstate" solver-snap)))
+  ;;
+  (warning-message 3 (format nil "~A~%" solver-lnk))
+  (if (string-equal solver "ik_solver.best.prototxt")
+      (print 'skip)
+    (unix::system solver-lnk))
+  (warning-message 3 (format nil "~A~%" caffe-lnk))
+  (unix::system caffe-lnk)
+  (warning-message 3 (format nil "~A~%" solverstate-lnk))
+  (unix::system solverstate-lnk)
+  )
 
 (defun ik-learn-with-all-solver
   (&rest args)
@@ -332,7 +334,7 @@
 	 ;;
 	 (base_lr-gain 1.0)
 	 (eq-scale-thre 0.3)
-	 (base_lr-gain-update-scale 2.0)
+	 (base_lr-gain-update-scale 1.1)
 	 (vain-cnt 0)
 	 (vain-cnt-max (/ lp 2.0)) prev now
 	 ;;
@@ -357,8 +359,14 @@
 	(setq base_lr-gain (/ base_lr-gain base_lr-gain-update-scale))
 	(incf vain-cnt)
 	))
+      (warning-message 3 "update base_lr-gain: ~A, vain: ~A, now: ~A~%"
+		       base_lr-gain vain-cnt now)
       ;; convergence
-      (if (> vain-cnt vain-cnt-max) (return-from nil nil))
+      (cond
+       ((>= vain-cnt vain-cnt-max)
+	(warning-message 3 "loop exceeded, ~A > ~A~%"
+			 vain-cnt vain-cnt-max)
+	(return-from nil nil)))
       )
     (setq *ret* ret)
     ret))
