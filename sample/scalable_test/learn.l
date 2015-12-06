@@ -326,11 +326,35 @@
     ))
 
 (defun ik-learn-best-loop
-  (&rest args &key (lp 10) &allow-other-keys)
+  (&rest args
+	 &key
+	 (lp 10)
+	 ;;
+	 (base_lr-gain 1.0)
+	 (eq-scale-thre 0.3)
+	 (base_lr-gain-update-scale 2.0)
+	 (vain-cnt 0)
+	 (vain-cnt-max (/ lp 2.0))
+	 ;;
+	 &allow-other-keys)
   (let* ((ret))
     (dotimes (i lp)
-      (push (apply 'ik-learn-best args) ret)
-      (if (not ret) (return-from nil nil))
+      (push (apply 'ik-learn-best :base_lr-gain base_lr-gain args) ret)
+      ;; update base_lr-gain
+      (cond
+       ((eps= now prev (* now eq-scale-thre))
+	(setq base_lr-gain (* base_lr-gain base_lr-gain-update-scale))
+	(incf vain-cnt)
+	)
+       ((eps< now prev (* now eq-scale-thre))
+	'nop
+	)
+       ((eps> now prev (* now eq-scale-thre))
+	(setq base_lr-gain (/ base_lr-gain base_lr-gain-update-scale))
+	(incf vain-cnt)
+	))
+      ;; convergence
+      (if (> vain-cnt vain-cnt-max) (return-from nil nil))
       )
     (setq *ret* ret)
     ret))
