@@ -333,10 +333,10 @@
 	 (lp 10)
 	 ;;
 	 (base_lr-gain 1.0)
-	 (eq-scale-thre 0.3)
-	 (base_lr-gain-update-scale 1.1)
+	 (eq-scale-thre 0.05)
+	 (base_lr-gain-update-scale 1.3)
 	 (vain-cnt 0)
-	 (vain-cnt-max (/ lp 2.0)) prev now
+	 (vain-cnt-max 5) prev now
 	 ;;
 	 &allow-other-keys)
   (let* ((ret))
@@ -349,14 +349,18 @@
        ((or (not (numberp now)) (not (numberp prev)))
 	'skip)
        ((eps= now prev (* now eq-scale-thre))
-	(setq base_lr-gain (* base_lr-gain base_lr-gain-update-scale))
+	;;(setq base_lr-gain (* base_lr-gain base_lr-gain-update-scale))
+	(setq base_lr-gain base_lr-gain-update-scale)
 	(incf vain-cnt)
 	)
        ((eps< now prev (* now eq-scale-thre))
+	(setq base_lr-gain 1.0)
+	(decf vain-cnt)
 	'nop
 	)
        ((eps> now prev (* now eq-scale-thre))
-	(setq base_lr-gain (/ base_lr-gain base_lr-gain-update-scale))
+	;; (setq base_lr-gain (/ base_lr-gain base_lr-gain-update-scale))
+	(setq base_lr-gain (/ 1.0 base_lr-gain-update-scale))
 	(incf vain-cnt)
 	))
       (warning-message 3 "update base_lr-gain: ~A, vain: ~A, now: ~A~%"
