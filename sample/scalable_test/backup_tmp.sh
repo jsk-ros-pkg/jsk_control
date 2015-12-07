@@ -19,6 +19,12 @@ then
     cd sample/scalable_test;
 fi
 
+ROOT=$1;
+if [ ! "$ROOT" ];
+then
+    ROOT=`date +"%s"`;
+fi
+
 if [ -e "tmp" ];
 then
     cd tmp;
@@ -26,5 +32,13 @@ then
     then
 	mkdir "backup";
     fi
-    mv * backup;
+    ##
+    if [ ! -e "backup/$ROOT" ];
+    then
+	mkdir "backup/$ROOT";
+    fi
+    for p in `ls | grep -v backup`;
+    do
+	mv $p backup/$ROOT;
+    done
 fi
