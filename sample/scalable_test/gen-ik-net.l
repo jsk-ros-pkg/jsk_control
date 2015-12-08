@@ -116,7 +116,7 @@
 	      "name: \"redundancy_ik_net_~As_~Am1_~Ad1_~Ai_~Ak_~Ad2_~Am2\""
 	      s (car m1) d1 i k d2 (car m2))
       (gen-memory-layer-string
-       "input" "input" "__dummy_label1" 32 9)
+       "input" "input" "__dummy_label1" 32 s)
       ;;
       (mapcar
        #'(lambda (_m1)
@@ -144,7 +144,7 @@
        "_debug_redundancy" "redundancy" "_debug_redundancy")
       ;;
       (gen-memory-layer-string
-       "target" "_target" "__dummy_label2" 32 6)
+       "target" "_target" "__dummy_label2" 32 k)
       (gen-reshape-layer-string "target_reshape" "_target" "target")
       ;;
       (gen-concate-layer-string "concate"
