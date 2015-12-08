@@ -19,7 +19,7 @@
 			      (butlast (send *robot* :rleg :joint-list))
 			      (butlast (send *robot* :lleg :joint-list))
 			      (send *robot* :torso :joint-list)))
-(setq *joint-list1* *joint-list3*)
+;; (setq *joint-list1* *joint-list3*)
 
 (defvar *ef-coords* (list (send *robot* :rarm :end-coords)))
 (defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
