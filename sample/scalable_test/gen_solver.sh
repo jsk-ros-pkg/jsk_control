@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-for base_lr in 0.1 0.05 0.01;
+for base_lr in 0.01 0.005 0.001;
 do
     for id in 0 1 2;
     do
