@@ -19,7 +19,7 @@
 			      (butlast (send *robot* :rleg :joint-list))
 			      (butlast (send *robot* :lleg :joint-list))
 			      (send *robot* :torso :joint-list)))
-;; (setq *joint-list1* *joint-list3*)
+;; (setq *joint-list1* *joint-list2*)
 
 (defvar *ef-coords* (list (send *robot* :rarm :end-coords)))
 (defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
@@ -31,13 +31,13 @@
 (defvar *sample-points* ;;96)
   (let* ((org
 	  (min
-	   (round 1e+8)
+	   (round 1e+6)
 	   (expt (max
-		  (min (round (expt 1e+8 (/ 1.0 (length *joint-list1*))))
+		  (min (round (expt 1e+6 (/ 1.0 (length *joint-list1*))))
 		       4) 2) (length *joint-list1*))))
 	 (sep 32))
     (if (not (zerop (mod org sep)))
-	(round (* (ceiling (/ (* 1.0 org) sep)) sep))
+	(max 1 (round (* (ceiling (/ (* 1.0 org) sep)) sep)))
       org)))
 
 (defvar *angle-vector-map*)
@@ -190,6 +190,8 @@
   ;;
   (let* (pos rot)
     (dotimes (_i sample-points)
+      (if (zerop (mod _i (round (/ sample-points 100))))
+          (warning-message 3 "~A%~%" (/ _i (round (/ sample-points 100)))))
       (dolist (j joint-list)
 	(send j :joint-angle
 	      (-
@@ -259,13 +261,18 @@
   ;; (caffe::reset-memory-layer :name "target"
   ;; 			     :size (length *ef-coords-map*)
   ;; 			     :data *ef-coords-map*)
-  (caffe::learn
-   :solver solver
-   :solverstate solverstate
-   :size *sample-points*
-   :ddata *ef-coords-map*
-   :idata *angle-vector-map*
-   ))
+  (cond
+   ((or (zerop (length *ef-coords-map*))
+        (zerop (length *angle-vector-map*)))
+    (warning-message 1 "zero training DB~%"))
+   (t
+    (caffe::learn
+     :solver solver
+     :solverstate solverstate
+     :size *sample-points*
+     :ddata *ef-coords-map*
+     :idata *angle-vector-map*
+     ))))
 
 (defun unix-command-line
   (cmd)
