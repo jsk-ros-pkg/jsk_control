@@ -11,8 +11,8 @@
   </group>
   <group unless="$(arg use_kinect)" >
     <include file="$(find calibration_launch)/capture_data/monocam_pipeline.launch"
-             ns="/multisense/left">
-      <arg name="image_topic" value="image_rect"/> <!-- this should be image proc -->
+             ns="/multisense_local/left">
+      <arg name="image_topic" value="image_rect_color"/> <!-- this should be image proc -->
       <arg name="frequency" value="5" />
     </include>
   </group>

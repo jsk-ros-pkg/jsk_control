@@ -5,11 +5,11 @@
   <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/jaxon_calibration" />
   <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/jaxon_calibration/cb_fail" />
 
-  <param name="/multisense/left/annotated_viewer/filename_format" type="string"
+  <param name="/multisense_local/left/annotated_viewer/filename_format" type="string"
          value="/tmp/jaxon_calibration/cb_fail/cb_monocam_%04i.jpg" />
 
   <include file="$(find calibration_launch)/capture_data/annotated_viewer.launch"
-           ns="/multisense/left" >
+           ns="/multisense_local/left" >
     <arg name="image_topic" value="image_rect_annotated" />
   </include>
 

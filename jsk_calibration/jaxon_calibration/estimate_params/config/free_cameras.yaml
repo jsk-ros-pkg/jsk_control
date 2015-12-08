@@ -2,7 +2,7 @@
   transforms:
     LARM_chain_cb: [1, 1, 1, 1, 1, 1]
     RARM_chain_cb: [1, 1, 1, 1, 1, 1]
-    multisense/left_camera_optical_frame_joint: [1, 1, 1, 1, 1, 1]
+    left_camera_optical_frame_joint: [1, 1, 1, 1, 1, 1]
 
   chains:
     LARM_chain:
@@ -16,7 +16,7 @@
     head_chain:
       gearing: [0, 0]
     torso_chain:
-      gearing: [0, 0]
+      gearing: [0, 0, 0]
 
   rectified_cams:
     head_camera:

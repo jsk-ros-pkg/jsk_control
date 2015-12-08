@@ -6,7 +6,7 @@
     arm_chain:
       gearing: [0, 0, 0, 0, 0, 0]
     head_chain:
-      gearing: [0, 0]
+      gearing: [0, 0, 0]
 
 
   rectified_cams:

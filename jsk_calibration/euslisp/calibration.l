@@ -6,7 +6,7 @@
   :slots (robot-model sampling-joints distances end-effector-offset limb
           angles x-angles y-angles
           reset-method motion-anglevectors camera-method filter-sampling
-          filter-sampling-coords
+          filter-sampling-coords duration-scale
           collision-links board-object prompt chain-ids
           robust-motion root-link))
 
@@ -28,6 +28,7 @@
                ((:y-angles ay-angles) '(0))
                ((:board board) nil)
                ((:limb alimb) nil)
+               ((:duration-scale dscl) 1.0)
                ((:robust-motion rob-motion) nil))
     (setq root-link aroot-link)
     (setq chain-ids achain-ids)
@@ -46,6 +47,7 @@
     (setq distances adistances)
     (setq end-effector-offset aend-effector-offset)
     (setq robust-motion rob-motion)
+    (setq duration-scale dscl)
     ;; assoc
     (send board-object :transform
           (send (send robot-model limb :end-coords :copy-worldcoords)
@@ -100,6 +102,7 @@
      (format f "repeat: False~%")
      ))
   (:write-initial-poses (strm)
+    (let ((cntr 0))
     (dolist (angle-vector motion-anglevectors)
      (send robot-model :angle-vector angle-vector)
      (let ((root (send robot-model :link root-link))
@@ -115,9 +118,11 @@
              (if (> (apply #'max (mapcar #'(lambda (x) (abs x)) a))
                     (apply #'max (mapcar #'(lambda (x) (abs x)) b)))
                  (setq ypr b) (setq ypr a)))
+           (format strm "## ~A ~D~%" limb cntr)
+           (incf cntr)
            (format strm "- [~8,8f, ~8,8f, ~8,8f, ~8,8f, ~8,8f, ~8,8f]~%"
                    (elt pos 0) (elt pos 1) (elt pos 2)
-                   (elt ypr 2) (elt ypr 1) (elt ypr 0)))))))
+                   (elt ypr 2) (elt ypr 1) (elt ypr 0))))))))
   (:generate-motion-yaml (root-directory arm angle-vector index tm)
     (let* ((fname (format nil "~A_~0,4d.yaml" (string arm) index))
            (full-path (format nil "~A/~A" root-directory fname)))
@@ -129,7 +134,7 @@
        (format f "joint_commands:~%")
        (format f "- controller: fullbody_controller~%")
        (format f "  segments:~%")
-       (format f "  - duration: ~A~%" tm)
+       (format f "  - duration: ~A~%" (* duration-scale tm)) ;; 
        (format f "    positions: ~A~%" (python-array-format ;convert to radian
                                         (mapcar #'deg2rad (coerce angle-vector cons))))
        (format f "joint_measurements:~%")
@@ -196,7 +201,8 @@
           (when (> (length angle-vector-sequence) max-N)
             (format t "motion length is ~A, try to reduce them to ~A~%"
                     (length angle-vector-sequence) max-N)
-            (setq angle-vector-sequence (remove-nearest-one angle-vector-sequence))))
+            (dotimes (i (- (length angle-vector-sequence) max-N))
+              (setq angle-vector-sequence (remove-nearest-one angle-vector-sequence)))))
         (setq motion-anglevectors angle-vector-sequence)
         (format t "refined motion is ~A~%" (length motion-anglevectors)))))
   (:check-motion (angle-vectors)
