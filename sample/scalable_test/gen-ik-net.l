@@ -83,6 +83,11 @@
   (gen-config-string
    (gen-simple-layer-list name "Sigmoid" bottom top)))
 
+(defun gen-tanh-layer-string
+  (name bottom top)
+  (gen-config-string
+   (gen-simple-layer-list name "TanH" bottom top)))
+
 (defun gen-reshape-layer-string
   (name bottom top)
   (gen-config-string
@@ -128,7 +133,7 @@
 	      (if (eq id 0) "input" (format nil "sig~A" id))
 	      (format nil "ip~A" id)
 	      _m1)
-	     (gen-sigmoid-layer-string
+	     (gen-tanh-layer-string
 	      (format nil "sig~A" id)
 	      (format nil "ip~A" id)
 	      (format nil "sig~A" (+ 1 id)))))
@@ -161,7 +166,7 @@
 	      (format nil "sig~A" id)
 	      (format nil "ip~A" id)
 	      _m2)
-	     (gen-sigmoid-layer-string
+	     (gen-tanh-layer-string
 	      (format nil "sig~A" id)
 	      (format nil "ip~A" id)
 	      (format nil "sig~A" (+ 1 id)))))
@@ -203,7 +208,7 @@
 	      (if (eq id (+ 1 d1)) "input" (format nil "sig~A" id))
 	      (format nil "ip~A" id)
 	      _m2)
-	     (gen-sigmoid-layer-string
+	     (gen-tanh-layer-string
 	      (format nil "sig~A" id)
 	      (format nil "ip~A" id)
 	      (format nil "sig~A" (+ 1 id)))))
