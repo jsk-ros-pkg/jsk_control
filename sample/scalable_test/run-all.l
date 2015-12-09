@@ -16,14 +16,15 @@
     (close p)
     ret))
 
-(let* ((lav (get-load-average)) (max 5.9) (skip (round (- max lav))))
+(let* ((lav (get-load-average)) (max 5.9) (skip (round (- max lav)))
+       (s 9) (k 6) (i 1))
   (dolist (param
-	   (list (list 9 100 2 1 6 2 100)
-		 (list 9 100 3 1 6 3 100)
-		 (list 9 100 4 1 6 4 100)
-		 (list 9 70 2 1 6 2 70)
-		 (list 9 70 3 1 6 3 70)
-		 (list 9 70 4 1 6 4 70)))
+	   (list (list s 100 2 i k 2 100)
+		 (list s 100 3 i k 3 100)
+		 (list s 100 4 i k 4 100)
+		 (list s 70 2 i k 2 70)
+		 (list s 70 3 i k 3 70)
+		 (list s 70 4 i k 4 70)))
     (fileoutput-layer-string "ik_net.prototxt" (apply 'gen-redundancy-ik-net param))
     (fileoutput-layer-string "predict_ik_net.prototxt"
 			     (apply 'gen-predict-ik-net param))
