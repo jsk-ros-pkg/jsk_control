@@ -72,7 +72,7 @@
   (&key (sample-points *sample-points*)
 	(joint-list *joint-list1*)
 	(ef-coords *ef-coords*)
-	(sep (floor (expt sample-points (/ 1.0 (length joint-list)))))
+	(sep (round (expt sample-points (/ 1.0 (length joint-list)))))
 	(root-link (car (send *robot* :links)))
 	(i 0)
 	(draw? nil)
@@ -107,6 +107,8 @@
     (labels ((itter
 	      (jlist)
 	      (cond
+               ((>= i sample-points)
+                'nop)
 	       ((null jlist)
 		(let* (pos rot)
 		  (send-all (send-all joint-list :child-link) :worldcoords)
@@ -136,7 +138,10 @@
 				  (+ 3 k (* j 6) (* i (length ef-coords) 6)))
 			    (aref rot k)))
 		    )
-		  (setq i (+ i 1))))
+		  (setq i (+ i 1))
+                  (if (zerop (mod i (round (/ sample-points 100))))
+                      (warning-message 2 "~A%~%" (/ i (round (/ sample-points 100)))))
+                  ))
 	       (t
 		(dotimes (j sep)
 		  (send (car jlist) :joint-angle
@@ -149,21 +154,25 @@
 			:relative t)
 		  (itter (cdr jlist))))
 	       )))
-	    (itter joint-list)
-	    ;; fill random
-	    (gen-random-ik-learning-data
-	     :sample-points sample-points
-	     :joint-list joint-list
-	     :ef-coords ef-coords
-	     :sep sep
-	     :root-link root-link
-	     :i i
-	     :draw? draw?
-	     :dump? nil)
-	    ;;
-	    (shuffle-random-vector-map)
-	    (dump-ik-learning-data :surfix surfix)
-	    ))))
+      (warning-message 1 "generate sep DB ~A^~A~%" (length joint-list) sep)
+      (itter joint-list)
+      ;; fill random
+      (warning-message 1 "generate random DB ~A~%" (- sample-points i))
+      (gen-random-ik-learning-data
+       :sample-points sample-points
+       :joint-list joint-list
+       :ef-coords ef-coords
+       :sep sep
+       :root-link root-link
+       :i i
+       :draw? draw?
+       :dump? nil)
+      ;;
+      (warning-message 1 "shuffling DB~%")
+      (shuffle-random-vector-map)
+      (warning-message 1 "write to file .~A~%" surfix)
+      (dump-ik-learning-data :surfix surfix)
+      ))))
 
 (defun gen-random-ik-learning-data
   (&key (sample-points *sample-points*)
@@ -190,6 +199,7 @@
   ;;
   (let* (pos rot)
     (dotimes (_i sample-points)
+      (if (>= i sample-points) (return-from nil nil))
       (if (zerop (mod _i (round (/ sample-points 100))))
           (warning-message 3 "~A%~%" (/ _i (round (/ sample-points 100)))))
       (dolist (j joint-list)
@@ -223,7 +233,6 @@
 		(aref rot k)))
 	)
       (incf i)
-      (if (>= i sample-points) (return-from nil nil))
       )
     (if dump? (dump-ik-learning-data :surfix surfix))
     ))
