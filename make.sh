@@ -13,9 +13,10 @@ if [ ! -e "caffe" ];
 then
     ##
     ##
-    wget https://github.com/BVLC/caffe/archive/master.zip
-    unzip master.zip;
-    mv caffe-master caffe;
+    wget https://github.com/BVLC/caffe/archive/d362894887af9dca8581906b2284f5be81dbd403.zip
+    unzip d362894887af9dca8581906b2284f5be81dbd403.zip;
+    mv caffe-d362894887af9dca8581906b2284f5be81dbd403 caffe;
+    ## mv caffe-master caffe;
     ## git clone https://github.com/BVLC/caffe.git;
     cd caffe;
     DIR_ROOT=`pwd`;
@@ -27,6 +28,11 @@ then
     DIR_3rdparty=`pwd`;
     ##
     ## glog
+    # wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
+    # tar zxvf glog-0.3.3.tar.gz
+    # cd glog-0.3.3
+    # ./configure
+    # make && sudo make install
     wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
     tar zxvf glog-0.3.3.tar.gz
     cd glog-0.3.3
@@ -50,10 +56,14 @@ then
     echo ">>>>> install gflags in `pwd`";
     ##
     ## lmdb
-    git clone https://gitorious.org/mdb/mdb.git
+    ##git clone https://gitorious.org/mdb/mdb.git
     ## wget https://gitorious.org/mdb/mdb/archive/master.zip;
     ## unzip master.zip;
     ## mv mdb-master mdb;
+    ##cd mdb/libraries/liblmdb
+    wget https://github.com/LMDB/lmdb/archive/7e476e4983cfba45cefe793b8bd6e13c486b3989.zip;
+    unzip 7e476e4983cfba45cefe793b8bd6e13c486b3989.zip;
+    mv lmdb-7e476e4983cfba45cefe793b8bd6e13c486b3989 mdb;
     cd mdb/libraries/liblmdb
     make && sudo make install
     cd $DIR_3rdparty;
