@@ -60,7 +60,7 @@
                                  :min-angle 0
                                  :step-angle 15))
                       :distances
-                      (range-equivalents 340 640 60)
+                      (range-equivalents 520 640 60)
                       :angles
                       (range-equivalents (deg2rad -30) (deg2rad 120) (deg2rad 30))
                       :x-angles
