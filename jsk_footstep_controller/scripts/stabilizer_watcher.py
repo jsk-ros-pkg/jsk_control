@@ -6,21 +6,29 @@ from hrpsys_ros_bridge.srv import OpenHRP_StabilizerService_getParameter as getP
 import rospy
 from std_msgs.msg import Empty
 from sound_play.msg import SoundRequest
+from hrpsys_ros_bridge.msg import ContactStatesStamped, ContactStateStamped, ContactState
 
 # global variable
 g_previous_st_controller_mode = None
 
-def controllerModeToString(mode):
-    if mode == 0:
-        return "MODE_IDLE"
-    elif mode == 1:
-        return "MODE_AIR"
-    elif mode == 2:
+def controllerModeToString(msg):
+    is_lleg_contact = None
+    is_rleg_contact = None
+    for state in msg.states:
+        if state.header.frame_id == "lfsensor":
+            if state.state.state == ContactState.ON:
+                is_lleg_contact = True
+            else:
+                is_lleg_contact = False
+        if state.header.frame_id == "rfsensor":
+            if state.state.state == ContactState.ON:
+                is_rleg_contact = True
+            else:
+                is_rleg_contact = False
+    if is_lleg_contact or is_rleg_contact:
         return "MODE_ST"
-    elif mode == 3:
-        return "MODE_SYNC_TO_IDLE"
-    elif mode == 4:
-        return "MODE_SYNC_TO_AIR"
+    else:
+        return "MODE_AIR"
 
 def isChangedControllerMode(actual_from, actual_to, expected_from, expected_to):
     if (actual_from in expected_from and
@@ -35,15 +43,13 @@ def trig():
     sound = SoundRequest()
     sound.sound = SoundRequest.SAY
     sound.command = SoundRequest.PLAY_ONCE
-    sound.arg = "Robot stans on the ground."
+    sound.arg = "Robot stands on the ground."
     g_robotsound_pub.publish(sound)
     
-    
-def watch(event):
-    global g_get_parameter_srv, g_previous_st_controller_mode
+def contactStatesCallback(msg):
+    global g_previous_st_controller_mode
     global g_odom_init_trigger_pub, g_robotsound_pub
-    st_param = g_get_parameter_srv().i_param
-    controller_mode = controllerModeToString(st_param.controller_mode)
+    controller_mode = controllerModeToString(msg)
     if (controller_mode == "MODE_AIR" or 
         controller_mode == "MODE_IDLE" or 
         controller_mode == "MODE_ST"):
@@ -61,10 +67,8 @@ def watch(event):
 
 if __name__ == "__main__":
     rospy.init_node("stabilizer_watcher")
-    rate = rospy.get_param("~rate", 1.0) # 10Hz
-    g_get_parameter_srv = rospy.ServiceProxy("/StabilizerServiceROSBridge/getParameter", getParameter)
+    contact_states_sub = rospy.Subscriber("/act_contact_states", ContactStatesStamped, contactStatesCallback, queue_size=1)
     g_odom_init_trigger_pub = rospy.Publisher("/odom_init_trigger", Empty)
     g_robotsound_pub = rospy.Publisher("/robotsound", SoundRequest)
-    timer = rospy.Timer(rospy.Duration(1.0 / rate), watch)
     rospy.spin()
 

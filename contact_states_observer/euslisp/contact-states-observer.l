@@ -37,7 +37,7 @@
    (jlist &key (debug-view nil))
    (let* ((ret)
           (idx-list
-           (mapcar #'(lambda (j) (position (send (send *robot* :hand (send self :name) j) :name) (send-all jlist :name))) check-jname-list))
+           (mapcar #'(lambda (j) (position (send (send (send *robot* :hand (send self :name)) j) :name) (send-all jlist :name))) check-jname-list))
           (cur-ja-list
            (mapcar #'(lambda (idx) (elt current-av idx)) idx-list)))
      (dolist (rav reference-datas)
@@ -268,7 +268,7 @@
  roseus::stringstring
  #'obj-env-state-set-param-cb)
 
-(let ((robot-name (ros::get-param "~robot_name")))
+(let ((robot-name (ros::get-param "/robot_name")))
   (cond
    ((string= robot-name "HRP2JSKNT")
     (require :hrp2jsknt-interface "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
@@ -291,9 +291,16 @@
 ;;(setup-sensor-viewer)
 (setup-grasp-states)
 (do-until-key
- (let ((hav (and (find-method *ri* :hand-state) (send (send *ri* :hand-state) :potentio))))
+ (let ((hav (or (and (find-method *ri* :hand-state) (send (send *ri* :hand-state) :potentio))
+                (send *ri* :get-joint-angle))))
    (when hav
-     (null-output (send *robot* :hand-angle-vector hav))
+     (cond
+      ((substringp "HRP2" (send *robot* :name))
+       (null-output (send *robot* :hand-angle-vector hav)))
+      ((substringp "JAXON" (send *robot* :name))
+       (mapcar #'(lambda (a av)
+                   (send (send *robot* :hand a) :angle-vector av))
+               '(:rarm :larm) hav)))
      (mapcar #'(lambda (gs hd)
                  (send gs :set-current-av
                        (send hd :angle-vector))

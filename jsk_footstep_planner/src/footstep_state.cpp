@@ -192,7 +192,6 @@ namespace jsk_footstep_planner
                                 double vertex_threshold,
                                 const bool skip_cropping)
   {
-    std::cout << "skip cropping: " << skip_cropping << std::endl;
     // TODO: z is ignored
     // extract candidate points
     //pcl::PointIndices::Ptr indices = cropPointCloud(cloud_2d, tree_2d);
@@ -267,9 +266,9 @@ namespace jsk_footstep_planner
       Eigen::Vector3f q = p + alpha * z;
       
       Eigen::Affine3f new_pose = Eigen::Translation3f(q) * new_rot;
-      std::cout << "new_pose: " << std::endl << new_pose.matrix() << std::endl;
-      std::cout << "q: " << std::endl << q << std::endl;
-      std::cout << "new_rot_mat: " << std::endl << new_rot_mat << std::endl;
+      // std::cout << "new_pose: " << std::endl << new_pose.matrix() << std::endl;
+      // std::cout << "q: " << std::endl << q << std::endl;
+      // std::cout << "new_rot_mat: " << std::endl << new_rot_mat << std::endl;
       //Eigen::Affine3f new_pose = new_rot * Eigen::Translation3f(q);
       // check is it enough points to support the footstep
       FootstepSupportState support_state;
@@ -311,7 +310,6 @@ namespace jsk_footstep_planner
                                          const int foot_y_sampling_num,
                                          const double vertex_threshold)
   {
-    ROS_INFO("hogeeeeeeeeeeeeeeeeee");
     const double dx = dimensions_[0] / foot_x_sampling_num;
     const double dy = dimensions_[1] / foot_y_sampling_num;
     // vertices

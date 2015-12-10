@@ -29,6 +29,15 @@ def verticesPoints(original_vertices, origin_pose, scale, resolution_size):
              int(v[1] / (scale / 2.0) * resolution_size / 2.0 + resolution_size / 2.0))
             for v in vertices_3d]
 
+def verticesPoints3D(original_vertices, origin_pose, scale, resolution_size):
+    original_vertices_3d_local = original_vertices
+    vertices_3d_pose = [concatenate_matrices(origin_pose, translation_matrix(v)) for v in original_vertices_3d_local]
+    vertices_3d = [translation_from_matrix(v) for v in vertices_3d_pose]
+    
+    return [(int(v[0] / (scale / 2.0) * resolution_size / 2.0 + resolution_size / 2.0),
+             int(v[1] / (scale / 2.0) * resolution_size / 2.0 + resolution_size / 2.0))
+            for v in vertices_3d]
+
 def transformToMatrix(transform):
     return matrixFromTranslationQuaternion([transform.translation.x,
                                             transform.translation.y,
@@ -70,14 +79,14 @@ def periodicCallback(event):
             _zmp_origin = tf_buffer.lookup_transform(root_link, zmp_msg.header.frame_id, rospy.Time())
             zmp_origin = transformToMatrix(_zmp_origin.transform)
             zmp_point = np.array([zmp_msg.point.x,
-                                       zmp_msg.point.y,
-                                       zmp_msg.point.z])
+                                  zmp_msg.point.y,
+                                  zmp_msg.point.z])
         if act_cp_msg:
             _act_cp_origin = tf_buffer.lookup_transform(root_link, act_cp_msg.header.frame_id, rospy.Time())
             act_cp_origin = transformToMatrix(_act_cp_origin.transform)
             act_cp_point = np.array([act_cp_msg.point.x,
-                                       act_cp_msg.point.y,
-                                       act_cp_msg.point.z])
+                                     act_cp_msg.point.y,
+                                     act_cp_msg.point.z])
         if ref_cp_msg:
             _ref_cp_origin = tf_buffer.lookup_transform(root_link, ref_cp_msg.header.frame_id, rospy.Time())
             ref_cp_origin = transformToMatrix(_ref_cp_origin.transform)
@@ -148,31 +157,31 @@ def periodicCallback(event):
             hull = cv.convexHull(np.array(lleg_points + rleg_points))
             cv.drawContours(image, [hull], -1, (155, 155, 155, 255), 2)
         if lleg_cop_msg:
-            lleg_cop_point_2d = verticesPoints([lleg_cop_point],
-                                               concatenate_matrices(inverse_matrix(mid_coords),
-                                                                    lleg_cop_origin),
-                                               scale,
-                                               image_size)[0]
+            lleg_cop_point_2d = verticesPoints3D([lleg_cop_point],
+                                                 concatenate_matrices(inverse_matrix(mid_coords),
+                                                                      lleg_cop_origin),
+                                                 scale,
+                                                 image_size)[0]
             drawPoint(image, lleg_cop_point_2d, 5, (0, 255, 0), "LCoP")
             lleg_cop_msg = None
         if rleg_cop_msg:
-            rleg_cop_point_2d = verticesPoints([rleg_cop_point],
-                                               concatenate_matrices(inverse_matrix(mid_coords),
-                                                                    rleg_cop_origin),
-                                               scale,
-                                               image_size)[0]
+            rleg_cop_point_2d = verticesPoints3D([rleg_cop_point],
+                                                 concatenate_matrices(inverse_matrix(mid_coords),
+                                                                      rleg_cop_origin),
+                                                 scale,
+                                                 image_size)[0]
             drawPoint(image, rleg_cop_point_2d, 5, (0, 0, 255), "RCoP")
             rleg_cop_msg = None
         if zmp_msg:
-            zmp_point_2d = verticesPoints([zmp_point],
-                                               concatenate_matrices(inverse_matrix(mid_coords),
-                                                                    zmp_origin),
-                                               scale,
-                                               image_size)[0]
+            zmp_point_2d = verticesPoints3D([zmp_point],
+                                            concatenate_matrices(inverse_matrix(mid_coords),
+                                                                 zmp_origin),
+                                            scale,
+                                            image_size)[0]
             drawPoint(image, zmp_point_2d, 5, (0, 255, 255), "ZMP")
             zmp_msg = None
         if ref_cp_msg:
-            ref_cp_point_2d = verticesPoints([ref_cp_point],
+            ref_cp_point_2d = verticesPoints3D([ref_cp_point],
                                                concatenate_matrices(inverse_matrix(mid_coords),
                                                                     ref_cp_origin),
                                                scale,
@@ -180,7 +189,7 @@ def periodicCallback(event):
             drawPoint(image, ref_cp_point_2d, 7, REF_CP_COLOR, "RCP")
             ref_cp_msg = None
         if act_cp_msg:
-            act_cp_point_2d = verticesPoints([act_cp_point],
+            act_cp_point_2d = verticesPoints3D([act_cp_point],
                                                concatenate_matrices(inverse_matrix(mid_coords),
                                                                     act_cp_origin),
                                                scale,

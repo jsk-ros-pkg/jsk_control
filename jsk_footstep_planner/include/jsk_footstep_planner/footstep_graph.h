@@ -76,7 +76,8 @@ namespace jsk_footstep_planner
       zero_state_(new FootstepState(0,
                                     Eigen::Affine3f::Identity(),
                                     Eigen::Vector3f::UnitX(),
-                                    resolution_))
+                                    resolution_)),
+      perception_duration_(0.0)
     {
     }
     virtual std::vector<StatePtr> successors(StatePtr target_state);
@@ -178,7 +179,8 @@ namespace jsk_footstep_planner
     virtual TransitionLimit::Ptr getGlobalTransitionLimit() { return global_transition_limit_; }
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in);
     virtual FootstepState::Ptr projectFootstep(FootstepState::Ptr in, unsigned int& state);
-
+    virtual ros::WallDuration getPerceptionDuration() { return perception_duration_; }
+    virtual void clearPerceptionDuration() { perception_duration_ = ros::WallDuration(0.0); }
     virtual std::vector<FootstepState::Ptr> localMoveFootstepState(FootstepState::Ptr in);
   protected:
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
@@ -222,6 +224,7 @@ namespace jsk_footstep_planner
     int support_check_x_sampling_;
     int support_check_y_sampling_;
     double support_check_vertex_neighbor_threshold_;
+    ros::WallDuration perception_duration_;
   private:
 
   };
