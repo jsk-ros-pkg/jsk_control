@@ -19,10 +19,13 @@
 			      (butlast (send *robot* :rleg :joint-list))
 			      (butlast (send *robot* :lleg :joint-list))
 			      (send *robot* :torso :joint-list)))
-;; (setq *joint-list1* *joint-list2*)
 
 (defvar *ef-coords* (list (send *robot* :rarm :end-coords)))
 (defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
+
+;; (setq *joint-list1* *joint-list2*)
+;; (setq *ef-coords* (send *robot* :arms :end-coords))
+;; (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 
 (objects (flatten (list (car (send *robot* :links))
 			(reverse (send-all *joint-list3* :child-link))
@@ -65,8 +68,8 @@
        (dotimes (j (length ef-coords))
 	 (dotimes (k 6)
 	   (swap cc-map
-		 (+ k (* 6 (length ef-coords) i))
-		 (+ k (* 6 (length ef-coords) r)))))))))
+		 (+ k (* j 6) (* 6 (length ef-coords) i))
+		 (+ k (* j 6) (* 6 (length ef-coords) r)))))))))
 
 (defun gen-ik-learning-data
   (&key (sample-points *sample-points*)
@@ -79,7 +82,7 @@
 	(surfix ""))
   ;;
   (cond
-   ((< sep 3)
+   ((< sep 2)
     (warning-message 3 "large search space ~A^~A~% -> random DB~%"
 		     (length joint-list) sep)
     (gen-random-ik-learning-data
@@ -139,7 +142,8 @@
 			    (aref rot k)))
 		    )
 		  (setq i (+ i 1))
-                  (if (zerop (mod i (round (/ sample-points 100))))
+                  (if (and (> sample-points 100)
+			   (zerop (mod i (round (/ sample-points 100)))))
                       (warning-message 2 "~A%~%" (/ i (round (/ sample-points 100)))))
                   ))
 	       (t
@@ -200,7 +204,8 @@
   (let* (pos rot)
     (dotimes (_i sample-points)
       (if (>= i sample-points) (return-from nil nil))
-      (if (zerop (mod _i (round (/ sample-points 100))))
+      (if (and (> sample-points 100)
+	       (zerop (mod _i (round (/ sample-points 100)))))
           (warning-message 3 "~A%~%" (/ _i (round (/ sample-points 100)))))
       (dolist (j joint-list)
 	(send j :joint-angle
@@ -390,7 +395,7 @@
 	 (lp 10)
 	 ;;
 	 (base_lr-gain 1.0)
-	 (eq-scale-thre 0.05)
+	 (eq-scale-thre 0.01)
 	 (base_lr-gain-update-scale 1.3)
 	 (vain-cnt 0)
 	 (vain-cnt-max 5) prev now
