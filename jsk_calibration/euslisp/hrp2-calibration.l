@@ -323,9 +323,10 @@
                (camera-method nil))
     (send-super :init :model-file amodel-file :model-class amodel-class)
     ;;
-    (send robot :head :neck-y :max-angle 31)
-    (send robot :head :neck-y :min-angle -31)
-    (send robot :head :neck-p :min-angle -15)
+    (send robot :head :neck-y :max-angle 17)
+    (send robot :head :neck-y :min-angle -17)
+    (send robot :head :neck-p :min-angle -10)
+    (send robot :head :neck-p :max-angle 25)
     ;;(send (send robot :body_lk) :make-pqpmodel :fat 10.0)
     (send (send robot :chest_link1_lk) :make-pqpmodel :fat 10.0)
     ;;(send (send robot :chest_link2_lk) :make-pqpmodel :fat 10.0)
@@ -342,6 +343,7 @@
                 ))
     ;; build good collision links
     (let ((collision-links (send robot :collision-check-pairs))
+          (distances (range-equivalents 500 620 40))
           (ignore-link-pairs
            '(("BODY" . "CHEST_LINK1")
              ("BODY" . "RLEG_LINK1")
@@ -375,23 +377,23 @@
                       (list
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-p)
-                                 :step-angle 15)
+                                 :step-angle 17.4)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
-                                 :step-angle 15))
-                      :distances
-                      (range-equivalents 360 640 70)
+                                 :step-angle 16.5))
+                      :distances distances
                       :angles
-                      (range-equivalents (deg2rad 50) (deg2rad 130) (deg2rad 20))
+                      (list (deg2rad 40) (deg2rad 65) (deg2rad 90) (deg2rad 105))
                       :x-angles
                       (list (deg2rad -15) (deg2rad 0) (deg2rad 15))
                       :y-angles
-                      (list (deg2rad -15) (deg2rad 0) (deg2rad 15))
+                      (list (deg2rad 30) (deg2rad 15) (deg2rad 0))
                       :board (make-mmurooka-board)
                       :end-effector-offset ;; should be changed
-                      (make-coords :pos (float-vector 195 0 45)
+                      (make-coords :pos (float-vector 165 0 45)
                                    :rpy (list 0 0 0))
                       :robust-motion nil
+                      :duration-scale 1.5
                       ))
       (send self :add-motion :rarm
             (instance calibration-motion
@@ -410,23 +412,23 @@
                       (list
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-p)
-                                 :step-angle 15)
+                                 :step-angle 17.4)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
-                                 :step-angle 15))
-                      :distances
-                      (range-equivalents 360 640 70)
+                                 :step-angle 16.5))
+                      :distances distances
                       :angles
-                      (range-equivalents (deg2rad 50) (deg2rad 130) (deg2rad 20))
+                      (list (deg2rad 75) (deg2rad 90) (deg2rad 115) (deg2rad 140))
                       :x-angles
                       (list (deg2rad -15) (deg2rad 0) (deg2rad 15))
                       :y-angles
-                      (list (deg2rad -15) (deg2rad 0) (deg2rad 15))
+                      (list (deg2rad 0) (deg2rad 15) (deg2rad 30))
                       :board (make-mmurooka-board)
                       :end-effector-offset ;; should be changed
-                      (make-coords :pos (float-vector 195 0 45)
+                      (make-coords :pos (float-vector 165 0 45)
                                    :rpy (list 0 0 0))
                       :robust-motion nil
+                      :duration-scale 1.5
                       ))
       #|
       (send self :add-motion :lleg
@@ -668,7 +670,17 @@
                           :init
                           :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/jaxon-interface.l"
                           :model-class 'jaxon-robot
-                          :head-camera-config "/multisense/left"
+                          :head-camera-config "/multisense_local/left"
+                          :camera-method :head_left_camera))
+  (send *calib* :generate-motions)
+  (send *calib* :generate-files "package://jsk_calibration/jaxon_calibration")
+  )
+(defun generate-jaxon_red-files ()
+  (setq *calib* (instance jaxon-calibration-config
+                          :init
+                          :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/jaxon_red-interface.l"
+                          :model-class 'jaxon_red-robot
+                          :head-camera-config "/multisense_local/left"
                           :camera-method :head_left_camera))
   (send *calib* :generate-motions)
   (send *calib* :generate-files "package://jsk_calibration/jaxon_calibration")

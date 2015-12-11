@@ -6,6 +6,6 @@
     <remap from="LARM_chain" to="LARM_chain/settled_interval" />
     <remap from="RARM_chain" to="RARM_chain/settled_interval" />
     <remap from="head_chain" to="head_chain/settled_interval" />
-    <remap from="head_camera" to="/multisense/left/settled_interval" />
+    <remap from="head_camera" to="/multisense_local/left/settled_interval" />
   </node>
 </launch>

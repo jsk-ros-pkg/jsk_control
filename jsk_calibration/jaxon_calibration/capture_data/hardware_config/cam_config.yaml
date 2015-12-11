@@ -1,14 +1,14 @@
 head_camera:
-  cb_detector_config: /multisense/left/cb_detector_config
-  led_detector_config: /multisense/left/led_detector
-  settler_config: /multisense/left/monocam_settler_config
+  cb_detector_config: /multisense_local/left/cb_detector_config
+  led_detector_config: /multisense_local/left/led_detector
+  settler_config: /multisense_local/left/monocam_settler_config
   configs:
     mmurooka_board:
       settler:
         tolerance: 2.00
         ignore_failures: True
-        max_step: 2.0 
-        cache_size: 4
+        max_step: 3.0 
+        cache_size: 100
       cb_detector:
         active: True
         num_x: 6
