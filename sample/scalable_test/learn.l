@@ -178,6 +178,17 @@
       (dump-ik-learning-data :surfix surfix)
       ))))
 
+(defun gen-random-angle-vector
+  (&optional (joint-list *joint-list1*))
+  (dolist (j joint-list)
+    (send j :joint-angle
+          (-
+           (+ (send j :min-angle)
+              (* (random 1.0)
+                 (- (send j :max-angle) (send j :min-angle))))
+           (send j :joint-angle))
+          :relative t)))
+
 (defun gen-random-ik-learning-data
   (&key (sample-points *sample-points*)
 	(joint-list *joint-list1*)
@@ -188,7 +199,10 @@
 	(draw? nil)
 	(dump? t)
 	(surfix (if dump?
-		    (format nil ".~A" (unix-command-line "basename `pwd`")))))
+		    (format nil ".~A" (unix-command-line "basename `pwd`"))))
+        (gen-random-angle-vector-func 'gen-random-angle-vector)
+        &allow-other-keys
+        )
   (setq *sample-points* sample-points)
   (if (not (eq (length *angle-vector-map*)
 	       (* (length joint-list) sample-points)))
@@ -207,15 +221,18 @@
       (if (and (> sample-points 100)
 	       (zerop (mod _i (round (/ sample-points 100)))))
           (warning-message 3 "~A%~%" (/ _i (round (/ sample-points 100)))))
-      (dolist (j joint-list)
-	(send j :joint-angle
-	      (-
-	       (+ (send j :min-angle)
-		  (* (random 1.0)
-		     (- (send j :max-angle) (send j :min-angle))))
-	       (send j :joint-angle))
-	      :relative t)
-	)
+      ;; (dolist (j joint-list)
+      ;;   (send j :joint-angle
+      ;;         (-
+      ;;          (+ (send j :min-angle)
+      ;;   	  (* (random 1.0)
+      ;;   	     (- (send j :max-angle) (send j :min-angle))))
+      ;;          (send j :joint-angle))
+      ;;         :relative t)
+      ;;   )
+      (if (functionp gen-random-angle-vector-func)
+          (funcall gen-random-angle-vector-func joint-list)
+        (warning-message 1 "invalid gen-random-angle-vector-func~%"))
       (send-all (send-all joint-list :child-link) :worldcoords)
       (send-all ef-coords :worldcoords)
       (dotimes (j (length joint-list))
@@ -241,6 +258,65 @@
       )
     (if dump? (dump-ik-learning-data :surfix surfix))
     ))
+
+;; gen-random-ik-learning-data-with-thre :sample-points 3 :thre 0.3 :max-time 5
+;; check-test-data 0
+;; ik-random-test-min :revert? t :random-angle (send-all *joint-list1* :joint-angle)
+(defun gen-random-ik-learning-data-with-thre
+  (&rest args
+         &key
+         (draw? t)
+         (thre 0.3)
+         (start-time (car (unix::gettimeofday)))
+         (max-time (* 15 60))
+         (_max-time (+ start-time max-time))
+         (time-over-flag nil)
+         (overthre-cnt 0)
+         (nop-cnt 1)
+         ret
+         &allow-other-keys)
+  (smart-initialize-net)
+  (cpplog::change-output-stream "/dev/null")
+  (setq
+   ret
+   (apply 'gen-random-ik-learning-data
+          :gen-random-angle-vector-func
+          #'(lambda (joint-list)
+              (gen-random-angle-vector joint-list)
+              (cond
+               (time-over-flag
+                (incf nop-cnt);; (print 'nop)
+                )
+               ((< _max-time (car (unix::gettimeofday)))
+                (setq time-over-flag t)
+                (warning-message 1 "time exceeded ~A~%" max-time))
+               (t
+                (let* ((dif))
+                  (setq dif (apply 'ik-random-test-min
+                                   :revert? t :initialize? nil :draw? draw? args))
+                  (while (and
+                          (not time-over-flag)
+                          (not (setq time-over-flag (< _max-time (car (unix::gettimeofday)))))
+                          (< (cdr (assoc :state-diff-norm dif)) thre))
+                    (if draw? (warning-message 6 "random av rejected: ~A < ~A~%" dif thre))
+                    ;; (gen-random-angle-vector joint-list)
+                    (setq dif (apply 'ik-random-test-min
+                                     :revert? t :initialize? nil :draw? draw? args))
+                    )
+                  (cond
+                   ((not time-over-flag) ;; (>= (cdr (assoc :state-diff-norm dif)) thre)
+                    (incf overthre-cnt)
+                    (if draw?
+                        (warning-message 5 "random av accepted~A: ~A < ~A~%" overthre-cnt dif thre)))
+                   ;; (t (incf nop-cnt))
+                   )
+                  ))))
+          args))
+  (warning-message 1 "[gen-random-ik-learning-data-with-thre] thre: ~A, over: ~A, nop: ~A~%"
+                   thre overthre-cnt nop-cnt)
+  (cpplog::change-output-stream "")
+  ret
+  )
 
 (defun load-ik-learning-data
   (&key (root "teacher") (surfix ""))
@@ -353,7 +429,7 @@
     ret))
 
 (defun ik-learn-best
-  (&rest args)
+  (&rest args &key (thre) &allow-other-keys)
   (let* (config state)
     ;; detect solver config
     (setq config
@@ -373,7 +449,9 @@
       (warning-message 1 "empty setting files~%")
       (throw :settings-not-found nil)))
     (warning-message 3 "regenrate random traning DB~%")
-    (gen-random-ik-learning-data)
+    (if (numberp thre)
+        (gen-random-ik-learning-data-with-thre :draw? nil :thre thre)
+      (gen-random-ik-learning-data))
     (warning-message 3 "update solver~%")
     (let* ((p (apply 'update-solver :input "ik_solver.best.prototxt" args)))
       (unix::system (format nil "ln -snf ~A ik_solver.best.prototxt" p)))
@@ -396,14 +474,21 @@
 	 ;;
 	 (base_lr-gain 1.0)
 	 (eq-scale-thre 0.01)
-	 (base_lr-gain-update-scale 1.3)
+	 (base_lr-gain-update-scale 1.1)
 	 (vain-cnt 0)
 	 (vain-cnt-max 5) prev now
+         (thre
+          (progn
+            (cpplog::change-output-stream "/dev/null")
+            (let* ((ret (ik-random-test-min-average :draw? nil)))
+              (cpplog::change-output-stream "")
+              ret)))
 	 ;;
 	 &allow-other-keys)
   (let* ((ret))
+    (push thre ret)
     (dotimes (i lp)
-      (push (apply 'ik-learn-best :base_lr-gain base_lr-gain args) ret)
+      (push (apply 'ik-learn-best :base_lr-gain base_lr-gain :thre (car ret) args) ret)
       (setq prev now)
       (setq now (car ret))
       ;; update base_lr-gain
@@ -538,7 +623,7 @@
 
 (defun ik-random-test
   (&key (calc-forward 'caffe::calc-forward-double) ;;'caffe::memory-calc-forward)
-	(draw? t)
+	(draw? t) (revert? nil)
 	tm
 	(joint-list *joint-list1*)
 	(ef-coords *ef-coords*)
@@ -606,6 +691,8 @@
 			 random-angle av)
 		    )
 	     (length av))))
+   (cons :revert?
+         (if revert? (mapcar '(lambda (j av) (send j :joint-angle av)) joint-list random-angle)))
    ))
 
 (defun ik-random-test-min
