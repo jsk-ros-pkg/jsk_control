@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from hrpsys_ros_bridge.srv import OpenHRP_StabilizerService_getParameter as getParameter
 import rospy
 import tf2_ros
 from geometry_msgs.msg import PointStamped
@@ -119,6 +120,8 @@ def periodicCallback(event):
                                              rleg_pose)
         lleg_points = verticesPoints(lleg_vertices, lleg_from_mid, scale, image_size)
         rleg_points = verticesPoints(rleg_vertices, rleg_from_mid, scale, image_size)
+        lleg_margined_points = verticesPoints(lleg_margined_vertices, lleg_from_mid, scale, image_size)
+        rleg_margined_points = verticesPoints(rleg_margined_vertices, rleg_from_mid, scale, image_size)
         image = np.zeros((image_size, image_size, 4), dtype=np.uint8)
         lleg_contact = False
         rleg_contact = False
@@ -156,6 +159,13 @@ def periodicCallback(event):
         if lleg_contact and rleg_contact:
             hull = cv.convexHull(np.array(lleg_points + rleg_points))
             cv.drawContours(image, [hull], -1, (155, 155, 155, 255), 2)
+            margined_hull = cv.convexHull(np.array(lleg_margined_points + rleg_margined_points))
+        elif lleg_contact:
+            margined_hull = cv.convexHull(np.array(lleg_margined_points))
+        elif rleg_contact:
+            margined_hull = cv.convexHull(np.array(rleg_margined_points))
+        if lleg_contact or rleg_contact:
+            cv.drawContours(image, [margined_hull], -1, (255, 255, 255, 255), 2)
         if lleg_cop_msg:
             lleg_cop_point_2d = verticesPoints3D([lleg_cop_point],
                                                  concatenate_matrices(inverse_matrix(mid_coords),
@@ -246,18 +256,32 @@ if __name__ == "__main__":
     pub = rospy.Publisher("~output", Image)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
+    g_get_parameter_srv = rospy.ServiceProxy("/StabilizerServiceROSBridge/getParameter", getParameter)
     lleg_end_coords = rospy.get_param("~lleg_end_coords", "lleg_end_coords")
     rleg_end_coords = rospy.get_param("~rleg_end_coords", "rleg_end_coords")
     image_size = rospy.get_param("~image_size", 400)
     scale = rospy.get_param("~scale", 0.6)
-    lleg_vertices = rospy.get_param("~lleg_vertices", [[0.137525, -0.070104],
-                                                       [-0.106925, -0.070104],
-                                                       [-0.106925,  0.070104],
-                                                       [ 0.137525,  0.070104]])
-    rleg_vertices = rospy.get_param("~rleg_vertices", [[0.137525, -0.070104],
-                                                       [-0.106925, -0.070104],
-                                                       [-0.106925, 0.070104],
-                                                       [0.137525, 0.070104]])
+    leg_front_margin = g_get_parameter_srv().i_param.eefm_leg_front_margin
+    leg_rear_margin = g_get_parameter_srv().i_param.eefm_leg_rear_margin
+    leg_inside_margin = g_get_parameter_srv().i_param.eefm_leg_inside_margin
+    leg_outside_margin = g_get_parameter_srv().i_param.eefm_leg_outside_margin
+    cp_check_margin = g_get_parameter_srv().i_param.cp_check_margin
+    lleg_vertices = [[leg_front_margin, leg_outside_margin],
+                     [leg_front_margin, -1*leg_inside_margin],
+                     [-1*leg_rear_margin, -1*leg_inside_margin],
+                     [-1*leg_rear_margin, leg_outside_margin]]
+    rleg_vertices = [[leg_front_margin, leg_inside_margin],
+                     [leg_front_margin, -1*leg_outside_margin],
+                     [-1*leg_rear_margin, -1*leg_outside_margin],
+                     [-1*leg_rear_margin, leg_inside_margin]]
+    lleg_margined_vertices = [[leg_front_margin-cp_check_margin[0], leg_outside_margin-cp_check_margin[3]],
+                              [leg_front_margin-cp_check_margin[0], -1*(leg_inside_margin-cp_check_margin[2])],
+                              [-1*(leg_rear_margin-cp_check_margin[1]), -1*(leg_inside_margin-cp_check_margin[2])],
+                              [-1*(leg_rear_margin-cp_check_margin[1]), leg_outside_margin-cp_check_margin[3]]]
+    rleg_margined_vertices = [[leg_front_margin-cp_check_margin[0], leg_inside_margin-cp_check_margin[2]],
+                              [leg_front_margin-cp_check_margin[0], -1*(leg_outside_margin-cp_check_margin[3])],
+                              [-1*(leg_rear_margin-cp_check_margin[1]), -1*(leg_outside_margin-cp_check_margin[3])],
+                              [-1*(leg_rear_margin-cp_check_margin[1]), leg_inside_margin-cp_check_margin[2]]]
     root_link = rospy.get_param("~root_link", "BODY")
     lleg_sub = rospy.Subscriber("/lfsensor_cop", PointStamped, llegCopCallback)
     rleg_sub = rospy.Subscriber("/rfsensor_cop", PointStamped, rlegCopCallback)
