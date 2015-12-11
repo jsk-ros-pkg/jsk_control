@@ -18,7 +18,7 @@
 
   <!-- rviz -->
   <node name="jaxon_gazebo_rviz" pkg="rviz" type="rviz"
-        args="-sync -d $(find iori_sandbox)/config/jaxon_camera_calib.rviz"
+        args="-sync -d $(find jsk_calibration)/config/camera_calib.rviz"
         respawn="true"/>
   
 </launch>
