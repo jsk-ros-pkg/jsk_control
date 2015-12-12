@@ -293,7 +293,9 @@
                (t
                 (let* ((dif))
                   (setq dif (apply 'ik-random-test-min
-                                   :revert? t :initialize? nil :draw? draw? args))
+                                   :redundancy-step 0.1
+                                   :revert? t :initialize? nil
+                                   :draw? draw? args))
                   (while (and
                           (not time-over-flag)
                           (not (setq time-over-flag (< _max-time (car (unix::gettimeofday)))))
@@ -301,7 +303,9 @@
                     (if draw? (warning-message 6 "random av rejected: ~A < ~A~%" dif thre))
                     ;; (gen-random-angle-vector joint-list)
                     (setq dif (apply 'ik-random-test-min
-                                     :revert? t :initialize? nil :draw? draw? args))
+                                     :redundancy-step 0.1
+                                     :revert? t :initialize? nil
+                                     :draw? draw? args))
                     )
                   (cond
                    ((not time-over-flag) ;; (>= (cdr (assoc :state-diff-norm dif)) thre)
