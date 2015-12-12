@@ -655,8 +655,11 @@
 				   (list
 				    (scale 1e-3 (send b :difference-position c))
 				    (send b :difference-rotation c))) c)))))
-	(redundancy (float-vector 0.5))
-	(initialize? (smart-initialize-net))
+        (initialize? (smart-initialize-net))
+	(redundancy;; (float-vector 0.5))
+         (fill
+          (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
+          0.5))
 	&allow-other-keys
 	)
   (setq input (concatenate float-vector input redundancy))
@@ -730,8 +733,11 @@
 			       (scale 1e-3 (send b :difference-position c))
 			       (send b :difference-rotation c))) c)))))
    (redundancy-step 0.01)
-   (redundancy (float-vector 0.0))
    (initialize? (smart-initialize-net))
+   (redundancy
+    (fill
+     (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
+     0.0))
    buf
    &allow-other-keys
    )
