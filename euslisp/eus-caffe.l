@@ -11,6 +11,7 @@
 (defforeign output-log *eus-caffe-plugin* "eus_caffe_output_log" (:integer) :integer)
 (defforeign _get_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_layer_blob_data" (:string :integer :string :integer) :integer)
 (defforeign _get_train_net_layer_blob_data *eus-caffe-plugin* "eus_caffe_get_train_net_layer_blob_data" (:string :integer :string :integer) :integer)
+(defforeign get-blob-count *eus-caffe-plugin* "eus_caffe_get_blob_count" (:string) :integer)
 (defforeign _get_blob_data *eus-caffe-plugin* "eus_caffe_get_blob_data" (:string :string :integer) :integer)
 (defforeign _get_train_net_blob_data *eus-caffe-plugin* "eus_caffe_get_train_net_blob_data" (:string :string :integer) :integer)
 (defforeign _get_input_blob_data *eus-caffe-plugin* "eus_caffe_get_input_blob_data" (:integer :string :integer) :integer)
