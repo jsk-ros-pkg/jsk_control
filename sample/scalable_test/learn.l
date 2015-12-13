@@ -732,19 +732,33 @@
 			      (list
 			       (scale 1e-3 (send b :difference-position c))
 			       (send b :difference-rotation c))) c)))))
-   (redundancy-step 0.01)
    (initialize? (smart-initialize-net))
    (redundancy
     (fill
      (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
      0.0))
+   (step-max 300)
+   (redundancy-step
+    (/ 1.0 (expt step-max (/ 1.0 (length redundancy)))))
+   ;;0.01)
    buf
    &allow-other-keys
    )
-  (dotimes (i (length redundancy))
-    (dotimes (j (round (/ 1.0 redundancy-step)))
-      (setf (aref redundancy i) (* j redundancy-step))
-      (push (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil args) buf)))
+  (labels ((itter
+            (depth)
+            (cond
+             ((zerop depth)
+              ;; (print redundancy)
+              (push (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil args) buf))
+             (t
+              (dotimes (j (round (/ 1.0 redundancy-step)))
+                (setf (aref redundancy (- depth 1)) (* j redundancy-step))
+                (itter (- depth 1)))))))
+    (itter (length redundancy)))
+  ;; (dotimes (i (length redundancy))
+  ;;   (dotimes (j (round (/ 1.0 redundancy-step)))
+  ;;     (setf (aref redundancy i) (* j redundancy-step))
+  ;;     (push (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil args) buf)))
   (setq *ret* buf)
   (car (sort buf #'(lambda (a b) (< (cdr (assoc :state-diff-norm a))
 				    (cdr (assoc :state-diff-norm b))))))
