@@ -607,22 +607,10 @@
 
 (defun smart-initialize-net
   nil
-  (caffe::gen-test-net :netproto "predict_ik_net.prototxt"
-		       :caffemodel
-		       (read-line
-			(piped-fork
-			 "ls -t | grep -e \"caffemodel$\" | head -n 1")))
-  ;; (caffe::create-solver :solver "ik_solver_batch1.prototxt"
-  ;; 			:solverstate
-  ;; 			(read-line
-  ;; 			 (piped-fork
-  ;; 			  "ls -t | grep -e \"solverstate$\" | head -n 1")))
-  ;; (caffe::reset-memory-layer :name "input"
-  ;; 			     :size (length av)
-  ;; 			     :data (copy-seq av))
-  ;; (caffe::reset-memory-layer :name "target"
-  ;; 			     :size (length input)
-  ;; 			     :data (copy-seq input))
+  (let* ((caffemodel (unix-command-line "ls -t | grep -e \"caffemodel$\" | head -n 1")))
+    (warning-message 6 "load caffe model ~A~%" caffemodel)
+    (caffe::gen-test-net :netproto "predict_ik_net.prototxt"
+                         :caffemodel caffemodel))
   )
 
 (defun ik-random-test
