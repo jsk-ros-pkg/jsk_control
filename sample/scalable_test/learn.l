@@ -23,9 +23,9 @@
 (defvar *ef-coords* (list (send *robot* :rarm :end-coords)))
 (defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 
-;; (setq *joint-list1* *joint-list2*)
-;; (setq *ef-coords* (send *robot* :arms :end-coords))
-;; (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
+(setq *joint-list1* *joint-list2*)
+(setq *ef-coords* (send *robot* :arms :end-coords))
+(setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 
 (objects (flatten (list (car (send *robot* :links))
 			(reverse (send-all *joint-list3* :child-link))
