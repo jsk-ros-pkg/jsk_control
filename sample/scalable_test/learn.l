@@ -514,6 +514,10 @@
 	(setq base_lr-gain (/ 1.0 base_lr-gain-update-scale))
 	(incf vain-cnt)
 	))
+      (warning-message
+       3 (format nil "~A~%" (unix-command-line "ls -l ik.best.caffemodel | sed -e \"s/ /\\\n/g\" | tail -1")))
+      (warning-message
+       3 (format nil "~A~%" (unix-command-line "ls -l ik.best.solverstate | sed -e \"s/ /\\\n/g\" | tail -1")))
       (warning-message 3 "update base_lr-gain: ~A, vain: ~A, now: ~A~%"
 		       base_lr-gain vain-cnt now)
       ;; convergence
