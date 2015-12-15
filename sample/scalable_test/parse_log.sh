@@ -12,7 +12,7 @@ do
             | sed -e "s/^.\+now: \([0-9\.+-e]\+\)$/\\1/g" \
             | awk '{if (NR==1) min=$1} {if($1 < min) min=$1} END {print min}';
         echo -n -e "\e[m";
-        cat ${p}/log.learn | grep vain | grep now | awk '{print "  " $0}';
+        cat ${p}/log.learn | grep now -B 2 | awk '{print "  " $0}';
     fi
 done
 
