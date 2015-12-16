@@ -22,6 +22,7 @@
 
 (defvar *ef-coords* (list (send *robot* :rarm :end-coords)))
 (defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
+(defvar *root-link* (car (send *robot* :links)))
 
 (setq *joint-list1* *joint-list2*)
 (setq *ef-coords* (send *robot* :arms :end-coords))
@@ -76,7 +77,7 @@
 	(joint-list *joint-list1*)
 	(ef-coords *ef-coords*)
 	(sep (round (expt sample-points (/ 1.0 (length joint-list)))))
-	(root-link (car (send *robot* :links)))
+	(root-link *root-link*) ;;(car (send *robot* :links)))
 	(i 0)
 	(draw? nil)
 	(surfix ""))
@@ -194,7 +195,8 @@
 	(joint-list *joint-list1*)
 	(ef-coords *ef-coords*)
 	(sep (round (expt sample-points (/ 1.0 (length joint-list)))))
-	(root-link (car (send *robot* :links)))
+        (root-link *root-link*)
+	;; (root-link (car (send *robot* :links)))
 	(i 0)
 	(draw? nil)
 	(dump? t)
@@ -546,7 +548,7 @@
     (setq c (make-coords
 	     :pos (scale 1e+3 (subseq input (+ 0 (* j 6)) (+ 3 (* j 6))))
 	     :rot (matrix-exponent (subseq input (+ 3 (* j 6)) (+ 6 (* j 6))))))
-    (setq c (send (send (car (send *robot* :links)) :copy-worldcoords)
+    (setq c (send (send *root-link* :copy-worldcoords)
 		  :transform c :local))
     (push c c-buf)
     )
@@ -637,7 +639,7 @@
 	 (progn (send-all (send-all joint-list :child-link) :worldcoords)
 		(send-all ef-coords :worldcoords)))
 	(c (send-all ef-coords :copy-worldcoords))
-	(b (send (car (send *robot* :links)) :copy-worldcoords))
+	(b (send *root-link* :copy-worldcoords))
 	(av (instantiate float-vector (length joint-list)))
 	(input
 	 (apply 'concatenate
@@ -714,7 +716,7 @@
     (progn (send-all (send-all joint-list :child-link) :worldcoords)
 	   (send-all ef-coords :worldcoords)))
    (c (send-all ef-coords :copy-worldcoords))
-   (b (send (car (send *robot* :links)) :copy-worldcoords))
+   (b (send *root-link* :copy-worldcoords))
    (av (instantiate float-vector (length joint-list)))
    (input
     (apply 'concatenate
