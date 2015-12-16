@@ -73,6 +73,7 @@
      (setq c (make-coords :pos (scale 1e+3 vec)))
      (setq c (send (send org-coords :copy-worldcoords)
                    :transform c :local))
+     (setq c (make-coords :pos (send c :worldpos)))
      c))
    c)
   (:nomethod
