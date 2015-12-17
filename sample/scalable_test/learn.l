@@ -9,11 +9,13 @@
 
 (defclass vector-coords
   :super propertied-object
-  :slots (coords mode))
+  :slots (coords mode v-buf c-buf))
 (defmethod vector-coords
   (:init (c
           &key ((:mode m) :coords))
-         (setq coords c) (setq mode m))
+         (setq coords c) (setq mode m)
+         (setq c-buf (make-coords))
+         (setq v-buf (instantiate float-vector (send self :length))))
   (:worldcoords
    nil
    (let* ((c (cond ((functionp coords) (funcall coords))
@@ -25,8 +27,10 @@
      (send c :worldcoords)))
   ;;
   (:vector
-   (&key (org-coords (make-coords)))
-   (let* ((c (send self :worldcoords)) ret)
+   (&key
+    (org-coords (make-coords))
+    (ret v-buf) (i 0))
+   (let* ((c (send self :worldcoords)))
      (cond
       ((eq mode :coords)
        (let* (pos rot)
@@ -34,13 +38,16 @@
                          :difference-position c))
          (setq rot (send (send org-coords :worldcoords)
                          :difference-rotation c))
-         (setq ret (concatenate float-vector (scale 1e-3 pos) rot))))
+         (dotimes (j 3) (setf (aref ret (+ i j)) (* 1e-3 (aref pos j))))
+         (dotimes (j 3) (setf (aref ret (+ 3 i j)) (aref rot j)))))
       ((eq mode :pos)
        (let* (pos)
          (setq pos (send (send org-coords :worldcoords)
                          :difference-position
                          c))
-         (setq ret (scale 1e-3 pos))))
+         (dotimes (j 3) (setf (aref ret (+ i j)) (* 1e-3 (aref pos j))))
+         ;; (setq ret (scale 1e-3 pos))
+         ))
       (t
        (warning-message 1 "[coords2vector] invalid mode ~A~%" mode)
        (throw :vector-coords-exception t)))
@@ -135,7 +142,8 @@
   (&key
    (ef-coords *ef-coords*)
    (root-link *root-link*)
-   (org-coords (send root-link :worldcoords)))
+   (org-coords (send root-link :worldcoords))
+   )
   (apply 'concatenate
          (cons float-vector
                (send-all ef-coords :vector :org-coords org-coords))))
@@ -209,15 +217,19 @@
    (t
     ;;
     (setq *sample-points* sample-points)
-    (if (not (eq (length *angle-vector-map*)
-                 (* (length joint-list) sample-points)))
-        (setq *angle-vector-map*
-              (instantiate float-vector
-                           (* (length joint-list) sample-points))))
-    (if (not (eq (length *ef-coords-map*)
-                 (* len sample-points)))
-        (setq *ef-coords-map*
-              (instantiate float-vector (* len sample-points))))
+    (cond
+     ((not (eq (length *angle-vector-map*)
+               (* (length joint-list) sample-points)))
+      (warning-message 1 "angle-vector-map alloc~%")
+      (setq *angle-vector-map*
+            (instantiate float-vector
+                         (* (length joint-list) sample-points)))))
+    (cond
+     ((not (eq (length *ef-coords-map*)
+               (* len sample-points)))
+      (warning-message 1 "ef-coords-map alloc~%")
+      (setq *ef-coords-map*
+            (instantiate float-vector (* len sample-points)))))
     (labels ((itter
               (jlist)
               (cond
@@ -306,15 +318,19 @@
         &allow-other-keys
         )
   (setq *sample-points* sample-points)
-  (if (not (eq (length *angle-vector-map*)
-               (* (length joint-list) sample-points)))
-      (setq *angle-vector-map*
-            (instantiate float-vector
-                         (* (length joint-list) sample-points))))
-  (if (not (eq (length *ef-coords-map*)
-               (* len sample-points)))
-      (setq *ef-coords-map*
-            (instantiate float-vector (* len sample-points))))
+  (cond
+   ((not (eq (length *angle-vector-map*)
+             (* (length joint-list) sample-points)))
+    (warning-message 1 "angle-vector-map alloc~%")
+    (setq *angle-vector-map*
+          (instantiate float-vector
+                       (* (length joint-list) sample-points)))))
+  (cond
+   ((not (eq (length *ef-coords-map*)
+             (* len sample-points)))
+    (warning-message 1 "ef-coords-map alloc~%")
+    (setq *ef-coords-map*
+          (instantiate float-vector (* len sample-points)))))
   ;;
   (let* (val)
     (dotimes (_i sample-points)
@@ -582,6 +598,7 @@
   (let* ((ret))
     (push thre ret)
     (dotimes (i lp)
+      (unix::gc)
       (push (apply 'ik-learn-best :base_lr-gain base_lr-gain :thre (car ret) args) ret)
       (setq prev now)
       (setq now (car ret))
@@ -617,7 +634,7 @@
                          vain-cnt vain-cnt-max)
         (return-from nil nil)))
       )
-    (setq *ret* ret)
+    ;; (setq *ret* ret)
     ret))
 
 (defun check-test-data
