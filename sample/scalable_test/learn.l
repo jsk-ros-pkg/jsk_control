@@ -399,7 +399,8 @@
                (t
                 (let* ((dif))
                   (setq dif (apply 'ik-random-test-min
-                                   :redundancy-step 0.1
+                                   ;; :redundancy-step 0.1
+                                   :step-max 30
                                    :revert? t :initialize? nil
                                    :draw? draw? args))
                   (while (and
@@ -409,7 +410,8 @@
                     (if draw? (warning-message 6 "random av rejected: ~A < ~A~%" dif thre))
                     ;; (gen-random-angle-vector joint-list)
                     (setq dif (apply 'ik-random-test-min
-                                     :redundancy-step 0.1
+                                     ;; :redundancy-step 0.1
+                                     :step-max 30
                                      :revert? t :initialize? nil
                                      :draw? draw? args))
                     )
@@ -785,7 +787,7 @@
    (redundancy-step
     (/ 1.0 (expt step-max (/ 1.0 (length redundancy)))))
    (revert? nil)
-   buf ret
+   tmp buf ret
    &allow-other-keys
    )
   (labels ((itter
@@ -793,7 +795,12 @@
             (cond
              ((zerop depth)
               ;; (print redundancy)
-              (push (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil :revert? revert? args) buf))
+              (setq tmp (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil :revert? revert? args))
+              ;;(push tmp buf)
+              (cond
+               ((not ret) (setq ret tmp))
+               ((< (cdr (assoc :state-diff-norm tmp))
+                   (cdr (assoc :state-diff-norm ret))) (setq ret tmp))))
              (t
               (dotimes (j (round (/ 1.0 redundancy-step)))
                 (setf (aref redundancy (- depth 1)) (* j redundancy-step))
@@ -803,9 +810,9 @@
   ;;   (dotimes (j (round (/ 1.0 redundancy-step)))
   ;;     (setf (aref redundancy i) (* j redundancy-step))
   ;;     (push (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil args) buf)))
-  (setq *ret* buf)
-  (setq ret (car (sort buf #'(lambda (a b) (< (cdr (assoc :state-diff-norm a))
-                                              (cdr (assoc :state-diff-norm b)))))))
+  ;; (setq *ret* buf)
+  ;; (setq ret (car (sort buf #'(lambda (a b) (< (cdr (assoc :state-diff-norm a))
+  ;; (cdr (assoc :state-diff-norm b)))))))
   (if (not revert?)
       (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy (cdr (assoc :redundancy ret)) :initialize? nil :revert? revert? args))
   ret
@@ -817,7 +824,7 @@
     (smart-initialize-net)
     (dotimes (i lp)
       (push (apply 'ik-random-test-min :initialize? nil args) ret))
-    (setq *ret* ret)
+    ;; (setq *ret* ret)
     (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :state-diff-norm d))) ret))
        (length ret))))
 
