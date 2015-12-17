@@ -201,7 +201,8 @@ public:
     //
     // std::cout << "calc_forward" << std::endl;
     // boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
-    caffe::Blob<double>* blob = new caffe::Blob<double>();
+    // caffe::Blob<double>* blob = new caffe::Blob<double>();
+    caffe::Blob<double> blob;
     std::vector<caffe::Blob<double>*> bottom;
     caffe::BlobProto blob_proto;
     blob_proto.set_num(num);
@@ -218,8 +219,8 @@ public:
       }
     }
     //
-    blob->FromProto(blob_proto);
-    bottom.push_back(blob);
+    blob.FromProto(blob_proto);
+    bottom.push_back(&blob);
     // double ret[10]; this->_get_blob_data(boost::shared_ptr<caffe::Blob<double>>(blob), ret, 10);
     // std::cout << " -- initialize done" << std::endl;
     this->test_net->Forward(bottom, nullptr);
