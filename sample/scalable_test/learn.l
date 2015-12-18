@@ -728,9 +728,10 @@
         (input (get-vector-from-ef-coords :ef-coords ef-coords :root-link root-link))
         (initialize? (smart-initialize-net))
         (redundancy;; (float-vector 0.5))
-         (fill
-          (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
-          0.5))
+         ;;(fill
+         (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
+         ;;0.5)
+         )
         &allow-other-keys
         )
   (setq input (concatenate float-vector input redundancy))
@@ -801,9 +802,10 @@
    (input (get-vector-from-ef-coords :ef-coords ef-coords :root-link root-link))
    (initialize? (smart-initialize-net))
    (redundancy
-    (fill
-     (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
-     0.0))
+    ;;(fill
+    (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
+    ;;0.0)
+    )
    (step-max 300)
    (redundancy-step
     (/ 1.0 (expt step-max (/ 1.0 (length redundancy)))))
