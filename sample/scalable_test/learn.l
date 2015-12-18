@@ -106,19 +106,32 @@
 (defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (defvar *root-link* (car (send *robot* :links)))
 
-(setq *joint-list1* *joint-list2*)
-(setq *ef-coords*
-      (mapcar
-       '(lambda (c mode) (instance vector-coords :init c :mode mode))
-       (list (send *robot* :larm :end-coords)
-             (send *robot* :rarm :end-coords)
-             ;; (send *robot* :lleg :end-coords)
-             ;; '(lambda (&rest args)
-             ;;    (make-coords :pos (send *robot* :centroid)))
-             )
-       (list :coords :coords :coords :pos)))
-(setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
+(defvar *learn-mode* :rarm-larm)
+(cond
+ ((eq *learn-mode* :rarm-larm)
+  (setq *joint-list1* *joint-list2*)
+  (setq *ef-coords*
+        (mapcar
+         '(lambda (c mode) (instance vector-coords :init c :mode mode))
+         (list (send *robot* :larm :end-coords)
+               (send *robot* :rarm :end-coords))
+         (list :coords :coords :coords :pos))))
+ ((eq *learn-mode* :rarm-larm-rleg-lleg)
+  (setq *joint-list1* *joint-list3*)
+  (setq *ef-coords*
+        (mapcar
+         '(lambda (c mode) (instance vector-coords :init c :mode mode))
+         (list (send *robot* :larm :end-coords)
+               (send *robot* :rarm :end-coords)
+               (send *robot* :lleg :end-coords)
+               ;; '(lambda (&rest args)
+               ;;    (make-coords :pos (send *robot* :centroid)))
+               )
+         (list :coords :coords :coords :pos)))
+  (setq *root-link* (car (last (butlast (send *robot* :rleg :link-list)))))
+  ))
 
+(setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (objects (flatten (list (car (send *robot* :links))
                         (reverse (send-all *joint-list3* :child-link))
                         *arrow*)))
