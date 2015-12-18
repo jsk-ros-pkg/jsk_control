@@ -663,11 +663,6 @@
    (output (instantiate float-vector (length joint-list)))
    c c-buf
    )
-  (setq c-buf
-        (get-ef-coords-from-vector
-         :ef-coords ef-coords
-         :vector (subseq *ef-coords-map* (* i len) (* (+ i 1) len))
-         :root-link root-link))
   (dotimes (j (length joint-list))
     (setf (aref output j)
           (aref *angle-vector-map* (+ (* i (length joint-list)) j))))
@@ -677,6 +672,11 @@
        joint-list output)
   (send-all (send-all joint-list :child-link) :worldcoords)
   (send-all ef-coords :worldcoords)
+  (setq c-buf
+        (get-ef-coords-from-vector
+         :ef-coords ef-coords
+         :vector (subseq *ef-coords-map* (* i len) (* (+ i 1) len))
+         :root-link root-link))
   (mapcar
    '(lambda (ar c)
       (send ar :newcoords (send c :copy-worldcoords)))
