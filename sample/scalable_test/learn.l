@@ -809,25 +809,37 @@
    (step-max 300)
    (redundancy-step
     (/ 1.0 (expt step-max (/ 1.0 (length redundancy)))))
+   (redundancy-step-cnt
+    (max 1 (floor (/ 1.0 redundancy-step))))
    (revert? nil)
-   tmp buf ret
+   tmp buf ret (cnt 0)
    &allow-other-keys
    )
   (labels ((itter
-            (depth)
+            (depth &optional (depth0 depth) (prev 0))
             (cond
+             ((and (zerop depth) (eq prev 0))
+              (let* ((jmax (max 0 (- step-max (expt redundancy-step-cnt depth0)))))
+                ;; (warning-message 1 "~A~%" jmax)
+                (dotimes (j jmax)
+                  (setf (aref redundancy (random depth0)) (random 1.0))
+                  (itter depth depth0 -1))))
              ((zerop depth)
               ;; (print redundancy)
-              (setq tmp (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil :revert? revert? args))
+              ;; (print (incf cnt))
+              (setq tmp (apply 'ik-random-test
+                               :random-angle random-angle :update-coords update-coords
+                               :c c :b b :av av :input input :redundancy redundancy
+                               :initialize? nil :revert? revert? args))
               ;;(push tmp buf)
               (cond
                ((not ret) (setq ret tmp))
                ((< (cdr (assoc :state-diff-norm tmp))
                    (cdr (assoc :state-diff-norm ret))) (setq ret tmp))))
              (t
-              (dotimes (j (round (/ 1.0 redundancy-step)))
+              (dotimes (j redundancy-step-cnt)
                 (setf (aref redundancy (- depth 1)) (* j redundancy-step))
-                (itter (- depth 1)))))))
+                (itter (- depth 1) depth0 (+ prev (- redundancy-step-cnt j 1))))))))
     (itter (length redundancy)))
   ;; (dotimes (i (length redundancy))
   ;;   (dotimes (j (round (/ 1.0 redundancy-step)))
