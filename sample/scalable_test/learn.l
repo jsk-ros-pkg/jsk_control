@@ -105,6 +105,7 @@
 ;; (defvar *ef-coords-length* (list 6))
 (defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (defvar *root-link* (car (send *robot* :links)))
+(defvar *root-link-fix-coords-func* nil)
 
 (defvar *learn-mode* :rarm-larm-rleg-lleg)
 (cond
@@ -129,6 +130,8 @@
                )
          (list :coords :coords :coords :pos)))
   (setq *root-link* (car (last (butlast (send *robot* :rleg :links)))))
+  (setq *root-link-fix-coords-func*
+        '(lambda nil (send *robot* :fix-leg-to-coords (make-coords) :rleg)))
   ))
 
 (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
@@ -661,6 +664,7 @@
    (len (length (get-vector-from-ef-coords)))
    (input (instantiate float-vector len))
    (output (instantiate float-vector (length joint-list)))
+   (root-link-fix-coords-func *root-link-fix-coords-func*)
    c c-buf
    )
   (dotimes (j (length joint-list))
@@ -672,6 +676,10 @@
        joint-list output)
   (send-all (send-all joint-list :child-link) :worldcoords)
   (send-all ef-coords :worldcoords)
+  ;;
+  (if (functionp root-link-fix-coords-func)
+      (funcall root-link-fix-coords-func))
+  ;;
   (setq c-buf
         (get-ef-coords-from-vector
          :ef-coords ef-coords
