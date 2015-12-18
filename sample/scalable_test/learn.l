@@ -106,7 +106,7 @@
 (defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (defvar *root-link* (car (send *robot* :links)))
 
-(defvar *learn-mode* :rarm-larm)
+(defvar *learn-mode* :rarm-larm-rleg-lleg)
 (cond
  ((eq *learn-mode* :rarm-larm)
   (setq *joint-list1* *joint-list2*)
@@ -128,7 +128,7 @@
                ;;    (make-coords :pos (send *robot* :centroid)))
                )
          (list :coords :coords :coords :pos)))
-  (setq *root-link* (car (last (butlast (send *robot* :rleg :link-list)))))
+  (setq *root-link* (car (last (butlast (send *robot* :rleg :links)))))
   ))
 
 (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
@@ -206,7 +206,7 @@
         (joint-list *joint-list1*)
         (ef-coords *ef-coords*)
         ;; (ef-coords-length *ef-coords-length*)
-        (sep (round (expt sample-points (/ 1.0 (length joint-list)))))
+        (sep (floor (expt sample-points (/ 1.0 (length joint-list)))))
         (root-link *root-link*) ;;(car (send *robot* :links)))
         (i 0)
         (draw? nil)
