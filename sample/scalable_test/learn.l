@@ -400,7 +400,7 @@
                 (let* ((dif))
                   (setq dif (apply 'ik-random-test-min
                                    ;; :redundancy-step 0.1
-                                   :step-max 30
+                                   :step-max 10
                                    :revert? t :initialize? nil
                                    :draw? draw? args))
                   (while (and
@@ -411,7 +411,7 @@
                     ;; (gen-random-angle-vector joint-list)
                     (setq dif (apply 'ik-random-test-min
                                      ;; :redundancy-step 0.1
-                                     :step-max 30
+                                     :step-max 10
                                      :revert? t :initialize? nil
                                      :draw? draw? args))
                     )
