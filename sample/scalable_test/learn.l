@@ -136,6 +136,7 @@
   ))
 
 (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
+(send-all (send *robot* :links) :set-val 'analysis-level :coords)
 (objects (flatten (list (car (send *robot* :links))
                         (reverse (send-all *joint-list3* :child-link))
                         *arrow*)))
