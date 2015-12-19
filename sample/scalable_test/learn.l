@@ -131,7 +131,8 @@
          (list :coords :coords :coords :pos)))
   (setq *root-link* (car (last (butlast (send *robot* :rleg :links)))))
   (setq *root-link-fix-coords-func*
-        '(lambda nil (send *robot* :fix-leg-to-coords (make-coords) :rleg)))
+        '(lambda nil (send *root-link* :worldcoords)
+           (send *robot* :fix-leg-to-coords (make-coords) :rleg)))
   ))
 
 (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
@@ -709,6 +710,7 @@
         (joint-list *joint-list1*)
         (ef-coords *ef-coords*)
         (root-link *root-link*)
+        (root-link-fix-coords-func *root-link-fix-coords-func*)
         (random-angle
          (mapcar '(lambda (j) (send j :joint-angle
                                     (-
@@ -720,7 +722,9 @@
                                     :relative t))
                  joint-list))
         (update-coords
-         (progn (send-all (send-all joint-list :child-link) :worldcoords)
+         (progn (if (functionp root-link-fix-coords-func)
+                    (funcall root-link-fix-coords-func))
+                (send-all (send-all joint-list :child-link) :worldcoords)
                 (send-all ef-coords :worldcoords)))
         (c (send-all (send-all ef-coords :worldcoords) :copy-worldcoords))
         (b (send root-link :copy-worldcoords))
@@ -746,6 +750,8 @@
                                   (- (rad2deg a) (send j :joint-angle))
                                   :relative t))
        joint-list av)
+  (if (functionp root-link-fix-coords-func)
+      (funcall root-link-fix-coords-func))
   (cond
    (draw?
     ;; (send *viewer* :draw-objects :flush nil)
@@ -783,6 +789,7 @@
    (joint-list *joint-list1*)
    (ef-coords *ef-coords*)
    (root-link *root-link*)
+   (root-link-fix-coords-func *root-link-fix-coords-func*)
    (random-angle
     (mapcar '(lambda (j) (send j :joint-angle
                                (-
@@ -794,7 +801,9 @@
                                :relative t))
             joint-list))
    (update-coords
-    (progn (send-all (send-all joint-list :child-link) :worldcoords)
+    (progn (if (functionp root-link-fix-coords-func)
+                    (funcall root-link-fix-coords-func))
+           (send-all (send-all joint-list :child-link) :worldcoords)
            (send-all ef-coords :worldcoords)))
    (c (send-all (send-all ef-coords :worldcoords) :copy-worldcoords))
    (b (send root-link :copy-worldcoords))
