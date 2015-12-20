@@ -921,11 +921,28 @@
 	   pair))
     pair))
 
-(bench
- (let* ((aborn-cnt 0)
-	(ret
+
+(let* ((aborn-cnt 0)
+       (joint-list *joint-list1*)
+       (random-angle
+	(progn
+	  (while (progn
+		   (mapcar '(lambda (j) (send j :joint-angle
+					      (-
+					       (+ (send j :min-angle)
+						  (* (random 1.0)
+						     (- (send j :max-angle)
+							(send j :min-angle))))
+					       (send j :joint-angle))
+					      :relative t))
+			   joint-list)
+		   (send *robot* :self-collision-check :pairs *collision-check-pair*)))
+	  (send-all joint-list :joint-angle)))
+       (ret
+	(bench
 	 (ik-random-test-min
 	  :initialize? nil
+	  :random-angle random-angle
 	  :step-max 30
 	  :after-callback-func
 	  #'(lambda (av c ef-coords)
@@ -953,7 +970,8 @@
 	  '(lambda (target-state target-task state task)
 	     (norm (send *robot* :calc-torque)))
 	  :draw? t
-	  )))
-   (format t "~A aborn~%" aborn-cnt)
-   ret
-   ))
+	  ))))
+  (send *viewer* :draw-objects)
+  (format t "~A aborn~%" aborn-cnt)
+  ret
+  )
