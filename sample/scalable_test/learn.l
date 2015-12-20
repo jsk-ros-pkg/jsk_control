@@ -790,7 +790,9 @@
      (cons :revert?
 	   (cond
 	    (revert?
-	     (mapcar '(lambda (j av) (send j :joint-angle av)) joint-list random-angle)
+	     (mapcar '(lambda (j av) (send j :joint-angle (- av (send j :joint-angle))
+					   :relative t))
+		     joint-list random-angle)
 	     (if (functionp root-link-fix-coords-func)
 		 (funcall root-link-fix-coords-func)))))
      ))))
@@ -886,11 +888,13 @@
   ;; (cdr (assoc :state-diff-norm b)))))))
   (cond
    (revert?
-    (mapcar '(lambda (j av) (send j :joint-angle av)) joint-list random-angle)
+    (mapcar '(lambda (j av) (send j :joint-angle (- av (send j :joint-angle)) :relative t))
+	    joint-list random-angle)
     (if (functionp root-link-fix-coords-func)
 	(funcall root-link-fix-coords-func)))
    (ret
-    (map cons '(lambda (j av) (send j :joint-angle (rad2deg av)))
+    (map cons '(lambda (j av) (send j :joint-angle (- (rad2deg av) (send j :joint-angle))
+				    :relative t))
 	 joint-list (cdr (assoc :state ret)))
     (if (functionp root-link-fix-coords-func)
 	(funcall root-link-fix-coords-func))))
@@ -996,7 +1000,8 @@
 	     (norm (send *robot* :calc-torque)))
 	  ;; :stop-func '(lambda (ret) ret)
 	  :draw? t
-	  ))))
+	  )
+	 )))
   (send *viewer* :draw-objects)
   (format t "ik: ~A, col:~A~%" ik-fail-cnt cl-fail-cnt)
   ret
