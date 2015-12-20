@@ -737,6 +737,8 @@
          (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
          ;;0.5)
          )
+	;;
+	(after-callback-func)
         &allow-other-keys
         )
   (setq input (concatenate float-vector input redundancy))
@@ -753,6 +755,8 @@
        joint-list av)
   (if (functionp root-link-fix-coords-func)
       (funcall root-link-fix-coords-func))
+  (if (functionp after-callback-func)
+      (funcall after-callback-func av c ef-coords))
   (cond
    (draw?
     ;; (send *viewer* :draw-objects :flush nil)
@@ -765,22 +769,25 @@
     (send *viewer* :viewsurface :flush)))
   (list
    (cons :time tm)
-   (cons :state (copy-seq av))
+   (cons :state (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
    (cons :redundancy (copy-seq redundancy))
    (cons :task-diff
          (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (scale 1e-3 (send c :difference-position ec)) (send c :difference-rotation ec))) (send-all ef-coords :worldcoords) c))))
          )
    (cons :state-diff
-         (map float-vector '(lambda (a b) (- (deg2rad a) b))
-              random-angle av))
+         (map float-vector '(lambda (a b) (deg2rad (- a b)))
+              random-angle (send-all joint-list :joint-angle)))
    (cons :state-diff-norm
          (sqrt
-          (/ (norm2 (map float-vector '(lambda (a b) (- (deg2rad a) b))
-                         random-angle av)
-                    )
+          (/ (norm2 (map float-vector '(lambda (a b) (deg2rad (- a b)))
+			 random-angle (send-all joint-list :joint-angle)))
              (length av))))
    (cons :revert?
-         (if revert? (mapcar '(lambda (j av) (send j :joint-angle av)) joint-list random-angle)))
+         (cond
+	  (revert?
+	   (mapcar '(lambda (j av) (send j :joint-angle av)) joint-list random-angle)
+	   (if (functionp root-link-fix-coords-func)
+	       (funcall root-link-fix-coords-func)))))
    ))
 
 (defun ik-random-test-min
@@ -875,48 +882,25 @@
 
 #|
 
-(defun random-index-vector
-  (size
-   &key
-   (ret (instantiate integer-vector size))
-   (cnt (* 10 size)))
-  (dotimes (i size) (setf (aref ret i) i))
-  (dotimes (i cnt)
-    (let* ((x (random size))
-           (y (random size))
-           (buf (aref ret x)))
-      (setf (aref ret x) (aref ret y))
-      (setf (aref ret y) buf)))
-  ret)
+(smart-initialize-net)
 
-
-(caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
-                     :caffemodel "redundancy_ik_net_x6_iter_60000000.caffemodel")
-(let* ((id2 (random 1000)) (id 0.0) (step 0.01) (max 1.0) (min 0.0)
-       (min-dif *inf*) (min-dif-id id) buf)
-  (do-until-key
-   (format t "[param] (db_id, rd_id) = (~A, ~A)~%" id2 id)
-   (format t "        (min_dif, rd_id) = (~A, ~A)~%" min-dif min-dif-id)
-   (setq id (+ id step))
-   (if (> min-dif
-          (setq buf (apply 'max (map cons 'abs (test-redundancy-ik :id id2 :redundancy id)))))
-       (setq min-dif buf min-dif-id id))
-   (cond
-    ((> id max)
-     (test-redundancy-ik :id id2 :redundancy min-dif-id)
-     (return-from nil (print min-dif))))
-   (if (or (> id max) (< id min)) (setq step (* -1 step)))))
-
-(caffe::gen-test-net :netproto "redundancy_ik_net_predict.prototxt"
-                     :caffemodel "redundancy_ik_net_iter_50000000.caffemodel")
-
-(caffe::calc-forward-double
- :isize 7 :osize 7
- :num 1 :channels 7 :width 1 :height 1
- :input (float-vector -0.105524 0.0936122 0.250577 -0.603332 0.946547 1.00249
-      0))
-
-(dotimes (i *sample-points*)
-  (print (norm (subseq *ef-coords* (* i 6) (* (+ i 1) 6)))))
-
-roseus learn.l "(progn (ik-learn) (exit))" > log.learn 2>&1
+(bench
+ (ik-random-test-min
+  :initialize? nil
+  :step-max 30
+  :after-callback-func
+  '(lambda (av c ef-coords)
+     (send *robot* :fullbody-inverse-kinematics
+	   (cons (make-coords) (send-all c :copy-worldcoords))
+	   :move-target (cons (send *robot* :rleg :end-coords)
+			      (send-all *ef-coords* :get-val 'coords))
+	   :link-list (mapcar
+		       '(lambda (mt) (send *robot* :link-list (send mt :parent)))
+		       (cons (send *robot* :rleg :end-coords)
+			     (send-all *ef-coords* :get-val 'coords)))
+	   :debug-view nil
+	   :target-centroid-pos nil
+	   :stop 5
+	   :revert-if-fail nil))
+  :draw? nil
+  ))
