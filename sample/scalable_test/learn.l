@@ -830,6 +830,11 @@
     (max 1 (floor (/ 1.0 redundancy-step))))
    (revert? nil)
    tmp buf ret (cnt 0) (update-arrow-coords? t)
+   ;;
+   (evaluation-func
+    '(lambda (val soa)
+       (< (cdr (assoc :state-diff-norm val))
+	  (cdr (assoc :state-diff-norm soa)))))
    &allow-other-keys
    )
   (labels ((itter
@@ -853,8 +858,9 @@
               ;;(push tmp buf)
               (cond
                ((not ret) (setq ret tmp))
-               ((< (cdr (assoc :state-diff-norm tmp))
-                   (cdr (assoc :state-diff-norm ret))) (setq ret tmp))))
+               ((and (functionp evaluation-func)
+		     (funcall evaluation-func tmp ret))
+		(setq ret tmp))))
              (t
               (dotimes (j redundancy-step-cnt)
                 (setf (aref redundancy (- depth 1)) (* j redundancy-step))
@@ -904,5 +910,5 @@
 	   :target-centroid-pos nil
 	   :stop 5
 	   :revert-if-fail nil))
-  :draw? nil
+  :draw? t
   ))
