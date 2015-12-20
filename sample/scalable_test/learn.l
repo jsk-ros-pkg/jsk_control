@@ -768,8 +768,8 @@
 	(send ar :newcoords (send c :copy-worldcoords)))
      *arrow* c)))
   (cond
-   ((and (functionp after-callback-func)
-	 (funcall after-callback-func av c ef-coords))
+   ((or (not (functionp after-callback-func))
+	(funcall after-callback-func av c ef-coords))
     (cond
      (draw?
       (send *viewer* :draw-objects :flush nil)
@@ -895,6 +895,7 @@
     (smart-initialize-net)
     (dotimes (i lp)
       (push (apply 'ik-random-test-min :initialize? nil args) ret))
+    (setq ret (remove nil ret))
     ;; (setq *ret* ret)
     (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :evaluation d))) ret))
        (length ret))))
