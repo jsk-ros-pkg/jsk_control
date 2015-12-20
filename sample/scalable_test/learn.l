@@ -896,6 +896,8 @@
     (dotimes (i lp)
       (push (apply 'ik-random-test-min :initialize? nil args) ret))
     (setq ret (remove nil ret))
+    (if (not (eq lp (length ret)))
+	(warning-message 1 "[ik-random-test-min-average] warn: ik-random-test-min sometimes redused? ~A/~A~%" (length ret) lp))
     ;; (setq *ret* ret)
     (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :evaluation d))) ret))
        (length ret))))
