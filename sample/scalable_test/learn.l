@@ -833,7 +833,7 @@
     (/ 1.0 (expt step-max (/ 1.0 (length redundancy)))))
    (redundancy-step-cnt
     (max 1 (floor (/ 1.0 redundancy-step))))
-   (revert? nil)
+   (revert? nil) (draw? t)
    tmp buf ret (cnt 0) (update-arrow-coords? t)
    ;;
    (stop-func)
@@ -884,8 +884,17 @@
   ;; (setq *ret* buf)
   ;; (setq ret (car (sort buf #'(lambda (a b) (< (cdr (assoc :state-diff-norm a))
   ;; (cdr (assoc :state-diff-norm b)))))))
-  (if (and (not revert?) ret)
-      (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy (cdr (assoc :redundancy ret)) :initialize? nil :revert? revert? args))
+  (cond
+   (revert?
+    (mapcar '(lambda (j av) (send j :joint-angle av)) joint-list random-angle)
+    (if (functionp root-link-fix-coords-func)
+	(funcall root-link-fix-coords-func)))
+   (ret
+    (map cons '(lambda (j av) (send j :joint-angle (rad2deg av)))
+	 joint-list (cdr (assoc :state ret)))
+    (if (functionp root-link-fix-coords-func)
+	(funcall root-link-fix-coords-func))))
+  (if (and draw? (or revert? ret)) (send *viewer* :draw-objects))
   ret
   )
 
@@ -968,7 +977,11 @@
 				   (send-all *ef-coords* :get-val 'coords)))
 			    :debug-view nil
 			    :target-centroid-pos nil
-			    :stop 15 :min-loop 0
+			    :stop 8 :min-loop 0
+			    :min (fill (instantiate float-vector 6) -1000)
+			    :max (fill (instantiate float-vector 6) +1000)
+			    :root-link-virtual-joint-weight
+			    (fill (instantiate float-vector 6) 1)
 			    :warnp nil
 			    :revert-if-fail t))
 		     (col))
@@ -981,7 +994,7 @@
 	  :evaluation-callback-func
 	  '(lambda (target-state target-task state task)
 	     (norm (send *robot* :calc-torque)))
-	  :stop-func '(lambda (ret) ret)
+	  ;; :stop-func '(lambda (ret) ret)
 	  :draw? t
 	  ))))
   (send *viewer* :draw-objects)
