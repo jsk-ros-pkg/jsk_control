@@ -755,40 +755,41 @@
        joint-list av)
   (if (functionp root-link-fix-coords-func)
       (funcall root-link-fix-coords-func))
-  (if (functionp after-callback-func)
-      (funcall after-callback-func av c ef-coords))
   (cond
    (update-arrow-coords?
     (mapcar
      '(lambda (ar c)
-        (send ar :newcoords (send c :copy-worldcoords)))
+	(send ar :newcoords (send c :copy-worldcoords)))
      *arrow* c)))
   (cond
-   (draw?
-    (send *viewer* :draw-objects :flush nil)
-    (send *viewer* :viewsurface :flush)))
-  (list
-   (cons :time tm)
-   (cons :state (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
-   (cons :redundancy (copy-seq redundancy))
-   (cons :task-diff
-         (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (scale 1e-3 (send c :difference-position ec)) (send c :difference-rotation ec))) (send-all ef-coords :worldcoords) c))))
-         )
-   (cons :state-diff
-         (map float-vector '(lambda (a b) (deg2rad (- a b)))
-              random-angle (send-all joint-list :joint-angle)))
-   (cons :state-diff-norm
-         (sqrt
-          (/ (norm2 (map float-vector '(lambda (a b) (deg2rad (- a b)))
-			 random-angle (send-all joint-list :joint-angle)))
-             (length av))))
-   (cons :revert?
-         (cond
-	  (revert?
-	   (mapcar '(lambda (j av) (send j :joint-angle av)) joint-list random-angle)
-	   (if (functionp root-link-fix-coords-func)
-	       (funcall root-link-fix-coords-func)))))
-   ))
+   ((and (functionp after-callback-func)
+	 (funcall after-callback-func av c ef-coords))
+    (cond
+     (draw?
+      (send *viewer* :draw-objects :flush nil)
+      (send *viewer* :viewsurface :flush)))
+    (list
+     (cons :time tm)
+     (cons :state (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
+     (cons :redundancy (copy-seq redundancy))
+     (cons :task-diff
+	   (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (scale 1e-3 (send c :difference-position ec)) (send c :difference-rotation ec))) (send-all ef-coords :worldcoords) c))))
+	   )
+     (cons :state-diff
+	   (map float-vector '(lambda (a b) (deg2rad (- a b)))
+		random-angle (send-all joint-list :joint-angle)))
+     (cons :state-diff-norm
+	   (sqrt
+	    (/ (norm2 (map float-vector '(lambda (a b) (deg2rad (- a b)))
+			   random-angle (send-all joint-list :joint-angle)))
+	       (length av))))
+     (cons :revert?
+	   (cond
+	    (revert?
+	     (mapcar '(lambda (j av) (send j :joint-angle av)) joint-list random-angle)
+	     (if (functionp root-link-fix-coords-func)
+		 (funcall root-link-fix-coords-func)))))
+     ))))
 
 (defun ik-random-test-min
   (&rest
@@ -857,6 +858,7 @@
 	      (if update-arrow-coords? (setq update-arrow-coords? nil))
               ;;(push tmp buf)
               (cond
+	       ((not tmp) 'nop)
                ((not ret) (setq ret tmp))
                ((and (functionp evaluation-func)
 		     (funcall evaluation-func tmp ret))
@@ -873,7 +875,7 @@
   ;; (setq *ret* buf)
   ;; (setq ret (car (sort buf #'(lambda (a b) (< (cdr (assoc :state-diff-norm a))
   ;; (cdr (assoc :state-diff-norm b)))))))
-  (if (not revert?)
+  (if (and (not revert?) ret)
       (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy (cdr (assoc :redundancy ret)) :initialize? nil :revert? revert? args))
   ret
   )
@@ -893,22 +895,29 @@
 (smart-initialize-net)
 
 (bench
- (ik-random-test-min
-  :initialize? nil
-  :step-max 30
-  :after-callback-func
-  '(lambda (av c ef-coords)
-     (send *robot* :fullbody-inverse-kinematics
-	   (cons (make-coords) (send-all c :copy-worldcoords))
-	   :move-target (cons (send *robot* :rleg :end-coords)
-			      (send-all *ef-coords* :get-val 'coords))
-	   :link-list (mapcar
-		       '(lambda (mt) (send *robot* :link-list (send mt :parent)))
-		       (cons (send *robot* :rleg :end-coords)
-			     (send-all *ef-coords* :get-val 'coords)))
-	   :debug-view nil
-	   :target-centroid-pos nil
-	   :stop 5
-	   :revert-if-fail nil))
-  :draw? t
-  ))
+ (let* ((aborn-cnt 0))
+   (ik-random-test-min
+    :initialize? nil
+    :step-max 30
+    :after-callback-func
+    #'(lambda (av c ef-coords)
+	(let* ((ret
+		(send *robot* :fullbody-inverse-kinematics
+		      (cons (make-coords) (send-all c :copy-worldcoords))
+		      :move-target (cons (send *robot* :rleg :end-coords)
+					 (send-all *ef-coords* :get-val 'coords))
+		      :link-list (mapcar
+				  '(lambda (mt) (send *robot* :link-list (send mt :parent)))
+				  (cons (send *robot* :rleg :end-coords)
+					(send-all *ef-coords* :get-val 'coords)))
+		      :debug-view nil
+		      :target-centroid-pos nil
+		      :stop 10
+		      :warnp nil
+		      :revert-if-fail t)))
+	  (if (not ret) (incf aborn-cnt))
+	  ret))
+    :draw? t
+    )
+   (format t "~A aborn~%" aborn-cnt)
+   ))
