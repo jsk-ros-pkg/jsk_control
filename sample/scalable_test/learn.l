@@ -424,7 +424,7 @@
                   (while (and
                           (not time-over-flag)
                           (not (setq time-over-flag (< _max-time (car (unix::gettimeofday)))))
-                          (< (cdr (assoc :state-diff-norm dif)) thre))
+                          (< (cdr (assoc :evaluation dif)) thre))
                     (if draw? (warning-message 6 "random av rejected: ~A < ~A~%" dif thre))
                     ;; (gen-random-angle-vector joint-list)
                     (setq dif (apply 'ik-random-test-min
@@ -739,6 +739,12 @@
          )
 	;;
 	(after-callback-func)
+	(evaluation-callback-func
+	 '(lambda (target-state target-task state task)
+	    (sqrt
+	     (/ (norm2 (map float-vector '(lambda (a b) (deg2rad (- a b)))
+			    target-state (send-all state :joint-angle)))
+		(length target-state)))))
         &allow-other-keys
         )
   (setq input (concatenate float-vector input redundancy))
@@ -778,11 +784,9 @@
      (cons :state-diff
 	   (map float-vector '(lambda (a b) (deg2rad (- a b)))
 		random-angle (send-all joint-list :joint-angle)))
-     (cons :state-diff-norm
-	   (sqrt
-	    (/ (norm2 (map float-vector '(lambda (a b) (deg2rad (- a b)))
-			   random-angle (send-all joint-list :joint-angle)))
-	       (length av))))
+     (cons :evaluation
+	   (if (functionp evaluation-callback-func)
+	       (funcall evaluation-callback-func random-angle c joint-list ef-coords)))
      (cons :revert?
 	   (cond
 	    (revert?
@@ -834,8 +838,8 @@
    ;;
    (evaluation-func
     '(lambda (val soa)
-       (< (cdr (assoc :state-diff-norm val))
-	  (cdr (assoc :state-diff-norm soa)))))
+       (< (cdr (assoc :evaluation val))
+	  (cdr (assoc :evaluation soa)))))
    &allow-other-keys
    )
   (labels ((itter
@@ -887,37 +891,69 @@
     (dotimes (i lp)
       (push (apply 'ik-random-test-min :initialize? nil args) ret))
     ;; (setq *ret* ret)
-    (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :state-diff-norm d))) ret))
+    (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :evaluation d))) ret))
        (length ret))))
 
 #|
 
 (smart-initialize-net)
+(cpplog::change-output-stream "/dev/null")
+
+(defvar *collision-check-pair*
+  (let* ((init (progn (send *robot* :init-pose)
+		      (send-all (send *robot* :links) :worldcoords)))
+	 (pair (send *robot* :collision-check-pairs))
+	 bl1 bl2)
+    (setq bl1 (send *robot* :self-collision-check))
+    ;;
+    (send *robot* :reset-manip-pose)
+    (send-all (send *robot* :links) :worldcoords)
+    (setq bl2 (send *robot* :self-collision-check))
+    (setq pair
+	  (remove-if
+	   #'(lambda (ll)
+	       (find-if #'(lambda (bl)
+			    (or (and (eq (car ll) (car bl))
+				     (eq (cdr ll) (cdr bl)))
+				(and (eq (car ll) (cdr bl))
+				     (eq (cdr ll) (car bl)))))
+			(append bl1 bl2)))
+	   pair))
+    pair))
 
 (bench
- (let* ((aborn-cnt 0))
-   (ik-random-test-min
-    :initialize? nil
-    :step-max 30
-    :after-callback-func
-    #'(lambda (av c ef-coords)
-	(let* ((ret
-		(send *robot* :fullbody-inverse-kinematics
-		      (cons (make-coords) (send-all c :copy-worldcoords))
-		      :move-target (cons (send *robot* :rleg :end-coords)
-					 (send-all *ef-coords* :get-val 'coords))
-		      :link-list (mapcar
-				  '(lambda (mt) (send *robot* :link-list (send mt :parent)))
-				  (cons (send *robot* :rleg :end-coords)
-					(send-all *ef-coords* :get-val 'coords)))
-		      :debug-view nil
-		      :target-centroid-pos nil
-		      :stop 10
-		      :warnp nil
-		      :revert-if-fail t)))
-	  (if (not ret) (incf aborn-cnt))
-	  ret))
-    :draw? t
-    )
+ (let* ((aborn-cnt 0)
+	(ret
+	 (ik-random-test-min
+	  :initialize? nil
+	  :step-max 30
+	  :after-callback-func
+	  #'(lambda (av c ef-coords)
+	      (let* ((ret
+		      (send *robot* :fullbody-inverse-kinematics
+			    (cons (make-coords) (send-all c :copy-worldcoords))
+			    :move-target
+			    (cons (send *robot* :rleg :end-coords)
+				  (send-all *ef-coords* :get-val 'coords))
+			    :link-list
+			    (mapcar
+			     '(lambda (mt) (send *robot* :link-list (send mt :parent)))
+			     (cons (send *robot* :rleg :end-coords)
+				   (send-all *ef-coords* :get-val 'coords)))
+			    :debug-view nil
+			    :target-centroid-pos nil
+			    :stop 10
+			    :warnp nil
+			    :revert-if-fail t)))
+		(setq ret (and ret (not (send *robot* :self-collision-check
+					      :pairs *collision-check-pair*))))
+		(if (not ret) (incf aborn-cnt))
+		ret))
+	  :evaluation-callback-func
+	  '(lambda (target-state target-task state task)
+	     (norm (send *robot* :calc-torque)))
+	  :draw? t
+	  )))
    (format t "~A aborn~%" aborn-cnt)
+   ret
    ))
