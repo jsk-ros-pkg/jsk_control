@@ -836,6 +836,7 @@
    (revert? nil)
    tmp buf ret (cnt 0) (update-arrow-coords? t)
    ;;
+   (stop-func)
    (evaluation-func
     '(lambda (val soa)
        (< (cdr (assoc :evaluation val))
@@ -866,12 +867,16 @@
                ((not ret) (setq ret tmp))
                ((and (functionp evaluation-func)
 		     (funcall evaluation-func tmp ret))
-		(setq ret tmp))))
+		(setq ret tmp)))
+	      ;;
+	      (if (and (functionp stop-func)
+		       (funcall stop-func ret)) (throw :stop-func-end nil))
+	      )
              (t
               (dotimes (j redundancy-step-cnt)
                 (setf (aref redundancy (- depth 1)) (* j redundancy-step))
                 (itter (- depth 1) depth0 (+ prev (- redundancy-step-cnt j 1))))))))
-    (itter (length redundancy)))
+    (catch :stop-func-end (itter (length redundancy))))
   ;; (dotimes (i (length redundancy))
   ;;   (dotimes (j (round (/ 1.0 redundancy-step)))
   ;;     (setf (aref redundancy i) (* j redundancy-step))
@@ -922,7 +927,8 @@
     pair))
 
 
-(let* ((aborn-cnt 0)
+(let* ((ik-fail-cnt 0)
+       (cl-fail-cnt 0)
        (joint-list *joint-list1*)
        (random-angle
 	(progn
@@ -959,19 +965,23 @@
 				   (send-all *ef-coords* :get-val 'coords)))
 			    :debug-view nil
 			    :target-centroid-pos nil
-			    :stop 10
+			    :stop 15 :min-loop 0
 			    :warnp nil
-			    :revert-if-fail t)))
-		(setq ret (and ret (not (send *robot* :self-collision-check
-					      :pairs *collision-check-pair*))))
-		(if (not ret) (incf aborn-cnt))
-		ret))
+			    :revert-if-fail t))
+		     (col))
+		(cond
+		 ((not ret) (incf ik-fail-cnt) nil)
+		 ((setq col (send *robot* :self-collision-check
+				  :pairs *collision-check-pair*))
+		  (incf cl-fail-cnt) nil)
+		 (t (and ret (not col))))))
 	  :evaluation-callback-func
 	  '(lambda (target-state target-task state task)
 	     (norm (send *robot* :calc-torque)))
+	  :stop-func '(lambda (ret) ret)
 	  :draw? t
 	  ))))
   (send *viewer* :draw-objects)
-  (format t "~A aborn~%" aborn-cnt)
+  (format t "ik: ~A, col:~A~%" ik-fail-cnt cl-fail-cnt)
   ret
   )
