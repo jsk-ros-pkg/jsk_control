@@ -706,7 +706,7 @@
 
 (defun ik-random-test
   (&key (calc-forward 'caffe::calc-forward-double) ;;'caffe::memory-calc-forward)
-        (draw? t) (revert? nil)
+        (draw? t) (revert? nil) (update-arrow-coords? t)
         tm
         (joint-list *joint-list1*)
         (ef-coords *ef-coords*)
@@ -758,13 +758,13 @@
   (if (functionp after-callback-func)
       (funcall after-callback-func av c ef-coords))
   (cond
-   (draw?
-    ;; (send *viewer* :draw-objects :flush nil)
-    ;; (send c :draw-on :flush nil :color (float-vector 1 0 0) :width 100)
+   (update-arrow-coords?
     (mapcar
      '(lambda (ar c)
         (send ar :newcoords (send c :copy-worldcoords)))
-     *arrow* c)
+     *arrow* c)))
+  (cond
+   (draw?
     (send *viewer* :draw-objects :flush nil)
     (send *viewer* :viewsurface :flush)))
   (list
@@ -829,7 +829,7 @@
    (redundancy-step-cnt
     (max 1 (floor (/ 1.0 redundancy-step))))
    (revert? nil)
-   tmp buf ret (cnt 0)
+   tmp buf ret (cnt 0) (update-arrow-coords? t)
    &allow-other-keys
    )
   (labels ((itter
@@ -847,7 +847,9 @@
               (setq tmp (apply 'ik-random-test
                                :random-angle random-angle :update-coords update-coords
                                :c c :b b :av av :input input :redundancy redundancy
+			       :update-arrow-coords? update-arrow-coords?
                                :initialize? nil :revert? revert? args))
+	      (if update-arrow-coords? (setq update-arrow-coords? nil))
               ;;(push tmp buf)
               (cond
                ((not ret) (setq ret tmp))
