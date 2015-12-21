@@ -13,6 +13,7 @@ do
             | awk '{if (NR==1) min=$1} {if($1 < min) min=$1} END {print min}';
         echo -n -e "\e[m";
         cat ${p}/log.learn | grep now -B 2 | awk '{print "  " $0}';
+	echo -n -e "\e[m";
     fi
 done
 
