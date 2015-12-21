@@ -202,6 +202,8 @@ namespace jsk_footstep_controller
     ros::Publisher pub_debug_rfoot_pos_;
     ros::Publisher pub_leg_odometory_;
     ros::Publisher pub_twist_;
+    ros::Publisher pub_odom_init_transform_;
+    ros::Publisher pub_odom_init_pose_stamped_;
     boost::shared_ptr<tf::TransformListener> tf_listener_;
     tf::TransformBroadcaster tf_broadcaster_;
     // parameters
