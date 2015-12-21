@@ -736,11 +736,11 @@
     (list :matrix ret :vector (list 0 0))
     ))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Utilities
+;; Utilities for old euslisp environment
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(unless (fboundp' concatenate-matrix-column)
 (defun concatenate-matrix-column (&rest args)
   "Concatenate matrix in column direction."
   (let (m ml (size-of-column (array-dimension (car args) 1)))
@@ -751,9 +751,9 @@
       (dotimes (i m)
 	(push (matrix-row mat i) ml)))
     (when ml (apply #'matrix (reverse ml)))
-    ))
+    )))
 
-
+(unless (fboundp' concatenate-matrix-row)
 (defun concatenate-matrix-row (&rest args)
   "Concatenate matrix in row direction."
   (let (m ml (size-of-column (array-dimension (car args) 0)))
@@ -764,9 +764,9 @@
       (dotimes (i m)
 	(push (matrix-column mat i) ml)))
     (when ml (transpose (apply #'matrix (reverse ml))))
-    ))
+    )))
 
-
+(unless (fboundp' concatenate-matrix-diagonal)
 (defun concatenate-matrix-diagonal (&rest args)
   "Concatenate matrix in diagonal."
   (let (mat m ll ml vl)
@@ -786,4 +786,4 @@
 	(push (apply #'concatenate
 		     (cons float-vector (reverse vl))) ml)))
     (when ml (apply #'matrix (reverse ml)))
-    ))
+    )))
