@@ -1024,6 +1024,7 @@ namespace jsk_footstep_controller
                                                            odom_init_pose_.translation()[1],
                                                            0.0) * 
                                       Eigen::AngleAxisd(getYaw(odom_init_pose_), Eigen::Vector3d::UnitZ()));
+    ros_odom_init_coords.header.stamp = ros::Time::now();
     ros_odom_init_coords.header.frame_id = parent_frame_id_;
     ros_odom_init_coords.child_frame_id = odom_init_frame_id_;
     tf::transformEigenToMsg(odom_init_pose, ros_odom_init_coords.transform);
