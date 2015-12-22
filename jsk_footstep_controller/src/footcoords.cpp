@@ -115,6 +115,8 @@ namespace jsk_footstep_controller
     pub_debug_rfoot_pos_ = pnh.advertise<geometry_msgs::Pose>("debug/rfoot_pose", 1);
     pub_leg_odometory_ = pnh.advertise<geometry_msgs::PoseStamped>("leg_odometry", 1);
     pub_twist_ = pnh.advertise<geometry_msgs::TwistStamped>("base_vel", 1);
+    pub_odom_init_transform_ = pnh.advertise<geometry_msgs::TransformStamped>("odom_init_transform", 1, true);
+    pub_odom_init_pose_stamped_ = pnh.advertise<geometry_msgs::PoseStamped>("odom_init_pose_stamped", 1, true);
     before_on_the_air_ = true;
     pnh.param("use_imu", use_imu_, false);
     pnh.param("use_imu_yaw", use_imu_yaw_, true);
@@ -1013,6 +1015,26 @@ namespace jsk_footstep_controller
     boost::mutex::scoped_lock lock(mutex_);
     // Update odom_init_pose
     odom_init_pose_ = odom_pose_;
+    
+    // publish odom_init topics
+    // whether invert_odom_init is true or not odom_init_pose_stamped and odom_init_transform is described in odom coordinates.
+    geometry_msgs::TransformStamped ros_odom_init_coords;
+    geometry_msgs::PoseStamped ros_odom_init_pose_stamped;
+    Eigen::Affine3d odom_init_pose = (Eigen::Translation3d(odom_init_pose_.translation()[0],
+                                                           odom_init_pose_.translation()[1],
+                                                           0.0) * 
+                                      Eigen::AngleAxisd(getYaw(odom_init_pose_), Eigen::Vector3d::UnitZ()));
+    ros_odom_init_coords.header.stamp = ros::Time::now();
+    ros_odom_init_coords.header.frame_id = parent_frame_id_;
+    ros_odom_init_coords.child_frame_id = odom_init_frame_id_;
+    tf::transformEigenToMsg(odom_init_pose, ros_odom_init_coords.transform);
+    pub_odom_init_transform_.publish(ros_odom_init_coords);
+    ros_odom_init_pose_stamped.header = ros_odom_init_coords.header;
+    ros_odom_init_pose_stamped.pose.position.x = ros_odom_init_coords.transform.translation.x;
+    ros_odom_init_pose_stamped.pose.position.y = ros_odom_init_coords.transform.translation.y;
+    ros_odom_init_pose_stamped.pose.position.z = ros_odom_init_coords.transform.translation.z;
+    ros_odom_init_pose_stamped.pose.orientation = ros_odom_init_coords.transform.rotation;
+    pub_odom_init_pose_stamped_.publish(ros_odom_init_pose_stamped);
   }
 
   void Footcoords::odomImuCallback(const nav_msgs::Odometry::ConstPtr& odom_msg,
