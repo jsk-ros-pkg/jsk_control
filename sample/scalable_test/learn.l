@@ -903,11 +903,11 @@
   )
 
 (defun ik-random-test-min-average
-  (&rest args &key (lp 100) &allow-other-keys)
+  (&rest args &key (lp 100) (step-max 300) &allow-other-keys)
   (let* ((ret))
     (smart-initialize-net)
     (dotimes (i lp)
-      (push (apply 'ik-random-test-min :initialize? nil args) ret))
+      (push (apply 'ik-random-test-min :initialize? nil :step-max step-max args) ret))
     (setq ret (remove nil ret))
     (if (not (eq lp (length ret)))
 	(warning-message 1 "[ik-random-test-min-average] warn: ik-random-test-min sometimes redused? ~A/~A~%" (length ret) lp))
