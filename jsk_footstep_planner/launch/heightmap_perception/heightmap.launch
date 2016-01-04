@@ -4,6 +4,7 @@
   <arg name="ROBOT_FRAME" default="body_on_odom" /> <!--it's not good-->
   <arg name="INPUT" default="/distance_filtered_laser_snapshots/output_cloud" />
   <arg name="DEBUG_VIEW" default="true" />
+  <arg name="DEBUG_HISTOGRAM" default="false" />
   <node pkg="jsk_topic_tools" type="standalone_complexed_nodelet" name="heightmap_nodelet"
         output="screen">
     <rosparam subst_value="true">
@@ -101,6 +102,18 @@
             if="$(arg DEBUG_VIEW)">
         <remap from="image" to="colorize_heightmap/output" />
       </node>
+      <group if="$(arg DEBUG_HISTOGRAM)">
+        <node pkg="jsk_perception" type="single_channel_histogram" name="heightmap_histogram">
+          <remap from="~input" to="/latest_heightmap/output" />
+          <rosparam>
+            use_mask: false
+            hist_size: 50
+            min_value: 0.0
+            max_value: 1.0
+          </rosparam>
+        </node>
+        <node pkg="jsk_rqt_plugins" type="rqt_histogram_plot" name="heightmap_histogram_plot" args="heightmap_histogram/output/histogram" />
+      </group>
     </group>
     <group ns="filtered">
       <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
@@ -110,6 +123,18 @@
             if="$(arg DEBUG_VIEW)">
         <remap from="image" to="colorize_heightmap/output" />
       </node>
+      <group if="$(arg DEBUG_HISTOGRAM)">
+        <node pkg="jsk_perception" type="single_channel_histogram" name="heightmap_histogram">
+          <remap from="~input" to="/latest_complete_heightmap/output" />
+          <rosparam>
+            use_mask: false
+            hist_size: 50
+            min_value: 0.0
+            max_value: 1.0
+          </rosparam>
+        </node>
+        <node pkg="jsk_rqt_plugins" type="rqt_histogram_plot" name="heightmap_histogram_plot" args="heightmap_histogram/output/histogram" />
+      </group>
     </group>
     <group ns="accumulated">
       <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
@@ -119,6 +144,18 @@
             if="$(arg DEBUG_VIEW)">
         <remap from="image" to="colorize_heightmap/output" />
       </node>
+      <group if="$(arg DEBUG_HISTOGRAM)">
+        <node pkg="jsk_perception" type="single_channel_histogram" name="heightmap_histogram">
+          <remap from="~input" to="/accumulated_heightmap/output" />
+          <rosparam>
+            use_mask: false
+            hist_size: 50
+            min_value: 0.0
+            max_value: 1.0
+          </rosparam>
+        </node>
+        <node pkg="jsk_rqt_plugins" type="rqt_histogram_plot" name="heightmap_histogram_plot" args="heightmap_histogram/output/histogram" />
+      </group>
     </group>
   </group>
 </launch>
