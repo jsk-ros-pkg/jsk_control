@@ -60,8 +60,8 @@ def drawPoint(image, point, size, color, text):
 #def cop_callback(lleg_cop, rleg_cop):
 def periodicCallback(event):
     global tf_buffer, lleg_cop_msg, rleg_cop_msg, zmp_msg, act_cp_msg, ref_cp_msg, act_contact_states_msg
-    try:
-        msg_lock.acquire()
+    with msg_lock:
+     try:
         _lleg_pose = tf_buffer.lookup_transform(root_link, lleg_end_coords, rospy.Time())
         _rleg_pose = tf_buffer.lookup_transform(root_link, rleg_end_coords, rospy.Time())
         if lleg_cop_msg:
@@ -208,11 +208,8 @@ def periodicCallback(event):
             act_cp_msg = None
         bridge = CvBridge()
         pub.publish(bridge.cv2_to_imgmsg(image, "bgra8"))
-    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-        # rospy.logerr("Failed to lookup transform")
-        pass
-    finally:
-        msg_lock.release()
+     except:
+         pass
 
 lleg_cop_msg = None
 rleg_cop_msg = None
