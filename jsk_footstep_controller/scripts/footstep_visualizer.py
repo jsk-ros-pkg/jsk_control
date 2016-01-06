@@ -253,6 +253,7 @@ if __name__ == "__main__":
     pub = rospy.Publisher("~output", Image)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
+    rospy.wait_for_service("/StabilizerServiceROSBridge/getParameter")
     g_get_parameter_srv = rospy.ServiceProxy("/StabilizerServiceROSBridge/getParameter", getParameter)
     lleg_end_coords = rospy.get_param("~lleg_end_coords", "lleg_end_coords")
     rleg_end_coords = rospy.get_param("~rleg_end_coords", "rleg_end_coords")
