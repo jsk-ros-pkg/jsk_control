@@ -1,9 +1,12 @@
 <launch>
+  <arg name="use_footcoords" default="true"/>
   <node pkg="jsk_footstep_controller"
         type="footcoords"
         name="footcoords"
+        if="$(arg use_footcoords)"
         >
   </node>
+
   <node pkg="jsk_footstep_controller"
         type="stabilizer_watcher.py"
         name="stabilizer_watcher" />
