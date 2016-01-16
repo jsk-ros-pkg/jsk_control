@@ -3,6 +3,7 @@ project(jsk_footstep_controller)
 
 find_package(catkin REQUIRED COMPONENTS
   jsk_footstep_msgs
+  dynamic_reconfigure
   jsk_footstep_planner
   actionlib_msgs
   jsk_pcl_ros
@@ -14,6 +15,9 @@ find_package(catkin REQUIRED COMPONENTS
   kdl_conversions
   urdf
 )
+
+generate_dynamic_reconfigure_options(
+  cfg/FootstepVisualizer.cfg)
 
 add_message_files(FILES
   GroundContactState.msg FootCoordsLowLevelInfo.msg SynchronizedForces.msg)
