@@ -2,6 +2,7 @@
 
 from hrpsys_ros_bridge.srv import OpenHRP_StabilizerService_getParameter as getParameter
 import rospy
+from tf2_py import ExtrapolationException
 import tf2_ros
 from geometry_msgs.msg import PointStamped
 from sensor_msgs.msg import Image
@@ -11,10 +12,11 @@ from tf.transformations import *
 import cv2 as cv
 import numpy as np
 from threading import Lock
-from math import pi
+from math import pi, isnan
 # hrpsys robot only
 from hrpsys_ros_bridge.msg import ContactStatesStamped, ContactStateStamped, ContactState
-
+from jsk_footstep_controller.cfg import FootstepVisualizerConfig
+from dynamic_reconfigure.server import Server
 
 msg_lock = Lock()
 def matrixFromTranslationQuaternion(trans, q):
@@ -31,10 +33,14 @@ def verticesPoints(original_vertices, origin_pose, scale, resolution_size):
             for v in vertices_3d]
 
 def verticesPoints3D(original_vertices, origin_pose, scale, resolution_size):
+    for v in original_vertices:
+        if isnan(v[0]) or isnan(v[1]) or isnan(v[2]):
+            return [False]
     original_vertices_3d_local = original_vertices
     vertices_3d_pose = [concatenate_matrices(origin_pose, translation_matrix(v)) for v in original_vertices_3d_local]
     vertices_3d = [translation_from_matrix(v) for v in vertices_3d_pose]
     
+        
     return [(int(v[0] / (scale / 2.0) * resolution_size / 2.0 + resolution_size / 2.0),
              int(v[1] / (scale / 2.0) * resolution_size / 2.0 + resolution_size / 2.0))
             for v in vertices_3d]
@@ -60,6 +66,7 @@ def drawPoint(image, point, size, color, text):
 #def cop_callback(lleg_cop, rleg_cop):
 def periodicCallback(event):
     global tf_buffer, lleg_cop_msg, rleg_cop_msg, zmp_msg, act_cp_msg, ref_cp_msg, act_contact_states_msg
+    print "run"
     with msg_lock:
      try:
         _lleg_pose = tf_buffer.lookup_transform(root_link, lleg_end_coords, rospy.Time())
@@ -147,7 +154,7 @@ def periodicCallback(event):
                     else:
                         rleg_color = (150, 150, 255, 255)
                         rleg_width = 1
-            act_contact_states_msg = None
+            # act_contact_states_msg = None
         cv.line(image, lleg_points[0], lleg_points[1], lleg_color, lleg_width)
         cv.line(image, lleg_points[1], lleg_points[2], lleg_color, lleg_width)
         cv.line(image, lleg_points[2], lleg_points[3], lleg_color, lleg_width)
@@ -166,50 +173,59 @@ def periodicCallback(event):
             margined_hull = cv.convexHull(np.array(rleg_margined_points))
         if lleg_contact or rleg_contact:
             cv.drawContours(image, [margined_hull], -1, (255, 255, 255, 255), 2)
-        if lleg_cop_msg:
+        if lleg_cop_msg and g_config.lcop:
             lleg_cop_point_2d = verticesPoints3D([lleg_cop_point],
                                                  concatenate_matrices(inverse_matrix(mid_coords),
                                                                       lleg_cop_origin),
                                                  scale,
                                                  image_size)[0]
-            drawPoint(image, lleg_cop_point_2d, 5, (0, 255, 0), "LCoP")
-            lleg_cop_msg = None
-        if rleg_cop_msg:
+            if lleg_cop_point_2d:
+                drawPoint(image, lleg_cop_point_2d, 5, (0, 255, 0), "LCoP")
+            # lleg_cop_msg = None
+        if rleg_cop_msg and g_config.rcop:
             rleg_cop_point_2d = verticesPoints3D([rleg_cop_point],
                                                  concatenate_matrices(inverse_matrix(mid_coords),
                                                                       rleg_cop_origin),
                                                  scale,
                                                  image_size)[0]
-            drawPoint(image, rleg_cop_point_2d, 5, (0, 0, 255), "RCoP")
-            rleg_cop_msg = None
-        if zmp_msg:
+            if rleg_cop_point_2d:
+                drawPoint(image, rleg_cop_point_2d, 5, (0, 0, 255), "RCoP")
+            # rleg_cop_msg = None
+        if zmp_msg and g_config.zmp:
             zmp_point_2d = verticesPoints3D([zmp_point],
                                             concatenate_matrices(inverse_matrix(mid_coords),
                                                                  zmp_origin),
                                             scale,
                                             image_size)[0]
-            drawPoint(image, zmp_point_2d, 5, (0, 255, 255), "ZMP")
-            zmp_msg = None
-        if ref_cp_msg:
+            if zmp_point_2d:
+                drawPoint(image, zmp_point_2d, 5, (0, 255, 255), "ZMP")
+            # zmp_msg = None
+        if ref_cp_msg and g_config.ref_cp:
             ref_cp_point_2d = verticesPoints3D([ref_cp_point],
                                                concatenate_matrices(inverse_matrix(mid_coords),
                                                                     ref_cp_origin),
                                                scale,
                                                image_size)[0]
-            drawPoint(image, ref_cp_point_2d, 7, REF_CP_COLOR, "RCP")
-            ref_cp_msg = None
-        if act_cp_msg:
+            if ref_cp_point_2d:
+                drawPoint(image, ref_cp_point_2d, 7, REF_CP_COLOR, "RCP")
+            # ref_cp_msg = None
+        if act_cp_msg and g_config.act_cp:
             act_cp_point_2d = verticesPoints3D([act_cp_point],
                                                concatenate_matrices(inverse_matrix(mid_coords),
                                                                     act_cp_origin),
                                                scale,
                                                image_size)[0]
-            drawPoint(image, act_cp_point_2d, 7, ACT_CP_COLOR, "ACP")
-            act_cp_msg = None
+            if act_cp_point_2d:
+                drawPoint(image, act_cp_point_2d, 7, ACT_CP_COLOR, "ACP")
+            # act_cp_msg = None
         bridge = CvBridge()
         pub.publish(bridge.cv2_to_imgmsg(image, "bgra8"))
-     except:
-         pass
+     except ExtrapolationException:
+         rospy.logwarn("tf error")
+     finally:
+        pass
+     # except Exception, e:
+     #     print e
 
 lleg_cop_msg = None
 rleg_cop_msg = None
@@ -248,12 +264,20 @@ def zmpCallback(msg):
     with msg_lock:
         zmp_msg = msg
 
+def config_callback(config, level):
+    global g_config
+    g_config = config
+    return config
+
 if __name__ == "__main__":
     rospy.init_node("footstep_visualizer")
     pub = rospy.Publisher("~output", Image)
+    srv = Server(FootstepVisualizerConfig, config_callback)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
+    rospy.loginfo("wait for st server")
     rospy.wait_for_service("/StabilizerServiceROSBridge/getParameter")
+    rospy.loginfo("st server found")
     g_get_parameter_srv = rospy.ServiceProxy("/StabilizerServiceROSBridge/getParameter", getParameter)
     lleg_end_coords = rospy.get_param("~lleg_end_coords", "lleg_end_coords")
     rleg_end_coords = rospy.get_param("~rleg_end_coords", "rleg_end_coords")
