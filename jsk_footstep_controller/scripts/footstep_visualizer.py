@@ -171,7 +171,7 @@ def periodicCallback(event):
             margined_hull = cv.convexHull(np.array(lleg_margined_points))
         elif rleg_contact:
             margined_hull = cv.convexHull(np.array(rleg_margined_points))
-        if lleg_contact or rleg_contact:
+        if (lleg_contact or rleg_contact) and g_config.cp_safe_area:
             cv.drawContours(image, [margined_hull], -1, (255, 255, 255, 255), 2)
         if lleg_cop_msg and g_config.lcop:
             lleg_cop_point_2d = verticesPoints3D([lleg_cop_point],
@@ -283,11 +283,12 @@ if __name__ == "__main__":
     rleg_end_coords = rospy.get_param("~rleg_end_coords", "rleg_end_coords")
     image_size = rospy.get_param("~image_size", 400)
     scale = rospy.get_param("~scale", 0.6)
-    leg_front_margin = g_get_parameter_srv().i_param.eefm_leg_front_margin
-    leg_rear_margin = g_get_parameter_srv().i_param.eefm_leg_rear_margin
-    leg_inside_margin = g_get_parameter_srv().i_param.eefm_leg_inside_margin
-    leg_outside_margin = g_get_parameter_srv().i_param.eefm_leg_outside_margin
-    cp_check_margin = g_get_parameter_srv().i_param.cp_check_margin
+    i_param = g_get_parameter_srv().i_param
+    leg_front_margin = i_param.eefm_leg_front_margin
+    leg_rear_margin = i_param.eefm_leg_rear_margin
+    leg_inside_margin = i_param.eefm_leg_inside_margin
+    leg_outside_margin = i_param.eefm_leg_outside_margin
+    cp_check_margin = i_param.cp_check_margin
     lleg_vertices = [[leg_front_margin, leg_outside_margin],
                      [leg_front_margin, -1*leg_inside_margin],
                      [-1*leg_rear_margin, -1*leg_inside_margin],
