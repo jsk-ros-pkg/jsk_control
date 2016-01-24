@@ -290,7 +290,7 @@
                (reference-output
                 (if use-output-matrix
                     (if use-drift-coeff
-                        (v- (apply #'concatenate float-vector reference-output-list) (transform output-matrix (transform total-output-drift-matrix total-drift-coeff-vector)))
+                        (v- (apply #'concatenate float-vector reference-output-list) (transform total-output-drift-matrix total-drift-coeff-vector))
                       (apply #'concatenate float-vector reference-output-list))))
                ;; G
                (total-inequality-matrix (if (every #'identity inequality-matrix-list)
@@ -323,11 +323,11 @@
                ;; output component in eval-coeff-vector
                (output-eval-coeff-vector
                 (if use-output-matrix
-                    (transform projected-output-weight-matrix (v- projected-output-current-state reference-output))))
+                    (transform projected-output-error-weight-matrix (v- projected-output-current-state reference-output))))
                ;; output component in eval-weight-matrix
                (output-eval-weight-matrix
                 (if use-output-matrix
-                    (m* projected-output-weight-matrix total-feedforward-matrix)))
+                    (m* projected-output-error-weight-matrix total-feedforward-matrix)))
                )
            (setq total-input-value-vector
                  (solve-qpoases-qp
@@ -366,7 +366,7 @@
                (push (subseq total-input-value-vector tmp-count (+ tmp-count idim)) input-value-list)
                (push (subseq state-values (* i state-dim) (* (1+ i) state-dim)) state-value-list)
                (if use-output-matrix
-                   (push (subseq output-value-list (* i output-dim) (* (1+ i) output-dim)) output-value-list))
+                   (push (subseq output-values (* i output-dim) (* (1+ i) output-dim)) output-value-list))
                (setq tmp-count (+ tmp-count idim))
                ))
            (setq input-value-list (reverse input-value-list) state-value-list (reverse state-value-list))
@@ -597,7 +597,7 @@
                c-limbs
                a-limbs
                t-mass
-               :reference-output tmp-reference-state
+               :reference-output tmp-reference-output
                :input-weight-vector input-weight-vector)
    self)
   (:calc-equality-matrix () nil)
@@ -715,13 +715,16 @@
          (error-weight-vector (let ((ww (instantiate float-vector state-dim)))
                                 (setf (elt ww 0) error-momentum-integral-weight)
                                 (setf (elt ww 1) error-momentum-weight)
-                                ww)))
+                                ww))
+         ((:output-weight-vector ovec))
+         ((:output-dim odim) 0))
    "Model Predictive Control for COG Z motion.
     tmp-preview-window is preview window size."
    (send-super :init
                tmp-preview-window state-dim
                :initial-state initial-state
-               :error-weight-vector error-weight-vector)
+               :error-weight-vector error-weight-vector
+               :output-dim odim :output-weight-vector ovec)
    )
   (:get-cog-z-from-preview-index
    (&optional (preview-index 0))
