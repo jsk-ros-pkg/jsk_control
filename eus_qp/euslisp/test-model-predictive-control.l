@@ -483,42 +483,65 @@
 (defun test-predictive-matrices-common
   (Ak-list Bk-list
    init-value input-value-list
-   mpc &optional (drift-coeff-list))
+   mpc
+   &optional (drift-coeff-list) (Ck-list) (Dk-list))
   (let ((state-value init-value)
-        (ret) (ret1) (ret0))
-    (mapcar #'(lambda (ak bk)
-                (send mpc :append-param
-                      (instance model-predictive-control-param
-                                :init nil nil Ak Bk
-                                nil nil nil nil nil)))
-            Ak-list Bk-list)
+        (state-value-list) (output-value-list) (ret1) (ret0) (ret2) (ret3))
     (dotimes (i (length Ak-list))
+      (send mpc :append-param
+            (instance model-predictive-control-param
+                      :init nil nil (elt Ak-list i) (elt Bk-list i)
+                      nil nil nil nil nil
+                      nil nil
+                      (if Ck-list (elt Ck-list i))
+                      (if Dk-list (elt Dk-list i)))))
+    (dotimes (i (length Ak-list))
+      (if Ck-list
+          (push (if Dk-list
+                    (v+ (transform (elt Ck-list i) state-value) (transform (elt Dk-list i) (elt input-value-list i)))
+                  (transform (elt Ck-list i) state-value))
+                output-value-list))
       (setq state-value (v+ (transform (elt Ak-list i) state-value) (transform (elt Bk-list i) (elt input-value-list i))))
       (if drift-coeff-list
           (setq state-value (v+ state-value (elt drift-coeff-list i))))
-      (push state-value ret)
+      (push state-value state-value-list)
       )
-    (setq ret0 (apply #'concatenate float-vector (reverse ret)))
+    (setq ret0 (apply #'concatenate float-vector (reverse state-value-list)))
     (setq ret1 (v+
-                (transform (send mpc :calc-phi-matrix Ak-list) init-value)
-                (transform (send mpc :calc-psi-matrix Ak-list Bk-list) (apply #'concatenate float-vector input-value-list))
+                (transform (send mpc :calc-total-system-matrix Ak-list) init-value)
+                (transform (send mpc :calc-total-input-matrix Ak-list Bk-list) (apply #'concatenate float-vector input-value-list))
                 ))
     (if drift-coeff-list
-        (setq ret1 (v+ ret1 (transform (send mpc :calc-lambda-matrix Ak-list) (apply #'concatenate float-vector drift-coeff-list)))))
+        (setq ret1 (v+ ret1 (transform (send mpc :calc-total-drift-matrix Ak-list) (apply #'concatenate float-vector drift-coeff-list)))))
+    (when Ck-list
+      (setq ret2 (apply #'concatenate float-vector (reverse output-value-list)))
+      (setq ret3 (v+ (transform (send mpc :calc-total-output-matrix Ak-list Ck-list) init-value)
+                     (transform (send mpc :calc-total-feedforward-matrix Ak-list Bk-list Ck-list Dk-list)
+                                (apply #'concatenate float-vector input-value-list))))
+      (if drift-coeff-list
+          (setq ret3 (v+ ret3 (transform (send mpc :calc-total-output-drift-matrix Ak-list Ck-list)
+                                         (apply #'concatenate float-vector drift-coeff-list)))))
+      )
     ;;(format-array ret0)
     ;;(format-array ret1)
-    (format-array (v- ret0 ret1) ";;   diff")
-    (format t ";;   same? ~A~%" (eps= (distance ret0 ret1) 0.0))
-    (eps= (distance ret0 ret1) 0.0)))
+    (format-array (v- ret0 ret1) ";;   state diff")
+    (format t ";;   state same? ~A~%" (eps= (distance ret0 ret1) 0.0))
+    (when Ck-list
+      (format-array (v- ret2 ret3) ";;   output diff")
+      (format t ";;   output same? ~A~%" (eps= (distance ret2 ret3) 0.0)))
+    (if Ck-list
+        (and (eps= (distance ret0 ret1) 0.0) (eps= (distance ret2 ret3) 0.0))
+      (eps= (distance ret0 ret1) 0.0))
+    ))
 
 (defun test-predictive-matrices-1
   ()
   "Test fixed size and values. Linear time-invariant system."
-  (let* ((mpc (instance model-predictive-control :init 4 3))
+  (format t ";; ~A~%" (documentation 'test-predictive-matrices-1))
+  (let* ((mpc (instance model-predictive-control :init 4 3 :output-dim 3))
          (Ak-list (list (scale-matrix 0.5 (unit-matrix 3)) (scale-matrix 1 (unit-matrix 3)) (scale-matrix 1.5 (unit-matrix 3)) (scale-matrix 2 (unit-matrix 3))))
          (Bk-list (list (scale-matrix 0.1 (unit-matrix 3)) (scale-matrix 0.2 (unit-matrix 3)) (scale-matrix 0.3 (unit-matrix 3)) (scale-matrix 0.4 (unit-matrix 3))))
          (input-value-list (list (float-vector -1 -2 -3) (float-vector -4 -5 -6) (float-vector -7 -8 -9) (float-vector -10 -11 -12))))
-    (format t ";; ~A~%" (documentation 'test-predictive-matrices-0))
     (test-predictive-matrices-common
      Ak-list Bk-list (mpc . current-state) input-value-list mpc)
     ))
@@ -526,11 +549,13 @@
 (defun test-predictive-matrices-2
   ()
   "Test random size and values. Linear time-invariant system."
+  (format t ";; ~A~%" (documentation 'test-predictive-matrices-2))
   (let* ((state-dim (1+ (random 5)))
          (input-dim (1+ (random 3)))
+         (output-dim (1+ (random 5)))
          (predict-len (1+ (random 10)))
          (initial-state (make-random-vector state-dim :random-range 1.0))
-         (mpc (instance model-predictive-control :init predict-len state-dim :initial-state initial-state))
+         (mpc (instance model-predictive-control :init predict-len state-dim :initial-state initial-state :output-dim output-dim))
          (tmpAk (make-random-matrix state-dim state-dim :random-range 5.0))
          (Ak-list (mapcar #'(lambda (x)
                               (copy-object tmpAk))
@@ -542,46 +567,32 @@
          (input-value-list (mapcar #'(lambda (x)
                                        (make-random-vector input-dim :random-range 1.0))
                                    (make-list predict-len))))
-    (format t ";; ~A~%" (documentation 'test-predictive-matrices-1))
     (test-predictive-matrices-common
      Ak-list Bk-list (mpc . current-state) input-value-list mpc)
     ))
 
 (defun test-predictive-matrices-3
-  ()
+  (&key (use-drift) (use-Ck-list) (use-Dk-list))
   "Test random size and values. Linear time-variant system."
+  (unless (or use-drift use-Ck-list use-Dk-list)
+    (format t ";; ~A~%" (documentation 'test-predictive-matrices-3)))
   (let* ((state-dim (1+ (random 5)))
+         (output-dim (1+ (random 5)))
          (input-dim (1+ (random 3)))
          (predict-len (1+ (random 10)))
          (initial-state (make-random-vector state-dim :random-range 1.0))
-         (mpc (instance model-predictive-control :init predict-len state-dim :initial-state initial-state))
+         (mpc (instance model-predictive-control :init predict-len state-dim :initial-state initial-state :output-dim output-dim))
          (Ak-list (mapcar #'(lambda (x)
                               (make-random-matrix state-dim state-dim :random-range 5.0))
                           (make-list predict-len)))
          (Bk-list (mapcar #'(lambda (x)
                               (make-random-matrix state-dim input-dim :random-range 1.0))
                           (make-list predict-len)))
-         (input-value-list (mapcar #'(lambda (x)
-                                       (make-random-vector input-dim :random-range 1.0))
-                                   (make-list predict-len))))
-    (format t ";; ~A~%" (documentation 'test-predictive-matrices-2))
-    (test-predictive-matrices-common
-     Ak-list Bk-list (mpc . current-state) input-value-list mpc)
-    ))
-
-(defun test-predictive-matrices-4
-  ()
-  "Test random size and values. Linear time-variant system with drift coeff."
-  (let* ((state-dim (1+ (random 5)))
-         (input-dim (1+ (random 3)))
-         (predict-len (1+ (random 10)))
-         (initial-state (make-random-vector state-dim :random-range 1.0))
-         (mpc (instance model-predictive-control :init predict-len state-dim :initial-state initial-state))
-         (Ak-list (mapcar #'(lambda (x)
-                              (make-random-matrix state-dim state-dim :random-range 5.0))
+         (Ck-list (mapcar #'(lambda (x)
+                              (make-random-matrix output-dim state-dim :random-range 1.0))
                           (make-list predict-len)))
-         (Bk-list (mapcar #'(lambda (x)
-                              (make-random-matrix state-dim input-dim :random-range 1.0))
+         (Dk-list (mapcar #'(lambda (x)
+                              (make-random-matrix output-dim input-dim :random-range 1.0))
                           (make-list predict-len)))
          (input-value-list (mapcar #'(lambda (x)
                                        (make-random-vector input-dim :random-range 1.0))
@@ -589,10 +600,45 @@
          (drift-coeff-list (mapcar #'(lambda (x)
                                        (make-random-vector state-dim :random-range 1.0))
                                    (make-list predict-len))))
-    (format t ";; ~A~%" (documentation 'test-predictive-matrices-3))
     (test-predictive-matrices-common
-     Ak-list Bk-list (mpc . current-state) input-value-list mpc drift-coeff-list)
+     Ak-list Bk-list (mpc . current-state) input-value-list mpc
+     drift-coeff-list (if use-Ck-list Ck-list) (if use-Dk-list Dk-list))
     ))
+
+(defun test-predictive-matrices-4
+  ()
+  "Test random size and values. Linear time-variant system with drift."
+  (format t ";; ~A~%" (documentation 'test-predictive-matrices-4))
+  (test-predictive-matrices-3 :use-drift t)
+  )
+
+(defun test-predictive-matrices-5
+  ()
+  "Test random size and values. Linear time-variant system with output."
+  (format t ";; ~A~%" (documentation 'test-predictive-matrices-5))
+  (test-predictive-matrices-3 :use-Ck-list t)
+  )
+
+(defun test-predictive-matrices-6
+  ()
+  "Test random size and values. Linear time-variant system with output+feedforward."
+  (format t ";; ~A~%" (documentation 'test-predictive-matrices-6))
+  (test-predictive-matrices-3 :use-Ck-list t :use-Dk-list t)
+  )
+
+(defun test-predictive-matrices-7
+  ()
+  "Test random size and values. Linear time-variant system with drift+output."
+  (format t ";; ~A~%" (documentation 'test-predictive-matrices-7))
+  (test-predictive-matrices-3 :use-drift t :use-Ck-list t)
+  )
+
+(defun test-predictive-matrices-8
+  ()
+  "Test random size and values. Linear time-variant system with drift+output+feedforward."
+  (format t ";; ~A~%" (documentation 'test-predictive-matrices-8))
+  (test-predictive-matrices-3 :use-drift t :use-Ck-list t :use-Dk-list t)
+  )
 
 (warn ";; MPC check funcs~%")
 (dotimes (i (get-max-id-for-demo-functions 'test-predictive-matrices-)) ;; Get max number of demo function
