@@ -60,43 +60,54 @@
 
 (cpplog::change-output-stream "/dev/null")
 
-#|
+(setq *links*
+      (mapcar
+       '(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links)))
+       *joint-list1*))
 
-(let* ((ef-coords *ef-coords*)
-       (root-link *root-link*)
-       (joint-list *joint-list1*)
-       (input *input*)
-       (redundancy
-	(instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
-       (step-max 300)
-       (av (instantiate float-vector (length joint-list))) ret)
+(defun main
+  (&key
+   (ef-coords *ef-coords*)
+   (root-link *root-link*)
+   (joint-list *joint-list1*)
+   (input *input*)
+   (redundancy
+    (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
+   (step-max 100)
+   (av (instantiate float-vector (length joint-list)))
+   ret (suc-cnt 0)
+   (draw? t))
   (setq input (concatenate float-vector input redundancy))
-  (dotimes (i step-max)
-    (dotimes (j (length redundancy))
-      (setf (aref input (- (- (length input) 1) j)) (random 1.0)))
-    (warning-message 6 "DNN calc forward: ")
-    (bench (caffe::calc-forward-double :isize (length input) :input input
-				       :osize (length av) :output av))
-    (warning-message 6 "solve IK: ")
-    (map cons #'(lambda (j a) (send j :joint-angle
-				    (- (rad2deg a) (send j :joint-angle))
-				    :relative t))
-	 joint-list av)
-    (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-    (bench
-     (progn
-       (eus_robot::configuration-copy-to)
-       (eus_robot::forward-kinematics 0)
-       ;; (map cons
-       ;; 	    '(lambda (j pos)
-       ;; 	       (eus_robot::set-configuration (send (send j :child-link) :get :id) pos 1))
-       ;; 	    joint-list av)
-       (setq ret (eus_robot_ik::solve-ik :max 30))))
-    (cond
-     ((plusp ret)
-      (eus_robot::configuration-copy-from)
-      (send *viewer* :draw-objects)
-      ;; (read-line)
-      ))))
-
+  (bench
+   (dotimes (i step-max)
+     (dotimes (j (length redundancy))
+       (setf (aref input (- (- (length input) 1) j)) (random 1.0)))
+     (warning-message 6 "DNN calc forward: ")
+     (bench (caffe::calc-forward-double :isize (length input) :input input
+					:osize (length av) :output av))
+     (warning-message 6 "solve IK: ")
+     ;; (map cons #'(lambda (j a) (send j :joint-angle
+     ;; 				       (- (rad2deg a) (send j :joint-angle))
+     ;; 				       :relative t))
+     ;; 	    joint-list av)
+     ;; (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+     (bench
+      (progn
+	;; (eus_robot::configuration-copy-to)
+	(map cons
+	     '(lambda (l pos)
+		(eus_robot::set-configuration (send l :get :id) pos 1))
+	     *links* av)
+	(eus_robot::forward-kinematics 0)
+	(setq ret (eus_robot_ik::solve-ik :max 15))))
+     (cond
+      ((plusp ret)
+       (cond
+	(draw?
+	 (eus_robot::configuration-copy-from)
+	 (send *viewer* :draw-objects)))
+       (incf suc-cnt)
+       ;; (read-line)
+       ))))
+  suc-cnt))
 
