@@ -2,17 +2,20 @@
 (require "learn.l")
 (require "package://contact_behavior_generation/euslisp/model/four-leg-seat.lisp")
 (require "package://eus_robot/euslisp/eus_robot_ik.l")
+(require "package://eus_robot/euslisp/eus_qp_collide.l")
 
+;; create environment objects
 (setq *seat* (instance four-leg-seat :init :name :seat :depth 1000 :width 500))
 (send *seat* :newcoords (make-coords))
 (send *seat* :rotate (deg2rad 90) :z)
-(send *seat* :translate (float-vector -400 100 0) :world)
+(send *seat* :translate (float-vector -350 100 0) :world)
 
 (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 200 (send *seat* :get-val 'height)) :thick 50))
 (send *table* :newcoords (make-coords))
 (send *table* :rotate (deg2rad 90) :z)
-(send *table* :translate (float-vector 200 100 0) :world)
+(send *table* :translate (float-vector 150 100 0) :world)
 
+;; setup initial postures
 (setup-hip-end-coords)
 
 (send *robot* :reset-pose)
@@ -38,6 +41,7 @@
 (send-all (send *robot* :links) :worldcoords)
 (setq *input* (get-vector-from-ef-coords :ef-coords *ef-coords* :root-link *root-link*))
 
+;; setup ik solver
 (send *robot* :legs :toe-p :min-angle 0)
 (send *robot* :legs :toe-p :max-angle 0)
 (progn
@@ -54,16 +58,46 @@
   )
 (send *robot* :legs :toe-p :min-angle -60)
 (send *robot* :legs :toe-p :max-angle 16)
-
-(objects (append (list *seat* *table*) (send *irtviewer* :objects)))
-(smart-initialize-net)
-
-(cpplog::change-output-stream "/dev/null")
-
 (setq *links*
       (mapcar
        '(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links)))
        *joint-list1*))
+
+
+(objects (append (list *seat* *table*) (send *irtviewer* :objects)))
+
+;; iniitliaze dnn
+(smart-initialize-net)
+(cpplog::change-output-stream "/dev/null")
+
+;; setup collision detection
+(eus_qp_collide::test-gen-collidable-pairs-old)
+(setq *collidable-pairs*
+      (append
+       eus_qp_collide::*collidable-pairs*
+       (mapcar #'(lambda (l) (cons *table* l)) *links*)
+       (mapcar #'(lambda (l) (cons *seat* l)) *links*)))
+;; (eus_qp_collide::add-all-link-convex *robot*)
+;; (eus_qp_collide::gen-all-convex-matrices)
+;; (eus_robot::register-collide-pairs eus_qp_collide::*collidable-pairs*)
+
+(defun check-all-collision nil
+  (let* ((ret 0))
+    (dolist (ll *collidable-pairs*)
+      (let* ((m1 (get (car ll) :pqpmodel))
+	     (m2 (get (cdr ll) :pqpmodel))
+	     (c1 (if (send (car ll) :get :id) (eus_robot::get-link-coords (send (car ll) :get :id)) (car ll)))
+	     (c2 (if (send (cdr ll) :get :id) (eus_robot::get-link-coords (send (cdr ll) :get :id)) (cdr ll)))
+	     (r1 (send c1 :worldrot))
+	     (t1 (send c1 :worldpos))
+	     (r2 (send c2 :worldrot))
+	     (t2 (send c2 :worldpos))
+	     (flag geometry::PQP_FIRST_CONTACT))
+	(if (null m1) (setq m1 (send (car ll) :make-pqpmodel :fat 0)))
+	(if (null m2) (setq m2 (send (cdr ll) :make-pqpmodel :fat 0)))
+	(setq ret (+ ret (geometry::pqpcollide r1 t1 m1 r2 t2 m2 flag)))
+	(if (plusp ret) (return-from check-all-collision ret))))
+    ret))
 
 (defun main
   (&key
@@ -73,7 +107,7 @@
    (input *input*)
    (redundancy
     (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
-   (step-max 100)
+   (step-max 1000)
    (av (instantiate float-vector (length joint-list)))
    ret (suc-cnt 0)
    (draw? t))
@@ -100,6 +134,16 @@
 	     *links* av)
 	(eus_robot::forward-kinematics 0)
 	(setq ret (eus_robot_ik::solve-ik :max 15))))
+     (warning-message 6 "collision: ")
+     (bench
+      (progn
+	(cond
+	 (ret
+	  ;; (eus_robot::configuration-copy-from)
+	  (if (plusp (check-all-collision))
+	      ;; (eus_robot::check-all-collide)
+	      ;;(send *robot* :self-collision-check :pairs *collidable-pairs* :mode :first)
+	      (setq ret 0))))))
      (cond
       ((plusp ret)
        (cond
@@ -107,7 +151,7 @@
 	 (eus_robot::configuration-copy-from)
 	 (send *viewer* :draw-objects)))
        (incf suc-cnt)
-       ;; (read-line)
+       (if (eq draw? :step) (read-line))
        ))))
-  suc-cnt))
+  suc-cnt)
 
