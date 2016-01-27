@@ -5,15 +5,16 @@
 (require "package://eus_robot/euslisp/eus_qp_collide.l")
 
 ;; create environment objects
-(setq *seat* (instance four-leg-seat :init :name :seat :depth 1000 :width 500))
+(setq *seat* (instance four-leg-seat :init :name :seat :depth 1000 :width 500 :height 370))
 (send *seat* :newcoords (make-coords))
 (send *seat* :rotate (deg2rad 90) :z)
 (send *seat* :translate (float-vector -350 100 0) :world)
+(send *seat* :set-val 'height 400)
 
 (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 200 (send *seat* :get-val 'height)) :thick 50))
 (send *table* :newcoords (make-coords))
 (send *table* :rotate (deg2rad 90) :z)
-(send *table* :translate (float-vector 150 100 0) :world)
+(send *table* :translate (float-vector 200 100 0) :world)
 
 ;; setup initial postures
 (setup-hip-end-coords)
@@ -82,6 +83,7 @@
 ;; (eus_robot::register-collide-pairs eus_qp_collide::*collidable-pairs*)
 
 (defun check-all-collision nil
+  ;; (return-from check-all-collision 0)
   (let* ((ret 0))
     (dolist (ll *collidable-pairs*)
       (let* ((m1 (get (car ll) :pqpmodel))
@@ -107,43 +109,47 @@
    (input *input*)
    (redundancy
     (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
-   (step-max 1000)
+   (step-max 300)
    (av (instantiate float-vector (length joint-list)))
-   ret (suc-cnt 0)
+   ret (suc-cnt 0) tm
    (draw? t))
   (setq input (concatenate float-vector input redundancy))
   (bench
    (dotimes (i step-max)
      (dotimes (j (length redundancy))
        (setf (aref input (- (- (length input) 1) j)) (random 1.0)))
-     (warning-message 6 "DNN calc forward: ")
-     (bench (caffe::calc-forward-double :isize (length input) :input input
-					:osize (length av) :output av))
-     (warning-message 6 "solve IK: ")
+     (setq tm (bench2 (caffe::calc-forward-double :isize (length input) :input input
+						  :osize (length av) :output av)))
+     (if draw? (warning-message 6 "DNN calc forward: ~A~%" tm))
      ;; (map cons #'(lambda (j a) (send j :joint-angle
      ;; 				       (- (rad2deg a) (send j :joint-angle))
      ;; 				       :relative t))
      ;; 	    joint-list av)
      ;; (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-     (bench
-      (progn
-	;; (eus_robot::configuration-copy-to)
-	(map cons
-	     '(lambda (l pos)
-		(eus_robot::set-configuration (send l :get :id) pos 1))
-	     *links* av)
-	(eus_robot::forward-kinematics 0)
-	(setq ret (eus_robot_ik::solve-ik :max 15))))
-     (warning-message 6 "collision: ")
-     (bench
-      (progn
-	(cond
-	 (ret
-	  ;; (eus_robot::configuration-copy-from)
-	  (if (plusp (check-all-collision))
-	      ;; (eus_robot::check-all-collide)
-	      ;;(send *robot* :self-collision-check :pairs *collidable-pairs* :mode :first)
-	      (setq ret 0))))))
+     (setq
+      tm
+      (bench2
+       (progn
+	 ;; (eus_robot::configuration-copy-to)
+	 (map cons
+	      '(lambda (l pos)
+		 (eus_robot::set-configuration (send l :get :id) pos 1))
+	      *links* av)
+	 (eus_robot::forward-kinematics 0)
+	 (setq ret (eus_robot_ik::solve-ik :max 15)))))
+     (if draw? (warning-message 6 "solve IK: ~A~%" tm))
+     (setq
+      tm
+      (bench2
+       (progn
+	 (cond
+	  (ret
+	   ;; (eus_robot::configuration-copy-from)
+	   (if (plusp (check-all-collision))
+	       ;; (eus_robot::check-all-collide)
+	       ;;(send *robot* :self-collision-check :pairs *collidable-pairs* :mode :first)
+	       (setq ret 0)))))))
+     (if draw? (warning-message 6 "collision: ~A~%" tm))
      (cond
       ((plusp ret)
        (cond
@@ -152,6 +158,13 @@
 	 (send *viewer* :draw-objects)))
        (incf suc-cnt)
        (if (eq draw? :step) (read-line))
-       ))))
+       (cond
+	((< (abs (aref (eus_robot::calc-links-centroid) 0)) 5e-3)
+	 (warning-message 1 "ok!!~%")
+	 (return-from nil nil)))
+       ))
+     ))
+  (eus_robot::configuration-copy-from)
+  (send *viewer* :draw-objects)
   suc-cnt)
 
