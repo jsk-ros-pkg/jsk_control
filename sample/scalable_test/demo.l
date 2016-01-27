@@ -3,25 +3,6 @@
 (require "package://contact_behavior_generation/euslisp/model/four-leg-seat.lisp")
 (require "package://eus_robot/euslisp/eus_robot_ik.l")
 
-(send *robot* :legs :toe-p :min-angle 0)
-(send *robot* :legs :toe-p :max-angle 0)
-
-(send *robot* :reset-pose)
-(send *robot* :fix-leg-to-coords (make-coords) :rleg)
-(send-all (send user::*robot* :links) :worldcoords)
-(eus_robot::clear-links)
-(eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
-(eus_robot::forward-kinematics 0)
-(eus_robot::print-link-tree)
-(eus_robot_ik::clear-all)
-(eus_robot_ik::add-target :limb :rarm)
-(eus_robot_ik::add-target :limb :larm)
-(eus_robot_ik::add-target :limb :lleg)
-(eus_robot::configuration-copy-to :robot user::*robot*)
-
-(send *robot* :legs :toe-p :min-angle -60)
-(send *robot* :legs :toe-p :max-angle 16)
-
 (setq *seat* (instance four-leg-seat :init :name :seat :depth 1000 :width 500))
 (send *seat* :newcoords (make-coords))
 (send *seat* :rotate (deg2rad 90) :z)
@@ -54,16 +35,37 @@
 	:debug-view :no-message
 	:target-centroid-pos nil
 	))
+(send-all (send *robot* :links) :worldcoords)
+(setq *input* (get-vector-from-ef-coords :ef-coords *ef-coords* :root-link *root-link*))
+
+(send *robot* :legs :toe-p :min-angle 0)
+(send *robot* :legs :toe-p :max-angle 0)
+(progn
+  (send-all (send user::*robot* :links) :worldcoords)
+  (eus_robot::clear-links)
+  (eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
+  (eus_robot::forward-kinematics 0)
+  (eus_robot::print-link-tree)
+  (eus_robot_ik::clear-all)
+  (eus_robot_ik::add-target :limb :rarm)
+  (eus_robot_ik::add-target :limb :larm)
+  (eus_robot_ik::add-target :limb :lleg)
+  (eus_robot::configuration-copy-to :robot user::*robot*)
+  )
+(send *robot* :legs :toe-p :min-angle -60)
+(send *robot* :legs :toe-p :max-angle 16)
 
 (objects (append (list *seat* *table*) (send *irtviewer* :objects)))
 (smart-initialize-net)
 
 (cpplog::change-output-stream "/dev/null")
 
+#|
+
 (let* ((ef-coords *ef-coords*)
        (root-link *root-link*)
        (joint-list *joint-list1*)
-       (input (get-vector-from-ef-coords :ef-coords ef-coords :root-link root-link))
+       (input *input*)
        (redundancy
 	(instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
        (step-max 300)
@@ -93,9 +95,8 @@
     (cond
      ((plusp ret)
       (eus_robot::configuration-copy-from)
-      (send *viewer* :draw-objects)))))
+      (send *viewer* :draw-objects)
+      ;; (read-line)
+      ))))
 
-#|
-(ik-random-test-min
- :random-angle (send-all *joint-list1* :joint-angle) :initialize? nil)
 

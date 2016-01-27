@@ -8,4 +8,4 @@ max_iter: 5000000
 momentum: 0.9
 display: 1000
 snapshot_prefix: "ik_net_NESTEROV_d4_n100_r3"
-solver_mode: GPU
+solver_mode: CPU
