@@ -134,7 +134,7 @@ namespace jsk_footstep_planner
     if (!graph_ ) {
       return false;
     }
-    if (!pointcloud_model_) {
+    if (use_pointcloud_model_ && !pointcloud_model_) {
       JSK_ROS_ERROR("No pointcloud model is yet available");
       publishText(pub_text_,
                   "No pointcloud model is yet available",
