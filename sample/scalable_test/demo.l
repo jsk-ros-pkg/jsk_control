@@ -1,51 +1,60 @@
+#!/usr/bin/env roseus
 
-(require "learn.l")
-(require "package://contact_behavior_generation/euslisp/model/four-leg-seat.lisp")
-(require "package://eus_robot/euslisp/eus_robot_ik.l")
-(require "package://eus_robot/euslisp/eus_qp_collide.l")
+(if (not (find-package "EUS_ROBOT")) (make-package "EUS_ROBOT"))
+(if (not (find-package "EUS_ROBOT_IK")) (make-package "EUS_ROBOT_IK"))
+(if (not (find-package "EUS_QP_COLLIDE")) (make-package "EUS_QP_COLLIDE"))
+(if (not (find-package "CPPLOG")) (make-package "CPPLOG"))
+(if (not (find-package "CAFFE")) (make-package "CAFFE"))
 
-;; create environment objects
-(setq *seat* (instance four-leg-seat :init :name :seat :depth 1000 :width 500 :height 370))
-(send *seat* :newcoords (make-coords))
-(send *seat* :rotate (deg2rad 90) :z)
-(send *seat* :translate (float-vector -350 100 0) :world)
-(send *seat* :set-val 'height 400)
-
-(setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 200 (send *seat* :get-val 'height)) :thick 50))
-(send *table* :newcoords (make-coords))
-(send *table* :rotate (deg2rad 90) :z)
-(send *table* :translate (float-vector 200 100 0) :world)
-
-;; setup initial postures
-(setup-hip-end-coords)
-
-(send *robot* :reset-pose)
-(send *robot* :fix-leg-to-coords (make-coords) :rleg)
-(let* ((mv (append (list (send *robot* :get :hip-end-coords))
-		   (send *robot* :arms :end-coords)
-		   (send *robot* :legs :end-coords)))
-       (ll (mapcar '(lambda (m) (send *robot* :link-list (send m :parent))) mv)))
-  (send *robot* :fullbody-inverse-kinematics
-	(append
-	 (list (make-coords :pos (float-vector -300 0 (send *seat* :get-val 'height)))
-	       (make-coords :pos (float-vector 100 0 (send *table* :get-val 'height))
-			    :rpy (list 0 (deg2rad 90) 0))
-	       (make-coords :pos (float-vector 100 0 (send *table* :get-val 'height))
-			    :rpy (list 0 (deg2rad 90) 0)))
-	 (send *robot* :legs :end-coords :copy-worldcoords))
-	:translation-axis '(:y :y :y t t)
-	:move-target mv
-	:link-list ll
-	:debug-view :no-message
-	:target-centroid-pos nil
-	))
-(send-all (send *robot* :links) :worldcoords)
-(setq *input* (get-vector-from-ef-coords :ef-coords *ef-coords* :root-link *root-link*))
-
-;; setup ik solver
-(send *robot* :legs :toe-p :min-angle 0)
-(send *robot* :legs :toe-p :max-angle 0)
-(progn
+(defun demo-setup
+  nil
+  ;; load files
+  (require "learn.l")
+  (require "package://contact_behavior_generation/euslisp/model/four-leg-seat.lisp")
+  (require "package://eus_robot/euslisp/eus_robot_ik.l")
+  (require "package://eus_robot/euslisp/eus_qp_collide.l")
+  ;;
+  ;; create environment objects
+  (setq *seat* (instance four-leg-seat :init :name :seat :depth 1000 :width 500 :height 370))
+  (send *seat* :newcoords (make-coords))
+  (send *seat* :rotate (deg2rad 90) :z)
+  (send *seat* :translate (float-vector -350 100 0) :world)
+  (send *seat* :set-val 'height 400)
+  ;;
+  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 200 (send *seat* :get-val 'height)) :thick 50))
+  (send *table* :newcoords (make-coords))
+  (send *table* :rotate (deg2rad 90) :z)
+  (send *table* :translate (float-vector 200 100 0) :world)
+  ;;
+  ;; setup initial postures
+  (setup-hip-end-coords)
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (let* ((mv (append (list (send *robot* :get :hip-end-coords))
+		     (send *robot* :arms :end-coords)
+		     (send *robot* :legs :end-coords)))
+	 (ll (mapcar '(lambda (m) (send *robot* :link-list (send m :parent))) mv)))
+    (send *robot* :fullbody-inverse-kinematics
+	  (append
+	   (list (make-coords :pos (float-vector -300 0 (send *seat* :get-val 'height)))
+		 (make-coords :pos (float-vector 100 0 (send *table* :get-val 'height))
+			      :rpy (list 0 (deg2rad 90) 0))
+		 (make-coords :pos (float-vector 100 0 (send *table* :get-val 'height))
+			      :rpy (list 0 (deg2rad 90) 0)))
+	   (send *robot* :legs :end-coords :copy-worldcoords))
+	  :translation-axis '(:y :y :y t t)
+	  :move-target mv
+	  :link-list ll
+	  :debug-view :no-message
+	  :target-centroid-pos nil
+	  ))
+  (send-all (send *robot* :links) :worldcoords)
+  (setq *input* (get-vector-from-ef-coords :ef-coords *ef-coords* :root-link *root-link*))
+  ;;
+  ;; setup ik solver
+  (send *robot* :legs :toe-p :min-angle 0)
+  (send *robot* :legs :toe-p :max-angle 0)
+  ;;
   (send-all (send user::*robot* :links) :worldcoords)
   (eus_robot::clear-links)
   (eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
@@ -56,31 +65,31 @@
   (eus_robot_ik::add-target :limb :larm)
   (eus_robot_ik::add-target :limb :lleg)
   (eus_robot::configuration-copy-to :robot user::*robot*)
+  ;;
+  (send *robot* :legs :toe-p :min-angle -60)
+  (send *robot* :legs :toe-p :max-angle 16)
+  (setq *links* (mapcar #'(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links))) *joint-list1*))
+  ;;
+  (objects (flatten (list *seat* *table*
+			  (car (send *robot* :links))
+			  (send-all *joint-list3* :child-link)
+			  *arrow*)))
+  ;;
+  ;; iniitliaze dnn
+  (smart-initialize-net)
+  (cpplog::change-output-stream "/dev/null")
+  ;;
+  ;; setup collision detection
+  (eus_qp_collide::test-gen-collidable-pairs-old)
+  (setq *collidable-pairs*
+	(append
+	 eus_qp_collide::*collidable-pairs*
+	 (mapcar #'(lambda (l) (cons *table* l)) *links*)
+	 (mapcar #'(lambda (l) (cons *seat* l)) *links*)))
+  ;; (eus_qp_collide::add-all-link-convex *robot*)
+  ;; (eus_qp_collide::gen-all-convex-matrices)
+  ;; (eus_robot::register-collide-pairs eus_qp_collide::*collidable-pairs*)
   )
-(send *robot* :legs :toe-p :min-angle -60)
-(send *robot* :legs :toe-p :max-angle 16)
-(setq *links*
-      (mapcar
-       '(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links)))
-       *joint-list1*))
-
-
-(objects (append (list *seat* *table*) (send *irtviewer* :objects)))
-
-;; iniitliaze dnn
-(smart-initialize-net)
-(cpplog::change-output-stream "/dev/null")
-
-;; setup collision detection
-(eus_qp_collide::test-gen-collidable-pairs-old)
-(setq *collidable-pairs*
-      (append
-       eus_qp_collide::*collidable-pairs*
-       (mapcar #'(lambda (l) (cons *table* l)) *links*)
-       (mapcar #'(lambda (l) (cons *seat* l)) *links*)))
-;; (eus_qp_collide::add-all-link-convex *robot*)
-;; (eus_qp_collide::gen-all-convex-matrices)
-;; (eus_robot::register-collide-pairs eus_qp_collide::*collidable-pairs*)
 
 (defun check-all-collision nil
   ;; (return-from check-all-collision 0)
@@ -101,7 +110,7 @@
 	(if (plusp ret) (return-from check-all-collision ret))))
     ret))
 
-(defun main
+(defun demo-main
   (&key
    (ef-coords *ef-coords*)
    (root-link *root-link*)
@@ -113,6 +122,7 @@
    (av (instantiate float-vector (length joint-list)))
    ret (suc-cnt 0) tm
    (draw? t))
+  ;;
   (setq input (concatenate float-vector input redundancy))
   (bench
    (dotimes (i step-max)
@@ -168,3 +178,4 @@
   (send *viewer* :draw-objects)
   suc-cnt)
 
+;; (demo-setup) (demo-main)
