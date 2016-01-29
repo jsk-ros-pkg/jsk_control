@@ -56,7 +56,8 @@ namespace jsk_footstep_planner
     // max_successor_distance_
     for (size_t i = 0; i < successors_from_left_to_right_.size(); i++) {
       Eigen::Affine3f transform = successors_from_left_to_right_[i];
-      double dist = transform.translation().norm();
+      //double dist = transform.translation().norm();
+      double dist = transform.translation()[0]; // Only consider x
       if (dist > max_successor_distance_) {
         max_successor_distance_ = dist;
       }
