@@ -24,7 +24,7 @@
   (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 200 (send *seat* :get-val 'height)) :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
-  (send *table* :translate (float-vector 200 100 0) :world)
+  (send *table* :translate (float-vector 150 100 0) :world)
   ;;
   ;; setup initial postures
   (setup-hip-end-coords)
@@ -131,6 +131,16 @@
 	(if (plusp ret) (return-from check-all-collision ret))))
     ret))
 
+(defun sep-vector
+  (sep-cnt depth vec)
+  (if (>= depth (length vec))
+      (list (copy-seq vec))
+    (let* (buf (step (/ 1.0 (- sep-cnt 1))))
+      (dotimes (i sep-cnt)
+	(setf (aref vec depth) (* i step))
+	(push (sep-vector sep-cnt (+ depth 1) vec) buf))
+      (apply 'append buf))))
+
 (defun demo-main
   (&key
    (ef-coords *ef-coords*)
@@ -139,17 +149,22 @@
    (input *input*)
    (redundancy
     (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
-   (step-max 300)
+   (step-max 5000)
    (av (instantiate float-vector (length joint-list)))
    ret (suc-cnt 0) tm
-   (draw? t))
+   (draw? t)
+   ;;
+   (sep-vector (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
+   )
   ;;
   (cpplog::change-output-stream "/dev/null")
   (setq input (concatenate float-vector input redundancy))
   (bench
-   (dotimes (i step-max)
+   (dolist (redundancy sep-vector)
+   ;; (dotimes (i step-max)
      (dotimes (j (length redundancy))
-       (setf (aref input (- (- (length input) 1) j)) (random 1.0)))
+       (setf (aref input (- (- (length input) 1) j)) (aref redundancy j)))
+     ;;(random 1.0)))
      (setq tm (bench2 (caffe::calc-forward-double :isize (length input) :input input
 						  :osize (length av) :output av)))
      (if draw? (warning-message 6 "DNN calc forward: ~A~%" tm))
