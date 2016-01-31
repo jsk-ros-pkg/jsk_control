@@ -37,9 +37,9 @@
     (send *robot* :fullbody-inverse-kinematics
 	  (append
 	   (list (make-coords :pos (float-vector -300 0 (send *seat* :get-val 'height)))
-		 (make-coords :pos (float-vector 100 0 (send *table* :get-val 'height))
+		 (make-coords :pos (float-vector 0 0 (send *table* :get-val 'height))
 			      :rpy (list 0 (deg2rad 90) 0))
-		 (make-coords :pos (float-vector 100 0 (send *table* :get-val 'height))
+		 (make-coords :pos (float-vector 0 0 (send *table* :get-val 'height))
 			      :rpy (list 0 (deg2rad 90) 0)))
 	   (send *robot* :legs :end-coords :copy-worldcoords))
 	  :translation-axis '(:y :y :y t t)
@@ -66,6 +66,7 @@
   (eus_robot_ik::add-target :limb :lleg)
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
+  ;;
   (send *robot* :legs :toe-p :min-angle -60)
   (send *robot* :legs :toe-p :max-angle 16)
   (setq *links* (mapcar #'(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links))) *joint-list1*))
@@ -73,11 +74,12 @@
   (objects (flatten (list *seat* *table*
 			  (car (send *robot* :links))
 			  (send-all *joint-list3* :child-link)
+			  (send *robot* :legs :toe-p :child-link)
 			  *arrow*)))
   ;;
   ;; iniitliaze dnn
   (smart-initialize-net)
-  (cpplog::change-output-stream "/dev/null")
+  ;; 
   ;;
   ;; setup collision detection
   (eus_qp_collide::test-gen-collidable-pairs-old)
@@ -86,9 +88,28 @@
 	 eus_qp_collide::*collidable-pairs*
 	 (mapcar #'(lambda (l) (cons *table* l)) *links*)
 	 (mapcar #'(lambda (l) (cons *seat* l)) *links*)))
-  ;; (eus_qp_collide::add-all-link-convex *robot*)
-  ;; (eus_qp_collide::gen-all-convex-matrices)
-  ;; (eus_robot::register-collide-pairs eus_qp_collide::*collidable-pairs*)
+  (eus_qp_collide::add-all-link-convex *robot*)
+  ;;
+  (send *table* :put :id
+	(+ (apply 'max (send-all (send *robot* :links) :get :id)) 1))
+  (send *seat* :put :id
+	(+ (apply 'max (send-all (send *robot* :links) :get :id)) 2))
+  (dolist (obj (list *table* *seat*))
+    (eus_robot::add-link
+     :name (format nil "~A" (send obj :name))
+     :id (send obj :get :id)
+     :pid -1)
+    (eus_robot::set-link-coords
+     (send obj :get :id) (send (send obj :worldcoords) :copy-worldcoords))
+    (dotimes (i 3)
+      (if (zerop (eus_robot::register-collide-model
+		  obj :id (send obj :get :id)
+		  :vertices-list (flatten (send-all (send (send obj :get-val 'seat-plane) :faces) :vertices)))) (return-from nil nil))
+      (warning-message 6 "register collide model retry ~A~%" (send obj :name))
+      ))
+  ;;
+  (eus_qp_collide::gen-all-convex-matrices)
+  (eus_robot::register-collide-pairs *collidable-pairs*)
   )
 
 (defun check-all-collision nil
@@ -123,6 +144,7 @@
    ret (suc-cnt 0) tm
    (draw? t))
   ;;
+  (cpplog::change-output-stream "/dev/null")
   (setq input (concatenate float-vector input redundancy))
   (bench
    (dotimes (i step-max)
@@ -155,9 +177,8 @@
 	 (cond
 	  (ret
 	   ;; (eus_robot::configuration-copy-from)
-	   (if (plusp (check-all-collision))
-	       ;; (eus_robot::check-all-collide)
-	       ;;(send *robot* :self-collision-check :pairs *collidable-pairs* :mode :first)
+	   (if (plusp ;;(check-all-collision))
+		(eus_robot::check-all-collide))
 	       (setq ret 0)))))))
      (if draw? (warning-message 6 "collision: ~A~%" tm))
      (cond
@@ -174,6 +195,7 @@
 	 (return-from nil nil)))
        ))
      ))
+  (cpplog::change-output-stream "")
   (eus_robot::configuration-copy-from)
   (send *viewer* :draw-objects)
   suc-cnt)
