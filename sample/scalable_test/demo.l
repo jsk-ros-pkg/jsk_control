@@ -50,6 +50,15 @@
 	  ))
   (send-all (send *robot* :links) :worldcoords)
   (setq *input* (get-vector-from-ef-coords :ef-coords *ef-coords* :root-link *root-link*))
+  (setq *support-face*
+	(instance face :init
+		  :vertices
+		  (quickhull
+		   (mapcar
+		    '(lambda (v) (float-vector (aref v 0) (aref v 1) 0))
+		    (append (send *robot* :arms :end-coords :worldpos)
+			    (send (send *robot* :support-polygon :rleg) :vertices)
+			    (send (send *robot* :support-polygon :lleg) :vertices))))))
   ;;
   ;; setup ik solver
   (send *robot* :legs :toe-p :min-angle 0)
@@ -79,7 +88,6 @@
   ;;
   ;; iniitliaze dnn
   (smart-initialize-net)
-  ;; 
   ;;
   ;; setup collision detection
   (eus_qp_collide::test-gen-collidable-pairs-old)
@@ -149,12 +157,13 @@
    (input *input*)
    (redundancy
     (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
-   (step-max 5000)
+   (step-max 500)
    (av (instantiate float-vector (length joint-list)))
-   ret (suc-cnt 0) tm
-   (draw? t)
+   ret (suc-cnt 0) (cnt 0) tm
+   (draw? t) (mode :first)
    ;;
    (sep-vector (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
+   (cog (float-vector 0 0 0))
    )
   ;;
   (cpplog::change-output-stream "/dev/null")
@@ -183,7 +192,16 @@
 		 (eus_robot::set-configuration (send l :get :id) pos 1))
 	      *links* av)
 	 (eus_robot::forward-kinematics 0)
-	 (setq ret (eus_robot_ik::solve-ik :max 15)))))
+	 (setq ret (eus_robot_ik::solve-ik :max 15))
+	 ;; check centroid
+	 (eus_robot::forward-kinematics 0)
+	 (eus_robot::calc-links-centroid :ret cog)
+	 (setf (aref cog 0) (* 1e+3 (aref cog 0)))
+	 (setf (aref cog 1) (* 1e+3 (aref cog 1)))
+	 (setf (aref cog 2) 0)
+	 (if (not (eq (send *support-face* :insidep cog) :inside)) (setq ret 0))
+	 ))
+      )
      (if draw? (warning-message 6 "solve IK: ~A~%" tm))
      (setq
       tm
@@ -196,23 +214,26 @@
 		(eus_robot::check-all-collide))
 	       (setq ret 0)))))))
      (if draw? (warning-message 6 "collision: ~A~%" tm))
+     (incf cnt)
+     ;;
+     (cond
+      (draw?
+       (eus_robot::configuration-copy-from)
+       (send *viewer* :draw-objects :flush nil)
+       (send *support-face* :draw-on :flush nil :width 30)
+       (send cog :draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 30)
+       (send *viewer* :viewsurface :flush)
+       ))
      (cond
       ((plusp ret)
-       (cond
-	(draw?
-	 (eus_robot::configuration-copy-from)
-	 (send *viewer* :draw-objects)))
        (incf suc-cnt)
        (if (eq draw? :step) (read-line))
-       (cond
-	((< (abs (aref (eus_robot::calc-links-centroid) 0)) 5e-3)
-	 (warning-message 1 "ok!!~%")
-	 (return-from nil nil)))
-       ))
-     ))
+       (if (eq mode :first) (return-from nil nil)))
+      )))
   (cpplog::change-output-stream "")
-  (eus_robot::configuration-copy-from)
-  (send *viewer* :draw-objects)
+  (warning-message 6 "~A outof ~A samples are valid~%" suc-cnt cnt)
+  ;; (eus_robot::configuration-copy-from)
+  ;; (send *viewer* :draw-objects)
   suc-cnt)
 
 ;; (demo-setup) (demo-main)
