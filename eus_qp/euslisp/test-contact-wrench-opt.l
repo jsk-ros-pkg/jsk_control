@@ -516,6 +516,16 @@
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
    ))
 
+(defun demo-cbox-wrench-calc-17
+  ()
+  "Demo for cbox wrench calculation by dummy-contact-constraint."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance dummy-contact-constraint :init))
+   (list (send *cbox* :get :face-coords-2))
+   ))
+
+
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
   (let ((ret))

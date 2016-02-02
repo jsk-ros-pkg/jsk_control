@@ -564,6 +564,20 @@
    (send-super :init :name name))
   )
 
+(defclass dummy-contact-constraint
+  :super contact-constraint
+  )
+
+(defmethod dummy-contact-constraint
+  (:init
+   (&key (name))
+   "Calc conatraint param list for dummy.
+    This can be used for hard-grasping contact, where no constraint is necessary."
+   (setq constraint-param-list
+         (calc-constraint-param-list-for-dummy))
+   (send-super :init :name name))
+  )
+
 (defun force-axis->index (ax)
   (case ax
     (:fx 0) (:fy 1) (:fz 2)
@@ -734,6 +748,14 @@
            (setf (elt (car ret) slide-idx) -1)
            (setf (elt (cadr ret) slide-idx) 1)))
     (list :matrix ret :vector (list 0 0))
+    ))
+
+(defun calc-constraint-param-list-for-dummy
+  ()
+  "Calc conatraint param list for dummy.
+   all elements of matrix and vector are zero."
+  (let ((ret (mapcar #'(lambda (x) (make-list 6 :initial-element 0)) '(0))))
+    (list :matrix ret :vector (list 0))
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
