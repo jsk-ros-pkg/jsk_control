@@ -6,6 +6,79 @@
 (if (not (find-package "CPPLOG")) (make-package "CPPLOG"))
 (if (not (find-package "CAFFE")) (make-package "CAFFE"))
 
+(defclass traj-elem
+  :super propertied-object
+  :slots (val neighbors path-map))
+(defmethod traj-elem
+  (:init (v &key ((:neighbors nn) nil)) (setq val v) (setq neighbors nn) (setq path-map (instance hash-table :init)))
+  (:neighbors nil neighbors)
+  (:value nil val)
+  (:distance (v) (/ (norm2 (v- val v)) (length v)))
+  (:neighbor? (elem) (find elem neighbors))
+  (:add-neighbor
+   (elem &key (add-thre -1))
+   (cond
+    ((< (send self :distance (send elem :value)) add-thre)
+     (send elem :_add-neighbor self)
+     (send self :_add-neighbor elem)
+     self)
+    (t nil)))
+  (:_add-neighbor
+   (elem)
+   (push elem neighbors)
+   (send self :add-path-neighbors elem (list self elem))
+   )
+  (:add-path-neighbors
+   (elem path &optional (depth 0))
+   (cond
+    ((not (send path-map :get elem))
+     (send path-map :enter elem path)
+     (send (send elem :get-val 'path-map) :enter self (reverse path))
+     (dolist (neighbor neighbors)
+       (send neighbor :add-path-neighbors elem (cons neighbor path) (+ depth 1))))
+    ;; (t (print depth))
+    ))
+  (:find
+   (elem)
+   (or (send path-map :get elem)
+       (let* ((path))
+	 (dolist (neighbor neighbors)
+	   (setq path (send neighbor :find elem))
+	   (cond
+	    (path
+	     (setq path (cons self path))
+	     (send path-map :enter elem path)
+	     (return-from nil nil))))
+	 path)))
+  )
+
+(defclass traj-set
+  :super propertied-object
+  :slots (name members root valids range))
+(defmethod traj-set
+  (:init
+   (&key ((:name nm) :traj-set)
+	 ((:range rg) (expt (deg2rad 17) 2))
+	 ((:members mem) nil))
+   (setq name nm)
+   (setq members mem)
+   (setq range rg)
+   )
+  (:members nil members)
+  (:root (&optional rt)
+	 (cond
+	  (rt (setq root rt) (push root members)))
+	 root)
+  (:valids nil valids)
+  (:add-valids (elem) (push elem valids))
+  (:add-elem
+   (elem)
+   (push elem members)
+   (remove-if #'(lambda (mem)
+		  (send mem :add-neighbor elem :add-thre range))
+	      (cdr members)))
+  )
+
 (defun demo-setup
   nil
   ;; load files
@@ -21,7 +94,7 @@
   (send *seat* :translate (float-vector -350 100 0) :world)
   (send *seat* :set-val 'height 400)
   ;;
-  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 200 (send *seat* :get-val 'height)) :thick 50))
+  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 230 (send *seat* :get-val 'height)) :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
   (send *table* :translate (float-vector 120 100 0) :world)
@@ -59,6 +132,7 @@
 		    (append (send *robot* :arms :end-coords :worldpos)
 			    (send (send *robot* :support-polygon :rleg) :vertices)
 			    (send (send *robot* :support-polygon :lleg) :vertices))))))
+  (setq *init-pose* (copy-seq (send *robot* :angle-vector)))
   ;;
   ;; setup ik solver
   (send *robot* :legs :toe-p :min-angle 0)
@@ -151,11 +225,13 @@
       (apply 'append buf))))
 
 (defun draw-wrapper
-  (&optional (cog (send *robot* :centroid)))
-  (eus_robot::configuration-copy-from)
+  (&key (cog nil) (conf (eus_robot::get-configurations)))
+  (eus_robot::configuration-copy-from :conf conf)
+  (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
   (send *viewer* :draw-objects :flush nil)
   (send *support-face* :draw-on :flush nil :width 30)
-  (send cog :draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 30)
+  (send (or cog (map float-vector '* (float-vector 1 1 0) (send *robot* :centroid)))
+	:draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 30)
   (send *viewer* :viewsurface :flush)
   )
 
@@ -174,13 +250,20 @@
    ;;
    (sep-vector (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
    (cog (float-vector 0 0 0))
+   (traj-set (instance traj-set :init))
+   (user-valid-check #'(lambda (cog) (< (abs (aref cog 0)) 80)))
    )
   ;;
   (cpplog::change-output-stream "/dev/null")
   (setq input (concatenate float-vector input redundancy))
+  (send *robot* :angle-vector (copy-seq *init-pose*))
+  (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
+  (if draw? (send *viewer* :draw-objects))
+  (eus_robot::configuration-copy-to)
   (bench
+   (send traj-set :root (instance traj-elem :init (copy-seq (eus_robot::get-configurations))))
    (dolist (redundancy sep-vector)
-   ;; (dotimes (i step-max)
+     ;; (dotimes (i step-max)
      (dotimes (j (length redundancy))
        (setf (aref input (- (- (length input) 1) j)) (aref redundancy j)))
      ;;(random 1.0)))
@@ -226,18 +309,33 @@
      (if draw? (warning-message 6 "collision: ~A~%" tm))
      (incf cnt)
      ;;
-     (if (eq t draw?) (draw-wrapper cog))
+     (if (eq t draw?) (draw-wrapper :cog cog))
      (cond
       ((plusp ret)
        (incf suc-cnt)
-       (if (eq :only-valid draw?) (draw-wrapper cog))
+       ;;
+       (let* ((elem (instance traj-elem :init (copy-seq (eus_robot::get-configurations)))))
+	 (send traj-set :add-elem elem)
+	 (if (funcall user-valid-check cog)
+	     (send traj-set :add-valids elem)))
+       ;;
+       (if (eq :only-valid draw?) (draw-wrapper :cog cog))
        (if step? (read-line))
-       (if (eq mode :first) (return-from nil nil)))
+       (cond
+	((and (eq mode :first)
+	      (let* ((elem
+		      (find-if #'(lambda (valid) (send valid :find (send traj-set :root)))
+			       (send traj-set :valids))))
+		(if elem (send traj-set :put :valid elem))
+		elem))
+	 (return-from nil nil))))
       )))
   (cpplog::change-output-stream "")
-  (warning-message 6 "~A outof ~A samples are valid~%" suc-cnt cnt)
+  (warning-message 6 "~A/~A samples are valid~%" suc-cnt cnt)
   ;; (eus_robot::configuration-copy-from)
   ;; (send *viewer* :draw-objects)
-  suc-cnt)
+  traj-set)
 
-;; (demo-setup) (demo-main)
+;; (demo-setup)
+;; (setq a (demo-main))
+;; (dolist (elm (send (send a :root) :find (send a :get :valid))) (draw-wrapper :conf (send elm :value)) (read-line))
