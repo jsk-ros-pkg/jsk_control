@@ -24,12 +24,12 @@
   (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 200 (send *seat* :get-val 'height)) :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
-  (send *table* :translate (float-vector 150 100 0) :world)
+  (send *table* :translate (float-vector 120 100 0) :world)
   ;;
   ;; setup initial postures
   (setup-hip-end-coords)
   (send *robot* :reset-pose)
-  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
   (let* ((mv (append (list (send *robot* :get :hip-end-coords))
 		     (send *robot* :arms :end-coords)
 		     (send *robot* :legs :end-coords)))
@@ -37,10 +37,10 @@
     (send *robot* :fullbody-inverse-kinematics
 	  (append
 	   (list (make-coords :pos (float-vector -300 0 (send *seat* :get-val 'height)))
-		 (make-coords :pos (float-vector 0 0 (send *table* :get-val 'height))
-			      :rpy (list 0 (deg2rad 90) 0))
-		 (make-coords :pos (float-vector 0 0 (send *table* :get-val 'height))
-			      :rpy (list 0 (deg2rad 90) 0)))
+		 (make-coords :pos (float-vector 50 0 (+ 50 (send *table* :get-val 'height)))
+			      :rpy (list 0 (deg2rad 0) 0))
+		 (make-coords :pos (float-vector 50 0 (+ 50 (send *table* :get-val 'height)))
+			      :rpy (list 0 (deg2rad 0) 0)))
 	   (send *robot* :legs :end-coords :copy-worldcoords))
 	  :translation-axis '(:y :y :y t t)
 	  :move-target mv
@@ -82,6 +82,7 @@
   ;;
   (objects (flatten (list *seat* *table*
 			  (car (send *robot* :links))
+			  (send *robot* :hand :arms)
 			  (send-all *joint-list3* :child-link)
 			  (send *robot* :legs :toe-p :child-link)
 			  *arrow*)))
@@ -149,6 +150,15 @@
 	(push (sep-vector sep-cnt (+ depth 1) vec) buf))
       (apply 'append buf))))
 
+(defun draw-wrapper
+  (&optional (cog (send *robot* :centroid)))
+  (eus_robot::configuration-copy-from)
+  (send *viewer* :draw-objects :flush nil)
+  (send *support-face* :draw-on :flush nil :width 30)
+  (send cog :draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 30)
+  (send *viewer* :viewsurface :flush)
+  )
+
 (defun demo-main
   (&key
    (ef-coords *ef-coords*)
@@ -157,10 +167,10 @@
    (input *input*)
    (redundancy
     (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
-   (step-max 500)
+   (step-max 700)
    (av (instantiate float-vector (length joint-list)))
    ret (suc-cnt 0) (cnt 0) tm
-   (draw? t) (mode :first)
+   (draw? t) (mode :first) (step? nil)
    ;;
    (sep-vector (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
    (cog (float-vector 0 0 0))
@@ -216,18 +226,12 @@
      (if draw? (warning-message 6 "collision: ~A~%" tm))
      (incf cnt)
      ;;
-     (cond
-      (draw?
-       (eus_robot::configuration-copy-from)
-       (send *viewer* :draw-objects :flush nil)
-       (send *support-face* :draw-on :flush nil :width 30)
-       (send cog :draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 30)
-       (send *viewer* :viewsurface :flush)
-       ))
+     (if (eq t draw?) (draw-wrapper cog))
      (cond
       ((plusp ret)
        (incf suc-cnt)
-       (if (eq draw? :step) (read-line))
+       (if (eq :only-valid draw?) (draw-wrapper cog))
+       (if step? (read-line))
        (if (eq mode :first) (return-from nil nil)))
       )))
   (cpplog::change-output-stream "")
