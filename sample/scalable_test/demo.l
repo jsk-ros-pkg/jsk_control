@@ -341,6 +341,14 @@
   ;; (send *viewer* :draw-objects)
   traj-set)
 
-;; (demo-setup)
-;; (setq a (demo-main))
-;; (dolist (elm (send (send a :root) :find (send a :get :valid))) (draw-wrapper :conf (send elm :value)) (read-line))
+(cond
+ ((find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*)
+  (warning-message 6  "find option --run-test~%")
+  (warning-message 6  "demo setup ...~%")
+  (demo-setup)
+  (warning-message 6  "run demo ...~%")
+  (setq a (demo-main))
+  (warning-message 6  "show results ...~%")
+  (dolist (elm (send (send a :root) :find (send a :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::sleep 1))
+  (warning-message 6 "done~%")
+  ))
