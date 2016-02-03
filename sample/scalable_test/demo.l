@@ -347,8 +347,11 @@
   (warning-message 6  "demo setup ...~%")
   (demo-setup)
   (warning-message 6  "run demo ...~%")
-  (setq a (demo-main))
+  (setq *traj-set* (demo-main))
   (warning-message 6  "show results ...~%")
-  (dolist (elm (send (send a :root) :find (send a :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::sleep 1))
+  (if *traj-set*
+      (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::sleep 1)))
   (warning-message 6 "done~%")
+  (warning-message 6 "output results are set to *traj-set*~%")
+  (print *traj-set*)
   ))
