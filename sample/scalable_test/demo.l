@@ -34,21 +34,26 @@
     ((not (send path-map :get elem))
      (send path-map :enter elem path)
      (send (send elem :get-val 'path-map) :enter self (reverse path))
-     (dolist (neighbor neighbors)
-       (send neighbor :add-path-neighbors elem (cons neighbor path) (+ depth 1))))
+     ;;(dolist (neighbor neighbors)
+     ;;  (send neighbor :add-path-neighbors elem (cons neighbor path) (+ depth 1)))
+     )
     ;; (t (print depth))
     ))
   (:find
-   (elem)
+   (elem
+    &optional (black-list (instance hash-table :init)))
    (or (send path-map :get elem)
        (let* ((path))
+	 (send black-list :enter self t)
 	 (dolist (neighbor neighbors)
-	   (setq path (send neighbor :find elem))
 	   (cond
-	    (path
-	     (setq path (cons self path))
-	     (send path-map :enter elem path)
-	     (return-from nil nil))))
+	    ((not (send black-list :get neighbor))
+	     (setq path (send neighbor :find elem black-list))
+	     (cond
+	      (path
+	       (setq path (cons self path))
+	       (send self :add-path-neighbors elem path)
+	       (return-from nil nil))))))
 	 path)))
   )
 
@@ -324,7 +329,7 @@
        (cond
 	((and (eq mode :first)
 	      (let* ((elem
-		      (find-if #'(lambda (valid) (send valid :find (send traj-set :root)))
+		      (find-if #'(lambda (valid) (send (send traj-set :root) :find valid))
 			       (send traj-set :valids))))
 		(if elem (send traj-set :put :valid elem))
 		elem))
