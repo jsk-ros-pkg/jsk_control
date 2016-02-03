@@ -231,6 +231,7 @@
 
 (defun draw-wrapper
   (&key (cog nil) (conf (eus_robot::get-configurations)))
+  (send *robot* :reset-pose)
   (eus_robot::configuration-copy-from :conf conf)
   (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
   (send *viewer* :draw-objects :flush nil)
@@ -342,7 +343,9 @@
   traj-set)
 
 (cond
- ((find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*)
+ ((and
+   (not (boundp '*load-as-lib*))
+   (find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*))
   (warning-message 6  "find option --run-test~%")
   (warning-message 6  "demo setup ...~%")
   (demo-setup)
