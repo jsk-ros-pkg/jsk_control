@@ -257,7 +257,7 @@
    (sep-vector (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
    (cog (float-vector 0 0 0))
    (traj-set (instance traj-set :init))
-   (user-valid-check #'(lambda (cog) (< (abs (aref cog 0)) 80)))
+   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 100)))
    )
   ;;
   (cpplog::change-output-stream "/dev/null")
@@ -350,7 +350,7 @@
   (warning-message 6  "demo setup ...~%")
   (demo-setup)
   (warning-message 6  "run demo ...~%")
-  (setq *traj-set* (demo-main))
+  (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
   (if *traj-set*
       (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::sleep 1)))
