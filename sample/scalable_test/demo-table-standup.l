@@ -10,7 +10,7 @@
   :super propertied-object
   :slots (val neighbors path-map))
 (defmethod traj-elem
-  (:init (v &key ((:neighbors nn) nil)) (setq val v) (setq neighbors nn) (setq path-map (instance hash-table :init)))
+  (:init (v &key ((:neighbors nn) nil)) (setq val v) (setq neighbors nn) (setq path-map (instance hash-table :init)) (send path-map :enter self (list self)) self)
   (:neighbors nil neighbors)
   (:value nil val)
   (:distance (v) (/ (norm2 (v- val v)) (length v)))
@@ -29,14 +29,16 @@
    (send self :add-path-neighbors elem (list self elem))
    )
   (:add-path-neighbors
-   (elem path &optional (depth 0))
+   (elem path &optional (depth 0) (depth-max 1000))
    (cond
     ((not (send path-map :get elem))
      (send path-map :enter elem path)
      (send (send elem :get-val 'path-map) :enter self (reverse path))
-     (dolist (neighbor neighbors)
-       (send neighbor :add-path-neighbors elem (cons neighbor path) (+ depth 1)))
-     )
+     (if (> depth-max depth)
+	 (dolist (neighbor neighbors)
+	   (send neighbor :add-path-neighbors elem (cons neighbor path)
+		 (+ depth 1) depth-max))
+       ))
     ;; (t (print depth))
     ))
   (:find
@@ -52,7 +54,7 @@
 	     (cond
 	      (path
 	       (setq path (cons self path))
-	       (send self :add-path-neighbors elem path)
+	       (send self :add-path-neighbors elem path 0 0)
 	       (return-from nil nil))))))
 	 path)))
   )
@@ -353,7 +355,7 @@
   (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
   (if *traj-set*
-      (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::sleep 1)))
+      (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000))))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
   (print *traj-set*)
