@@ -306,7 +306,7 @@
        (if step? (read-line))
        (cond
 	((and (eq mode :first)
-	      (let* ((clear (send traj-set :clear-all-path-map))
+	      (let* (;;(clear (send traj-set :clear-all-path-map))
 		     (elem
 	      	      (find-if #'(lambda (valid) (send (send traj-set :root) :find valid))
 	      		       (send traj-set :valids))))
