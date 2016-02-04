@@ -234,6 +234,7 @@
 (defun draw-wrapper
   (&key (cog nil) (conf (eus_robot::get-configurations)))
   (send *robot* :reset-pose)
+  ;;
   (eus_robot::configuration-copy-from :conf conf)
   (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
   (send *viewer* :draw-objects :flush nil)
