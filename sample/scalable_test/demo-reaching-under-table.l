@@ -206,6 +206,7 @@
       )))
   (cpplog::change-output-stream "")
   (warning-message 6 "~A/~A samples are valid~%" suc-cnt cnt)
+  (draw-wrapper)
   ;; (eus_robot::configuration-copy-from)
   ;; (send *viewer* :draw-objects)
   traj-set)
