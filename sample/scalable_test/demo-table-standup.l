@@ -79,11 +79,12 @@
   (:valids nil valids)
   (:add-valids (elem) (push elem valids))
   (:add-elem
-   (elem)
+   (elem &optional (merge? t))
    (push elem members)
-   (remove-if #'(lambda (mem)
-		  (send mem :add-neighbor elem :add-thre range))
-	      (cdr members)))
+   (if merge?
+       (mapcar #'(lambda (mem)
+		   (send mem :add-neighbor elem :add-thre range))
+	       (cdr members))))
   )
 
 (defun demo-setup
@@ -170,6 +171,9 @@
   ;;
   ;; iniitliaze dnn
   (smart-initialize-net)
+  (setq *redundancy* (instantiate float-vector (- (caffe::get-blob-count "input")
+						  (length *input*))))
+  (setq *input* (concatenate float-vector *input* *redundancy*))
   ;;
   ;; setup collision detection
   (eus_qp_collide::test-gen-collidable-pairs-old)
@@ -244,14 +248,132 @@
   (send *viewer* :viewsurface :flush)
   )
 
+(defun demo-ik
+  (&key
+   ;;
+   ;; problem settings
+   (ef-coords *ef-coords*)
+   (caffe-root-link *root-link*)
+   (ik-root-link (send *robot* :get :root-link))
+   (joint-list *joint-list1*)
+   (redundancy *redundancy*)
+   (support-limbs '(:rarm :larm :rleg :lleg))
+   (support-face
+    (setq
+     *support-face*
+     (instance face :init
+	       :vertices
+	       (quickhull
+		(mapcar
+		 '(lambda (v) (float-vector (aref v 0) (aref v 1) 0))
+		 (flatten
+		  (mapcar
+		   '(lambda (k)
+		      (if (find k '(:rarm :larm))
+			  (send *robot* k :end-coords :worldpos)
+			(send (send *robot* :support-polygon k) :vertices)))
+		   support-limbs)))))))
+   (user-valid-check #'(lambda (cog) t))
+   (step-max 300)
+   ;;
+   ;; buf
+   (input (concatenate float-vector (get-vector-from-ef-coords :ef-coords ef-coords :root-link caffe-root-link) redundancy))
+   (av (instantiate float-vector (length joint-list)))
+   (ok? nil) (suc-cnt 0) (cnt 0) (traj? t) tm
+   ;; (sep-vector (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
+   (cog (float-vector 0 0 0))
+   (traj-set (instance traj-set :init))
+   ;;
+   ;; debug option
+   (draw? t) (mode :first) (step? nil)
+   ;;
+   )
+  ;;
+  (bench
+   (cpplog::change-output-stream "/dev/null")
+   (send traj-set :put :ok nil)
+   (send traj-set :root (instance traj-elem :init (copy-seq (eus_robot::get-configurations))))
+   ;; update ik settings
+   (eus_robot::set-link-coords 0 (send ik-root-link :copy-worldcoords))
+   (dotimes (i (length ef-coords))
+     (eus_robot_ik::change-target-coords i (send (nth i ef-coords) :worldcoords)))
+   ;;
+   ;; (dolist (redundancy sep-vector)
+   (dotimes (i step-max)
+     ;;
+     ;; start loop
+     (incf cnt)
+     ;;
+     ;; dnn kinematics calcuration
+     (dotimes (j (length redundancy)) ;; random redundant parameters
+       (setf (aref input (- (- (length input) 1) j)) (random 1.0))) ;; (setf (aref input (- (- (length input) 1) j)) (aref redundancy j)))
+     (setq tm (bench2 (caffe::calc-forward-double :isize (length input) :input input
+						  :osize (length av) :output av)))
+     (if draw? (warning-message 6 "DNN calc forward: ~A~%" tm))
+     ;;
+     ;; solve inverse kinematics
+     (setq
+      tm
+      (bench2
+       (progn
+	 (map cons
+	      '(lambda (l pos)
+		 (eus_robot::set-configuration (send l :get :id) pos 1))
+	      *links* av)
+	 (eus_robot::forward-kinematics 0)
+	 (setq ok? (plusp (eus_robot_ik::solve-ik :max 15)))
+	 ;; check centroid
+	 (eus_robot::forward-kinematics 0)
+	 (eus_robot::calc-links-centroid :ret cog)
+	 (setf (aref cog 0) (* 1e+3 (aref cog 0)))
+	 (setf (aref cog 1) (* 1e+3 (aref cog 1)))
+	 (setf (aref cog 2) 0)
+	 (if (not (eq (send support-face :insidep cog) :inside)) (setq ok? nil))
+	 ))
+      )
+     (if draw? (warning-message 6 "solve IK: ~A~%" tm))
+     ;;
+     ;; check collision
+     (setq
+      tm
+      (bench2
+       (if (and ok? (plusp (eus_robot::check-all-collide))) (setq ok? nil))))
+     (if draw? (warning-message 6 "collision: ~A~%" tm))
+     ;;
+     ;;
+     (if (eq t draw?) (draw-wrapper :cog cog))
+     (cond
+      (ok?
+       (incf suc-cnt)
+       (let* ((elem (instance traj-elem :init (copy-seq (eus_robot::get-configurations)))))
+	 (send traj-set :add-elem elem traj?)
+	 (if (funcall user-valid-check cog)
+	     (send traj-set :add-valids elem)))
+       (if (eq :only-valid draw?) (draw-wrapper :cog cog))
+       (if step? (read-line))
+       (cond
+	((and (eq mode :first)
+	      (or
+	       (not traj?)
+	       (let* ((elem
+		       (find-if #'(lambda (valid) (send (send traj-set :root) :find valid))
+				(send traj-set :valids))))
+		 (if elem (send traj-set :put :valid elem))
+		 elem)))
+	 (send traj-set :put :ok t)
+	 (return-from nil nil))))
+      )))
+  (cpplog::change-output-stream "")
+  (if draw? (warning-message 6 "~A/~A samples are valid~%" suc-cnt cnt))
+  traj-set)
+
 (defun demo-main
   (&key
    (ef-coords *ef-coords*)
    (root-link *root-link*)
    (joint-list *joint-list1*)
    (input *input*)
-   (redundancy
-    (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
+   (redundancy *redundancy*)
    (step-max 700)
    (av (instantiate float-vector (length joint-list)))
    ret (suc-cnt 0) (cnt 0) tm
@@ -264,7 +386,7 @@
    )
   ;;
   (cpplog::change-output-stream "/dev/null")
-  (setq input (concatenate float-vector input redundancy))
+  ;; (setq input (concatenate float-vector input redundancy))
   (send *robot* :angle-vector (copy-seq *init-pose*))
   (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
   (if draw? (send *viewer* :draw-objects))
