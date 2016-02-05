@@ -388,17 +388,18 @@
        ((and (eq mode :first)
 	     (or
 	      (not traj?)
-	      (let* ((elem
-		      (send (send traj-set :root) :wide-first-find (send traj-set :valids))))
-		      ;; (find-if #'(lambda (valid) (send (send traj-set :root)
-		      ;; :wide-first-find valid))
-		      ;; (send traj-set :valids))))
+	      (let* ((elem))
+		(setq tm (bench2 (setq elem (send (send traj-set :root) :wide-first-find (send traj-set :valids)))))
+		;; (find-if #'(lambda (valid) (send (send traj-set :root)
+		;; :wide-first-find valid))
+		;; (send traj-set :valids))))
+		(if draw? (warning-message 6 "wide-first-search: ~A~%" tm))
 		(if elem (send traj-set :put :valid elem))
 		elem)))
 	(send traj-set :put :ok t)
 	(return-from nil nil))))
      ))
-  (if draw? (warning-message 6 "~A/~A samples are valid~%" suc-cnt cnt))
+  (if draw? (warning-message 6 "~A/~A samples are valid, traj=~A~%" suc-cnt cnt (send traj-set :get :valid)))
   traj-set)
 
 (defun demo-main
@@ -408,7 +409,7 @@
    (step-max 1000)
    (draw? t)
    (traj? t)
-   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 100)))
+   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 85)))
    ret
    &allow-other-keys
    )
