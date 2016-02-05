@@ -29,7 +29,7 @@
     (send *robot* :fullbody-inverse-kinematics
 	  (append
 	   (list
-	    (make-coords :pos (float-vector 250 300 (+ 30 (send *table* :get-val 'height)))
+	    (make-coords :pos (float-vector 250 400 (+ 0 (send *table* :get-val 'height)))
 			 :rpy (list 0 0 (deg2rad 90))))
 	   (send *robot* :legs :end-coords :copy-worldcoords))
 	  :translation-axis '(t t t)
@@ -54,7 +54,7 @@
   ;;
   (setq *rarm-target-sphere* (make-sphere 100))
   (send *rarm-target-sphere* :set-color (float-vector 1 0 0))
-  (gl::transparent *rarm-target-sphere* 0.8)
+  (gl::transparent *rarm-target-sphere* 0.4)
   (setq *rarm-coords*
 	(instance vector-coords :init
 		  '(lambda (&rest args)
@@ -121,7 +121,7 @@
    (input *input*)
    (redundancy
     (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
-   (step-max 700)
+   (step-max 300)
    (av (instantiate float-vector (length joint-list)))
    ret (suc-cnt 0) (cnt 0) tm
    (draw? t) (mode :first) (step? nil)
@@ -227,7 +227,8 @@
   (if (send traj-set :get :ok)
       (send *rarm-target-sphere* :set-color (float-vector 0 1 0))
     (send *rarm-target-sphere* :set-color (float-vector 1 0 0)))
-  (draw-wrapper)
+  (gl::transparent *rarm-target-sphere* 0.4)
+  ;; (draw-wrapper)
   ;; (eus_robot::configuration-copy-from)
   ;; (send *viewer* :draw-objects)
   traj-set)
@@ -238,9 +239,11 @@
     (dolist (z (if (eq x 0) (list 0 1 2 3 4 5 6 7) (list 0 1 2 5 6 7)))
       (send *rarm-target-sphere* :newcoords
 	    (make-coords :pos (float-vector (+ (* -100 x) 700) 0 (+ (* z 100) 300))))
-      (demo-main :draw? nil)
-      ;; (draw-wrapper)
-      (read-line))))
+      (if (send (demo-main :draw? nil) :get :ok)
+	  (draw-wrapper) (send *viewer* :draw-objects))
+      (let* ((cmd (read-line)))
+	(if (and (> (length cmd) 0) (eq (aref cmd 0) #\q))
+	    (return-from demo-main2 nil))))))
 
 (cond
  ((find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*)
@@ -250,6 +253,7 @@
   (send *rarm-target-sphere* :translate (float-vector 400 0 300) :world)
   (warning-message 6  "run demo ...~%")
   (setq *traj-set* (demo-main :draw? nil))
+  (draw-wrapper)
   (warning-message 6  "show results ...~%")
   ;; (if (send *traj-set* :get :valid)
   ;; (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::sleep 1))
