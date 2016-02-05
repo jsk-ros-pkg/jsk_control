@@ -209,10 +209,18 @@
        (if step? (read-line))
        (cond
 	((and (eq mode :first)
-	      (let* (;;(clear (send traj-set :clear-all-path-map))
-		     (elem
-	      	      (find-if #'(lambda (valid) (send (send traj-set :root) :find valid))
-	      		       (send traj-set :valids))))
+	      (let* ((elem))
+		(setq
+		 tm
+		 (bench2
+		  (setq
+		   elem
+		   (send (send traj-set :root) :wide-first-find (send traj-set :valids)))))
+		;; (let* (;;(clear (send traj-set :clear-all-path-map))
+		;; (elem
+		;; (find-if #'(lambda (valid) (send (send traj-set :root) :find valid))
+		;; (send traj-set :valids))))
+		(if draw? (warning-message 6 "wide-first-search: ~A~%" tm))
 	      	(if elem (send traj-set :put :valid elem))
 	      	elem)
 	      )
@@ -256,7 +264,7 @@
   (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
   (if (send *traj-set* :get :valid)
-      (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000)))
+      (dolist (elm (send *traj-set* :get :valid)) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000)))
     (warning-message 1 "no answer~%")
     )
   (warning-message 6 "done~%")
