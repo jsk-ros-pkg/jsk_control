@@ -71,8 +71,8 @@
   (eus_robot::forward-kinematics 0)
   (eus_robot::print-link-tree)
   (eus_robot_ik::clear-all)
-  (eus_robot_ik::add-target :limb :rarm :rotation-axis-rot (make-matrix 3 3))
   (eus_robot_ik::add-target :limb :larm)
+  (eus_robot_ik::add-target :limb :rarm :rotation-axis-rot (make-matrix 3 3))
   (eus_robot_ik::add-target :limb :lleg)
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
@@ -84,6 +84,9 @@
   ;;
   ;; iniitliaze dnn
   (smart-initialize-net)
+  (setq *redundancy* (instantiate float-vector (- (caffe::get-blob-count "input")
+						  (length *input*))))
+  (setq *input* (concatenate float-vector *input* *redundancy*))
   ;;
   ;; setup collision detection
   (eus_qp_collide::test-gen-collidable-pairs-old)
@@ -119,8 +122,7 @@
    (root-link *root-link*)
    (joint-list *joint-list1*)
    (input *input*)
-   (redundancy
-    (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
+   (redundancy *redundancy*)
    (step-max 300)
    (av (instantiate float-vector (length joint-list)))
    ret (suc-cnt 0) (cnt 0) tm
@@ -134,7 +136,7 @@
    )
   ;;
   (cpplog::change-output-stream "/dev/null")
-  (setq input (concatenate float-vector input redundancy))
+  ;; (setq input (concatenate float-vector input redundancy))
   (send *robot* :angle-vector (copy-seq *init-pose*))
   (send *robot* :fix-leg-to-coords (make-coords) :rleg)
   (if draw? (send *viewer* :draw-objects))
@@ -165,7 +167,7 @@
 	 ;; aho
 	 ;; (eus_robot_ik::clear-all)
 	 ;; (eus_robot_ik::add-target :limb :rarm :target-coords (send *rarm-coords* :coords-from-vector rarm-coords :org-coords *root-link*))
-	 (eus_robot_ik::change-target-coords 0 (send *rarm-coords* :coords-from-vector rarm-coords :org-coords *root-link*))
+	 (eus_robot_ik::change-target-coords 1 (send *rarm-coords* :coords-from-vector rarm-coords :org-coords *root-link*))
 	 ;; (eus_robot_ik::add-target :limb :larm)
 	 ;; (eus_robot_ik::add-target :limb :lleg)
 	 ;;
