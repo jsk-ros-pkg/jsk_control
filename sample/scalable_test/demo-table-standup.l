@@ -280,13 +280,14 @@
    (input (concatenate float-vector (get-vector-from-ef-coords :ef-coords ef-coords :root-link caffe-root-link) redundancy))
    (av (instantiate float-vector (length joint-list)))
    (ok? nil) (suc-cnt 0) (cnt 0) (traj? t) tm
-   ;; (sep-vector (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
+   (ref-redundancy (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
    (cog (float-vector 0 0 0))
    (traj-set (instance traj-set :init))
    ;;
    ;; debug option
    (draw? t) (mode :first) (step? nil)
    ;;
+   &allow-other-keys
    )
   ;;
   (bench
@@ -298,15 +299,19 @@
    (dotimes (i (length ef-coords))
      (eus_robot_ik::change-target-coords i (send (nth i ef-coords) :worldcoords)))
    ;;
-   ;; (dolist (redundancy sep-vector)
    (dotimes (i step-max)
      ;;
      ;; start loop
      (incf cnt)
      ;;
      ;; dnn kinematics calcuration
-     (dotimes (j (length redundancy)) ;; random redundant parameters
-       (setf (aref input (- (- (length input) 1) j)) (random 1.0))) ;; (setf (aref input (- (- (length input) 1) j)) (aref redundancy j)))
+     (if ref-redundancy
+	 (let* ((rd (car ref-redundancy)))
+	   (dotimes (j (length redundancy))
+	     (setf (aref input (- (- (length input) 1) j)) (aref rd j)))
+	   (setq ref-redundancy (cdr ref-redundancy)))
+       (dotimes (j (length redundancy)) ;; random redundant parameters
+	 (setf (aref input (- (- (length input) 1) j)) (random 1.0))))
      (setq tm (bench2 (caffe::calc-forward-double :isize (length input) :input input
 						  :osize (length av) :output av)))
      (if draw? (warning-message 6 "DNN calc forward: ~A~%" tm))
@@ -366,6 +371,44 @@
   (cpplog::change-output-stream "")
   (if draw? (warning-message 6 "~A/~A samples are valid~%" suc-cnt cnt))
   traj-set)
+
+(defun demo-main
+  (&rest
+   args
+   &key
+   (step-max 1000)
+   (draw? t)
+   (traj? t)
+   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 80)))
+   &allow-other-keys
+   )
+  ;; set initial stata
+  (send *robot* :angle-vector (copy-seq *init-pose*))
+  (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
+  (if draw? (send *viewer* :draw-objects))
+  (eus_robot::configuration-copy-to)
+  (apply 'demo-ik :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check args))
+
+(cond
+ ((and
+   (not (boundp '*load-as-lib*))
+   (find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*))
+  (warning-message 6  "find option --run-test~%")
+  (warning-message 6  "demo setup ...~%")
+  (demo-setup)
+  (warning-message 6  "run demo ...~%")
+  (setq *traj-set* (demo-main :draw? nil))
+  (warning-message 6  "show results ...~%")
+  (if (send *traj-set* :get :valid)
+      (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000)))
+    (warning-message 1 "no answer~%"))
+  (warning-message 6 "done~%")
+  (warning-message 6 "output results are set to *traj-set*~%")
+  (print *traj-set*)
+  ))
+
+
+#|
 
 (defun demo-main
   (&key
@@ -466,21 +509,3 @@
   ;; (eus_robot::configuration-copy-from)
   ;; (send *viewer* :draw-objects)
   traj-set)
-
-(cond
- ((and
-   (not (boundp '*load-as-lib*))
-   (find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*))
-  (warning-message 6  "find option --run-test~%")
-  (warning-message 6  "demo setup ...~%")
-  (demo-setup)
-  (warning-message 6  "run demo ...~%")
-  (setq *traj-set* (demo-main :draw? nil))
-  (warning-message 6  "show results ...~%")
-  (if (send *traj-set* :get :valid)
-      (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000)))
-    (warning-message 1 "no answer~%"))
-  (warning-message 6 "done~%")
-  (warning-message 6 "output results are set to *traj-set*~%")
-  (print *traj-set*)
-  ))
