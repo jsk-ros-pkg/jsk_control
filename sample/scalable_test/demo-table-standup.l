@@ -238,9 +238,9 @@
   (eus_robot::configuration-copy-from :conf conf)
   (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
   (send *viewer* :draw-objects :flush nil)
-  (send *support-face* :draw-on :flush nil :width 30)
+  (send *support-face* :draw-on :flush nil :width 5)
   (send (or cog (map float-vector '* (float-vector 1 1 0) (send *robot* :centroid)))
-	:draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 30)
+	:draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 5)
   (send *viewer* :viewsurface :flush)
   )
 
