@@ -152,8 +152,8 @@
   (eus_robot::forward-kinematics 0)
   (eus_robot::print-link-tree)
   (eus_robot_ik::clear-all)
-  (eus_robot_ik::add-target :limb :rarm)
   (eus_robot_ik::add-target :limb :larm)
+  (eus_robot_ik::add-target :limb :rarm)
   (eus_robot_ik::add-target :limb :lleg)
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
