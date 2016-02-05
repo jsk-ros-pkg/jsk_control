@@ -29,7 +29,7 @@
    (send self :add-path-neighbors elem (list self elem))
    )
   (:add-path-neighbors
-   (elem path &optional (depth 0) (depth-max 1000))
+   (elem path &optional (depth 0) (depth-max 0))
    (cond
     ((not (send path-map :get elem))
      (send path-map :enter elem path)
@@ -57,7 +57,37 @@
 	       (send self :add-path-neighbors elem path 0 0)
 	       (return-from nil nil))))))
 	 path)))
-  )
+  (:wide-first-find
+   (elem
+    &optional
+    (selfs (progn (send self :put :path (list self)) (list self)))
+    (black-list (instance hash-table :init)))
+   (let* ((path)
+	  (neighbors
+	   (apply
+	    'append
+	    (mapcar
+	     #'(lambda (slf)
+		 (remove-if
+		  #'(lambda (elm)
+		      (if (send black-list :get elm) t
+			(progn
+			  (send black-list :enter elm t)
+			  (send elm :put :parent slf)
+			  (send elm :put :path (cons elm (send slf :get :path)))
+			  nil)))
+		  (send slf :neighbors)))
+	     selfs))))
+     (cond
+      (neighbors
+       (dolist (neighbor neighbors)
+	 (cond
+	  ((find neighbor elem)
+	   (setq path (send neighbor :get :path))
+	   ;; (send self :add-path-neighbors elem path 0 0)
+	   (return-from nil nil))))
+       (if path (reverse path)
+	 (send self :wide-first-find elem neighbors black-list)))))))
 
 (defclass traj-set
   :super propertied-object
@@ -349,7 +379,7 @@
      (ok?
       (incf suc-cnt)
       (let* ((elem (instance traj-elem :init (copy-seq (eus_robot::get-configurations)))))
-	(send traj-set :add-elem elem traj?)
+	(send traj-set :add-elem elem t)
 	(if (funcall user-valid-check cog)
 	    (send traj-set :add-valids elem)))
       (if (eq :only-valid draw?) (draw-wrapper :cog cog))
@@ -359,8 +389,10 @@
 	     (or
 	      (not traj?)
 	      (let* ((elem
-		      (find-if #'(lambda (valid) (send (send traj-set :root) :find valid))
-			       (send traj-set :valids))))
+		      (send (send traj-set :root) :wide-first-find (send traj-set :valids))))
+		      ;; (find-if #'(lambda (valid) (send (send traj-set :root)
+		      ;; :wide-first-find valid))
+		      ;; (send traj-set :valids))))
 		(if elem (send traj-set :put :valid elem))
 		elem)))
 	(send traj-set :put :ok t)
@@ -401,7 +433,7 @@
   (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
   (if (send *traj-set* :get :valid)
-      (dolist (elm (send (send *traj-set* :root) :find (send *traj-set* :get :valid))) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000)))
+      (dolist (elm (send *traj-set* :get :valid)) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000)))
     (warning-message 1 "no answer~%"))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
