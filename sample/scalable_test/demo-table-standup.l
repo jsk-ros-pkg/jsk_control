@@ -266,12 +266,13 @@
       (apply 'append buf))))
 
 (defun draw-wrapper
-  (&key (cog nil) (conf (eus_robot::get-configurations)) root-link-coords)
+  (&key (cog nil) (conf (eus_robot::get-configurations))
+	root-link-coords (support-face *support-face*))
   ;; (send *robot* :reset-pose)
   (eus_robot::configuration-copy-from :conf conf :root-link-coords root-link-coords)
   ;; (if rleg-coords (send *robot* :fix-leg-to-coords rleg-coords :rleg))
   (send *viewer* :draw-objects :flush nil)
-  (send *support-face* :draw-on :flush nil :width 5)
+  (send support-face :draw-on :flush nil :width 5)
   (send (or cog (map float-vector '* (float-vector 1 1 0) (send *robot* :centroid)))
 	:draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 5)
   (send *viewer* :viewsurface :flush)
@@ -283,7 +284,10 @@
   (if (atom traj) (setq traj (list traj)))
   (dolist (trj traj)
     (dolist (elm (send trj :get :valid))
-      (draw-wrapper :conf (send elm :value) :root-link-coords (send elm :get :root-link-coords)) (unix::usleep (* 100 1000)))))
+      (draw-wrapper :conf (send elm :value)
+		    :support-face (or (send elm :get :support-face) *support-face*)
+		    :root-link-coords (send elm :get :root-link-coords))
+      (unix::usleep (* 100 1000)))))
 
 (defun demo-ik
   (&key
@@ -348,6 +352,7 @@
 	(instance traj-elem :init (copy-seq (eus_robot::get-configurations))))
   (send (send traj-set :root) :put :root-link-coords
 	(eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
+  (send (send traj-set :root) :put :support-face support-face)
   ;;
   ;; update ik settings
   (eus_robot::set-link-coords 0 (send ik-root-link :copy-worldcoords))
@@ -416,6 +421,7 @@
       (let* ((elem (instance traj-elem :init (copy-seq (eus_robot::get-configurations)))))
 	(send elem :put :root-link-coords
 	      (eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
+	(send elem :put :support-face support-face)
 	(send traj-set :add-elem elem t)
 	(if (funcall user-valid-check cog)
 	    (send traj-set :add-valids elem)))
