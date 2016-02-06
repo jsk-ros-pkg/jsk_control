@@ -128,32 +128,56 @@
 	       (rarm0
 		(instance vector-coords :init (send (nth 1 *ef-coords*) :copy-worldcoords)))
 	       (lleg0
-		(instance vector-coords :init (send (nth 2 *ef-coords*) :copy-worldcoords))))
+		(instance vector-coords :init (send (nth 2 *ef-coords*) :copy-worldcoords)))
+	       (caffe-rleg0 (send (send *root-link* :worldcoords) :copy-worldcoords))
+	       (ik-rleg0 (send (send (send *robot* :get :root-link) :worldcoords)
+			       :copy-worldcoords)))
 	  (list
 	   (list :ef-coords (list larm0 rarm0 lleg0)
-		 :support-limbs '(:larm :rarm :lleg :rleg))
+		 :support-limbs '(:larm :rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
 	   ;;
 	   (list :ef-coords (list larm0 rarm0 lleg0)
-		 :support-limbs '(:larm :rarm :rleg))
+		 :support-limbs '(:larm :rarm :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
 	   (list :ef-coords
 		 (list larm0 rarm0
 		       (setq lleg0 (send lleg0 :transform-copy
 					 (make-coords :pos (float-vector 0 0 50)))))
-		 :support-limbs '(:larm :rarm :rleg))
+		 :support-limbs '(:larm :rarm :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
 	   (list :ef-coords
 		 (list larm0 rarm0
 		       (setq lleg0 (send lleg0 :transform-copy
 					 (make-coords :pos (float-vector 0 80 0)))))
-		 :support-limbs '(:larm :rarm :rleg))
+		 :support-limbs '(:larm :rarm :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
 	   (list :ef-coords
 		 (list larm0 rarm0
 		       (setq lleg0 (send lleg0 :transform-copy
 					 (make-coords :pos (float-vector 0 0 -50)))))
-		 :support-limbs '(:larm :rarm :rleg))
-	   ;;
+		 :support-limbs '(:larm :rarm :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
 	   (list :ef-coords
 		 (list larm0 rarm0 lleg0)
-		 :support-limbs '(:larm :rarm :lleg :rleg)))))
+		 :support-limbs '(:larm :rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   ;;
+	   ;; (list :ef-coords (list larm0 rarm0 lleg0)
+	   ;; 	 :support-limbs '(:larm :rarm :lleg))
+	   ;; (list :ef-coords (list larm0 rarm0 lleg0)
+	   ;; 	 :support-limbs '(:larm :rarm :lleg))
+	   ;; (list :ef-coords (list larm0 rarm0 lleg0)
+	   ;; 	 :support-limbs '(:larm :rarm :lleg))
+	   ;; (list :ef-coords (list larm0 rarm0 lleg0)
+	   ;; 	 :support-limbs '(:larm :rarm :lleg))
+	   )))
   )
 
 (defun demo-main
@@ -185,7 +209,7 @@
    (draw? t)
    (traj? t)
    (step? t)
-   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 70)))
+   (user-valid-check #'(lambda (cog) (< (abs (aref cog 0)) 70)))
    ret
    &allow-other-keys
    )
@@ -203,11 +227,11 @@
        (let* ((elems (send (car ret) :get :valid))
 	      (now (car (last elems))))
 	 (if draw? (warning-message 6 "success~%"))
-	 (bench
-	  (eus_robot::configuration-copy-from
-	   :conf (send now :value)
-	   :root-link-coords (send now :get :root-link-coords))
-	  (eus_robot::configuration-copy-to))
+	 ;; (bench
+	 (eus_robot::configuration-copy-from
+	  :conf (send now :value)
+	  :root-link-coords (send now :get :root-link-coords))
+	 (eus_robot::configuration-copy-to)
 	 (if step? (read-line))
 	 ))))
   (cpplog::change-output-stream "")
