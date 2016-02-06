@@ -227,7 +227,7 @@
 	 (return-from nil nil))))
       )))
   (cpplog::change-output-stream "")
-  (warning-message 6 "~A/~A samples are valid~%" suc-cnt cnt)
+  (warning-message 6 "~A/~A samples are valid, search results ~A~%" suc-cnt cnt (send traj-set :get :valid))
   (draw-wrapper)
   ;; (eus_robot::configuration-copy-from)
   ;; (send *viewer* :draw-objects)
