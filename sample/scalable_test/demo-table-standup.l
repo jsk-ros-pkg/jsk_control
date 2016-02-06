@@ -266,11 +266,10 @@
       (apply 'append buf))))
 
 (defun draw-wrapper
-  (&key (cog nil) (conf (eus_robot::get-configurations)) (rleg-coords (make-coords)))
-  (send *robot* :reset-pose)
-  ;;
-  (eus_robot::configuration-copy-from :conf conf)
-  (send *robot* :fix-leg-to-coords rleg-coords :rleg)
+  (&key (cog nil) (conf (eus_robot::get-configurations)) root-link-coords)
+  ;; (send *robot* :reset-pose)
+  (eus_robot::configuration-copy-from :conf conf :root-link-coords root-link-coords)
+  ;; (if rleg-coords (send *robot* :fix-leg-to-coords rleg-coords :rleg))
   (send *viewer* :draw-objects :flush nil)
   (send *support-face* :draw-on :flush nil :width 5)
   (send (or cog (map float-vector '* (float-vector 1 1 0) (send *robot* :centroid)))
@@ -323,6 +322,8 @@
   ;;
   (send traj-set :put :ok nil)
   (send traj-set :root (instance traj-elem :init (copy-seq (eus_robot::get-configurations))))
+  (send (send traj-set :root) :put :root-link-coords
+	(eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
   ;; update ik settings
   (eus_robot::set-link-coords 0 (send ik-root-link :copy-worldcoords))
   (dotimes (i (length ef-coords))
@@ -385,6 +386,8 @@
      (ok?
       (incf suc-cnt)
       (let* ((elem (instance traj-elem :init (copy-seq (eus_robot::get-configurations)))))
+	(send elem :put :root-link-coords
+	      (eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
 	(send traj-set :add-elem elem t)
 	(if (funcall user-valid-check cog)
 	    (send traj-set :add-valids elem)))
@@ -440,7 +443,7 @@
   (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
   (if (send *traj-set* :get :valid)
-      (dolist (elm (send *traj-set* :get :valid)) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000)))
+      (do-until-key (dolist (elm (send *traj-set* :get :valid)) (draw-wrapper :conf (send elm :value) :root-link-coords (send elm :get :root-link-coords)) (unix::usleep (* 100 1000))))
     (warning-message 1 "no answer~%"))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
