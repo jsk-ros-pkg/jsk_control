@@ -342,15 +342,16 @@
    &allow-other-keys
    )
   ;;
-  ;; update ik settings
-  (eus_robot::set-link-coords 0 (send ik-root-link :copy-worldcoords))
-  (eus_robot::forward-kinematics)
-  ;;
   (send traj-set :put :ok nil)
   (send traj-set :root
 	(instance traj-elem :init (copy-seq (eus_robot::get-configurations))))
   (send (send traj-set :root) :put :root-link-coords
 	(eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
+  ;;
+  ;; update ik settings
+  (eus_robot::set-link-coords 0 (send ik-root-link :copy-worldcoords))
+  (eus_robot::forward-kinematics 0)
+  ;;
   ;;
   (dotimes (i (length ef-coords))
     (eus_robot_ik::change-target-coords
@@ -454,6 +455,7 @@
   (send *robot* :fix-leg-to-coords (make-coords) :rleg)
   (if draw? (send *viewer* :draw-objects))
   (eus_robot::configuration-copy-to)
+  (eus_robot::forward-kinematics 0)
   (bench (setq ret (apply 'demo-ik :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check args)))
   (cpplog::change-output-stream "")
   ret)
