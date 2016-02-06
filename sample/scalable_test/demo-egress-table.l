@@ -119,6 +119,43 @@
   (eus_robot::register-collide-pairs *collidable-pairs*)
   (if (plusp (eus_robot::check-all-collide))
       (warning-message 1 "invalid initial states with collision~%"))
+  ;;
+  (send *robot* :angle-vector (copy-seq *init-pose*))
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (setq *ef-coords-list*
+	(let* ((larm0
+		(instance vector-coords :init (send (nth 0 *ef-coords*) :copy-worldcoords)))
+	       (rarm0
+		(instance vector-coords :init (send (nth 1 *ef-coords*) :copy-worldcoords)))
+	       (lleg0
+		(instance vector-coords :init (send (nth 2 *ef-coords*) :copy-worldcoords))))
+	  (list
+	   (list :ef-coords (list larm0 rarm0 lleg0)
+		 :support-limbs '(:larm :rarm :lleg :rleg))
+	   ;;
+	   (list :ef-coords (list larm0 rarm0 lleg0)
+		 :support-limbs '(:larm :rarm :rleg))
+	   (list :ef-coords
+		 (list larm0 rarm0
+		       (send lleg0 :transform-copy
+			     (make-coords :pos (float-vector 0 0 50))))
+		 :support-limbs '(:larm :rarm :rleg))
+	   (list :ef-coords
+		 (list larm0 rarm0
+		       (send lleg0 :transform-copy
+			     (make-coords :pos (float-vector 0 100 50))))
+		 :support-limbs '(:larm :rarm :rleg))
+	   (list :ef-coords
+		 (list larm0 rarm0
+		       (send lleg0 :transform-copy
+			     (make-coords :pos (float-vector 0 100 0))))
+		 :support-limbs '(:larm :rarm :rleg))
+	   ;;
+	   (list :ef-coords
+		 (list larm0 rarm0
+		       (send lleg0 :transform-copy
+			     (make-coords :pos (float-vector 0 100 0))))
+		 :support-limbs '(:larm :rarm :lleg :rleg)))))
   )
 
 (defun demo-main
@@ -128,7 +165,7 @@
    (step-max 1000)
    (draw? t)
    (traj? t)
-   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 90)))
+   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 70)))
    ret
    &allow-other-keys
    )
@@ -142,6 +179,41 @@
   (cpplog::change-output-stream "")
   ret)
 
+(defun demo-egress
+  (&rest
+   args
+   &key
+   (step-max 1000)
+   (draw? t)
+   (traj? t)
+   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 70)))
+   ret
+   &allow-other-keys
+   )
+  (cpplog::change-output-stream "/dev/null")
+  ;; set initial stata
+  (send *robot* :angle-vector (copy-seq *init-pose*))
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (if draw? (send *viewer* :draw-objects))
+  (eus_robot::configuration-copy-to)
+  ;;
+  (bench
+   (dolist (efl *ef-coords-list*)
+     (push (apply 'demo-ik (append elf (list :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check) args)) ret)
+     (if (not (send (car ret) :get :valid)) (return-from nil (setq ret nil))
+       (let* ((elems (send (car ret) :get :valids))
+	      (now (car (last elems))))
+	 (if draw? (warning-message 6 "success~%"))
+	 (bench
+	  (eus_robot::configuration-copy-from
+	   :conf (send now :valeus)
+	   :root-link-coords (send now :get :root-link-coords))
+	  (eus_robot::configuration-copy-to))
+	 (read-line)
+	 ))))
+  (cpplog::change-output-stream "")
+  ret)
+
 (cond
  ((find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*)
   (warning-message 6  "find option --run-test~%")
@@ -151,7 +223,7 @@
   (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
   (if (send *traj-set* :get :valid)
-      (dolist (elm (send *traj-set* :get :valid)) (draw-wrapper :conf (send elm :value)) (unix::usleep (* 100 1000)))
+      (do-until-key (dolist (elm (send *traj-set* :get :valid)) (draw-wrapper :conf (send elm :value) :root-link-coords (send elm :get :root-link-coords)) (unix::usleep (* 100 1000))))
     (warning-message 1 "no answer~%"))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
