@@ -169,15 +169,35 @@
 		 :caffe-root-link caffe-rleg0
 		 :ik-root-link ik-rleg0)
 	   ;;
-	   ;; (list :ef-coords (list larm0 rarm0 lleg0)
-	   ;; 	 :support-limbs '(:larm :rarm :lleg))
-	   ;; (list :ef-coords (list larm0 rarm0 lleg0)
-	   ;; 	 :support-limbs '(:larm :rarm :lleg))
-	   ;; (list :ef-coords (list larm0 rarm0 lleg0)
-	   ;; 	 :support-limbs '(:larm :rarm :lleg))
-	   ;; (list :ef-coords (list larm0 rarm0 lleg0)
-	   ;; 	 :support-limbs '(:larm :rarm :lleg))
-	   )))
+	   (list :ef-coords (list larm0 rarm0 lleg0)
+	   	 :support-limbs '(:larm :rarm :lleg)
+		 :caffe-root-link
+		 (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
+					 :translate (float-vector 0 0 50) :world))
+		 :ik-root-link
+		 (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
+				      :translate (float-vector 0 0 50) :world)))
+	   (list :ef-coords (list larm0 rarm0 lleg0)
+	   	 :support-limbs '(:larm :rarm :lleg)
+		 :caffe-root-link
+		 (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
+					 :translate (float-vector 0 80 0) :world))
+		 :ik-root-link
+		 (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
+				      :translate (float-vector 0 80 0) :world)))
+	   (list :ef-coords (list larm0 rarm0 lleg0)
+	   	 :support-limbs '(:larm :rarm :lleg)
+		 :caffe-root-link
+		 (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
+					 :translate (float-vector 0 0 -50) :world))
+		 :ik-root-link
+		 (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
+				      :translate (float-vector 0 0 -50) :world)))
+	   (list :ef-coords (list larm0 rarm0 lleg0)
+	   	 :support-limbs '(:larm :rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0
+		 ))))
   )
 
 (defun demo-main
@@ -206,9 +226,9 @@
    args
    &key
    (step-max 1000)
-   (draw? t)
+   (draw? nil)
    (traj? t)
-   (step? t)
+   (step? nil)
    (user-valid-check #'(lambda (cog) (< (abs (aref cog 0)) 70)))
    ret
    &allow-other-keys
@@ -222,7 +242,7 @@
   ;;
   (bench
    (dolist (efl *ef-coords-list*)
-     (push (apply 'demo-ik (append efl (list :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check) args)) ret)
+     (push (apply 'demo-ik (append efl (list :step-max step-max :draw? draw? :traj? traj? :step? nil :user-valid-check user-valid-check) args)) ret)
      (if (not (send (car ret) :get :valid)) (return-from nil (setq ret nil))
        (let* ((elems (send (car ret) :get :valid))
 	      (now (car (last elems))))
@@ -232,7 +252,8 @@
 	  :conf (send now :value)
 	  :root-link-coords (send now :get :root-link-coords))
 	 (eus_robot::configuration-copy-to)
-	 (if step? (read-line))
+	 (if step? (progn (warning-message 6 "animate?~%")
+			  (draw-traj-wrapper (car ret)) (read-line)))
 	 ))))
   (cpplog::change-output-stream "")
   (cond
@@ -249,7 +270,7 @@
   (warning-message 6  "run demo ...~%")
   (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
-  (if (send *traj-set* :get :valid) (draw-traj-wrapper *traj-set*)
+  (if (send *traj-set* :get :valid) (do-until-key (draw-traj-wrapper *traj-set*))
     (warning-message 1 "no answer~%"))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
