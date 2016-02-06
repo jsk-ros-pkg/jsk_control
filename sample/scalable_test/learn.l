@@ -90,7 +90,7 @@
    (&rest args)
    (send* (send self :worldcoords) (car args) (cdr args)))
   (:transform-copy
-   (c) (instance vector-coords :init (send (send self :copy-worldcoords) :transform c)))
+   (c) (instance vector-coords :init (send (send self :copy-worldcoords) :transform c :world)))
   )
 
 (defvar *robot* (hrp2jsknt))
