@@ -143,18 +143,18 @@
 	   (list :ef-coords
 		 (list larm0 rarm0
 		       (send lleg0 :transform-copy
-			     (make-coords :pos (float-vector 0 100 50))))
+			     (make-coords :pos (float-vector 0 80 50))))
 		 :support-limbs '(:larm :rarm :rleg))
 	   (list :ef-coords
 		 (list larm0 rarm0
 		       (send lleg0 :transform-copy
-			     (make-coords :pos (float-vector 0 100 0))))
+			     (make-coords :pos (float-vector 0 80 0))))
 		 :support-limbs '(:larm :rarm :rleg))
 	   ;;
 	   (list :ef-coords
 		 (list larm0 rarm0
 		       (send lleg0 :transform-copy
-			     (make-coords :pos (float-vector 0 100 0))))
+			     (make-coords :pos (float-vector 0 80 0))))
 		 :support-limbs '(:larm :rarm :lleg :rleg)))))
   )
 
@@ -199,14 +199,14 @@
   ;;
   (bench
    (dolist (efl *ef-coords-list*)
-     (push (apply 'demo-ik (append elf (list :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check) args)) ret)
+     (push (apply 'demo-ik (append efl (list :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check) args)) ret)
      (if (not (send (car ret) :get :valid)) (return-from nil (setq ret nil))
-       (let* ((elems (send (car ret) :get :valids))
+       (let* ((elems (send (car ret) :get :valid))
 	      (now (car (last elems))))
 	 (if draw? (warning-message 6 "success~%"))
 	 (bench
 	  (eus_robot::configuration-copy-from
-	   :conf (send now :valeus)
+	   :conf (send now :value)
 	   :root-link-coords (send now :get :root-link-coords))
 	  (eus_robot::configuration-copy-to))
 	 (read-line)
