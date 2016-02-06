@@ -122,7 +122,8 @@
   ;;
   (send *robot* :angle-vector (copy-seq *init-pose*))
   (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-  (require "egress-ef-coords-list.l")
+  (if (probe-file "egress-ef-coords-list.l") (require "egress-ef-coords-list.l")
+    (if (probe-file "../egress-ef-coords-list.l") (require "../egress-ef-coords-list.l")))
   )
 
 
@@ -150,6 +151,8 @@
   (bench
    (dolist (efl *ef-coords-list*)
      (push (apply 'demo-ik (append efl (list :step-max step-max :draw? draw? :traj? traj? :step? nil :user-valid-check user-valid-check) args)) ret)
+     (setq *ret* ret)
+     (setq *last-efl* efl)
      (if (not (send (car ret) :get :valid)) (return-from nil (setq ret nil))
        (let* ((elems (send (car ret) :get :valid))
 	      (now (car (last elems))))
