@@ -285,6 +285,7 @@
    (ef-coords *ef-coords*)
    (caffe-root-link *root-link*)
    (ik-root-link (send *robot* :get :root-link))
+   (offset-coords (make-list (length ef-coords)))
    (joint-list *joint-list1*)
    (redundancy *redundancy*)
    (support-limbs '(:rarm :larm :rleg :lleg))
@@ -307,7 +308,7 @@
    (step-max 300)
    ;;
    ;; buf
-   (input (concatenate float-vector (get-vector-from-ef-coords :ef-coords ef-coords :root-link caffe-root-link) redundancy))
+   (input (concatenate float-vector (get-vector-from-ef-coords :ef-coords ef-coords :root-link caffe-root-link :offset-coords offset-coords) redundancy))
    (av (instantiate float-vector (length joint-list)))
    (ok? nil) (suc-cnt 0) (cnt 0) (traj? t) tm
    (ref-redundancy (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
@@ -325,7 +326,12 @@
   ;; update ik settings
   (eus_robot::set-link-coords 0 (send ik-root-link :copy-worldcoords))
   (dotimes (i (length ef-coords))
-    (eus_robot_ik::change-target-coords i (send (nth i ef-coords) :worldcoords)))
+    (eus_robot_ik::change-target-coords
+     i
+     (let* ((_c (send (nth i ef-coords) :worldcoords))
+	    (off (nth i offset-coords))
+	    (c (if off (send (send _c :copy-worldcoords) :transform off :world) _c)))
+       c)))
   ;;
   (dotimes (i step-max)
     ;;
