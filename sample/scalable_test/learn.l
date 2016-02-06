@@ -29,8 +29,11 @@
   (:vector
    (&key
     (org-coords (make-coords))
+    (offset-coords)
     (ret v-buf) (i 0))
-   (let* ((c (send self :worldcoords)))
+   (let* ((_c (send self :worldcoords))
+	  (c (if offset-coords (send (send _c :copy-worldcoords)
+				     :transform offset-coords :world) _c)))
      (cond
       ((eq mode :coords)
        (let* (pos rot)
@@ -160,11 +163,14 @@
   (&key
    (ef-coords *ef-coords*)
    (root-link *root-link*)
+   (offset-coords (make-list (length ef-coords)))
    (org-coords (send root-link :worldcoords))
    )
   (apply 'concatenate
          (cons float-vector
-               (send-all ef-coords :vector :org-coords org-coords))))
+               (mapcar #'(lambda (efc off)
+			   (send efc :vector :org-coords org-coords :offset-coords off))
+		       ef-coords offset-coords))))
 
 (defun get-ef-coords-from-vector
   (&key
