@@ -36,9 +36,9 @@
     (send *robot* :fullbody-inverse-kinematics
 	  (append
 	   (list (make-coords :pos (float-vector -270 0 (send *seat* :get-val 'height)))
-		 (make-coords :pos (float-vector 80 0 (+ 50 (send *table* :get-val 'height)))
+		 (make-coords :pos (float-vector 100 0 (+ 50 (send *table* :get-val 'height)))
 			      :rpy (list 0 (deg2rad 0) 0))
-		 (make-coords :pos (float-vector 80 0 (+ 50 (send *table* :get-val 'height)))
+		 (make-coords :pos (float-vector 100 0 (+ 50 (send *table* :get-val 'height)))
 			      :rpy (list 0 (deg2rad 0) 0)))
 	   (send *robot* :legs :end-coords :copy-worldcoords))
 	  :translation-axis '(:y :y :y t t)
@@ -137,24 +137,22 @@
 		 :support-limbs '(:larm :rarm :rleg))
 	   (list :ef-coords
 		 (list larm0 rarm0
-		       (send lleg0 :transform-copy
-			     (make-coords :pos (float-vector 0 0 50))))
+		       (setq lleg0 (send lleg0 :transform-copy
+					 (make-coords :pos (float-vector 0 0 50)))))
 		 :support-limbs '(:larm :rarm :rleg))
 	   (list :ef-coords
 		 (list larm0 rarm0
-		       (send lleg0 :transform-copy
-			     (make-coords :pos (float-vector 0 80 50))))
+		       (setq lleg0 (send lleg0 :transform-copy
+					 (make-coords :pos (float-vector 0 80 0)))))
 		 :support-limbs '(:larm :rarm :rleg))
 	   (list :ef-coords
 		 (list larm0 rarm0
-		       (send lleg0 :transform-copy
-			     (make-coords :pos (float-vector 0 80 0))))
+		       (setq lleg0 (send lleg0 :transform-copy
+					 (make-coords :pos (float-vector 0 0 -50)))))
 		 :support-limbs '(:larm :rarm :rleg))
 	   ;;
 	   (list :ef-coords
-		 (list larm0 rarm0
-		       (send lleg0 :transform-copy
-			     (make-coords :pos (float-vector 0 80 0))))
+		 (list larm0 rarm0 lleg0)
 		 :support-limbs '(:larm :rarm :lleg :rleg)))))
   )
 
@@ -165,7 +163,7 @@
    (step-max 1000)
    (draw? t)
    (traj? t)
-   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 70)))
+   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 80)))
    ret
    &allow-other-keys
    )
@@ -186,6 +184,7 @@
    (step-max 1000)
    (draw? t)
    (traj? t)
+   (step? t)
    (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 70)))
    ret
    &allow-other-keys
@@ -209,10 +208,14 @@
 	   :conf (send now :value)
 	   :root-link-coords (send now :get :root-link-coords))
 	  (eus_robot::configuration-copy-to))
-	 (read-line)
+	 (if step? (read-line))
 	 ))))
   (cpplog::change-output-stream "")
-  ret)
+  (cond
+   (ret
+    (setq ret (reverse ret))
+    (do-until-key (draw-traj-wrapper ret))
+    ret)))
 
 (cond
  ((find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*)
@@ -222,8 +225,7 @@
   (warning-message 6  "run demo ...~%")
   (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
-  (if (send *traj-set* :get :valid)
-      (do-until-key (dolist (elm (send *traj-set* :get :valid)) (draw-wrapper :conf (send elm :value) :root-link-coords (send elm :get :root-link-coords)) (unix::usleep (* 100 1000))))
+  (if (send *traj-set* :get :valid) (draw-traj-wrapper *traj-set*)
     (warning-message 1 "no answer~%"))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
