@@ -197,8 +197,63 @@
 	   	 :support-limbs '(:larm :rarm :lleg :rleg)
 		 :caffe-root-link caffe-rleg0
 		 :ik-root-link ik-rleg0
-		 ))))
-  )
+		 )
+	   ;;
+	   (list :ef-coords
+		 (list (setq larm0
+			     (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 50))))
+		       rarm0 lleg0)
+	   	 :support-limbs '(:rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   (list :ef-coords
+		 (list (setq larm0
+			     (send larm0 :transform-copy (make-coords :pos (float-vector 0 80 0))))
+		       rarm0 lleg0)
+	   	 :support-limbs '(:rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   (list :ef-coords
+		 (list (setq larm0
+			     (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 -50))))
+		       rarm0 lleg0)
+	   	 :support-limbs '(:rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   (list :ef-coords (list larm0 rarm0 lleg0)
+	   	 :support-limbs '(:larm :rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   ;;
+	   (list :ef-coords
+		 (list larm0
+		       (setq rarm0
+			     (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 50))))
+		       lleg0)
+	   	 :support-limbs '(:rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   (list :ef-coords
+		 (list larm0
+		       (setq rarm0
+			     (send rarm0 :transform-copy (make-coords :pos (float-vector 0 80 0))))
+		       lleg0)
+	   	 :support-limbs '(:rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   (list :ef-coords
+		 (list larm0
+		       (setq rarm0
+			     (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 -50))))
+		       lleg0)
+	   	 :support-limbs '(:rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   (list :ef-coords (list larm0 rarm0 lleg0)
+	   	 :support-limbs '(:larm :rarm :lleg :rleg)
+		 :caffe-root-link caffe-rleg0
+		 :ik-root-link ik-rleg0)
+	   ))))
 
 (defun demo-main
   (&rest
