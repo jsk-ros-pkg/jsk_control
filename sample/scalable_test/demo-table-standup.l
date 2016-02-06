@@ -287,7 +287,10 @@
    (offset-coords (make-list (length ef-coords)))
    (joint-list *joint-list1*)
    (redundancy *redundancy*)
-   (support-limbs '(:rarm :larm :rleg :lleg))
+   (support-limbs '(:larm :rarm :lleg :rleg))
+   (support-coords
+    (mapcar '(lambda (k) (send *robot* k :end-coords :copy-worldcoords))
+	    support-limbs))
    (support-face
     (setq
      *support-face*
@@ -298,11 +301,22 @@
 		 '(lambda (v) (float-vector (aref v 0) (aref v 1) 0))
 		 (flatten
 		  (mapcar
-		   '(lambda (k)
-		      (if (find k '(:rarm :larm))
-			  (send *robot* k :end-coords :worldpos)
-			(send (send *robot* :support-polygon k) :vertices)))
-		   support-limbs)))))))
+		   #'(lambda (k c)
+		       (cond
+			((not (find k '(:rleg :lleg)))
+			 (send c :worldpos))
+			(t
+			 (if (not (and (boundp '*leg-support-polygon*) *leg-support-polygon*))
+			     (setq *leg-support-polygon*
+				   (mapcar
+				    #'(lambda (k)
+					(cons k (mapcar #'(lambda (v) (send (send (send *robot* k :end-coords :parent) :worldcoords) :inverse-transform-vector v)) (send (send *robot* :support-polygon k) :vertices))))
+				    '(:lleg :rleg))))
+			 (mapcar
+			  #'(lambda (v)
+			      (send (send (send *robot* k :end-coords :parent) :worldcoords) :transform-vector v))
+			  (cdr (assoc k *leg-support-polygon*))))))
+		   support-limbs support-coords)))))))
    (user-valid-check #'(lambda (cog) t))
    (step-max 300)
    ;;
