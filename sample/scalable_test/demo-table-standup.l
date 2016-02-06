@@ -275,6 +275,7 @@
   (send (or cog (map float-vector '* (float-vector 1 1 0) (send *robot* :centroid)))
 	:draw-on :flush nil :color (float-vector 1 0 0) :size 100 :width 5)
   (send *viewer* :viewsurface :flush)
+  (x::window-main-one)
   )
 
 (defun draw-traj-wrapper
