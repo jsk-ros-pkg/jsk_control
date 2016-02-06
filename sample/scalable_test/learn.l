@@ -89,6 +89,8 @@
   (:nomethod
    (&rest args)
    (send* (send self :worldcoords) (car args) (cdr args)))
+  (:transform-copy
+   (c) (instance vector-coords :init (send (send self :copy-worldcoords) :transform c)))
   )
 
 (defvar *robot* (hrp2jsknt))
