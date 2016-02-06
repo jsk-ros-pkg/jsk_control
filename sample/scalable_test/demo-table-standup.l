@@ -289,7 +289,9 @@
    (redundancy *redundancy*)
    (support-limbs '(:larm :rarm :lleg :rleg))
    (support-coords
-    (mapcar '(lambda (k) (send *robot* k :end-coords :copy-worldcoords))
+    (mapcar '(lambda (k)
+	       (if (find k '(:rarm :larm)) (send *robot* k :end-coords :copy-worldcoords)
+		 (send (send *robot* k :end-coords :parent) :copy-worldcoords)))
 	    support-limbs))
    (support-face
     (setq
@@ -313,8 +315,7 @@
 					(cons k (mapcar #'(lambda (v) (send (send (send *robot* k :end-coords :parent) :worldcoords) :inverse-transform-vector v)) (send (send *robot* :support-polygon k) :vertices))))
 				    '(:lleg :rleg))))
 			 (mapcar
-			  #'(lambda (v)
-			      (send (send (send *robot* k :end-coords :parent) :worldcoords) :transform-vector v))
+			  #'(lambda (v) (send c :transform-vector v))
 			  (cdr (assoc k *leg-support-polygon*))))))
 		   support-limbs support-coords)))))))
    (user-valid-check #'(lambda (cog) t))
