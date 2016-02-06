@@ -277,6 +277,13 @@
   (send *viewer* :viewsurface :flush)
   )
 
+(defun draw-traj-wrapper
+  (traj)
+  (if (atom traj) (setq traj (list traj)))
+  (dolist (trj traj)
+    (dolist (elm (send trj :get :valid))
+      (draw-wrapper :conf (send elm :value) :root-link-coords (send elm :get :root-link-coords)) (unix::usleep (* 100 1000)))))
+
 (defun demo-ik
   (&key
    ;;
@@ -458,7 +465,7 @@
   (setq *traj-set* (demo-main :draw? nil))
   (warning-message 6  "show results ...~%")
   (if (send *traj-set* :get :valid)
-      (do-until-key (dolist (elm (send *traj-set* :get :valid)) (draw-wrapper :conf (send elm :value) :root-link-coords (send elm :get :root-link-coords)) (unix::usleep (* 100 1000))))
+      (do-until-key (draw-traj-wrapper *traj-set*))
     (warning-message 1 "no answer~%"))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
