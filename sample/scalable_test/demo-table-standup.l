@@ -129,28 +129,28 @@
   (setq *seat* (instance four-leg-seat :init :name :seat :depth 1000 :width 500 :height 370))
   (send *seat* :newcoords (make-coords))
   (send *seat* :rotate (deg2rad 90) :z)
-  (send *seat* :translate (float-vector -350 100 0) :world)
+  (send *seat* :translate (float-vector -320 100 0) :world)
   (send *seat* :set-val 'height 400)
   ;;
   (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 230 (send *seat* :get-val 'height)) :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
-  (send *table* :translate (float-vector 120 100 0) :world)
+  (send *table* :translate (float-vector 150 100 0) :world)
   ;;
   ;; setup initial postures
   (setup-hip-end-coords)
   (send *robot* :reset-pose)
-  (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
   (let* ((mv (append (list (send *robot* :get :hip-end-coords))
 		     (send *robot* :arms :end-coords)
 		     (send *robot* :legs :end-coords)))
 	 (ll (mapcar '(lambda (m) (send *robot* :link-list (send m :parent))) mv)))
     (send *robot* :fullbody-inverse-kinematics
 	  (append
-	   (list (make-coords :pos (float-vector -300 0 (send *seat* :get-val 'height)))
-		 (make-coords :pos (float-vector 50 0 (+ 50 (send *table* :get-val 'height)))
+	   (list (make-coords :pos (float-vector -270 0 (send *seat* :get-val 'height)))
+		 (make-coords :pos (float-vector 80 0 (+ 50 (send *table* :get-val 'height)))
 			      :rpy (list 0 (deg2rad 0) 0))
-		 (make-coords :pos (float-vector 50 0 (+ 50 (send *table* :get-val 'height)))
+		 (make-coords :pos (float-vector 80 0 (+ 50 (send *table* :get-val 'height)))
 			      :rpy (list 0 (deg2rad 0) 0)))
 	   (send *robot* :legs :end-coords :copy-worldcoords))
 	  :translation-axis '(:y :y :y t t)
@@ -266,11 +266,11 @@
       (apply 'append buf))))
 
 (defun draw-wrapper
-  (&key (cog nil) (conf (eus_robot::get-configurations)))
+  (&key (cog nil) (conf (eus_robot::get-configurations)) (rleg-coords (make-coords)))
   (send *robot* :reset-pose)
   ;;
   (eus_robot::configuration-copy-from :conf conf)
-  (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
+  (send *robot* :fix-leg-to-coords rleg-coords :rleg)
   (send *viewer* :draw-objects :flush nil)
   (send *support-face* :draw-on :flush nil :width 5)
   (send (or cog (map float-vector '* (float-vector 1 1 0) (send *robot* :centroid)))
@@ -409,14 +409,14 @@
    (step-max 1000)
    (draw? t)
    (traj? t)
-   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 85)))
+   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 60)))
    ret
    &allow-other-keys
    )
   (cpplog::change-output-stream "/dev/null")
   ;; set initial stata
   (send *robot* :angle-vector (copy-seq *init-pose*))
-  (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
   (if draw? (send *viewer* :draw-objects))
   (eus_robot::configuration-copy-to)
   (bench (setq ret (apply 'demo-ik :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check args)))
@@ -441,103 +441,3 @@
   (print *traj-set*)
   ))
 
-
-;; (defun demo-main
-;;   (&key
-;;    (ef-coords *ef-coords*)
-;;    (root-link *root-link*)
-;;    (joint-list *joint-list1*)
-;;    (input *input*)
-;;    (redundancy *redundancy*)
-;;    (step-max 700)
-;;    (av (instantiate float-vector (length joint-list)))
-;;    ret (suc-cnt 0) (cnt 0) tm
-;;    (draw? t) (mode :first) (step? nil)
-;;    ;;
-;;    (sep-vector (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
-;;    (cog (float-vector 0 0 0))
-;;    (traj-set (instance traj-set :init))
-;;    (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 80)))
-;;    )
-;;   ;;
-;;   (cpplog::change-output-stream "/dev/null")
-;;   ;; (setq input (concatenate float-vector input redundancy))
-;;   (send *robot* :angle-vector (copy-seq *init-pose*))
-;;   (send *robot* :fix-leg-to-coords (make-coords :pos (float-vector -30 0 0)) :rleg)
-;;   (if draw? (send *viewer* :draw-objects))
-;;   (eus_robot::configuration-copy-to)
-;;   (bench
-;;    (send traj-set :root (instance traj-elem :init (copy-seq (eus_robot::get-configurations))))
-;;    (dolist (redundancy sep-vector)
-;;      ;; (dotimes (i step-max)
-;;      (dotimes (j (length redundancy))
-;;        (setf (aref input (- (- (length input) 1) j)) (aref redundancy j)))
-;;      ;;(random 1.0)))
-;;      (setq tm (bench2 (caffe::calc-forward-double :isize (length input) :input input
-;; 						  :osize (length av) :output av)))
-;;      (if draw? (warning-message 6 "DNN calc forward: ~A~%" tm))
-;;      ;; (map cons #'(lambda (j a) (send j :joint-angle
-;;      ;; 				       (- (rad2deg a) (send j :joint-angle))
-;;      ;; 				       :relative t))
-;;      ;; 	    joint-list av)
-;;      ;; (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-;;      (setq
-;;       tm
-;;       (bench2
-;;        (progn
-;; 	 ;; (eus_robot::configuration-copy-to)
-;; 	 (map cons
-;; 	      '(lambda (l pos)
-;; 		 (eus_robot::set-configuration (send l :get :id) pos 1))
-;; 	      *links* av)
-;; 	 (eus_robot::forward-kinematics 0)
-;; 	 (setq ret (eus_robot_ik::solve-ik :max 15))
-;; 	 ;; check centroid
-;; 	 (eus_robot::forward-kinematics 0)
-;; 	 (eus_robot::calc-links-centroid :ret cog)
-;; 	 (setf (aref cog 0) (* 1e+3 (aref cog 0)))
-;; 	 (setf (aref cog 1) (* 1e+3 (aref cog 1)))
-;; 	 (setf (aref cog 2) 0)
-;; 	 (if (not (eq (send *support-face* :insidep cog) :inside)) (setq ret 0))
-;; 	 ))
-;;       )
-;;      (if draw? (warning-message 6 "solve IK: ~A~%" tm))
-;;      (setq
-;;       tm
-;;       (bench2
-;;        (progn
-;; 	 (cond
-;; 	  (ret
-;; 	   ;; (eus_robot::configuration-copy-from)
-;; 	   (if (plusp ;;(check-all-collision))
-;; 		(eus_robot::check-all-collide))
-;; 	       (setq ret 0)))))))
-;;      (if draw? (warning-message 6 "collision: ~A~%" tm))
-;;      (incf cnt)
-;;      ;;
-;;      (if (eq t draw?) (draw-wrapper :cog cog))
-;;      (cond
-;;       ((plusp ret)
-;;        (incf suc-cnt)
-;;        ;;
-;;        (let* ((elem (instance traj-elem :init (copy-seq (eus_robot::get-configurations)))))
-;; 	 (send traj-set :add-elem elem)
-;; 	 (if (funcall user-valid-check cog)
-;; 	     (send traj-set :add-valids elem)))
-;;        ;;
-;;        (if (eq :only-valid draw?) (draw-wrapper :cog cog))
-;;        (if step? (read-line))
-;;        (cond
-;; 	((and (eq mode :first)
-;; 	      (let* ((elem
-;; 		      (find-if #'(lambda (valid) (send (send traj-set :root) :find valid))
-;; 			       (send traj-set :valids))))
-;; 		(if elem (send traj-set :put :valid elem))
-;; 		elem))
-;; 	 (return-from nil nil))))
-;;       )))
-;;   (cpplog::change-output-stream "")
-;;   (warning-message 6 "~A/~A samples are valid~%" suc-cnt cnt)
-;;   ;; (eus_robot::configuration-copy-from)
-;;   ;; (send *viewer* :draw-objects)
-;;   traj-set)
