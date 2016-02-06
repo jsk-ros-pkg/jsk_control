@@ -344,10 +344,13 @@
   ;;
   (send traj-set :put :ok nil)
   (send traj-set :root (instance traj-elem :init (copy-seq (eus_robot::get-configurations))))
-  (send (send traj-set :root) :put :root-link-coords
-	(eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
   ;; update ik settings
   (eus_robot::set-link-coords 0 (send ik-root-link :copy-worldcoords))
+  (eus_robot::forward-kinematics)
+  ;;
+  (send (send traj-set :root) :put :root-link-coords
+	(eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
+  ;;
   (dotimes (i (length ef-coords))
     (eus_robot_ik::change-target-coords
      i
