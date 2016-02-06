@@ -205,30 +205,10 @@
    args
    &key
    (step-max 1000)
-   (draw? t)
-   (traj? t)
-   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 80)))
-   ret
-   &allow-other-keys
-   )
-  (cpplog::change-output-stream "/dev/null")
-  ;; set initial stata
-  (send *robot* :angle-vector (copy-seq *init-pose*))
-  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-  (if draw? (send *viewer* :draw-objects))
-  (eus_robot::configuration-copy-to)
-  (bench (setq ret (apply 'demo-ik :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check args)))
-  (cpplog::change-output-stream "")
-  ret)
-
-(defun demo-egress
-  (&rest
-   args
-   &key
-   (step-max 1000)
    (draw? nil)
    (traj? t)
    (step? nil)
+   (animate? t)
    (user-valid-check #'(lambda (cog) (< (abs (aref cog 0)) 70)))
    ret
    &allow-other-keys
@@ -239,6 +219,7 @@
   (send *robot* :fix-leg-to-coords (make-coords) :rleg)
   (if draw? (send *viewer* :draw-objects))
   (eus_robot::configuration-copy-to)
+  (eus_robot::forward-kinematics 0)
   ;;
   (bench
    (dolist (efl *ef-coords-list*)
@@ -252,6 +233,7 @@
 	  :conf (send now :value)
 	  :root-link-coords (send now :get :root-link-coords))
 	 (eus_robot::configuration-copy-to)
+	 (eus_robot::forward-kinematics 0)
 	 (if step? (progn (warning-message 6 "animate?~%")
 			  (draw-traj-wrapper (car ret)) (read-line)))
 	 ))))
@@ -259,7 +241,7 @@
   (cond
    (ret
     (setq ret (reverse ret))
-    (do-until-key (draw-traj-wrapper ret))
+    (if animate? (do-until-key (draw-traj-wrapper ret)))
     ret)))
 
 (cond
@@ -268,12 +250,35 @@
   (warning-message 6  "demo setup ...~%")
   (demo-setup)
   (warning-message 6  "run demo ...~%")
-  (setq *traj-set* (demo-main :draw? nil))
+  (setq *traj-set* (demo-main :draw? nil :animate? nil))
   (warning-message 6  "show results ...~%")
-  (if (send *traj-set* :get :valid) (do-until-key (draw-traj-wrapper *traj-set*))
+  (if *traj-set* (do-until-key (draw-traj-wrapper *traj-set*))
     (warning-message 1 "no answer~%"))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
   (print *traj-set*)
   ))
 
+#|
+
+(defun demo-main
+  (&rest
+   args
+   &key
+   (step-max 1000)
+   (draw? t)
+   (traj? t)
+   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 80)))
+   ret
+   &allow-other-keys
+   )
+  (cpplog::change-output-stream "/dev/null")
+  ;; set initial stata
+  (send *robot* :angle-vector (copy-seq *init-pose*))
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (if draw? (send *viewer* :draw-objects))
+  (eus_robot::configuration-copy-to)
+  (eus_robot::forward-kinematics 0)
+  (bench (setq ret (apply 'demo-ik :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check args)))
+  (cpplog::change-output-stream "")
+  ret)
