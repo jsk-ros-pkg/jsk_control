@@ -18,7 +18,7 @@
   (send *seat* :translate (float-vector -380 100 0) :world)
   (send *seat* :set-val 'height 390)
   ;;
-  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 230 (send *seat* :get-val 'height)) :thick 50))
+  (setq *table* (instance four-leg-seat :init :name :table :depth 1200 :width 400 :height (+ 230 (send *seat* :get-val 'height)) :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
   (send *table* :translate (float-vector 150 100 0) :world)
@@ -144,7 +144,7 @@
 			   ((eq limb :lleg) lleg0)
 			   (t ik-rleg0))))
 		    (cond
-		     ((numberp move) (send c :rotate (deg2rad move)))
+		     ((numberp move) (send c :rotate (deg2rad move) :z))
 		     ((vectorp move) (send c :translate move :world))
 		     ((subclassp (class move) coordinates)
 		      (send c :transform move :world))
@@ -156,7 +156,6 @@
 	:caffe-root-link caffe-rleg0
 	:ik-root-link ik-rleg0))
 
-;; interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm 'nop))
 (defun interactive-demo-proc
   (&rest args
 	 &key
@@ -182,14 +181,15 @@
   (cond
    (suc?
     (setq *ef-coords-list* (append *ef-coords-list* ef-coords-list))
-    (send *viewer* :draw-objects)
+    ;; (send *viewer* :draw-objects)
+    (draw-wrapper)
     (warning-message 6 "demo-proc succeeded~%")
     )
    (t
     ;;
     ;; revert
     (send *robot* :angle-vector (copy-seq angle-vector-org))
-    (send *robot* :fix-leg-to-coords (send rleg-coords-org :copy-worldcoords))
+    (send *robot* :fix-leg-to-coords (send rleg-coords-org :copy-worldcoords) :rleg)
     (send *viewer* :draw-objects)
     (eus_robot::configuration-copy-to)
     (eus_robot::forward-kinematics 0)
@@ -221,7 +221,9 @@
 	   :root-link-coords (send now :get :root-link-coords))
 	  (eus_robot::configuration-copy-to)
 	  (eus_robot::forward-kinematics 0)
-	  (send *viewer* :draw-objects))
+	  ;; (send *viewer* :draw-objects)
+	  (draw-wrapper)
+	  )
       (warning-message 1 "latest ret has no posture~%")))))
 
 (defun demo-proc
@@ -296,3 +298,21 @@
   (print *traj-set*)
   ))
 
+
+#|
+
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm 'nop)))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm (float-vector 0 0 50))))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm -30)))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm (float-vector 80 0 0))))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm (float-vector 0 0 -50))))
+;;
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm 'nop)))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 50))))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 80 120 0))))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 -50))))
+;;
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 'nop)))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 50))))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 20 80 0))))
+(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg -30)))
