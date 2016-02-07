@@ -126,8 +126,7 @@
     (if (probe-file "../egress-ef-coords-list.l") (require "../egress-ef-coords-list.l")))
   )
 
-
-(defun demo-main
+(defun demo-proc
   (&rest
    args
    &key
@@ -138,6 +137,38 @@
    (animate? t)
    (user-valid-check #'(lambda (cog) (< (abs (aref cog 0)) 70)))
    ret
+   (ef-coords-list *ef-coords-list*)
+   &allow-other-keys
+   )
+  (dolist (efl ef-coords-list)
+    (push (apply 'demo-ik (append efl (list :step-max step-max :draw? draw? :traj? traj? :step? nil :user-valid-check user-valid-check) args)) ret)
+    (setq *ret* ret)
+    (setq *last-efl* efl)
+    (if (not (send (car ret) :get :valid)) (return-from nil (setq ret nil))
+      (let* ((elems (send (car ret) :get :valid))
+	     (now (car (last elems))))
+	(if draw? (warning-message 6 "success~%"))
+	;; (bench
+	(eus_robot::configuration-copy-from
+	 :conf (send now :value)
+	 :root-link-coords (send now :get :root-link-coords))
+	(eus_robot::configuration-copy-to)
+	(eus_robot::forward-kinematics 0)
+	(if step? (progn (warning-message 6 "animate?~%")
+			 (draw-traj-wrapper (car ret)) (read-line)))
+	)))
+  (cond
+   (ret
+    (setq ret (reverse ret))
+    (if animate? (do-until-key (draw-traj-wrapper ret)))
+    ret)))
+
+(defun demo-main
+  (&rest
+   args
+   &key
+   (draw? nil)
+   ret-buf
    &allow-other-keys
    )
   (cpplog::change-output-stream "/dev/null")
@@ -148,30 +179,9 @@
   (eus_robot::configuration-copy-to)
   (eus_robot::forward-kinematics 0)
   ;;
-  (bench
-   (dolist (efl *ef-coords-list*)
-     (push (apply 'demo-ik (append efl (list :step-max step-max :draw? draw? :traj? traj? :step? nil :user-valid-check user-valid-check) args)) ret)
-     (setq *ret* ret)
-     (setq *last-efl* efl)
-     (if (not (send (car ret) :get :valid)) (return-from nil (setq ret nil))
-       (let* ((elems (send (car ret) :get :valid))
-	      (now (car (last elems))))
-	 (if draw? (warning-message 6 "success~%"))
-	 ;; (bench
-	 (eus_robot::configuration-copy-from
-	  :conf (send now :value)
-	  :root-link-coords (send now :get :root-link-coords))
-	 (eus_robot::configuration-copy-to)
-	 (eus_robot::forward-kinematics 0)
-	 (if step? (progn (warning-message 6 "animate?~%")
-			  (draw-traj-wrapper (car ret)) (read-line)))
-	 ))))
+  (bench (setq ret-buf (apply 'demo-proc args)))
   (cpplog::change-output-stream "")
-  (cond
-   (ret
-    (setq ret (reverse ret))
-    (if animate? (do-until-key (draw-traj-wrapper ret)))
-    ret)))
+  ret-buf)
 
 (cond
  ((find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*)
