@@ -126,6 +126,92 @@
     (if (probe-file "../egress-ef-coords-list.l") (require "../egress-ef-coords-list.l")))
   )
 
+(defun gen-move-limb-ef-coords-list
+  (limb move
+	&key
+	(support-limbs (remove limb '(:larm :rarm :lleg :rleg)))
+	(larm0 (send (nth 0 *ef-coords*) :copy-worldcoords))
+	(rarm0 (send (nth 1 *ef-coords*) :copy-worldcoords))
+	(lleg0 (send (nth 2 *ef-coords*) :copy-worldcoords))
+	(caffe-rleg0 (send (send *root-link* :worldcoords) :copy-worldcoords))
+	(ik-rleg0 (send (send (send *robot* :get :root-link) :worldcoords)
+			:copy-worldcoords))
+	(caffe-ik-rleg0 (send caffe-rleg0 :transformation ik-rleg0 :local))
+	;;
+	(coords (let* ((c (cond
+			   ((eq limb :larm) larm0)
+			   ((eq limb :rarm) rarm0)
+			   ((eq limb :lleg) lleg0)
+			   (t ik-rleg0))))
+		    (cond
+		     ((numberp move) (send c :rotate (deg2rad move)))
+		     ((vectorp move) (send c :translate move :world))
+		     ((subclassp (class (make-coords)) coordinates)
+		      (send c :transform move :world))
+		     ((functionp move) (funcall c))))))
+  (setq caffe-rleg0 (send caffe-rleg0 :transform ik-rleg0 :local))
+  (list :ef-coords (mapcar '(lambda (c) (instance vector-coords :init c))
+			   (list larm0 rarm0 lleg0))
+	:support-limbs support-limbs
+	:caffe-root-link caffe-rleg0
+	:ik-root-link ik-rleg0))
+
+(defun interactive-demo-proc
+  (&rest args
+	 &key
+	 (ef-coords-list)
+	 (angle-vector-org (copy-seq (send *robot* :angle-vector)))
+	 (rleg-coords-org (send *robot* :rleg :end-coords :copy-worldcoords))
+	 (ret-org (if (not (boundp '*ret*)) (setq *ret* nil) *ret*))
+	 suc?
+	 &allow-other-keys)
+  ;;
+  (send *robot* :angle-vector (copy-seq angle-vector-org))
+  (send *robot* :fix-leg-to-coords (send rleg-coords-org :copy-worldcoords) :rleg)
+  (send *viewer* :draw-objects)
+  (eus_robot::configuration-copy-to)
+  (eus_robot::forward-kinematics 0)
+  ;;
+  (bench (setq suc? (apply 'demo-proc :ef-coords-list ef-coords-list :ret *ret* args)))
+  ;;
+  (cond
+   (suc?
+    (setq *ef-coords-list* (append *ef-coords-list* (list ef-coords-list)))
+    (warning-message 6 "demo-proc succeeded~%")
+    )
+   (t
+    ;;
+    ;; revert
+    (send *robot* :angle-vector (copy-seq angle-vector-org))
+    (send *robot* :fix-leg-to-coords (send rleg-coords-org :copy-worldcoords))
+    (send *viewer* :draw-objects)
+    (eus_robot::configuration-copy-to)
+    (eus_robot::forward-kinematics 0)
+    ;;
+    (setq *ret* ret-org)
+    ;;
+    (warning-message 1 "demo-proc has no answer, reverted~%")
+    )))
+
+(defun revert-ret
+  nil
+  (cond
+   ((not (and (boundp '*ret*) *ret*))
+    (warning-message 1 "empty ret detected~%"))
+   (t
+    (setq *ret-org* (car *ret*))
+    (setq *ret* (cdr *ret*))
+    (if (send *ret-org* :get :valid)
+	(let* ((elems (send *ret-org* :get :valid))
+	       (now (car (last elems))))
+	  (eus_robot::configuration-copy-from
+	   :conf (send now :value)
+	   :root-link-coords (send now :get :root-link-coords))
+	  (eus_robot::configuration-copy-to)
+	  (eus_robot::forward-kinematics 0)
+	  (send *viewer* :draw-objects))
+      (warning-message 1 "latest ret has no posture~%")))))
+
 (defun demo-proc
   (&rest
    args
