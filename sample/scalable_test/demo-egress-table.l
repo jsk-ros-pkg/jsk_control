@@ -146,7 +146,7 @@
 		    (cond
 		     ((numberp move) (send c :rotate (deg2rad move)))
 		     ((vectorp move) (send c :translate move :world))
-		     ((subclassp (class (make-coords)) coordinates)
+		     ((subclassp (class move) coordinates)
 		      (send c :transform move :world))
 		     ((functionp move) (funcall c))))))
   (setq caffe-rleg0 (send caffe-rleg0 :transform ik-rleg0 :local))
@@ -156,6 +156,7 @@
 	:caffe-root-link caffe-rleg0
 	:ik-root-link ik-rleg0))
 
+;; interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm 'nop))
 (defun interactive-demo-proc
   (&rest args
 	 &key
@@ -163,8 +164,11 @@
 	 (angle-vector-org (copy-seq (send *robot* :angle-vector)))
 	 (rleg-coords-org (send *robot* :rleg :end-coords :copy-worldcoords))
 	 (ret-org (if (not (boundp '*ret*)) (setq *ret* nil) *ret*))
+	 (animate? nil)
 	 suc?
 	 &allow-other-keys)
+  ;;
+  (cpplog::change-output-stream "/dev/null")
   ;;
   (send *robot* :angle-vector (copy-seq angle-vector-org))
   (send *robot* :fix-leg-to-coords (send rleg-coords-org :copy-worldcoords) :rleg)
@@ -172,11 +176,13 @@
   (eus_robot::configuration-copy-to)
   (eus_robot::forward-kinematics 0)
   ;;
-  (bench (setq suc? (apply 'demo-proc :ef-coords-list ef-coords-list :ret *ret* args)))
+  (bench (setq suc? (apply 'demo-proc :ef-coords-list ef-coords-list
+			   :ret *ret* :animate? animate? args)))
   ;;
   (cond
    (suc?
-    (setq *ef-coords-list* (append *ef-coords-list* (list ef-coords-list)))
+    (setq *ef-coords-list* (append *ef-coords-list* ef-coords-list))
+    (send *viewer* :draw-objects)
     (warning-message 6 "demo-proc succeeded~%")
     )
    (t
@@ -191,7 +197,10 @@
     (setq *ret* ret-org)
     ;;
     (warning-message 1 "demo-proc has no answer, reverted~%")
-    )))
+    )
+   )
+  (cpplog::change-output-stream "")
+  )
 
 (defun revert-ret
   nil
@@ -201,8 +210,11 @@
    (t
     (setq *ret-org* (car *ret*))
     (setq *ret* (cdr *ret*))
-    (if (send *ret-org* :get :valid)
-	(let* ((elems (send *ret-org* :get :valid))
+    (setq *ret-now* (car *ret*))
+    (setq *last-efl* (car (last *ef-coords-list*)))
+    (setq *ef-coords-list* (butlast *ef-coords-list*))
+    (if (send *ret-now* :get :valid)
+	(let* ((elems (send *ret-now* :get :valid))
 	       (now (car (last elems))))
 	  (eus_robot::configuration-copy-from
 	   :conf (send now :value)
