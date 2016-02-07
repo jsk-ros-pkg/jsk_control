@@ -198,26 +198,3 @@
   (print *traj-set*)
   ))
 
-#|
-
-(defun demo-main
-  (&rest
-   args
-   &key
-   (step-max 1000)
-   (draw? t)
-   (traj? t)
-   (user-valid-check #'(lambda (cog) (< (print (abs (aref cog 0))) 80)))
-   ret
-   &allow-other-keys
-   )
-  (cpplog::change-output-stream "/dev/null")
-  ;; set initial stata
-  (send *robot* :angle-vector (copy-seq *init-pose*))
-  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-  (if draw? (send *viewer* :draw-objects))
-  (eus_robot::configuration-copy-to)
-  (eus_robot::forward-kinematics 0)
-  (bench (setq ret (apply 'demo-ik :step-max step-max :draw? draw? :traj? traj? :user-valid-check user-valid-check args)))
-  (cpplog::change-output-stream "")
-  ret)
