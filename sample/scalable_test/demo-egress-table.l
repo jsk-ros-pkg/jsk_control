@@ -12,13 +12,13 @@
   (require "package://eus_robot/euslisp/eus_qp_collide.l")
   ;;
   ;; create environment objects
-  (setq *seat* (instance four-leg-seat :init :name :seat :depth 800 :width 500 :height 400 :thick 300))
+  (setq *seat* (instance four-leg-seat :init :name :seat :depth 800 :width 500 :height 350 :thick 300))
   (send *seat* :newcoords (make-coords))
   (send *seat* :rotate (deg2rad 90) :z)
   (send *seat* :translate (float-vector -380 100 0) :world)
   (send *seat* :set-val 'height (+ 20 (send *seat* :get-val 'height))) ;; add margin
   ;;
-  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 230 390) :thick 50))
+  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height 630 :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
   (send *table* :translate (float-vector 150 100 0) :world)
@@ -36,22 +36,38 @@
 	 (ll (mapcar '(lambda (m) (send *robot* :link-list (send m :parent))) mv)))
     (send *robot* :fullbody-inverse-kinematics
 	  (append
-	   (list (make-coords :pos (float-vector -270 0 (send *seat* :get-val 'height)))
-		 (make-coords :pos (float-vector 150 (+ bc 250)
-						 (+ 50
-						    (send *table* :get-val 'height)))
-			      :rpy (list (deg2rad -20) (deg2rad 0) 0))
+	   (list (make-coords :pos (float-vector -270 bc (send *seat* :get-val 'height)))
+		 ;;
+		 ;; larm
+		 ;; (make-coords :pos (float-vector 130 (+ bc 250)
+		 ;; 				 (+ 100
+		 ;; 				    (send *table* :get-val 'height)))
+		 ;; 	      :rpy (list (deg2rad 0) (deg2rad 90) (deg2rad 0)))
+		 ;; (make-coords :pos (float-vector -200 (+ bc 250)
+		 ;; 				 (+ 100
+		 ;; 				    (send *seat* :get-val 'height)))
+		 ;; 	      :rpy (list (deg2rad 0) (deg2rad 90) (deg2rad 0)))
+		 (make-coords :pos (float-vector 130 (+ bc 250)
+		 				 (+ 50
+		 				    (send *table* :get-val 'height)))
+		 	      :rpy (list (deg2rad -20) (deg2rad 0) 0))
+		 ;;
+		 ;; rarm
+		 ;; (make-coords :pos (float-vector 130 (- bc 250)
+		 ;; 				 (+ 100
+		 ;; 				    (send *table* :get-val 'height)))
+		 ;; 	      :rpy (list (deg2rad 0) (deg2rad 90) (deg2rad 0)))
 		 ;; (make-coords :pos (float-vector -200 (- bc 250)
 		 ;; 				 (+ 100
 		 ;; 				    (send *seat* :get-val 'height)))
 		 ;; 	      :rpy (list (deg2rad 0) (deg2rad 90) (deg2rad 0)))
-		 (make-coords :pos (float-vector 150 (- bc 250)
+		 (make-coords :pos (float-vector 130 (- bc 250)
 		 				 (+ 50
 		 				    (send *table* :get-val 'height)))
 		 	      :rpy (list (deg2rad +20) (deg2rad 0) 0))
 		 )
 	   (send *robot* :legs :end-coords :copy-worldcoords))
-	  :translation-axis '(:y t t t t)
+	  :translation-axis '(t t t t t)
 	  :move-target mv
 	  :link-list ll
 	  :debug-view :no-message
@@ -284,7 +300,7 @@
    (traj? t)
    (step? nil)
    (animate? t)
-   (user-valid-check #'(lambda (cog) (< (abs (aref cog 0)) 70)))
+   (user-valid-check #'(lambda (cog) t)); (< (abs (aref cog 0)) 70)))
    ret
    (ef-coords-list *ef-coords-list*)
    &allow-other-keys
@@ -349,7 +365,7 @@
 
 #|
 
-;; (interactive-demo-proc-detach :larm (float-vector 0 80 30))
-(interactive-demo-proc-detach :rarm (float-vector 0 80 30))
 (interactive-demo-proc-detach :lleg (float-vector 0 80 30))
 (interactive-demo-proc-detach :rleg (float-vector 0 80 30))
+(interactive-demo-proc-detach :larm (float-vector 0 80 30))
+(interactive-demo-proc-detach :rarm (float-vector 0 80 30))
