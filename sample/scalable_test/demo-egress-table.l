@@ -18,7 +18,7 @@
   (send *seat* :translate (float-vector -380 100 0) :world)
   (send *seat* :set-val 'height 390)
   ;;
-  (setq *table* (instance four-leg-seat :init :name :table :depth 900 :width 400 :height (+ 230 (send *seat* :get-val 'height)) :thick 50))
+  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 230 (send *seat* :get-val 'height)) :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
   (send *table* :translate (float-vector 150 100 0) :world)
@@ -37,10 +37,10 @@
     (send *robot* :fullbody-inverse-kinematics
 	  (append
 	   (list (make-coords :pos (float-vector -270 0 (send *seat* :get-val 'height)))
-		 (make-coords :pos (float-vector 150 (+ bc 200)
+		 (make-coords :pos (float-vector 150 (+ bc 250)
 						 (+ 50 (send *table* :get-val 'height)))
 			      :rpy (list (deg2rad -20) (deg2rad 0) 0))
-		 (make-coords :pos (float-vector 150 (- bc 200)
+		 (make-coords :pos (float-vector 150 (- bc 250)
 						 (+ 50 (send *table* :get-val 'height)))
 			      :rpy (list (deg2rad +20) (deg2rad 0) 0)))
 	   (send *robot* :legs :end-coords :copy-worldcoords))
@@ -336,5 +336,7 @@
 
 #|
 
+;; (interactive-demo-proc-detach :larm (float-vector 0 80 30))
 (interactive-demo-proc-detach :rarm (float-vector 0 80 30))
 (interactive-demo-proc-detach :lleg (float-vector 0 80 30))
+(interactive-demo-proc-detach :rleg (float-vector 0 80 30))
