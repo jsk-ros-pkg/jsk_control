@@ -12,13 +12,13 @@
   (require "package://eus_robot/euslisp/eus_qp_collide.l")
   ;;
   ;; create environment objects
-  (setq *seat* (instance four-leg-seat :init :name :seat :depth 800 :width 500 :height 370 :thick 300))
+  (setq *seat* (instance four-leg-seat :init :name :seat :depth 800 :width 500 :height 400 :thick 300))
   (send *seat* :newcoords (make-coords))
   (send *seat* :rotate (deg2rad 90) :z)
   (send *seat* :translate (float-vector -380 100 0) :world)
-  (send *seat* :set-val 'height 390)
+  (send *seat* :set-val 'height (+ 20 (send *seat* :get-val 'height))) ;; add margin
   ;;
-  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 230 (send *seat* :get-val 'height)) :thick 50))
+  (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height (+ 230 390) :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
   (send *table* :translate (float-vector 150 100 0) :world)
@@ -41,7 +41,7 @@
 						 (+ 50
 						    (send *table* :get-val 'height)))
 			      :rpy (list (deg2rad -20) (deg2rad 0) 0))
-		 ;; (make-coords :pos (float-vector -250 (- bc 250)
+		 ;; (make-coords :pos (float-vector -200 (- bc 250)
 		 ;; 				 (+ 100
 		 ;; 				    (send *seat* :get-val 'height)))
 		 ;; 	      :rpy (list (deg2rad 0) (deg2rad 90) (deg2rad 0)))
@@ -350,6 +350,6 @@
 #|
 
 ;; (interactive-demo-proc-detach :larm (float-vector 0 80 30))
-(interactive-demo-proc-detach :rarm (float-vector 0 80 30) -20)
+(interactive-demo-proc-detach :rarm (float-vector 0 80 30))
 (interactive-demo-proc-detach :lleg (float-vector 0 80 30))
 (interactive-demo-proc-detach :rleg (float-vector 0 80 30))
