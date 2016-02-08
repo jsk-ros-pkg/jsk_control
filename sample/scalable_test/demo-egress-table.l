@@ -42,7 +42,8 @@
 			      :rpy (list (deg2rad -20) (deg2rad 0) 0))
 		 (make-coords :pos (float-vector 150 (- bc 250)
 						 (+ 50 (send *table* :get-val 'height)))
-			      :rpy (list (deg2rad +20) (deg2rad 0) 0)))
+			      :rpy (list (deg2rad +20) (deg2rad 0) 0))
+		 )
 	   (send *robot* :legs :end-coords :copy-worldcoords))
 	  :translation-axis '(:y t t t t)
 	  :move-target mv
@@ -172,9 +173,14 @@
 (defvar *last-detach-results*)
 (defvar *detach-results*)
 (defun interactive-demo-proc-detach
-  (limb vec)
+  (limb vec &optional (rot))
   (setq *last-detach-results* nil)
-  (dolist (move (list (scale 0 vec) (map float-vector '* (float-vector 0 0 1) vec) (map float-vector '* (float-vector 1 1 0) vec) (map float-vector '* (float-vector 0 0 -1) vec)))
+  (dolist (move (append (list (map float-vector '* (float-vector 0 0 0) vec)
+			      (map float-vector '* (float-vector 0 0 1) vec)
+			      (map float-vector '* (float-vector 1 1 0) vec))
+			(if rot (list rot))
+			(list
+			 (map float-vector '* (float-vector 0 0 -1) vec))))
     (push (interactive-demo-proc
 	   :ef-coords-list (list (gen-move-limb-ef-coords-list limb move)))
 	  *last-detach-results*)
@@ -337,6 +343,6 @@
 #|
 
 ;; (interactive-demo-proc-detach :larm (float-vector 0 80 30))
-(interactive-demo-proc-detach :rarm (float-vector 0 80 30))
+(interactive-demo-proc-detach :rarm (float-vector 0 80 30) -20)
 (interactive-demo-proc-detach :lleg (float-vector 0 80 30))
 (interactive-demo-proc-detach :rleg (float-vector 0 80 30))
