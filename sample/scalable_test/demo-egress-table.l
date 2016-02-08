@@ -169,6 +169,28 @@
 	:caffe-root-link caffe-rleg0
 	:ik-root-link ik-rleg0))
 
+(defvar *last-detach-results*)
+(defvar *detach-results*)
+(defun interactive-demo-proc-detach
+  (limb vec)
+  (setq *last-detach-results* nil)
+  (dolist (move (list (scale 0 vec) (map float-vector '* (float-vector 0 0 1) vec) (map float-vector '* (float-vector 1 1 0) vec) (map float-vector '* (float-vector 0 0 -1) vec)))
+    (push (interactive-demo-proc
+	   :ef-coords-list (list (gen-move-limb-ef-coords-list limb move)))
+	  *last-detach-results*)
+    (if (not (car *last-detach-results*))
+	(progn (push *last-detach-results* *detach-results*)
+	       (revert-interactive-demo-proc-detach)
+	       (return-from nil (setq *last-detach-results* nil)))))
+  (if *last-detach-results* (push *last-detach-results* *detach-results*))
+  )
+
+(defun revert-interactive-demo-proc-detach
+  nil
+  (setq *last-detach-results* (car *detach-results*))
+  (setq *detach-results* (cdr *detach-results*))
+  (dolist (l *last-detach-results*) (if l (revert-ret))))
+
 (defun interactive-demo-proc
   (&rest args
 	 &key
@@ -213,6 +235,7 @@
     )
    )
   (cpplog::change-output-stream "")
+  suc?
   )
 
 (defun revert-ret
@@ -313,104 +336,5 @@
 
 #|
 
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector -10 80 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm -10)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm -10)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 30 50 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 100 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 50))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 100 0))))
-;;(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm -30)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 -50))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 100 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 100 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 0 -30))))
-
-
-
-
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 50 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 10)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector -10 50 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 10)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector -10 50 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 10)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector -50 10 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 10)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector -50 0 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 50))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 100 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm -30)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 -50))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 100 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg 20)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector -30 50 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :lleg (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 100 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rleg (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 30))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 100 0))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :rarm (float-vector 0 0 -30))))
-
-;;
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm 'nop)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm (float-vector 0 0 50))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm 30)))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm (float-vector -100 100 100))))
-(interactive-demo-proc :ef-coords-list (list (gen-move-limb-ef-coords-list :larm (float-vector 0 0 -50))))
-
+(interactive-demo-proc-detach :rarm (float-vector 0 80 30))
+(interactive-demo-proc-detach :lleg (float-vector 0 80 30))
