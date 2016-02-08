@@ -38,11 +38,17 @@
 	  (append
 	   (list (make-coords :pos (float-vector -270 0 (send *seat* :get-val 'height)))
 		 (make-coords :pos (float-vector 150 (+ bc 250)
-						 (+ 50 (send *table* :get-val 'height)))
+						 (+ 50
+						    (send *table* :get-val 'height)))
 			      :rpy (list (deg2rad -20) (deg2rad 0) 0))
+		 ;; (make-coords :pos (float-vector -250 (- bc 250)
+		 ;; 				 (+ 100
+		 ;; 				    (send *seat* :get-val 'height)))
+		 ;; 	      :rpy (list (deg2rad 0) (deg2rad 90) (deg2rad 0)))
 		 (make-coords :pos (float-vector 150 (- bc 250)
-						 (+ 50 (send *table* :get-val 'height)))
-			      :rpy (list (deg2rad +20) (deg2rad 0) 0))
+		 				 (+ 50
+		 				    (send *table* :get-val 'height)))
+		 	      :rpy (list (deg2rad +20) (deg2rad 0) 0))
 		 )
 	   (send *robot* :legs :end-coords :copy-worldcoords))
 	  :translation-axis '(:y t t t t)
@@ -51,6 +57,7 @@
 	  :debug-view :no-message
 	  :target-centroid-pos nil
 	  ))
+  (send-all (send *robot* :hand :arms) :grasp-pose)
   (send-all (send *robot* :links) :worldcoords)
   (setq *input* (get-vector-from-ef-coords :ef-coords *ef-coords* :root-link *root-link*))
   (setq *support-face*

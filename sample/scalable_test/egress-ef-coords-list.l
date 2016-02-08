@@ -24,7 +24,7 @@
 	 (list :ef-coords
 	       (list larm0 rarm0
 		     (setq lleg0 (send lleg0 :transform-copy
-				       (make-coords :pos (float-vector 0 0 50)))))
+				       (make-coords :pos (float-vector 0 0 30)))))
 	       :support-limbs '(:larm :rarm :rleg)
 	       :caffe-root-link caffe-rleg0
 	       :ik-root-link ik-rleg0)
@@ -38,7 +38,7 @@
 	 (list :ef-coords
 	       (list larm0 rarm0
 		     (setq lleg0 (send lleg0 :transform-copy
-				       (make-coords :pos (float-vector 0 0 -50)))))
+				       (make-coords :pos (float-vector 0 0 -30)))))
 	       :support-limbs '(:larm :rarm :rleg)
 	       :caffe-root-link caffe-rleg0
 	       :ik-root-link ik-rleg0)
@@ -53,10 +53,10 @@
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
 	       (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
-				       :translate (float-vector 0 0 50) :world))
+				       :translate (float-vector 0 0 30) :world))
 	       :ik-root-link
 	       (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
-				    :translate (float-vector 0 0 50) :world)))
+				    :translate (float-vector 0 0 30) :world)))
 	 (list :ef-coords (list larm0 rarm0 lleg0)
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
@@ -69,10 +69,10 @@
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
 	       (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
-				       :translate (float-vector 0 0 -50) :world))
+				       :translate (float-vector 0 0 -30) :world))
 	       :ik-root-link
 	       (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
-				    :translate (float-vector 0 0 -50) :world)))
+				    :translate (float-vector 0 0 -30) :world)))
 	 (list :ef-coords (list larm0 rarm0 lleg0)
 	       :support-limbs '(:larm :rarm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -82,7 +82,7 @@
 	 ;; move larm
 	 (list :ef-coords
 	       (list (setq larm0
-			   (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 50))))
+			   (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 30))))
 		     rarm0 lleg0)
 	       :support-limbs '(:rarm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -96,7 +96,7 @@
 	       :ik-root-link ik-rleg0)
 	 (list :ef-coords
 	       (list (setq larm0
-			   (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 -50))))
+			   (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 -30))))
 		     rarm0 lleg0)
 	       :support-limbs '(:rarm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -110,7 +110,7 @@
 	 (list :ef-coords
 	       (list larm0
 		     (setq rarm0
-			   (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 50))))
+			   (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 30))))
 		     lleg0)
 	       :support-limbs '(:larm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -126,7 +126,7 @@
 	 (list :ef-coords
 	       (list larm0
 		     (setq rarm0
-			   (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 -50))))
+			   (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 -30))))
 		     lleg0)
 	       :support-limbs '(:larm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -143,7 +143,7 @@
 	 (list :ef-coords
 	       (list larm0 rarm0
 		     (setq lleg0 (send lleg0 :transform-copy
-				       (make-coords :pos (float-vector 0 0 50)))))
+				       (make-coords :pos (float-vector 0 0 30)))))
 	       :support-limbs '(:larm :rarm :rleg)
 	       :caffe-root-link caffe-rleg0
 	       :ik-root-link ik-rleg0)
@@ -157,7 +157,7 @@
 	 (list :ef-coords
 	       (list larm0 rarm0
 		     (setq lleg0 (send lleg0 :transform-copy
-				       (make-coords :pos (float-vector 0 0 -50)))))
+				       (make-coords :pos (float-vector 0 0 -30)))))
 	       :support-limbs '(:larm :rarm :rleg)
 	       :caffe-root-link caffe-rleg0
 	       :ik-root-link ik-rleg0)
@@ -172,10 +172,10 @@
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
 	       (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
-				       :translate (float-vector 0 0 50) :world))
+				       :translate (float-vector 0 0 30) :world))
 	       :ik-root-link
 	       (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
-				    :translate (float-vector 0 0 50) :world)))
+				    :translate (float-vector 0 0 30) :world)))
 	 (list :ef-coords (list larm0 rarm0 lleg0)
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
@@ -188,10 +188,10 @@
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
 	       (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
-				       :translate (float-vector 0 0 -50) :world))
+				       :translate (float-vector 0 0 -30) :world))
 	       :ik-root-link
 	       (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
-				    :translate (float-vector 0 0 -50) :world)))
+				    :translate (float-vector 0 0 -30) :world)))
 	 (list :ef-coords (list larm0 rarm0 lleg0)
 	       :support-limbs '(:larm :rarm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -201,7 +201,7 @@
 	 ;; move larm
 	 (list :ef-coords
 	       (list (setq larm0
-			   (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 50))))
+			   (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 30))))
 		     rarm0 lleg0)
 	       :support-limbs '(:rarm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -215,7 +215,7 @@
 	       :ik-root-link ik-rleg0)
 	 (list :ef-coords
 	       (list (setq larm0
-			   (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 -50))))
+			   (send larm0 :transform-copy (make-coords :pos (float-vector 0 0 -30))))
 		     rarm0 lleg0)
 	       :support-limbs '(:rarm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -229,7 +229,7 @@
 	 (list :ef-coords
 	       (list larm0
 		     (setq rarm0
-			   (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 50))))
+			   (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 30))))
 		     lleg0)
 	       :support-limbs '(:larm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -245,7 +245,7 @@
 	 (list :ef-coords
 	       (list larm0
 		     (setq rarm0
-			   (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 -50))))
+			   (send rarm0 :transform-copy (make-coords :pos (float-vector 0 0 -30))))
 		     lleg0)
 	       :support-limbs '(:larm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
@@ -263,7 +263,7 @@
 	 (list :ef-coords
 	       (list larm0 rarm0
 		     (setq lleg0 (send lleg0 :transform-copy
-				       (make-coords :pos (float-vector 0 0 50)))))
+				       (make-coords :pos (float-vector 0 0 30)))))
 	       :support-limbs '(:larm :rarm :rleg)
 	       :caffe-root-link caffe-rleg0
 	       :ik-root-link ik-rleg0)
@@ -277,7 +277,7 @@
 	 (list :ef-coords
 	       (list larm0 rarm0
 		     (setq lleg0 (send lleg0 :transform-copy
-				       (make-coords :pos (float-vector 0 0 -50)))))
+				       (make-coords :pos (float-vector 0 0 -30)))))
 	       :support-limbs '(:larm :rarm :rleg)
 	       :caffe-root-link caffe-rleg0
 	       :ik-root-link ik-rleg0)
@@ -292,10 +292,10 @@
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
 	       (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
-				       :translate (float-vector 0 0 50) :world))
+				       :translate (float-vector 0 0 30) :world))
 	       :ik-root-link
 	       (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
-				    :translate (float-vector 0 0 50) :world)))
+				    :translate (float-vector 0 0 30) :world)))
 	 (list :ef-coords (list larm0 rarm0 lleg0)
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
@@ -308,10 +308,10 @@
 	       :support-limbs '(:larm :rarm :lleg)
 	       :caffe-root-link
 	       (setq caffe-rleg0 (send (send caffe-rleg0 :copy-worldcoords)
-				       :translate (float-vector 0 0 -50) :world))
+				       :translate (float-vector 0 0 -30) :world))
 	       :ik-root-link
 	       (setq ik-rleg0 (send (send ik-rleg0 :copy-worldcoords)
-				    :translate (float-vector 0 0 -50) :world)))
+				    :translate (float-vector 0 0 -30) :world)))
 	 (list :ef-coords (list larm0 rarm0 lleg0)
 	       :support-limbs '(:larm :rarm :lleg :rleg)
 	       :caffe-root-link caffe-rleg0
