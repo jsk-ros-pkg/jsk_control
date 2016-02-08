@@ -21,7 +21,7 @@
   (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height 630 :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
-  (send *table* :translate (float-vector 150 100 0) :world)
+  (send *table* :translate (float-vector 130 100 0) :world)
   ;;
   ;; setup initial postures
   (send-all (send *robot* :joint-list) :set-val 'joint-min-max-table nil)
@@ -158,19 +158,21 @@
 	&key
 	(last-ef-coords
 	 (if *ef-coords-list*
-	     (append (cadr (member :ef-coords (car (last *ef-coords-list*))))
-		     (list (cadr (member :caffe-root-link (car (last *ef-coords-list*))))
-			   (cadr (member :ik-root-link (car (last *ef-coords-list*))))))))
+	     (send-all
+	      (append (cadr (member :ef-coords (car (last *ef-coords-list*))))
+		      (list (cadr (member :caffe-root-link (car (last *ef-coords-list*))))
+			    (cadr (member :ik-root-link (car (last *ef-coords-list*))))))
+	      :copy-worldcoords)))
 	(support-limbs (remove limb '(:larm :rarm :lleg :rleg)))
-	(larm0 (or (send (nth 0 last-ef-coords) :copy-worldcoords)
+	(larm0 (or (nth 0 last-ef-coords)
 		   (send (nth 0 *ef-coords*) :copy-worldcoords)))
-	(rarm0 (or (send (nth 1 last-ef-coords) :copy-worldcoords)
+	(rarm0 (or (nth 1 last-ef-coords)
 		   (send (nth 1 *ef-coords*) :copy-worldcoords)))
-	(lleg0 (or (send (nth 2 last-ef-coords) :copy-worldcoords)
+	(lleg0 (or (nth 2 last-ef-coords)
 		   (send (nth 2 *ef-coords*) :copy-worldcoords)))
-	(caffe-rleg0 (or (send (nth 3 last-ef-coords) :copy-worldcoords)
+	(caffe-rleg0 (or (nth 3 last-ef-coords)
 			 (send (send *root-link* :worldcoords) :copy-worldcoords)))
-	(ik-rleg0 (or (send (nth 4 last-ef-coords) :copy-worldcoords)
+	(ik-rleg0 (or (nth 4 last-ef-coords)
 		      (send (send (send *robot* :get :root-link) :worldcoords)
 			    :copy-worldcoords)))
 	(caffe-ik-rleg0 (send caffe-rleg0 :transformation ik-rleg0 :local))
@@ -196,7 +198,7 @@
 (defvar *last-detach-results*)
 (defvar *detach-results*)
 (defun interactive-demo-proc-detach
-  (limb vec &optional (rot))
+  (limb vec &rest args &key (rot) &allow-other-keys)
   (setq *last-detach-results* nil)
   (dolist (move (append (list (map float-vector '* (float-vector 0 0 0) vec)
 			      (map float-vector '* (float-vector 0 0 1) vec)
@@ -204,8 +206,10 @@
 			(if rot (list rot))
 			(list
 			 (map float-vector '* (float-vector 0 0 -1) vec))))
-    (push (interactive-demo-proc
-	   :ef-coords-list (list (gen-move-limb-ef-coords-list limb move)))
+    (push (apply
+	   'interactive-demo-proc
+	   :ef-coords-list (list (gen-move-limb-ef-coords-list limb move))
+	   args)
 	  *last-detach-results*)
     (if (not (car *last-detach-results*))
 	(progn (push *last-detach-results* *detach-results*)
@@ -227,8 +231,7 @@
 	 (angle-vector-org (copy-seq (send *robot* :angle-vector)))
 	 (rleg-coords-org (send *robot* :rleg :end-coords :copy-worldcoords))
 	 (ret-org (if (not (boundp '*ret*)) (setq *ret* nil) *ret*))
-	 (animate? nil)
-	 suc?
+	 (animate? nil) suc?
 	 &allow-other-keys)
   ;;
   (cpplog::change-output-stream "/dev/null")
@@ -261,8 +264,7 @@
     (setq *ret* ret-org)
     ;;
     (warning-message 1 "demo-proc has no answer, reverted~%")
-    )
-   )
+    ))
   (cpplog::change-output-stream "")
   suc?
   )
