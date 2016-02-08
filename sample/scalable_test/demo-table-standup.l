@@ -345,7 +345,7 @@
    (traj-set (instance traj-set :init))
    ;;
    ;; debug option
-   (draw? t) (mode :first) (step? nil)
+   (draw? t) (mode :first) (step? nil) (solve-ik? t)
    ;;
    &allow-other-keys
    )
@@ -397,7 +397,7 @@
 		(eus_robot::set-configuration (send l :get :id) pos 1))
 	     *links* av)
 	(eus_robot::forward-kinematics 0)
-	(setq ok? (plusp (eus_robot_ik::solve-ik :max 15)))
+	(setq ok? (or (not solve-ik?) (plusp (eus_robot_ik::solve-ik :max 15))))
 	;; check centroid
 	(eus_robot::forward-kinematics 0)
 	(eus_robot::calc-links-centroid :ret cog)
