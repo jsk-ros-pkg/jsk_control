@@ -251,7 +251,10 @@
 	     (flag geometry::PQP_FIRST_CONTACT))
 	(if (null m1) (setq m1 (send (car ll) :make-pqpmodel :fat 0)))
 	(if (null m2) (setq m2 (send (cdr ll) :make-pqpmodel :fat 0)))
-	(setq ret (+ ret (geometry::pqpcollide r1 t1 m1 r2 t2 m2 flag)))
+	(let* ((col (geometry::pqpcollide r1 t1 m1 r2 t2 m2 flag)))
+	  (if (plusp col) (warning-message 1 "~A vs ~A has collide~%"
+					   (send (car ll) :name) (send (cdr ll) :name)))
+	  (setq ret (+ ret col)))
 	(if (plusp ret) (return-from check-all-collision ret))))
     ret))
 
