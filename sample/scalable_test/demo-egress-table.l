@@ -12,7 +12,7 @@
   (require "package://eus_robot/euslisp/eus_qp_collide.l")
   ;;
   ;; create environment objects
-  (setq *seat* (instance four-leg-seat :init :name :seat :depth 800 :width 500 :height 350 :thick 300))
+  (setq *seat* (instance four-leg-seat :init :name :seat :depth 380 :width 500 :height 350 :thick 300))
   (send *seat* :newcoords (make-coords))
   (send *seat* :rotate (deg2rad 90) :z)
   (send *seat* :translate (float-vector -380 100 0) :world)
