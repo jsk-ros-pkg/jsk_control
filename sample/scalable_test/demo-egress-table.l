@@ -17,11 +17,13 @@
   (send *seat* :rotate (deg2rad 90) :z)
   (send *seat* :translate (float-vector -380 100 0) :world)
   (send *seat* :set-val 'height (+ 20 (send *seat* :get-val 'height))) ;; add margin
+  (send-all (butlast (send *seat* :bodies)) :set-color (float-vector 0.6 0.4 0.4))
   ;;
   (setq *table* (instance four-leg-seat :init :name :table :depth 1000 :width 400 :height 630 :thick 50))
   (send *table* :newcoords (make-coords))
   (send *table* :rotate (deg2rad 90) :z)
   (send *table* :translate (float-vector 130 100 0) :world)
+  (send-all (butlast (send *table* :bodies)) :set-color (float-vector 0.6 0.4 0.4))
   ;;
   ;; setup initial postures
   (send-all (send *robot* :joint-list) :set-val 'joint-min-max-table nil)
@@ -111,6 +113,8 @@
   (setq *links* (mapcar #'(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links))) *joint-list1*))
   ;;
   (objects (flatten (list *seat* (cddr (send *table* :bodies)) *robot*)))
+  (send *irtviewer* :change-background (float-vector 1 1 1))
+  (send *viewer* :draw-objects)
   ;;
   ;; iniitliaze dnn
   (smart-initialize-net)
