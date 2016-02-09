@@ -100,6 +100,9 @@
   (eus_robot_ik::add-target :limb :larm)
   (eus_robot_ik::add-target :limb :rarm)
   (eus_robot_ik::add-target :limb :lleg)
+  ;;
+  ;; (eus_robot_ik::set-cog-target :cog-gain 0.01)
+  ;;
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
   ;;
@@ -304,12 +307,14 @@
    (step? nil)
    (animate? t)
    (user-valid-check #'(lambda (cog) t)); (< (abs (aref cog 0)) 70)))
+   (target-centroid-pos (plusp (eus_robot_ik::is-cog-mode)))
+   (ik-args (if target-centroid-pos (list :cog-thre 1e+10)))
    ret
    (ef-coords-list *ef-coords-list*)
    &allow-other-keys
    )
   (dolist (efl ef-coords-list)
-    (push (apply 'demo-ik (append efl (list :step-max step-max :draw? draw? :traj? traj? :step? nil :user-valid-check user-valid-check) args)) ret)
+    (push (apply 'demo-ik (append efl (list :target-centroid-pos target-centroid-pos :step-max step-max :draw? draw? :traj? traj? :step? nil :user-valid-check user-valid-check :ik-args ik-args) args)) ret)
     (setq *ret* ret)
     (setq *last-efl* efl)
     (if (not (send (car ret) :get :valid)) (return-from nil (setq ret nil))
