@@ -333,6 +333,7 @@
 			  #'(lambda (v) (send c :transform-vector v))
 			  (cdr (assoc k *leg-support-polygon*))))))
 		   support-limbs support-coords)))))))
+   (target-centroid-pos nil)
    (user-valid-check #'(lambda (cog) t))
    (step-max 300)
    ;;
@@ -345,7 +346,7 @@
    (traj-set (instance traj-set :init))
    ;;
    ;; debug option
-   (draw? t) (mode :first) (step? nil) (solve-ik? t)
+   (draw? t) (mode :first) (step? nil) (solve-ik? t) (ik-args nil)
    ;;
    &allow-other-keys
    )
@@ -361,7 +362,6 @@
   (eus_robot::set-link-coords 0 (send ik-root-link :copy-worldcoords))
   (eus_robot::forward-kinematics 0)
   ;;
-  ;;
   (dotimes (i (length ef-coords))
     (eus_robot_ik::change-target-coords
      i
@@ -369,6 +369,12 @@
 	    (off (nth i offset-coords))
 	    (c (if off (send (send _c :copy-worldcoords) :transform off :world) _c)))
        c)))
+  ;;
+  (cond
+   (target-centroid-pos
+    (eus_robot_ik::set-cog-borders support-face)
+    (if (vectorp target-centroid-pos)
+	(eus_robot_ik::change-cog-target-coords (scale 1e-3 target-centroid-pos)))))
   ;;
   (dotimes (i step-max)
     ;;
@@ -397,7 +403,7 @@
 		(eus_robot::set-configuration (send l :get :id) pos 1))
 	     *links* av)
 	(eus_robot::forward-kinematics 0)
-	(setq ok? (or (not solve-ik?) (plusp (eus_robot_ik::solve-ik :max 10))))
+	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_robot_ik::solve-ik :max 15 ik-args))))
 	;; check centroid
 	(eus_robot::forward-kinematics 0)
 	(eus_robot::calc-links-centroid :ret cog)
