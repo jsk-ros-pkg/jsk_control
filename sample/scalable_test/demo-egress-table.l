@@ -163,7 +163,8 @@
 		      (list (cadr (member :caffe-root-link (car (last *ef-coords-list*))))
 			    (cadr (member :ik-root-link (car (last *ef-coords-list*))))))
 	      :copy-worldcoords)))
-	(support-limbs (remove limb '(:larm :rarm :lleg :rleg)))
+	(support-limbs-org '(:larm :rarm :lleg :rleg))
+	(support-limbs (remove limb support-limbs-org))
 	(larm0 (or (nth 0 last-ef-coords)
 		   (send (nth 0 *ef-coords*) :copy-worldcoords)))
 	(rarm0 (or (nth 1 last-ef-coords)
@@ -367,7 +368,15 @@
 
 #|
 
-(interactive-demo-proc-detach :lleg (float-vector 0 80 30))
-(interactive-demo-proc-detach :rleg (float-vector 0 80 30))
-(interactive-demo-proc-detach :larm (float-vector 0 80 30))
-(interactive-demo-proc-detach :rarm (float-vector 0 80 30))
+(interactive-demo-proc-detach :lleg (float-vector 0 80 30) :step-max 50000)
+(interactive-demo-proc-detach :rleg (float-vector 0 80 30) :step-max 50000)
+(interactive-demo-proc-detach :rarm (float-vector 0 80 30) :step-max 50000)
+
+(interactive-demo-proc-detach :larm (float-vector 0 80 30) :step-max 50000
+			      :support-limbs '(:rleg :lleg))
+(interactive-demo-proc-detach :rarm (float-vector 0 80 30) :step-max 50000
+			      :support-limbs '(:rleg :lleg))
+(interactive-demo-proc-detach :lleg (float-vector 0 80 30) :step-max 50000
+			      :support-limbs '(:rleg))
+(interactive-demo-proc-detach :rleg (float-vector 0 80 30) :step-max 50000
+			      :support-limbs '(:lleg))

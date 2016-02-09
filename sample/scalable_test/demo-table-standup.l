@@ -397,7 +397,7 @@
 		(eus_robot::set-configuration (send l :get :id) pos 1))
 	     *links* av)
 	(eus_robot::forward-kinematics 0)
-	(setq ok? (or (not solve-ik?) (plusp (eus_robot_ik::solve-ik :max 15))))
+	(setq ok? (or (not solve-ik?) (plusp (eus_robot_ik::solve-ik :max 10))))
 	;; check centroid
 	(eus_robot::forward-kinematics 0)
 	(eus_robot::calc-links-centroid :ret cog)
