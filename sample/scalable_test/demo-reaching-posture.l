@@ -81,6 +81,8 @@
   (setq *links* (mapcar #'(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links))) *joint-list1*))
   ;;
   (objects (flatten (list *table* *robot* *rarm-target-sphere*)))
+  (send *irtviewer* :change-background (float-vector 1 1 1))
+  (send *viewer* :draw-objects)
   ;;
   ;; iniitliaze dnn
   (smart-initialize-net)
