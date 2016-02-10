@@ -175,16 +175,48 @@
   ret)
 
 (defun demo-main2
-  nil
+  (&key (img-dir))
   (dotimes (x 5)
-    (dolist (z (if (eq x 0) (list 0 1 2 3 4 5 6 7) (list 0 1 2 5 6 7)))
+    (dolist (z (if (eq x 0) (list 0 1 2 3 4 5) (list 0 1 2 5)))
       (send *rarm-target-sphere* :newcoords
 	    (make-coords :pos (float-vector (+ (* -100 x) 700) 0 (+ (* z 100) 300))))
       (if (send (demo-main :draw? nil) :get :ok)
 	  (draw-wrapper) (send *viewer* :draw-objects))
       (let* ((cmd (read-line)))
 	(if (and (> (length cmd) 0) (eq (aref cmd 0) #\q))
-	    (return-from demo-main2 nil))))))
+	    (return-from demo-main2 nil)))
+      (if img-dir
+	  (let* ((path (format nil "~A/x~Az~A.png" img-dir x z)))
+	    (if (not (probe-file img-dir))
+		(unix::system (format nil "mkdir -p ~A" img-dir)))
+	    (if (not (probe-file path))
+		(send *viewer* :viewsurface :write-to-image-file path))))
+      )))
+
+(defun demo-main3
+  nil
+  (objects (list *robot* *rarm-target-sphere* *table*))
+  (dotimes (x 5)
+    (dolist (z (if (eq x 0) (list 0 1 2 3 4 5 6) (list 0 1 2 5 6)))
+      (send *rarm-target-sphere* :newcoords
+	    (make-coords :pos (float-vector (+ (* -100 x) 700) 0 (+ (* z 100) 300))))
+      (setq *rarm-target-sphere-shadow* (make-sphere 100))
+      (send *rarm-target-sphere-shadow*
+	    :newcoords (send *rarm-target-sphere* :copy-worldcoords))
+      (gl::transparent *rarm-target-sphere-shadow* 0.4)
+      (cond
+       ((send (demo-main :draw? nil) :get :ok)
+	(send *rarm-target-sphere-shadow* :set-color (float-vector 0 1 0))
+	(draw-wrapper))
+       (t
+	(send *rarm-target-sphere-shadow* :set-color (float-vector 1 0 0))
+	(send *viewer* :draw-objects)))
+      (send *irtviewer* :objects
+	    (append (send *irtviewer* :objects)
+		    (list (copy-object *robot*) *rarm-target-sphere-shadow*)))
+      (let* ((cmd (read-line)))
+	(if (and (> (length cmd) 0) (eq (aref cmd 0) #\q))
+	    (return-from demo-main3 nil))))))
 
 (cond
  ((find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*)
