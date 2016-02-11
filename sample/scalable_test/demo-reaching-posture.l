@@ -157,21 +157,26 @@
    (step-max 10)
    (rarm-random-step-max 100)
    rarm-coords
-   ret
+   ret (tm-buf (float-vector 0))
    )
   (cpplog::change-output-stream "/dev/null")
   ;;
-  (bench
-   (dotimes (i rarm-random-step-max)
-     (setq rarm-coords (send *rarm-coords* :vector :org-coords caffe-root-link))
-     (dotimes (j (length rarm-coords)) (setf (aref input (+ 6 j)) (aref rarm-coords j)))
-     (setq ret (apply 'demo-ik :input input :redundancy redundancy :ik-root-link ik-root-link :caffe-root-link caffe-root-link :ref-redundancy nil :support-limbs support-limbs :support-face support-face :ef-coords ef-coords :draw? draw? :step-max step-max :traj? traj? args))
-     (if (send ret :get :ok) (return-from nil nil))))
+  (setf
+   (aref tm-buf 0)
+   (+
+    (aref tm-buf 0)
+    (bench2
+     (dotimes (i rarm-random-step-max)
+       (setq rarm-coords (send *rarm-coords* :vector :org-coords caffe-root-link))
+       (dotimes (j (length rarm-coords)) (setf (aref input (+ 6 j)) (aref rarm-coords j)))
+       (setq ret (apply 'demo-ik :input input :redundancy redundancy :ik-root-link ik-root-link :caffe-root-link caffe-root-link :ref-redundancy nil :support-limbs support-limbs :support-face support-face :ef-coords ef-coords :draw? draw? :step-max step-max :traj? traj? args))
+       (if (send ret :get :ok) (return-from nil nil))))))
   (if (send ret :get :ok)
       (send *rarm-target-sphere* :set-color (float-vector 0 1 0))
     (send *rarm-target-sphere* :set-color (float-vector 1 0 0)))
   (gl::transparent *rarm-target-sphere* 0.4)
   (cpplog::change-output-stream "")
+  (format t "time: ~A~%" (aref tm-buf 0))
   ret)
 
 (defun demo-main2
@@ -193,30 +198,63 @@
 		(send *viewer* :viewsurface :write-to-image-file path))))
       )))
 
+(defun draw-line-man
+  (&key
+   (robot *robot*)
+   (flush t)
+   (color (float-vector 0 0 0))
+   )
+  (send *viewer* :viewsurface :color color)
+  (send (send *viewer* :viewsurface) :line-width 4.0)
+  (mapcar
+   #'(lambda (l)
+       (if (send l :parent-link)
+	   (send *irtviewer*
+		 :viewer :viewsurface
+		 :3d-line
+		 (send l :worldpos)
+		 (send (send l :parent-link) :worldpos))))
+   (send robot :links))
+  (if flush (send *irtviewer* :viewer :viewsurface :flush)))
+
+;; time: 5.81668/21
 (defun demo-main3
-  nil
-  (objects (list *robot* *rarm-target-sphere* *table*))
-  (dotimes (x 5)
-    (dolist (z (if (eq x 0) (list 0 1 2 3 4 5 6) (list 0 1 2 5 6)))
+  (&key (tm-buf (float-vector 0)) (cnt 0) (robot-buf (list *robot*))
+	(sphere-buf (list *rarm-target-sphere*)) (line-robot? nil)
+	(robot-max 50) (robot-step 3))
+  (objects (append (list *table*) robot-buf sphere-buf))
+  (dotimes (x 4)
+    (dolist (z (if (eq x 0) (list 0 1 2 3 4 5) (list 0 1 2 4 5)))
+      (incf cnt)
       (send *rarm-target-sphere* :newcoords
-	    (make-coords :pos (float-vector (+ (* -100 x) 700) 0 (+ (* z 100) 300))))
+	    (make-coords :pos (float-vector (+ (* -150 x) 700) 0 (+ (* z 150) 200))))
       (setq *rarm-target-sphere-shadow* (make-sphere 100))
       (send *rarm-target-sphere-shadow*
 	    :newcoords (send *rarm-target-sphere* :copy-worldcoords))
       (gl::transparent *rarm-target-sphere-shadow* 0.4)
       (cond
-       ((send (demo-main :draw? nil) :get :ok)
+       ((send (demo-main :draw? nil :tm-buf tm-buf) :get :ok)
 	(send *rarm-target-sphere-shadow* :set-color (float-vector 0 1 0))
 	(draw-wrapper))
        (t
 	(send *rarm-target-sphere-shadow* :set-color (float-vector 1 0 0))
 	(send *viewer* :draw-objects)))
+      (push *rarm-target-sphere-shadow* sphere-buf)
+      (if (and (plusp (decf robot-max))
+	       (zerop (mod robot-max robot-step)))
+	  (push (copy-object *robot*) robot-buf))
       (send *irtviewer* :objects
-	    (append (send *irtviewer* :objects)
-		    (list (copy-object *robot*) *rarm-target-sphere-shadow*)))
-      (let* ((cmd (read-line)))
-	(if (and (> (length cmd) 0) (eq (aref cmd 0) #\q))
-	    (return-from demo-main3 nil))))))
+	    (append (if (not line-robot?) robot-buf)
+		    (list *table*)
+		    sphere-buf))
+      (if line-robot?
+	  (mapcar '(lambda (r) (draw-line-man :robot r)) robot-buf))
+      ;; (let* ((cmd (read-line)))
+      ;; (if (and (> (length cmd) 0) (eq (aref cmd 0) #\q))
+      ;; (return-from demo-main3 nil)))
+      ))
+  (format t "time: ~A/~A~%" (aref tm-buf 0) cnt)
+  )
 
 (cond
  ((find-if #'(lambda (str) (string-equal "--run-test" str)) lisp::*eustop-argument*)
