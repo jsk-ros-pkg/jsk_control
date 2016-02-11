@@ -1,6 +1,7 @@
 #!/usr/bin/env roseus
 
 (setq *load-as-lib* t)
+;; (require :hrp2jsknt "package://hrpsys_ros_bridge_tutorials/models/hrp2jsknt.mensa.l")
 (require "demo-table-standup.l")
 
 (defun demo-setup
@@ -305,7 +306,7 @@
   (&rest
    args
    &key
-   (step-max 1000)
+   (step-max 8000)
    (draw? nil)
    (traj? t)
    (step? nil)
@@ -340,12 +341,14 @@
     (if animate? (do-until-key (draw-traj-wrapper ret)))
     ret)))
 
+(defvar *tm-buf* (float-vector 0))
 (defun demo-main
   (&rest
    args
    &key
    (draw? nil)
    ret-buf
+   (tm-buf *tm-buf*)
    &allow-other-keys
    )
   (cpplog::change-output-stream "/dev/null")
@@ -356,7 +359,8 @@
   (eus_robot::configuration-copy-to)
   (eus_robot::forward-kinematics 0)
   ;;
-  (bench (setq ret-buf (apply 'demo-proc args)))
+  (setf (aref tm-buf 0) (bench2 (setq ret-buf (apply 'demo-proc args))))
+  (format t "TIME: ~A sec~%" (aref tm-buf 0))
   (cpplog::change-output-stream "")
   ret-buf)
 
@@ -368,11 +372,18 @@
   (warning-message 6  "run demo ...~%")
   (setq *traj-set* (demo-main :draw? nil :animate? nil))
   (warning-message 6  "show results ...~%")
-  (if *traj-set* (do-until-key (draw-traj-wrapper *traj-set*))
+  (if *traj-set*
+      (if (find-if #'(lambda (str) (string-equal "--skip-anime" str)) lisp::*eustop-argument*)
+	  (warning-message 6 "succeeded~%")
+	(do-until-key (draw-traj-wrapper *traj-set*)))
     (warning-message 1 "no answer~%"))
   (warning-message 6 "done~%")
   (warning-message 6 "output results are set to *traj-set*~%")
   (print *traj-set*)
+  (let* ((p (open "demo_egress.log" :direction :output)))
+    (if *traj-set* (format p "o~%") (format p "x~%"))
+    (format p "~A~%" (aref *tm-buf* 0))
+    (close p))
   ))
 
 #|
