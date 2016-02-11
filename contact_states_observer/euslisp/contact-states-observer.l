@@ -193,6 +193,7 @@
                                    (let ((ret (instance hrpsys_ros_bridge::ContactStateStamped
                                                         :init
                                                         :state (instance hrpsys_ros_bridge::ContactState
+                                                                         :init
                                                                          :state (if (string= "grasp" (send co :mode))
                                                                                     (if (string= "Off" (send co :get-result))
                                                                                         hrpsys_ros_bridge::contactstate::*off*

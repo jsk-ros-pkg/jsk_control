@@ -1,13 +1,17 @@
 <launch>
+  <arg name="USE_NODELET_MANAGER" default="true"/>
+  <arg name="NODELET_MANAGER_NAME" default="heightmap_nodelet"/>
+  <arg name="NODELET_INDEX" default="0"/>
   <arg name="STATIC_FRAME" default="map" />
   <arg name="STAND_FRAME" default="odom_init" />
   <arg name="ROBOT_FRAME" default="body_on_odom" /> <!--it's not good-->
   <arg name="INPUT" default="/distance_filtered_laser_snapshots/output_cloud" />
   <arg name="DEBUG_VIEW" default="true" />
-  <node pkg="jsk_topic_tools" type="standalone_complexed_nodelet" name="heightmap_nodelet"
-        output="screen">
+  <node pkg="jsk_topic_tools" type="standalone_complexed_nodelet" name="$(arg NODELET_MANAGER_NAME)"
+        output="screen" if="$(arg USE_NODELET_MANAGER)"/>
+  <group ns="$(arg NODELET_MANAGER_NAME)">
     <rosparam subst_value="true">
-      nodelets:
+      nodelets_$(arg NODELET_INDEX):
         - name: map_origin_polygon
           type: jsk_pcl/StaticPolygonArrayPublisher
           remappings:
@@ -60,7 +64,7 @@
             - from: ~input
               to: accumulated_heightmap_pointcloud/output
     </rosparam>
-  </node>
+  </group>
   <rosparam param="map_origin_polygon" subst_value="true">
     use_message: true
     frame_ids: [$(arg STAND_FRAME)]
