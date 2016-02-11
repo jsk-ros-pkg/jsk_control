@@ -258,15 +258,25 @@
 	(if (plusp ret) (return-from check-all-collision ret))))
     ret))
 
-(defun sep-vector
+(defun _sep-vector
   (sep-cnt depth vec)
   (if (>= depth (length vec))
       (list (copy-seq vec))
     (let* (buf (step (/ 1.0 (- sep-cnt 1))))
       (dotimes (i sep-cnt)
 	(setf (aref vec depth) (* i step))
-	(push (sep-vector sep-cnt (+ depth 1) vec) buf))
+	(push (_sep-vector sep-cnt (+ depth 1) vec) buf))
       (apply 'append buf))))
+
+(defvar *sep-vector*)
+(defun sep-vector
+  (sep-cnt depth vec)
+  (if (not (and (eq sep-cnt (car *sep-vector*))
+		(eq depth (cadr *sep-vector*))
+		(eq (length vec) (length (caddr *sep-vector*)))))
+      (setq *sep-vector*
+	    (list sep-cnt depth vec (_sep-vector sep-cnt depth vec))))
+  (cadddr *sep-vector*))
 
 (defun draw-wrapper
   (&key (cog nil) (conf (eus_robot::get-configurations))
