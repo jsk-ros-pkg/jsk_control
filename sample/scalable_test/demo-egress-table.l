@@ -306,7 +306,7 @@
   (&rest
    args
    &key
-   (step-max 8000)
+   (step-max 100000)
    (draw? nil)
    (traj? t)
    (step? nil)
