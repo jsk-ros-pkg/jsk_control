@@ -522,11 +522,12 @@
   (:init
    (&key (mu-trans) (mu-rot) (slide-axis)
          (l-max-x) (l-max-y) (l-min-x) (l-min-y)
-         (name))
+         (name) (max-fz))
    "Calc default constraint matrix.
     This is include 2D friction force, 1D rotational friction moment, non-negative normal force, and 2D-COP constraint,
     e.g., for foot constraint."
    (setq contact-constraint-list
+         (append
          (list
            ;; friction
           (if slide-axis
@@ -537,7 +538,9 @@
            (instance 2D-cop-contact-constraint :init l-max-x l-min-x l-max-y l-min-y)
            ;; fz
            (instance norm-contact-constraint :init :fz)
-           ))
+           )
+         (if max-fz
+             (list (instance min-max-contact-constraint :init :fz max-fz :min/max :max)))))
    (send-super :init :name name)
    )
   )
