@@ -355,12 +355,15 @@
    (target-centroid-pos nil)
    (user-valid-check #'(lambda (cog) t))
    (step-max 300)
+   (max-time 10) ;; seconds
+   (_max-time (+ max-time (car (unix::gettimeofday))))
    ;;
    ;; buf
    (input (concatenate float-vector (get-vector-from-ef-coords :ef-coords ef-coords :root-link caffe-root-link :offset-coords offset-coords) redundancy))
    (av (instantiate float-vector (length joint-list)))
    (ok? nil) (suc-cnt 0) (cnt 0) (traj? t) tm
-   (ref-redundancy (sep-vector (expt step-max (/ 1.0 (length redundancy))) 0 redundancy))
+   (ref-redundancy (sep-vector (expt (min 8000 step-max) (/ 1.0 (length redundancy)))
+			       0 redundancy))
    (cog (float-vector 0 0 0))
    (traj-set (instance traj-set :init))
    ;;
@@ -399,6 +402,7 @@
     ;;
     ;; start loop
     (incf cnt)
+    (if (> (car (unix::gettimeofday)) _max-time) (return-from nil nil))
     ;;
     ;; dnn kinematics calcuration
     (if ref-redundancy
