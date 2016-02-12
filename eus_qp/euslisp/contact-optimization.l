@@ -528,19 +528,19 @@
     e.g., for foot constraint."
    (setq contact-constraint-list
          (append
-         (list
+          (list
            ;; friction
-          (if slide-axis
-              (instance 2D-translational-sliding-contact-constraint :init mu-trans :slide-axis slide-axis)
-              (instance 2D-translational-friction-contact-constraint :init mu-trans))
+           (if slide-axis
+               (instance 2D-translational-sliding-contact-constraint :init mu-trans :slide-axis slide-axis)
+             (instance 2D-translational-friction-contact-constraint :init mu-trans))
            (instance rotational-friction-contact-constraint :init mu-rot :fz)
            ;; cop
            (instance 2D-cop-contact-constraint :init l-max-x l-min-x l-max-y l-min-y)
            ;; fz
            (instance norm-contact-constraint :init :fz)
            )
-         (if max-fz
-             (list (instance min-max-contact-constraint :init :fz max-fz :min/max :max)))))
+          (if max-fz
+              (list (instance min-max-contact-constraint :init :fz max-fz :min/max :max)))))
    (send-super :init :name name)
    )
   )
