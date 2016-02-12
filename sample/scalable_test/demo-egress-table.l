@@ -124,6 +124,7 @@
   (setq *input* (concatenate float-vector *input* *redundancy*))
   ;;
   ;; setup collision detection
+  (mapcar '(lambda (l) (send-message l bodyset :worldcoords)) (send *robot* :links))
   (eus_qp_collide::test-gen-collidable-pairs-old)
   (setq *collidable-pairs*
 	(append
@@ -136,6 +137,7 @@
 	(+ (apply 'max (send-all (send *robot* :links) :get :id)) 1))
   (send *seat* :put :id
 	(+ (apply 'max (send-all (send *robot* :links) :get :id)) 2))
+  (mapcar '(lambda (l) (send-message l bodyset :worldcoords)) (list *table* *seat*))
   (dolist (obj (list *table* *seat*))
     (eus_robot::add-link
      :name (format nil "~A" (send obj :name))
@@ -152,8 +154,10 @@
   ;;
   (eus_qp_collide::gen-all-convex-matrices)
   (eus_robot::register-collide-pairs *collidable-pairs*)
-  (if (plusp (eus_robot::check-all-collide))
-      (warning-message 1 "invalid initial states with collision~%"))
+  (cond
+   ((plusp (eus_robot::check-all-collide))
+    (warning-message 1 "invalid initial states with collision~%")
+    (throw :invalid-iniital-state-with-collision-exception nil)))
   ;;
   (send *robot* :angle-vector (copy-seq *init-pose*))
   (send *robot* :fix-leg-to-coords (make-coords) :rleg)
@@ -373,6 +377,7 @@
   (setq *traj-set* (demo-main :draw? nil :animate? nil))
   (let* ((p (open "demo_egress.log" :direction :output)))
     (if *traj-set* (format p "o~%") (format p "x~%"))
+    (format p "~A~%" (length *ret*))
     (format p "~A~%" (aref *tm-buf* 0))
     (close p))
   (if *traj-set* (warning-message 6 "succeeded~%")
