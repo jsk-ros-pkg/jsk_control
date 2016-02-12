@@ -393,3 +393,11 @@
 ;;   ;; (eus_robot::configuration-copy-from)
 ;;   ;; (send *viewer* :draw-objects)
 ;;   traj-set)
+
+;; (send *rarm-target-sphere* :newcoords (make-coords :pos (float-vector 700.0 0.0 600.0)))
+;; (send *rarm-target-sphere* :set-color (float-vector 1 0 0))
+;; (let* ((key '(:rarm :lleg :rleg))
+;;        (mt (mapcar '(lambda (k) (send *robot* k :end-coords)) key))
+;;        (ll (mapcar '(lambda (m) (send *robot* :link-list (send m :parent))) mt))
+;;        (tc (send-all mt :copy-worldcoords)))
+;;   (
