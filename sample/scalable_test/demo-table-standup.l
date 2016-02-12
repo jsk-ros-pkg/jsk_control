@@ -355,7 +355,7 @@
    (target-centroid-pos nil)
    (user-valid-check #'(lambda (cog) t))
    (step-max 300)
-   (max-time 10) ;; seconds
+   (max-time 30) ;; seconds
    (_max-time (+ max-time (car (unix::gettimeofday))))
    ;;
    ;; buf
