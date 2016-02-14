@@ -85,7 +85,7 @@
 		(send *robot* :fix-leg-to-coords (make-coords) :rleg)
 		(send-all (send *robot* :links) :worldcoords)
 		(send *irtviewer* :objects
-		      (append (list (copy-object *robot*))
+		      (append ;; (list (copy-object *robot*))
 			      *arrow*
 			      (remove-if '(lambda (a) (subclassp (class a) robot-model))
 					 (send *irtviewer* :objects))))
@@ -169,7 +169,6 @@
 (demo-setup)
 
 (demo-reset-pose-redundancy :check-balance? nil)
-(send *irtviewer* :viewer :viewing :look #f(500 3500 1000) (send *robot* :centroid))
 (send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_reset_pose.jpg")
 ;; 30/100 samples are valid, traj=nil
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.020883(100)/0.040057(100)/0.0(0)/0.01819(70)/0.0(0)/0.090259
@@ -185,6 +184,31 @@
 (eus_qp_collide::clear-convex)
 (demo-setup)
 (send *irtviewer* :objects (append *arrow* (send *irtviewer* :objects)))
+;;
 (demo-reset-pose-redundancy :check-balance? nil :reset-pose (copy-seq (send *robot* :angle-vector)))
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress.jpg")
+;; 15/100 samples are valid, traj=nil
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.021968(100)/0.040384(100)/0.0(0)/0.042718(74)/0.0(0)/0.114899
+;;
+(send *viewer* :viewing :look #f(3832.96 1118.63 1649.89) #f(-173.901 119.606 620.28))
+(send *viewer* :draw-objects)
+(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_front.jpg")
+;;
+;; (print (list 'send '*viewer* :viewing :look (send *irtviewer* :viewpoint) (send *irtviewer* :viewtarget)))
+(send *viewer* :viewing :look #f(-127.655 4513.81 607.946) #f(-201.92 259.166 682.223))
+(send *viewer* :draw-objects)
+(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_side.jpg")
 
+(send *robot* :angle-vector *init-pose*)
+(send *robot* :fix-leg-to-coords (make-coords) :rleg)
+(demo-reset-pose-redundancy :check-balance? t :reset-pose (copy-seq (send *robot* :angle-vector)))
+;; 5/100 samples are valid, traj=nil
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.019568(100)/0.038555(100)/0.001516(74)/0.0094(16)/0.0(0)/0.075337
+;;
+(send *viewer* :viewing :look #f(3832.96 1118.63 1649.89) #f(-173.901 119.606 620.28))
+(send *viewer* :draw-objects)
+(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_front_with_centroid.jpg")
+;;
+;; (print (list 'send '*viewer* :viewing :look (send *irtviewer* :viewpoint) (send *irtviewer* :viewtarget)))
+(send *viewer* :viewing :look #f(-127.655 4513.81 607.946) #f(-201.92 259.166 682.223))
+(send *viewer* :draw-objects)
+(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_side_with_centroid.jpg")
