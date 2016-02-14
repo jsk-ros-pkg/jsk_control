@@ -76,12 +76,14 @@
    (reset-pose (copy-seq (send *robot* :reset-pose)))
    (cnt-buf (instantiate integer-vector 6))
    (tm-buf (instantiate float-vector 6))
+   (demo-main 'demo-random-redundancy-check)
+   (min-dist 10000)
    tm
    &allow-other-keys
    )
   (fill cnt-buf 0)
   (fill tm-buf 0)
-  (apply 'demo-random-redundancy-check
+  (apply demo-main
 	 :event-cnt cnt-buf
 	 :event-tm tm-buf
 	 :draw? nil
@@ -96,14 +98,14 @@
 					 (send *irtviewer* :objects))))
 		(copy-seq (send *robot* :angle-vector)))
 	 (append args ik-args))
-  (apply 'demo-random-redundancy-check
+  (apply demo-main
 	 :draw? t
 	 :random-angle
 	 (progn (send *robot* :angle-vector (copy-seq reset-pose))
 		(send *robot* :fix-leg-to-coords (make-coords) :rleg)
 		(send-all (send *robot* :links) :worldcoords)
 		(send *irtviewer* :objects
-		      (append (list (copy-object *robot*))
+		      (append ;; (list (copy-object *robot*))
 			      *arrow*
 			      (remove-if '(lambda (a) (subclassp (class a) robot-model))
 					 (send *irtviewer* :objects))))
@@ -116,9 +118,9 @@
 		    (ds (mapcar '(lambda (r) (norm2 (v- (send r :angle-vector)
 							(send *robot* :angle-vector))))
 				rl))
-		    (min-ds (apply 'min ds)) min-r)
+		    (min-ds (if ds (apply 'min ds) 1e+100)) min-r)
 	       (cond
-		((> min-ds 10000)
+		((> min-ds min-dist)
 		 ;; (setq min-r (cdr (find-if #'(lambda (dr) (eq (car dr) min-ds))
 		 ;; (mapcar 'cons ds rl))))
 		 (send *irtviewer* :objects
@@ -129,13 +131,13 @@
 		 )))
 	     t)
 	 (append args ik-args))
-  (warning-message 6 "DNN/IK/COG/COL/TREE/TOTAL = ~A(~A)/~A(~A)/~A(~A)/~A(~A)/~A(~A)/~A~%"
+  (warning-message 6 "DNN/IK/COG/COL/TREE/TOTAL = ~A(~A)/~A(~A)/~A(~A)/~A(~A)/~A(~A)/~A(~A)~%"
 		   (aref tm-buf 0) (aref cnt-buf 0)
 		   (aref tm-buf 1) (aref cnt-buf 1)
 		   (aref tm-buf 2) (aref cnt-buf 2)
 		   (aref tm-buf 3) (aref cnt-buf 3)
 		   (aref tm-buf 4) (aref cnt-buf 4)
-		   (aref tm-buf 5))
+		   (aref tm-buf 5) (aref cnt-buf 5))
   )
 
 (defun demo-random-redundancy-check
@@ -167,6 +169,25 @@
   (let* ((ret (apply 'demo-ik args)))
     (cpplog::change-output-stream "")
     ret)
+  )
+
+(defun write-image-wrapper
+  (&key
+   (front-view-point (float-vector 4638.57 1214.24 1458.95))
+   (front-view-target  (float-vector 169.606 100.0 729.467))
+   ;;
+   (side-view-point (float-vector 575.967 4744.73 648.083))
+   (side-view-target (float-vector 169.606 100.0 729.467))
+   (base-path-name "4limb_ik_redundancy_egress")
+   )
+  (send *viewer* :viewing :look front-view-point front-view-target)
+  (send *viewer* :draw-objects)
+  (send *viewer* :viewsurface :write-to-image-file
+	(format nil "~A_front.jpg" base-path-name))
+  (send *viewer* :viewing :look side-view-point side-view-target)
+  (send *viewer* :draw-objects)
+  (send *viewer* :viewsurface :write-to-image-file
+	(format nil "~A_side.jpg" base-path-name))
   )
 
 #|
@@ -235,3 +256,26 @@
 
 
 ;; (print (list 'send '*viewer* :viewing :look (send *irtviewer* :viewpoint) (send *irtviewer* :viewtarget)))
+
+(require "demo-reaching-posture.l")
+(eus_qp_collide::clear-convex)
+(demo-setup)
+(send *rarm-target-sphere* :newcoords (make-coords :pos (float-vector 700 0 600)))
+(send *irtviewer* :objects (append (list (nth 0 *arrow*) (nth 2 *arrow*))
+				   (remove *robot* (send *irtviewer* :objects))))
+(send *viewer* :draw-objects)
+;;
+(send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+(demo-reset-pose-redundancy :check-balance? t :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)) :demo-main 'demo-main :step-max 5 :rarm-random-step-max 20 :min-dist -1)
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.019583(100)/0.045406(100)/0.001718(69)/0.015439(32)/0.0(0)/0.090005(3)
+(write-image-wrapper :base-path-name "4limb_ik_redundancy_reach_col_bal")
+;;
+(send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+(demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)) :demo-main 'demo-main :step-max 5 :rarm-random-step-max 20 :min-dist -1)
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.020172(100)/0.040659(100)/0.0(0)/0.037095(76)/0.0(0)/0.105535(5)
+(write-image-wrapper :base-path-name "4limb_ik_redundancy_reach_col")
+;;
+(send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+(demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? nil :reset-pose (copy-seq (send *robot* :angle-vector)) :demo-main 'demo-main :step-max 5 :rarm-random-step-max 20)
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.021459(100)/0.042755(100)/0.0(0)/0.0(0)/0.0(0)/0.07424(73)
+(write-image-wrapper :base-path-name "4limb_ik_redundancy_reach")
