@@ -310,7 +310,7 @@
 		(unix::system (format nil "mkdir -p ~A" output-dir)))
 	    (if (not (probe-file path))
 		(send *viewer* :viewsurface :write-to-image-file path))))
-      (unix::usleep (* 100 1000)))))
+      (unix::usleep (* 10 1000)))))
 
 (defun demo-ik
   (&key
@@ -464,7 +464,7 @@
 	(setq
 	 tm
 	 (bench2
-	  (if (and ok? (plusp (eus_robot::check-all-collide))) (setq ok? nil))))
+	  (if (plusp (eus_robot::check-all-collide)) (setq ok? nil))))
 	(setf (aref event-cnt 3) (+ (aref event-cnt 3) 1))
 	(setf (aref event-tm 3) (+ (aref event-tm 3) tm))
 	(if draw? (warning-message 6 "collision: ~A~%" tm))
@@ -484,7 +484,7 @@
 	  (cond
 	   ((and (eq mode :first)
 		 (or
-		  (not traj?)
+		  (and (not traj?) (send traj-set :valids))
 		  (let* ((elem))
 		    (setq tm (bench2 (setq elem (send (send traj-set :root)
 						      :wide-first-find (send traj-set :valids)))))
@@ -496,6 +496,9 @@
 		    (if draw? (warning-message 6 "wide-first-search: ~A~%" tm))
 		    (if elem (send traj-set :put :valid elem))
 		    elem)))
+	    (if (not traj?) (send traj-set :put :valid
+				  (list (send traj-set :root)
+					(car (send traj-set :valids)))))
 	    (send traj-set :put :ok t)
 	    (return-from nil nil)))))))))
     ;;
