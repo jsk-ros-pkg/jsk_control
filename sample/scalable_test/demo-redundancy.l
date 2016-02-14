@@ -55,21 +55,27 @@
 	   :mode :all
 	   :step-max 100
 	   :traj? nil
-	   :ik-args (list :max 10 :pthre (* 1e-3 10) :rthre (deg2rad 5))
+	   :ik-args (list :max 15 :pthre (* 1e-3 10) :rthre (deg2rad 5))
 	   )
 	  )
 	 (av (copy-seq (send *robot* :reset-pose)))
+	 (cnt-buf (instantiate integer-vector 6))
+	 (tm-buf (instantiate float-vector 6))
+	 tm
 	 )
-    (bench
-     (apply 'random-demo-ik
-	    :draw? nil
-	    :random-angle
-	    (progn (send *robot* :angle-vector av)
-		   (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-		   (send-all (send *robot* :links) :worldcoords)
-		   (send *irtviewer* :objects (cons (copy-object *robot*) *arrow*))
-		   (copy-seq (send *robot* :angle-vector)))
-	    (append args ik-args)))
+    (fill cnt-buf 0)
+    (fill tm-buf 0)
+    (apply 'random-demo-ik
+	   :event-cnt cnt-buf
+	   :event-tm tm-buf
+	   :draw? nil
+	   :random-angle
+	   (progn (send *robot* :angle-vector av)
+		  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+		  (send-all (send *robot* :links) :worldcoords)
+		  (send *irtviewer* :objects (cons (copy-object *robot*) *arrow*))
+		  (copy-seq (send *robot* :angle-vector)))
+	   (append args ik-args))
     (apply 'random-demo-ik
 	   :random-angle
 	   (progn (send *robot* :angle-vector av)
@@ -95,6 +101,13 @@
 			  (send *irtviewer* :objects))))))
 	       t)
 	   (append args ik-args))
+    (warning-message 6 "DNN/IK/COG/COL/TREE/TOTAL = ~A(~A)/~A(~A)/~A(~A)/~A(~A)/~A(~A)/~A~%"
+		     (aref tm-buf 0) (aref cnt-buf 0)
+		     (aref tm-buf 1) (aref cnt-buf 1)
+		     (aref tm-buf 2) (aref cnt-buf 2)
+		     (aref tm-buf 3) (aref cnt-buf 3)
+		     (aref tm-buf 4) (aref cnt-buf 4)
+		     (aref tm-buf 5))
     ))
 
 (defun random-demo-ik
@@ -123,7 +136,7 @@
   (send *viewer* :draw-objects)
   (setq *support-face* nil)
   (cpplog::change-output-stream "/dev/null")
-  (let* ((ret (apply 'demo-ik :check-balance? nil :support-face nil args)))
+  (let* ((ret (apply 'demo-ik :check-balance? nil args)))
     (cpplog::change-output-stream "")
     ret)
   )
