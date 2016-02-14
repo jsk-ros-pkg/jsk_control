@@ -362,8 +362,8 @@
    ;; buf
    (input (concatenate float-vector (get-vector-from-ef-coords :ef-coords ef-coords :root-link caffe-root-link :offset-coords offset-coords) redundancy))
    (av (instantiate float-vector (length joint-list)))
-   (event-cnt (instantiate integer-vector 4))
-   (event-tm (instantiate float-vector 4))
+   (event-cnt (instantiate integer-vector 6))
+   (event-tm (instantiate float-vector 6))
    (ok? nil) (suc-cnt 0) (cnt 0) (traj? t) tm
    (ref-redundancy (sep-vector (expt (min 8000 step-max) (/ 1.0 (length redundancy)))
 			       0 redundancy))
@@ -375,6 +375,7 @@
    ;;
    &allow-other-keys
    )
+  (setf (aref event-tm 5) (let* ((tm (unix::gettimeofday))) (+ (car tm) (* 1e-6 (cadr tm)))))
   ;;
   (send traj-set :put :ok nil)
   (send traj-set :root
@@ -417,6 +418,8 @@
 	(setf (aref input (- (- (length input) 1) j)) (random 1.0))))
     (setq tm (bench2 (caffe::calc-forward-double :isize (length input) :input input
 						 :osize (length av) :output av)))
+    (setf (aref event-cnt 0) (+ (aref event-cnt 0) 1))
+    (setf (aref event-tm 0) (+ (aref event-tm 0) tm))
     (if draw? (warning-message 6 "DNN calc forward: ~A~%" tm))
     ;;
     ;; solve inverse kinematics
@@ -431,8 +434,8 @@
 	(eus_robot::forward-kinematics 0)
 	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_robot_ik::solve-ik (append ik-args (list :max 15))))))
 	)))
-    (setf (aref event-cnt 0) (+ (aref event-cnt 0) 1))
-    (setf (aref event-tm 0) (+ (aref event-tm 0) tm))
+    (setf (aref event-cnt 1) (+ (aref event-cnt 1) 1))
+    (setf (aref event-tm 1) (+ (aref event-tm 1) tm))
     (if draw? (warning-message 6 "solve IK: ~A~%" tm))
     ;;
     ;; check centroid
@@ -451,8 +454,8 @@
 		   (not (eq (send support-face :insidep cog) :inside)))
 	      (setq ok? nil)))))
       (if check-balance?
-	  (progn (setf (aref event-cnt 1) (+ (aref event-cnt 1) 1))
-		 (setf (aref event-tm 1) (+ (aref event-tm 1) tm))))
+	  (progn (setf (aref event-cnt 2) (+ (aref event-cnt 2) 1))
+		 (setf (aref event-tm 2) (+ (aref event-tm 2) tm))))
       (if draw? (warning-message 6 "check balance: ~A~%" tm))
       (cond
        (ok?
@@ -462,8 +465,8 @@
 	 tm
 	 (bench2
 	  (if (and ok? (plusp (eus_robot::check-all-collide))) (setq ok? nil))))
-	(setf (aref event-cnt 2) (+ (aref event-cnt 2) 1))
-	(setf (aref event-tm 2) (+ (aref event-tm 2) tm))
+	(setf (aref event-cnt 3) (+ (aref event-cnt 3) 1))
+	(setf (aref event-tm 3) (+ (aref event-tm 3) tm))
 	(if draw? (warning-message 6 "collision: ~A~%" tm))
 	;;
 	(cond
@@ -488,8 +491,8 @@
 		    ;; (find-if #'(lambda (valid) (send (send traj-set :root)
 		    ;; :wide-first-find valid))
 		    ;; (send traj-set :valids))))
-		    (setf (aref event-cnt 3) (+ (aref event-cnt 3) 1))
-		    (setf (aref event-tm 3) (+ (aref event-tm 3) tm))
+		    (setf (aref event-cnt 4) (+ (aref event-cnt 4) 1))
+		    (setf (aref event-tm 4) (+ (aref event-tm 4) tm))
 		    (if draw? (warning-message 6 "wide-first-search: ~A~%" tm))
 		    (if elem (send traj-set :put :valid elem))
 		    elem)))
@@ -499,6 +502,10 @@
     (if (eq t draw?) (draw-wrapper :cog cog))
     )
   (if draw? (warning-message 6 "~A/~A samples are valid, traj=~A~%" suc-cnt cnt (send traj-set :get :valid)))
+  (setf (aref event-tm 5)
+	(let* ((tm (unix::gettimeofday)))
+	  (- (+ (car tm) (* 1e-6 (cadr tm)))
+	     (aref event-tm 5))))
   traj-set)
 
 (defun demo-main
