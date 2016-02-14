@@ -443,7 +443,7 @@
     (cond
      (ok?
       (cond
-       (check-collision?
+       (check-balance?
 	(setq
 	 tm
 	 (bench2
