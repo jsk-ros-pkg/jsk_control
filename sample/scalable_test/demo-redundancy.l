@@ -50,33 +50,52 @@
 
 (defun registered-posture-ik
   (&rest args)
-  (apply 'random-demo-ik
-	 :mode :all
-	 :step-max 300
-	 :random-angle
-	 (progn (send *robot* :reset-pose)
-		(send *robot* :fix-leg-to-coords (make-coords) :rleg)
-		(send-all (send *robot* :links) :worldcoords)
-		(send *irtviewer* :objects (cons (copy-object *robot*) *arrow*))
-		(copy-seq (send *robot* :angle-vector)))
-	 :user-valid-check
-	 #'(lambda (&rest args)
-	     (let* ((rl (remove-if-not '(lambda (r) (subclassp (class r) robot-model))
-				       (send *irtviewer* :objects)))
-		    (ds (mapcar '(lambda (r) (norm2 (v- (send r :angle-vector)
-							(send *robot* :angle-vector))))
-				rl))
-		    (min-ds (apply 'min ds)) min-r)
-	       (cond
-		((> min-ds 10000)
-		 ;; (setq min-r (cdr (find-if #'(lambda (dr) (eq (car dr) min-ds))
-		 ;; (mapcar 'cons ds rl))))
-		 (send *irtviewer* :objects
-		       (append
-			(list (copy-object *robot*))
-			(send *irtviewer* :objects))))))
-	     t)
-	 args))
+  (let* ((ik-args
+	  (list
+	   :mode :all
+	   :step-max 100
+	   :traj? nil
+	   :ik-args (list :max 10 :pthre (* 1e-3 10) :rthre (deg2rad 5))
+	   )
+	  )
+	 (av (copy-seq (send *robot* :reset-pose)))
+	 )
+    (bench
+     (apply 'random-demo-ik
+	    :draw? nil
+	    :random-angle
+	    (progn (send *robot* :angle-vector av)
+		   (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+		   (send-all (send *robot* :links) :worldcoords)
+		   (send *irtviewer* :objects (cons (copy-object *robot*) *arrow*))
+		   (copy-seq (send *robot* :angle-vector)))
+	    (append args ik-args)))
+    (apply 'random-demo-ik
+	   :random-angle
+	   (progn (send *robot* :angle-vector av)
+		  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+		  (send-all (send *robot* :links) :worldcoords)
+		  (send *irtviewer* :objects (cons (copy-object *robot*) *arrow*))
+		  (copy-seq (send *robot* :angle-vector)))
+	   :user-valid-check
+	   #'(lambda (&rest args)
+	       (let* ((rl (remove-if-not '(lambda (r) (subclassp (class r) robot-model))
+					 (send *irtviewer* :objects)))
+		      (ds (mapcar '(lambda (r) (norm2 (v- (send r :angle-vector)
+							  (send *robot* :angle-vector))))
+				  rl))
+		      (min-ds (apply 'min ds)) min-r)
+		 (cond
+		  ((> min-ds 10000)
+		   ;; (setq min-r (cdr (find-if #'(lambda (dr) (eq (car dr) min-ds))
+		   ;; (mapcar 'cons ds rl))))
+		   (send *irtviewer* :objects
+			 (append
+			  (list (copy-object *robot*))
+			  (send *irtviewer* :objects))))))
+	       t)
+	   (append args ik-args))
+    ))
 
 (defun random-demo-ik
   (&rest
@@ -104,7 +123,7 @@
   (send *viewer* :draw-objects)
   (setq *support-face* nil)
   (cpplog::change-output-stream "/dev/null")
-  (let* ((ret (apply 'demo-ik :check-balance? nil :support-face nil :ik-args (list :max 30) args)))
+  (let* ((ret (apply 'demo-ik :check-balance? nil :support-face nil args)))
     (cpplog::change-output-stream "")
     ret)
   )
