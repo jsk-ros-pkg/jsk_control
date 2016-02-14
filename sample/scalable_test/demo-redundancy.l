@@ -3,52 +3,55 @@
 (setq *load-as-lib* t)
 (require "demo-table-standup.l")
 
-(require "learn.l")
-(require "package://eus_robot/euslisp/eus_robot_ik.l")
-(require "package://eus_robot/euslisp/eus_qp_collide.l")
+(defun demo-setup
+  nil
+  (require "learn.l")
+  (require "package://eus_robot/euslisp/eus_robot_ik.l")
+  (require "package://eus_robot/euslisp/eus_qp_collide.l")
+  ;;
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (send-all (send *robot* :links) :worldcoords)
+  ;;
+  ;; setup ik solver
+  (send *robot* :legs :toe-p :min-angle 0)
+  (send *robot* :legs :toe-p :max-angle 0)
+  ;;
+  (send-all (send user::*robot* :links) :worldcoords)
+  (eus_robot::clear-links)
+  (eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
+  (eus_robot::forward-kinematics 0)
+  (eus_robot::print-link-tree)
+  (eus_robot_ik::clear-all)
+  (eus_robot_ik::add-target :limb :larm)
+  (eus_robot_ik::add-target :limb :rarm)
+  (eus_robot_ik::add-target :limb :lleg)
+  (eus_robot::configuration-copy-to :robot user::*robot*)
+  ;;
+  (send *robot* :legs :toe-p :min-angle -60)
+  (send *robot* :legs :toe-p :max-angle 16)
+  (setq *links* (mapcar #'(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links))) *joint-list1*))
+  ;;
+  ;; setup collision detection
+  (eus_qp_collide::test-gen-collidable-pairs-old)
+  (setq *collidable-pairs* eus_qp_collide::*collidable-pairs*)
+  (eus_qp_collide::add-all-link-convex *robot*)
+  (eus_qp_collide::gen-all-convex-matrices)
+  (eus_robot::register-collide-pairs *collidable-pairs*)
+  ;;
+  ;; dnn setup
+  (smart-initialize-net)
+  (setq *input* (get-vector-from-ef-coords :ef-coords *ef-coords* :root-link *root-link*))
+  (setq *redundancy* (instantiate float-vector (- (caffe::get-blob-count "input")
+						  (length *input*))))
+  (setq *input* (concatenate float-vector *input* *redundancy*))
+  ;;
+  ;; setup viewer
+  (send *irtviewer* :change-background (float-vector 1 1 1))
+  (objects (cons *robot* *arrow*))
+  )
 
-(send *robot* :reset-pose)
-(send *robot* :fix-leg-to-coords (make-coords) :rleg)
-(send-all (send *robot* :links) :worldcoords)
-
-;; setup ik solver
-(send *robot* :legs :toe-p :min-angle 0)
-(send *robot* :legs :toe-p :max-angle 0)
-;;
-(send-all (send user::*robot* :links) :worldcoords)
-(eus_robot::clear-links)
-(eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
-(eus_robot::forward-kinematics 0)
-(eus_robot::print-link-tree)
-(eus_robot_ik::clear-all)
-(eus_robot_ik::add-target :limb :larm)
-(eus_robot_ik::add-target :limb :rarm)
-(eus_robot_ik::add-target :limb :lleg)
-(eus_robot::configuration-copy-to :robot user::*robot*)
-;;
-(send *robot* :legs :toe-p :min-angle -60)
-(send *robot* :legs :toe-p :max-angle 16)
-(setq *links* (mapcar #'(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links))) *joint-list1*))
-
-;; setup collision detection
-(eus_qp_collide::test-gen-collidable-pairs-old)
-(setq *collidable-pairs* eus_qp_collide::*collidable-pairs*)
-(eus_qp_collide::add-all-link-convex *robot*)
-(eus_qp_collide::gen-all-convex-matrices)
-(eus_robot::register-collide-pairs *collidable-pairs*)
-
-;; dnn setup
-(smart-initialize-net)
-(setq *input* (get-vector-from-ef-coords :ef-coords *ef-coords* :root-link *root-link*))
-(setq *redundancy* (instantiate float-vector (- (caffe::get-blob-count "input")
-						(length *input*))))
-(setq *input* (concatenate float-vector *input* *redundancy*))
-
-;; setup viewer
-(send *irtviewer* :change-background (float-vector 1 1 1))
-(objects (cons *robot* *arrow*))
-
-(defun registered-posture-ik
+(defun demo-reset-pose-redundancy
   (&rest
    args
    &key
@@ -64,30 +67,38 @@
      :ik-args (list :max 15 :pthre (* 1e-3 10) :rthre (deg2rad 5))
      )
     )
-   (av (copy-seq (send *robot* :reset-pose)))
+   (reset-pose (copy-seq (send *robot* :reset-pose)))
    (cnt-buf (instantiate integer-vector 6))
    (tm-buf (instantiate float-vector 6))
    tm
    )
   (fill cnt-buf 0)
   (fill tm-buf 0)
-  (apply 'random-demo-ik
+  (apply 'demo-random-redundancy-check
 	 :event-cnt cnt-buf
 	 :event-tm tm-buf
 	 :draw? nil
 	 :random-angle
-	 (progn (send *robot* :angle-vector av)
+	 (progn (send *robot* :angle-vector (copy-seq reset-pose))
 		(send *robot* :fix-leg-to-coords (make-coords) :rleg)
 		(send-all (send *robot* :links) :worldcoords)
-		(send *irtviewer* :objects (cons (copy-object *robot*) *arrow*))
+		(send *irtviewer* :objects
+		      (append (list (copy-object *robot*))
+			      *arrow*
+			      (remove-if '(lambda (a) (subclassp (class a) robot-model))
+					 (send *irtviewer* :objects))))
 		(copy-seq (send *robot* :angle-vector)))
 	 (append args ik-args))
-  (apply 'random-demo-ik
+  (apply 'demo-random-redundancy-check
 	 :random-angle
-	 (progn (send *robot* :angle-vector av)
+	 (progn (send *robot* :angle-vector (copy-seq reset-pose))
 		(send *robot* :fix-leg-to-coords (make-coords) :rleg)
 		(send-all (send *robot* :links) :worldcoords)
-		(send *irtviewer* :objects (cons (copy-object *robot*) *arrow*))
+		(send *irtviewer* :objects
+		      (append (list (copy-object *robot*))
+			      *arrow*
+			      (remove-if '(lambda (a) (subclassp (class a) robot-model))
+					 (send *irtviewer* :objects))))
 		(copy-seq (send *robot* :angle-vector)))
 	 :user-valid-check
 	 #'(lambda (&rest args)
@@ -116,7 +127,7 @@
 		   (aref tm-buf 5))
   )
 
-(defun random-demo-ik
+(defun demo-random-redundancy-check
   (&rest
    args
    &key
@@ -146,3 +157,25 @@
     (cpplog::change-output-stream "")
     ret)
   )
+
+#|
+
+(demo-setup)
+
+(demo-reset-pose-redundancy :check-balance? nil)
+(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_reset_pose.jpg")
+;; 30/100 samples are valid, traj=nil
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.020883(100)/0.040057(100)/0.0(0)/0.01819(70)/0.0(0)/0.090259
+
+(demo-reset-pose-redundancy :check-balance? t)
+(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_reset_pose_with_centroid.jpg")
+;; 9/100 samples are valid, traj=nil
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.019434(100)/0.039366(100)/0.001511(70)/0.006923(24)/0.0(0)/0.0737
+
+(require "demo-egress-table.l")
+(eus_qp_collide::clear-convex)
+(demo-setup)
+(send *irtviewer* :objects (append *arrow* (send *irtviewer* :objects)))
+(demo-reset-pose-redundancy :check-balance? nil :reset-pose
+			    (copy-seq (send *robot* :angle-vector)))
+(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress.jpg")
