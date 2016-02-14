@@ -48,6 +48,36 @@
 (send *irtviewer* :change-background (float-vector 1 1 1))
 (objects (cons *robot* *arrow*))
 
+(defun registered-posture-ik
+  (&rest args)
+  (apply 'random-demo-ik
+	 :mode :all
+	 :step-max 300
+	 :random-angle
+	 (progn (send *robot* :reset-pose)
+		(send *robot* :fix-leg-to-coords (make-coords) :rleg)
+		(send-all (send *robot* :links) :worldcoords)
+		(send *irtviewer* :objects (cons (copy-object *robot*) *arrow*))
+		(copy-seq (send *robot* :angle-vector)))
+	 :user-valid-check
+	 #'(lambda (&rest args)
+	     (let* ((rl (remove-if-not '(lambda (r) (subclassp (class r) robot-model))
+				       (send *irtviewer* :objects)))
+		    (ds (mapcar '(lambda (r) (norm2 (v- (send r :angle-vector)
+							(send *robot* :angle-vector))))
+				rl))
+		    (min-ds (apply 'min ds)) min-r)
+	       (cond
+		((> min-ds 10000)
+		 ;; (setq min-r (cdr (find-if #'(lambda (dr) (eq (car dr) min-ds))
+		 ;; (mapcar 'cons ds rl))))
+		 (send *irtviewer* :objects
+		       (append
+			(list (copy-object *robot*))
+			(send *irtviewer* :objects))))))
+	     t)
+	 args))
+
 (defun random-demo-ik
   (&rest
    args
@@ -74,6 +104,7 @@
   (send *viewer* :draw-objects)
   (setq *support-face* nil)
   (cpplog::change-output-stream "/dev/null")
-  (apply 'demo-ik :check-balance? nil :support-face nil :ik-args (list :max 30) args)
-  (cpplog::change-output-stream "")
+  (let* ((ret (apply 'demo-ik :check-balance? nil :support-face nil :ik-args (list :max 30) args)))
+    (cpplog::change-output-stream "")
+    ret)
   )
