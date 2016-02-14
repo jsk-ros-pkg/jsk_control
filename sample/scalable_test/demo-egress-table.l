@@ -317,7 +317,8 @@
    (animate? t)
    (user-valid-check #'(lambda (cog) t)); (< (abs (aref cog 0)) 70)))
    (target-centroid-pos (plusp (eus_robot_ik::is-cog-mode)))
-   (ik-args (if target-centroid-pos (list :cog-thre 1e+10)))
+   (ik-args (append nil ;;(list :pthre (* 1e-3 10) :rthre (deg2rad 5))
+		    (if target-centroid-pos (list :cog-thre 1e+10))))
    ret
    (ef-coords-list *ef-coords-list*)
    &allow-other-keys
@@ -374,7 +375,7 @@
   (warning-message 6  "demo setup ...~%")
   (demo-setup)
   (warning-message 6  "run demo ...~%")
-  (setq *traj-set* (demo-main :draw? nil :animate? nil))
+  (setq *traj-set* (demo-main :draw? nil :animate? nil :traj? nil))
   (let* ((p (open "demo_egress.log" :direction :output)))
     (if *traj-set* (format p "o~%") (format p "x~%"))
     (format p "~A~%" (length *ret*))
