@@ -376,7 +376,10 @@
    ;;
    &allow-other-keys
    )
-  (setf (aref event-tm 5) (let* ((tm (unix::gettimeofday))) (+ (car tm) (* 1e-6 (cadr tm)))))
+  (setf (aref event-tm 5)
+	(-
+	 (let* ((tm (unix::gettimeofday))) (+ (car tm) (* 1e-6 (cadr tm))))
+	 (aref event-tm 5)))
   ;;
   (send traj-set :put :ok nil)
   (send traj-set :root
@@ -513,6 +516,7 @@
 	(let* ((tm (unix::gettimeofday)))
 	  (- (+ (car tm) (* 1e-6 (cadr tm)))
 	     (aref event-tm 5))))
+  (setf (aref event-cnt 5) (+ (aref event-cnt 5) suc-cnt))
   traj-set)
 
 (defun demo-main
