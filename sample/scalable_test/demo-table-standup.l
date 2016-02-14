@@ -285,7 +285,8 @@
   (eus_robot::configuration-copy-from :conf conf :root-link-coords root-link-coords)
   ;; (if rleg-coords (send *robot* :fix-leg-to-coords rleg-coords :rleg))
   (send *viewer* :draw-objects :flush nil)
-  (send support-face :draw-on :flush nil :width 5 :color (float-vector 0.3 1 0.3))
+  (if support-face
+      (send support-face :draw-on :flush nil :width 5 :color (float-vector 0.3 1 0.3)))
   (send (or cog (map float-vector '* (float-vector 1 1 0) (send *robot* :centroid)))
 	:draw-on :flush nil :color (float-vector 1 0.3 0.3) :size 100 :width 5)
   (send *viewer* :viewsurface :flush)
@@ -368,7 +369,7 @@
    (traj-set (instance traj-set :init))
    ;;
    ;; debug option
-   (draw? t) (mode :first) (step? nil) (solve-ik? t) (ik-args nil)
+   (draw? t) (mode :first) (step? nil) (solve-ik? t) (check-balance? t) (ik-args nil)
    ;;
    &allow-other-keys
    )
@@ -426,14 +427,16 @@
 		(eus_robot::set-configuration (send l :get :id) pos 1))
 	     *links* av)
 	(eus_robot::forward-kinematics 0)
-	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_robot_ik::solve-ik :max 15 ik-args))))
+	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_robot_ik::solve-ik (append ik-args (list :max 15))))))
 	;; check centroid
 	(eus_robot::forward-kinematics 0)
 	(eus_robot::calc-links-centroid :ret cog)
 	(setf (aref cog 0) (* 1e+3 (aref cog 0)))
 	(setf (aref cog 1) (* 1e+3 (aref cog 1)))
 	(setf (aref cog 2) 0)
-	(if (not (eq (send support-face :insidep cog) :inside)) (setq ok? nil))
+	(if (and check-balance?
+		 (not (eq (send support-face :insidep cog) :inside)))
+	    (setq ok? nil))
 	))
      )
     (if draw? (warning-message 6 "solve IK: ~A~%" tm))
