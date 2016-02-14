@@ -9,6 +9,8 @@
   (require "package://eus_robot/euslisp/eus_robot_ik.l")
   (require "package://eus_robot/euslisp/eus_qp_collide.l")
   ;;
+  (send-all (send *robot* :joint-list) :set-val 'joint-min-max-table nil)
+  (send-all (send *robot* :joint-list) :set-val 'joint-min-max-target nil)
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords) :rleg)
   (send-all (send *robot* :links) :worldcoords)
@@ -90,6 +92,7 @@
 		(copy-seq (send *robot* :angle-vector)))
 	 (append args ik-args))
   (apply 'demo-random-redundancy-check
+	 :draw? t
 	 :random-angle
 	 (progn (send *robot* :angle-vector (copy-seq reset-pose))
 		(send *robot* :fix-leg-to-coords (make-coords) :rleg)
@@ -102,6 +105,7 @@
 		(copy-seq (send *robot* :angle-vector)))
 	 :user-valid-check
 	 #'(lambda (&rest args)
+	     (eus_robot::configuration-copy-from)
 	     (let* ((rl (remove-if-not '(lambda (r) (subclassp (class r) robot-model))
 				       (send *irtviewer* :objects)))
 		    (ds (mapcar '(lambda (r) (norm2 (v- (send r :angle-vector)
@@ -115,7 +119,9 @@
 		 (send *irtviewer* :objects
 		       (append
 			(list (copy-object *robot*))
-			(send *irtviewer* :objects))))))
+			(send *irtviewer* :objects)))
+		 (send *viewer* :draw-objects)
+		 )))
 	     t)
 	 (append args ik-args))
   (warning-message 6 "DNN/IK/COG/COL/TREE/TOTAL = ~A(~A)/~A(~A)/~A(~A)/~A(~A)/~A(~A)/~A~%"
@@ -163,11 +169,14 @@
 (demo-setup)
 
 (demo-reset-pose-redundancy :check-balance? nil)
+(send *irtviewer* :viewer :viewing :look #f(500 3500 1000) (send *robot* :centroid))
 (send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_reset_pose.jpg")
 ;; 30/100 samples are valid, traj=nil
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.020883(100)/0.040057(100)/0.0(0)/0.01819(70)/0.0(0)/0.090259
 
 (demo-reset-pose-redundancy :check-balance? t)
+(send *viewer* :draw-objects)
+(send *support-face* :draw-on :flush t :width 5 :color (float-vector 0.3 1 0.3)))
 (send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_reset_pose_with_centroid.jpg")
 ;; 9/100 samples are valid, traj=nil
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.019434(100)/0.039366(100)/0.001511(70)/0.006923(24)/0.0(0)/0.0737
@@ -176,6 +185,6 @@
 (eus_qp_collide::clear-convex)
 (demo-setup)
 (send *irtviewer* :objects (append *arrow* (send *irtviewer* :objects)))
-(demo-reset-pose-redundancy :check-balance? nil :reset-pose
-			    (copy-seq (send *robot* :angle-vector)))
+(demo-reset-pose-redundancy :check-balance? nil :reset-pose (copy-seq (send *robot* :angle-vector)))
 (send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress.jpg")
+
