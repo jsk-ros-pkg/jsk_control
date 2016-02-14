@@ -401,3 +401,10 @@
 ;;        (ll (mapcar '(lambda (m) (send *robot* :link-list (send m :parent))) mt))
 ;;        (tc (send-all mt :copy-worldcoords)))
 ;;   (
+
+;; (send *rarm-target-sphere* :newcoords (float-vector 400 0 300) :world)
+;; (let* ((tm-buf (float-vector 0)) (lp 100))
+;;   (dotimes (i lp)
+;;     (setq *traj-set* (demo-main :draw? nil :tm-buf tm-buf))
+;;     (if (not (send *traj-set* :get :ok)) (warning-message 1 "no anwser~%")))
+;;   (print (/ (aref tm-buf 0) lp)))
