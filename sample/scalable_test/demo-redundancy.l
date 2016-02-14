@@ -192,68 +192,29 @@
 
 #|
 
+(require "demo-redundancy.l")
+
 (demo-setup)
 
 (demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? nil)
 (send *viewer* :draw-objects)
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_reset_pose.jpg")
+(send *viewer* :viewsurface :write-to-image-file "reset_pose.jpg")
 ;; 70/100 samples are valid, traj=nil
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.019661(100)/0.040587(100)/0.0(0)/0.0(0)/0.0(0)/0.073419
 
 
 (demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? t)
 (send *viewer* :draw-objects)
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_reset_pose_col.jpg")
+(send *viewer* :viewsurface :write-to-image-file "reset_pose_col.jpg")
 ;; 30/100 samples are valid, traj=nil
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.020883(100)/0.040057(100)/0.0(0)/0.01819(70)/0.0(0)/0.090259
 
 (demo-reset-pose-redundancy :check-balance? t :solve-ik? t :check-collision? t)
 (send *viewer* :draw-objects)
 (send *support-face* :draw-on :flush t :width 5 :color (float-vector 0.3 1 0.3)))
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_reset_pose_col_bal.jpg")
+(send *viewer* :viewsurface :write-to-image-file "reset_pose_col_bal.jpg")
 ;; 9/100 samples are valid, traj=nil
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.019434(100)/0.039366(100)/0.001511(70)/0.006923(24)/0.0(0)/0.0737
-
-(require "demo-egress-table.l")
-(eus_qp_collide::clear-convex)
-(demo-setup)
-(send *irtviewer* :objects (append *arrow* (send *irtviewer* :objects)))
-;;
-(demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? nil :reset-pose (copy-seq (send *robot* :angle-vector)))
-;; 74/100 samples are valid, traj=nil
-;; DNN/IK/COG/COL/TREE/TOTAL = 0.019223(100)/0.038647(100)/0.0(0)/0.0(0)/0.0(0)/0.073551
-(send *viewer* :viewing :look #f(3832.96 1118.63 1649.89) #f(-173.901 119.606 620.28))
-(send *viewer* :draw-objects)
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_front.jpg")
-(send *viewer* :viewing :look #f(-127.655 4513.81 607.946) #f(-201.92 259.166 682.223))
-(send *viewer* :draw-objects)
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_side.jpg")
-
-;;
-(send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-(demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)))
-;; 16/100 samples are valid, traj=nil
-;; DNN/IK/COG/COL/TREE/TOTAL = 0.020567(100)/0.041735(100)/0.0(0)/0.040762(74)/0.0(0)/0.11072
-;;
-(send *viewer* :viewing :look #f(3832.96 1118.63 1649.89) #f(-173.901 119.606 620.28))
-(send *viewer* :draw-objects)
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_front_col.jpg")
-(send *viewer* :viewing :look #f(-127.655 4513.81 607.946) #f(-201.92 259.166 682.223))
-(send *viewer* :draw-objects)
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_side_col.jpg")
-
-(send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
-(demo-reset-pose-redundancy :check-balance? t :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)))
-;; 5/100 samples are valid, traj=nil
-;; DNN/IK/COG/COL/TREE/TOTAL = 0.019568(100)/0.038555(100)/0.001516(74)/0.0094(16)/0.0(0)/0.075337
-;;
-(send *viewer* :viewing :look #f(3832.96 1118.63 1649.89) #f(-173.901 119.606 620.28))
-(send *viewer* :draw-objects)
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_front_col_bal.jpg")
-(send *viewer* :viewing :look #f(-127.655 4513.81 607.946) #f(-201.92 259.166 682.223))
-(send *viewer* :draw-objects)
-(send *viewer* :viewsurface :write-to-image-file "4limb_ik_redundancy_egress_side_col_bal.jpg")
-
 
 ;; (print (list 'send '*viewer* :viewing :look (send *irtviewer* :viewpoint) (send *irtviewer* :viewtarget)))
 
@@ -268,14 +229,59 @@
 (send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
 (demo-reset-pose-redundancy :check-balance? t :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)) :demo-main 'demo-main :step-max 5 :rarm-random-step-max 20 :min-dist -1)
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.019583(100)/0.045406(100)/0.001718(69)/0.015439(32)/0.0(0)/0.090005(3)
-(write-image-wrapper :base-path-name "4limb_ik_redundancy_reach_col_bal")
+(write-image-wrapper :base-path-name "reach_col_bal")
 ;;
 (send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
 (demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)) :demo-main 'demo-main :step-max 5 :rarm-random-step-max 20 :min-dist -1)
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.020172(100)/0.040659(100)/0.0(0)/0.037095(76)/0.0(0)/0.105535(5)
-(write-image-wrapper :base-path-name "4limb_ik_redundancy_reach_col")
+(write-image-wrapper :base-path-name "reach_col")
 ;;
 (send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
 (demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? nil :reset-pose (copy-seq (send *robot* :angle-vector)) :demo-main 'demo-main :step-max 5 :rarm-random-step-max 20)
 ;; DNN/IK/COG/COL/TREE/TOTAL = 0.021459(100)/0.042755(100)/0.0(0)/0.0(0)/0.0(0)/0.07424(73)
-(write-image-wrapper :base-path-name "4limb_ik_redundancy_reach")
+(write-image-wrapper :base-path-name "reach")
+
+
+(defun write-image-wrapper
+  (&key
+   (front-view-point (float-vector 3832.96 1118.63 1649.89))
+   (front-view-target (float-vector -173.901 119.606 620.28))
+   ;;
+   (side-view-point (float-vector -127.655 4513.81 607.946))
+   (side-view-target  (float-vector -201.92 259.166 682.223))
+   (base-path-name "4limb_ik_redundancy_egress")
+   )
+  (send *viewer* :viewing :look front-view-point front-view-target)
+  (send *viewer* :draw-objects)
+  (send *viewer* :viewsurface :write-to-image-file
+	(format nil "~A_front.jpg" base-path-name))
+  (send *viewer* :viewing :look side-view-point side-view-target)
+  (send *viewer* :draw-objects)
+  (send *viewer* :viewsurface :write-to-image-file
+	(format nil "~A_side.jpg" base-path-name))
+  )
+
+(require "demo-egress-table.l")
+(eus_qp_collide::clear-convex)
+(demo-setup)
+(send *irtviewer* :objects (append *arrow* (send *irtviewer* :objects)))
+;;
+(demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? nil :reset-pose (copy-seq (send *robot* :angle-vector)))
+;; 74/100 samples are valid, traj=nil
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.019223(100)/0.038647(100)/0.0(0)/0.0(0)/0.0(0)/0.073551
+(write-image-wrapper :base-path-name "egress")
+
+;;
+(send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+(demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)))
+;; 16/100 samples are valid, traj=nil
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.020567(100)/0.041735(100)/0.0(0)/0.040762(74)/0.0(0)/0.11072
+;;
+(write-image-wrapper :base-path-name "egress_col")
+
+(send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+(demo-reset-pose-redundancy :check-balance? t :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)))
+;; 5/100 samples are valid, traj=nil
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.019568(100)/0.038555(100)/0.001516(74)/0.0094(16)/0.0(0)/0.075337
+;;
+(write-image-wrapper :base-path-name "egress_col_bal")
