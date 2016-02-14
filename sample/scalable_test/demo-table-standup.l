@@ -371,7 +371,8 @@
    (traj-set (instance traj-set :init))
    ;;
    ;; debug option
-   (draw? t) (mode :first) (step? nil) (solve-ik? t) (check-balance? t) (ik-args nil)
+   (draw? t) (mode :first) (step? nil) (solve-ik? t) (check-balance? t) (check-collision? t)
+   (ik-args nil)
    ;;
    &allow-other-keys
    )
@@ -441,33 +442,36 @@
     ;; check centroid
     (cond
      (ok?
-      (setq
-       tm
-       (bench2
-	(progn
-	  (eus_robot::forward-kinematics 0)
-	  (eus_robot::calc-links-centroid :ret cog)
-	  (setf (aref cog 0) (* 1e+3 (aref cog 0)))
-	  (setf (aref cog 1) (* 1e+3 (aref cog 1)))
-	  (setf (aref cog 2) 0)
-	  (if (and check-balance?
-		   (not (eq (send support-face :insidep cog) :inside)))
-	      (setq ok? nil)))))
-      (if check-balance?
-	  (progn (setf (aref event-cnt 2) (+ (aref event-cnt 2) 1))
-		 (setf (aref event-tm 2) (+ (aref event-tm 2) tm))))
-      (if draw? (warning-message 6 "check balance: ~A~%" tm))
+      (cond
+       (check-collision?
+	(setq
+	 tm
+	 (bench2
+	  (progn
+	    (eus_robot::forward-kinematics 0)
+	    (eus_robot::calc-links-centroid :ret cog)
+	    (setf (aref cog 0) (* 1e+3 (aref cog 0)))
+	    (setf (aref cog 1) (* 1e+3 (aref cog 1)))
+	    (setf (aref cog 2) 0)
+	    (if (not (eq (send support-face :insidep cog) :inside))
+		(setq ok? nil)))))
+	(setf (aref event-cnt 2) (+ (aref event-cnt 2) 1))
+	(setf (aref event-tm 2) (+ (aref event-tm 2) tm))
+	(if draw? (warning-message 6 "check balance: ~A~%" tm))))
       (cond
        (ok?
 	;;
 	;; check collision
-	(setq
-	 tm
-	 (bench2
-	  (if (plusp (eus_robot::check-all-collide)) (setq ok? nil))))
-	(setf (aref event-cnt 3) (+ (aref event-cnt 3) 1))
-	(setf (aref event-tm 3) (+ (aref event-tm 3) tm))
-	(if draw? (warning-message 6 "collision: ~A~%" tm))
+	(cond
+	 (check-collision?
+	  (setq
+	   tm
+	   (bench2
+	    (if (plusp (eus_robot::check-all-collide)) (setq ok? nil))))
+	  (setf (aref event-cnt 3) (+ (aref event-cnt 3) 1))
+	  (setf (aref event-tm 3) (+ (aref event-tm 3) tm))
+	  (if draw? (warning-message 6 "collision: ~A~%" tm))
+	  ))
 	;;
 	(cond
 	 (ok?
