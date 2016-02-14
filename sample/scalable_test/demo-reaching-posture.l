@@ -158,6 +158,7 @@
    (rarm-random-step-max 100)
    rarm-coords
    ret (tm-buf (float-vector 0))
+   &allow-other-keys
    )
   (cpplog::change-output-stream "/dev/null")
   ;;
