@@ -362,6 +362,8 @@
    ;; buf
    (input (concatenate float-vector (get-vector-from-ef-coords :ef-coords ef-coords :root-link caffe-root-link :offset-coords offset-coords) redundancy))
    (av (instantiate float-vector (length joint-list)))
+   (event-cnt (instantiate integer-vector 4))
+   (event-tm (instantiate float-vector 4))
    (ok? nil) (suc-cnt 0) (cnt 0) (traj? t) tm
    (ref-redundancy (sep-vector (expt (min 8000 step-max) (/ 1.0 (length redundancy)))
 			       0 redundancy))
@@ -428,55 +430,74 @@
 	     *links* av)
 	(eus_robot::forward-kinematics 0)
 	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_robot_ik::solve-ik (append ik-args (list :max 15))))))
-	;; check centroid
-	(eus_robot::forward-kinematics 0)
-	(eus_robot::calc-links-centroid :ret cog)
-	(setf (aref cog 0) (* 1e+3 (aref cog 0)))
-	(setf (aref cog 1) (* 1e+3 (aref cog 1)))
-	(setf (aref cog 2) 0)
-	(if (and check-balance?
-		 (not (eq (send support-face :insidep cog) :inside)))
-	    (setq ok? nil))
-	))
-     )
+	)))
+    (setf (aref event-cnt 0) (+ (aref event-cnt 0) 1))
+    (setf (aref event-tm 0) (+ (aref event-tm 0) tm))
     (if draw? (warning-message 6 "solve IK: ~A~%" tm))
     ;;
-    ;; check collision
-    (setq
-     tm
-     (bench2
-      (if (and ok? (plusp (eus_robot::check-all-collide))) (setq ok? nil))))
-    (if draw? (warning-message 6 "collision: ~A~%" tm))
-    ;;
-    ;;
-    (if (eq t draw?) (draw-wrapper :cog cog))
+    ;; check centroid
     (cond
      (ok?
-      (incf suc-cnt)
-      (let* ((elem (instance traj-elem :init (copy-seq (eus_robot::get-configurations)))))
-	(send elem :put :root-link-coords
-	      (eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
-	(send elem :put :support-face support-face)
-	(send traj-set :add-elem elem t)
-	(if (funcall user-valid-check cog)
-	    (send traj-set :add-valids elem)))
-      (if (eq :only-valid draw?) (draw-wrapper :cog cog))
-      (if step? (read-line))
+      (setq
+       tm
+       (bench2
+	(progn
+	  (eus_robot::forward-kinematics 0)
+	  (eus_robot::calc-links-centroid :ret cog)
+	  (setf (aref cog 0) (* 1e+3 (aref cog 0)))
+	  (setf (aref cog 1) (* 1e+3 (aref cog 1)))
+	  (setf (aref cog 2) 0)
+	  (if (and check-balance?
+		   (not (eq (send support-face :insidep cog) :inside)))
+	      (setq ok? nil)))))
+      (if check-balance?
+	  (progn (setf (aref event-cnt 1) (+ (aref event-cnt 1) 1))
+		 (setf (aref event-tm 1) (+ (aref event-tm 1) tm))))
+      (if draw? (warning-message 6 "check balance: ~A~%" tm))
       (cond
-       ((and (eq mode :first)
-	     (or
-	      (not traj?)
-	      (let* ((elem))
-		(setq tm (bench2 (setq elem (send (send traj-set :root) :wide-first-find (send traj-set :valids)))))
-		;; (find-if #'(lambda (valid) (send (send traj-set :root)
-		;; :wide-first-find valid))
-		;; (send traj-set :valids))))
-		(if draw? (warning-message 6 "wide-first-search: ~A~%" tm))
-		(if elem (send traj-set :put :valid elem))
-		elem)))
-	(send traj-set :put :ok t)
-	(return-from nil nil))))
-     ))
+       (ok?
+	;;
+	;; check collision
+	(setq
+	 tm
+	 (bench2
+	  (if (and ok? (plusp (eus_robot::check-all-collide))) (setq ok? nil))))
+	(setf (aref event-cnt 2) (+ (aref event-cnt 2) 1))
+	(setf (aref event-tm 2) (+ (aref event-tm 2) tm))
+	(if draw? (warning-message 6 "collision: ~A~%" tm))
+	;;
+	(cond
+	 (ok?
+	  (incf suc-cnt)
+	  (let* ((elem (instance traj-elem :init (copy-seq (eus_robot::get-configurations)))))
+	    (send elem :put :root-link-coords
+		  (eus_robot::get-link-coords (send (car (send *robot* :links)) :get :id)))
+	    (send elem :put :support-face support-face)
+	    (send traj-set :add-elem elem t)
+	    (if (funcall user-valid-check cog)
+		(send traj-set :add-valids elem)))
+	  (if (eq :only-valid draw?) (draw-wrapper :cog cog))
+	  (if step? (read-line))
+	  (cond
+	   ((and (eq mode :first)
+		 (or
+		  (not traj?)
+		  (let* ((elem))
+		    (setq tm (bench2 (setq elem (send (send traj-set :root)
+						      :wide-first-find (send traj-set :valids)))))
+		    ;; (find-if #'(lambda (valid) (send (send traj-set :root)
+		    ;; :wide-first-find valid))
+		    ;; (send traj-set :valids))))
+		    (setf (aref event-cnt 3) (+ (aref event-cnt 3) 1))
+		    (setf (aref event-tm 3) (+ (aref event-tm 3) tm))
+		    (if draw? (warning-message 6 "wide-first-search: ~A~%" tm))
+		    (if elem (send traj-set :put :valid elem))
+		    elem)))
+	    (send traj-set :put :ok t)
+	    (return-from nil nil)))))))))
+    ;;
+    (if (eq t draw?) (draw-wrapper :cog cog))
+    )
   (if draw? (warning-message 6 "~A/~A samples are valid, traj=~A~%" suc-cnt cnt (send traj-set :get :valid)))
   traj-set)
 
