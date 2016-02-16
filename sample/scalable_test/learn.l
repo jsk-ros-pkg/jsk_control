@@ -911,8 +911,8 @@
   )
 
 (defun ik-random-test-min-average
-  (&rest args &key (lp 100) (step-max 300) &allow-other-keys)
-  (let* ((ret))
+  (&rest args &key (lp 100) (step-max 300) (variance (float-vector 0)) &allow-other-keys)
+  (let* ((ret) avr var)
     (smart-initialize-net)
     (dotimes (i lp)
       (push (apply 'ik-random-test-min :initialize? nil :step-max step-max args) ret))
@@ -920,8 +920,13 @@
     (if (not (eq lp (length ret)))
 	(warning-message 1 "[ik-random-test-min-average] warn: ik-random-test-min sometimes redused? ~A/~A~%" (length ret) lp))
     ;; (setq *ret* ret)
-    (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :evaluation d))) ret))
-       (length ret))))
+    (setq avr (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :evaluation d))) ret))
+		(length ret)))
+    (setq var (mapcar #'(lambda (d) (- avr (cdr (assoc :evaluation d)))) ret))
+    (setq var (apply '+ (mapcar '(lambda (d) (* d d)) var)))
+    (setq var (sqrt (/ var (length ret))))
+    (setf (aref variance 0) var)
+    avr))
 
 #|
 
@@ -1014,3 +1019,5 @@
   (format t "ik: ~A, col:~A~%" ik-fail-cnt cl-fail-cnt)
   ret
   )
+
+;; (progn (smart-initialize-net) (cpplog::change-output-stream "/dev/null") (let* ((var (float-vector 0)) avr (log (open "ik_random_test_min.log" :direction :output))) (setq avr (ik-random-test-min-average :draw? nil :variance var)) (format log "~A ~A~%" avr (aref var 0)) (close log) (unix::system "cat ik_random_test_min.log")))
