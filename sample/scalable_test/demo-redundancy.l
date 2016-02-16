@@ -267,21 +267,18 @@
 (send *irtviewer* :objects (append *arrow* (send *irtviewer* :objects)))
 ;;
 (demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? nil :reset-pose (copy-seq (send *robot* :angle-vector)))
-;; 74/100 samples are valid, traj=nil
-;; DNN/IK/COG/COL/TREE/TOTAL = 0.019223(100)/0.038647(100)/0.0(0)/0.0(0)/0.0(0)/0.073551
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.019223(100)/0.038647(100)/0.0(0)/0.0(0)/0.0(0)/0.073551(74)
 (write-image-wrapper :base-path-name "egress")
 
 ;;
 (send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
 (demo-reset-pose-redundancy :check-balance? nil :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)))
-;; 16/100 samples are valid, traj=nil
-;; DNN/IK/COG/COL/TREE/TOTAL = 0.020567(100)/0.041735(100)/0.0(0)/0.040762(74)/0.0(0)/0.11072
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.020567(100)/0.041735(100)/0.0(0)/0.040762(74)/0.0(0)/0.11072(16)
 ;;
 (write-image-wrapper :base-path-name "egress_col")
 
 (send *robot* :angle-vector *init-pose*) (send *robot* :fix-leg-to-coords (make-coords) :rleg)
 (demo-reset-pose-redundancy :check-balance? t :solve-ik? t :check-collision? t :reset-pose (copy-seq (send *robot* :angle-vector)))
-;; 5/100 samples are valid, traj=nil
-;; DNN/IK/COG/COL/TREE/TOTAL = 0.019568(100)/0.038555(100)/0.001516(74)/0.0094(16)/0.0(0)/0.075337
+;; DNN/IK/COG/COL/TREE/TOTAL = 0.019568(100)/0.038555(100)/0.001516(74)/0.0094(16)/0.0(0)/0.075337(5)
 ;;
 (write-image-wrapper :base-path-name "egress_col_bal")
