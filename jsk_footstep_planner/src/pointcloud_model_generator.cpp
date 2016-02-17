@@ -56,6 +56,9 @@ namespace jsk_footstep_planner
     else if (model_name == "gaussian") {
       gaussian(output, hole_rate);
     }
+    else if (model_name == "flat_pole") {
+      flatPole(output, hole_rate);
+    }
   }
 
   void PointCloudModelGenerator::flat(pcl::PointCloud<PointT>& output, double hole_rate)
@@ -73,6 +76,80 @@ namespace jsk_footstep_planner
           p.x = x;
           p.y = y;
           output.points.push_back(p);
+        }
+      }
+    }
+  }
+
+  void PointCloudModelGenerator::addPole(pcl::PointCloud<PointT>& output,
+                                         const Eigen::Vector3f& center,
+                                         const double width,
+                                         const double height)
+  {
+    double y0 = center[1] + width / 2.0;
+    double y1 = center[1] - width / 2.0;
+    double x0 = center[0] + width / 2.0;
+    double x1 = center[0] - width / 2.0;
+    for (double x = x0; x > x1; x = x - 0.01) {
+      for (double z = 0; z < height; z = z + 0.01) {
+        pcl::PointNormal p;
+        p.x = x;
+        p.y = y0;
+        p.z = z;
+        output.points.push_back(p);
+      }
+    }
+    for (double y = y0; y > y1; y = y - 0.01) {
+      for (double z = 0; z < height; z = z + 0.01) {
+        pcl::PointNormal p;
+        p.x = x1;
+        p.y = y;
+        p.z = z;
+        output.points.push_back(p);
+      }
+    }
+    for (double x = x0; x > x1; x = x - 0.01) {
+      for (double z = 0; z < height; z = z + 0.01) {
+        pcl::PointNormal p;
+        p.x = x;
+        p.y = y1;
+        p.z = z;
+        output.points.push_back(p);
+      }
+    }
+    for (double y = y0; y > y1; y = y - 0.01) {
+      for (double z = 0; z < height; z = z + 0.01) {
+        pcl::PointNormal p;
+        p.x = x0;
+        p.y = y;
+        p.z = z;
+        output.points.push_back(p);
+      }
+    }
+  }
+  
+  void PointCloudModelGenerator::flatPole(pcl::PointCloud<PointT>& output, double hole_rate)
+  {
+    boost::mt19937 gen( static_cast<unsigned long>(time(0)) );
+    boost::uniform_real<> dst( 0, 100 );
+    boost::variate_generator<
+      boost::mt19937&, boost::uniform_real<>
+      > rand( gen, dst );
+
+    for (double y = -4; y < 4; y = y + 0.01) {
+      for (double x = -4; x < 4; x = x + 0.01) {
+        if (rand() >= hole_rate) {
+          pcl::PointNormal p;
+          p.x = x;
+          p.y = y;
+          output.points.push_back(p);
+        }
+      }
+    }
+    for (double y = -4; y < 4; y = y + 2.0) {
+      for (double x = -4; x < 4; x = x + 2.0) {
+        if (x != 0.0 || y != 0.0) {
+          addPole(output, Eigen::Vector3f(x, y, 0), 0.2, 2.0);
         }
       }
     }

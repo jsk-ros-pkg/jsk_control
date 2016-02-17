@@ -71,7 +71,30 @@ namespace jsk_footstep_planner
       JSK_ROS_INFO("build graph done");
     }
     sub_pointcloud_model_ = nh.subscribe("pointcloud_model", 1, &FootstepPlanner::pointcloudCallback, this);
+    sub_obstacle_model_ = nh.subscribe("obstacle_model", 1, &FootstepPlanner::obstacleCallback, this);
+    std::vector<double> collision_bbox_size, collision_bbox_offset;
+    if (jsk_topic_tools::readVectorParameter(nh, "collision_bbox_size", collision_bbox_size)) {
+      collision_bbox_size_[0] = collision_bbox_size[0];
+      collision_bbox_size_[1] = collision_bbox_size[1];
+      collision_bbox_size_[2] = collision_bbox_size[2];
+    }
+    if (jsk_topic_tools::readVectorParameter(nh, "collision_bbox_offset", collision_bbox_offset)) {
+      collision_bbox_offset_ = Eigen::Affine3f::Identity() * Eigen::Translation3f(collision_bbox_offset[0],
+                                                                                  collision_bbox_offset[1],
+                                                                                  collision_bbox_offset[2]);
+    }
     as_.start();
+  }
+
+  void FootstepPlanner::obstacleCallback(
+    const sensor_msgs::PointCloud2::ConstPtr& msg)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    obstacle_model_.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::fromROSMsg(*msg, *obstacle_model_);
+    if (graph_ && use_obstacle_model_) {
+      graph_->setObstacleModel(obstacle_model_);
+    }
   }
   
   void FootstepPlanner::pointcloudCallback(
@@ -358,6 +381,11 @@ namespace jsk_footstep_planner
     else {
       graph_->setTransitionLimit(TransitionLimitXYZRPY::Ptr());
     }
+    if (use_obstacle_model_) {
+      graph_->setCollisionBBoxSize(collision_bbox_size_);
+      graph_->setCollisionBBoxOffset(collision_bbox_offset_);
+    }
+    graph_->setObstacleResolution(obstacle_resolution_);
     if (use_global_transition_limit_) {
       graph_->setGlobalTransitionLimit(
         TransitionLimitRP::Ptr(new TransitionLimitRP(
@@ -453,6 +481,7 @@ namespace jsk_footstep_planner
                  % open_list_cloud.points.size()
                  % close_list_cloud.points.size()).str(),
                 OK);
+    ROS_INFO_STREAM("use_obstacle_model: " << graph_->useObstacleModel());
   }
 
   void FootstepPlanner::publishPointCloud(
@@ -626,6 +655,11 @@ namespace jsk_footstep_planner
     heuristic_second_rotation_weight_ = config.heuristic_second_rotation_weight;
     cost_weight_ = config.cost_weight;
     heuristic_weight_ = config.heuristic_weight;
+    if (use_obstacle_model_ != config.use_obstacle_model) {
+      use_obstacle_model_ = config.use_obstacle_model;
+      need_to_rebuild_graph = true;
+    }
+    obstacle_resolution_ = config.obstacle_resolution;
     if (need_to_rebuild_graph) {
       if (graph_) {             // In order to skip first initialization
         buildGraph();
@@ -640,10 +674,15 @@ namespace jsk_footstep_planner
                                                    resolution_theta_),
                                    use_pointcloud_model_,
                                    use_lazy_perception_,
-                                   use_local_movement_));
+                                   use_local_movement_,
+                                   use_obstacle_model_));
     if (use_pointcloud_model_ && pointcloud_model_) {
       graph_->setPointCloudModel(pointcloud_model_);
     }
+    if (use_obstacle_model_ && obstacle_model_) {
+      graph_->setObstacleModel(obstacle_model_);
+    }
+    graph_->setObstacleResolution(obstacle_resolution_);
     graph_->setBasicSuccessors(successors_);
   }
 }

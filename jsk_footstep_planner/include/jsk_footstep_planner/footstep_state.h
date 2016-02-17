@@ -211,7 +211,8 @@ namespace jsk_footstep_planner
                                            const int foot_x_sampling_num,
                                            const int foot_y_sampling_num,
                                            const double vertex_threshold);
-
+    
+    virtual Eigen::Affine3f midcoords(const FootstepState& other);
   protected:
     Eigen::Affine3f pose_;
     const Eigen::Vector3f dimensions_;
