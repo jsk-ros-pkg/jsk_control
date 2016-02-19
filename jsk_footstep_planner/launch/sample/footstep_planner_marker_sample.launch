@@ -1,0 +1,86 @@
+<launch>
+  <node pkg="jsk_footstep_planner" type="footstep_marker" name="footstep_marker" output="screen">
+    <rosparam>
+      disable_tf: false
+      footstep_size_x: 0.237418
+      footstep_size_y: 0.134017
+      lleg_footstep_offset: [0.015502, 0.010078, 0.0]
+      rleg_footstep_offset: [0.015502, -0.010078, 0.0]
+    </rosparam>
+  </node>
+  <node pkg="jsk_footstep_controller" type="simple-footstep-controller.l" name="footstep_controller"
+        output="screen">
+  </node>
+
+  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
+    <rosparam>
+      use_pointcloud_model: false
+      use_lazy_perception: false
+      use_local_movement: true
+      project_start_state: false
+      project_goal_state: false
+    </rosparam>
+
+    <rosparam>
+      footstep_size_x: 0.24
+      footstep_size_y: 0.14
+    </rosparam>
+    <rosparam>
+      successors:
+      - x: 0
+        y: -0.2
+        theta: 0
+      - x: 0
+        y: -0.3
+        theta: 0
+      - x: 0
+        y: -0.15
+        theta: 0
+      - x: 0.2
+        y: -0.2
+        theta: 0
+      - x: 0.25
+        y: -0.2
+        theta: 0
+      - x: 0.3
+        y: -0.2
+        theta: 0
+      - x: 0.1
+        y: -0.2
+        theta: 0
+      - x: -0.1
+        y: -0.2
+        theta: 0
+      - x: 0
+        y: -0.2
+        theta: 0.17
+      - x: 0
+        y: -0.3
+        theta: 0.17
+      - x: 0.2
+        y: -0.2
+        theta: 0.17
+      - x: 0.25
+        y: -0.2
+        theta: 0.17
+      - x: 0.1
+        y: -0.2
+        theta: 0.17
+      - x: 0
+        y: -0.2
+        theta: -0.17
+      - x: 0
+        y: -0.3
+        theta: -0.17
+      - x: 0.2
+        y: -0.2
+        theta: -0.17
+      - x: 0.25
+        y: -0.2
+        theta: -0.17
+      - x: 0.1
+        y: -0.2
+        theta: -0.17
+    </rosparam>
+  </node>
+</launch>

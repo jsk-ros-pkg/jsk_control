@@ -15,7 +15,7 @@ find_package(PCL REQUIRED)
 add_service_files(FILES
   ChangeSuccessor.srv)
 generate_dynamic_reconfigure_options(
-  cfg/FootstepPlanner.cfg cfg/PointCloudModelGenerator.cfg)
+  cfg/FootstepPlanner.cfg cfg/PointCloudModelGenerator.cfg cfg/FootstepMarker.cfg)
 generate_messages()
 #catkin_python_setup()
 catkin_package(
@@ -35,6 +35,8 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}
 include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 link_libraries(${pcl_ros_LIBRARIES} ${catkin_LIBRARIES})
 add_library(jsk_footstep_planner
+  src/footstep_conversions.cpp
+  src/marker_array_publisher.cpp
   src/simple_neighbored_graph.cpp
   src/footstep_state.cpp
   src/footstep_graph.cpp
@@ -44,6 +46,9 @@ add_library(jsk_footstep_planner
   src/transition_limit.cpp
   src/footstep_planner.cpp
   src/line2d.cpp)
+
+add_executable(footstep_marker src/footstep_marker.cpp)
+target_link_libraries(footstep_marker jsk_footstep_planner)
 
 add_executable(sample_simple_graph demo/sample_simple_graph.cpp)
 target_link_libraries(sample_simple_graph jsk_footstep_planner)
