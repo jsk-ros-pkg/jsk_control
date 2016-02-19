@@ -45,6 +45,44 @@
 
 namespace jsk_footstep_planner
 {
+
+  void add3Dof2DControl( visualization_msgs::InteractiveMarker &msg, bool fixed)
+  {
+    visualization_msgs::InteractiveMarkerControl control;
+
+    if(fixed)
+      control.orientation_mode = visualization_msgs::InteractiveMarkerControl::FIXED;
+
+    control.orientation.w = 1;
+    control.orientation.x = 1;
+    control.orientation.y = 0;
+    control.orientation.z = 0;
+    // control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+    // msg.controls.push_back(control);
+    control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+    msg.controls.push_back(control);
+
+    control.orientation.w = 1;
+    control.orientation.x = 0;
+    control.orientation.y = 1;
+    control.orientation.z = 0;
+    control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+    msg.controls.push_back(control);
+    // control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+    // msg.controls.push_back(control);
+
+    control.orientation.w = 1;
+    control.orientation.x = 0;
+    control.orientation.y = 0;
+    control.orientation.z = 1;
+    // control.interaction_mode = visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS;
+    // msg.controls.push_back(control);
+    control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_AXIS;
+    msg.controls.push_back(control);
+
+  }
+
+  
   PosePair::PosePair(const Eigen::Affine3f& first, const std::string& first_name,
                      const Eigen::Affine3f& second, const std::string& second_name):
     first_(first), first_name_(first_name),
@@ -230,7 +268,7 @@ namespace jsk_footstep_planner
     rleg_goal_pose_ = leg_poses->midcoords() * Eigen::Translation3f(0, - default_footstep_margin_ / 2.0, 0.0);
     setupGoalMarker(leg_poses->midcoords(), int_goal_marker);
     if (is_2d_mode_) {
-      im_helpers::add3Dof2DControl(int_goal_marker, false);
+      add3Dof2DControl(int_goal_marker, false);
     }
     else {
       im_helpers::add6DofControl(int_goal_marker, false);
