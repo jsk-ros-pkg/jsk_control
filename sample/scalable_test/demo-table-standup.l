@@ -95,7 +95,7 @@
 (defmethod traj-set
   (:init
    (&key ((:name nm) :traj-set)
-	 ((:range rg) (expt (deg2rad 17) 2))
+	 ((:range rg) (expt (deg2rad 30) 2))
 	 ((:members mem) nil))
    (setq name nm)
    (setq members mem)
@@ -294,7 +294,7 @@
   )
 
 (defun draw-traj-wrapper
-  (traj &key (output-dir nil) (traj-id 0) (elem-id 0))
+  (traj &key (output-dir nil) (traj-id 0) (elem-id 0) (sleep-step 10))
   (if (atom traj) (setq traj (list traj)))
   (dolist (trj traj)
     (incf traj-id)
@@ -310,7 +310,7 @@
 		(unix::system (format nil "mkdir -p ~A" output-dir)))
 	    (if (not (probe-file path))
 		(send *viewer* :viewsurface :write-to-image-file path))))
-      (unix::usleep (* 10 1000)))))
+      (unix::usleep (* sleep-step 1000)))))
 
 (defun demo-ik
   (&key
