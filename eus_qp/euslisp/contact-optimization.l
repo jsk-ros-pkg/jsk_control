@@ -284,7 +284,7 @@
 
 (defmethod contact-constraint
   (:init
-   (&key (name))
+   (&key (name) (gen-drawing? t))
    (send self :name name)
    (when contact-constraint-list
      (setq constraint-param-list
@@ -295,7 +295,7 @@
            (make-matrix (length mat-list) (length (car mat-list)) mat-list)))
    (let ((vec-list (cadr (memq :vector constraint-param-list))))
      (setq constraint-vector (concatenate float-vector vec-list)))
-   (send self :gen-drawing-object)
+   (when gen-drawing? (send self :gen-drawing-object))
    self)
   (:constraint-param-list () constraint-param-list)
   (:gen-drawing-object
@@ -338,7 +338,7 @@
 
 (defmethod 2D-translational-friction-contact-constraint
   (:init
-   (tmp-mu-trans &key ((:norm-axis tmp-norm-axis) :fz))
+   (tmp-mu-trans &key ((:norm-axis tmp-norm-axis) :fz) (gen-drawing? t))
    "Calc conatraint param list for translational friction.
    mu-trans is friction coefficient.
    norm-axis is axis of normal (such as fz).
@@ -353,7 +353,7 @@
            (list :matrix (apply #'append (mapcar #'(lambda (x) (cadr (memq :matrix x))) ret))
                  :vector (apply #'append (mapcar #'(lambda (x) (cadr (memq :vector x))) ret)))
            ))
-   (send-super :init))
+   (send-super :init :gen-drawing? gen-drawing?))
   (:gen-drawing-object
    (&key (z-length 200))
    (let ((b
@@ -377,7 +377,7 @@
 
 (defmethod rotational-friction-contact-constraint
   (:init
-   (tmp-mu-rot tmp-norm-axis &key ((:fric-axis tmp-fric-axis)))
+   (tmp-mu-rot tmp-norm-axis &key ((:fric-axis tmp-fric-axis)) (gen-drawing? t))
    "Calc conatraint param list for translational friction.
    mu-trans is friction coefficient.
    norm-axis is axis of normal (such as fz).
@@ -386,7 +386,7 @@
    (setq constraint-param-list
          (calc-constraint-param-list-for-rotational-friction
           mu-rot norm-axis :fric-axis fric-axis))
-   (send-super :init))
+   (send-super :init :gen-drawing? gen-drawing?))
   )
 
 (defclass 2D-cop-contact-constraint
@@ -402,7 +402,8 @@
         (moment-axes (case tmp-force-axis
                        (:fz (list :ny :nx))
                        (:fy (list :nx :nz))
-                       (:fx (list :nz :ny)))))
+                       (:fx (list :nz :ny))))
+        (gen-drawing? t))
   "Calc two-dimensional rectangular COP constraint.
    l-*-? is all [mm].
    l-max-? and l-min-? are max and min direction for an axis.
@@ -416,7 +417,7 @@
          l-max-1 l-min-1 l-max-2 l-min-2
          :force-axis force-axis
          :moment-axes moment-axes))
-  (send-super :init)
+  (send-super :init :gen-drawing? gen-drawing?)
   )
   (:gen-drawing-object
    ()
@@ -439,14 +440,14 @@
 
 (defmethod norm-contact-constraint
   (:init
-   (norm-axis &key (norm 1))
+   (norm-axis &key (norm 1) (gen-drawing? t))
    "Calc constraint param for non-negative contact constraint.
    norm-axis is axis of normal (such as fz).
    norm = 1 is non-negative constraint. norm = -1 is non-positive constraint."
    (setq constraint-param-list
          (calc-constraint-param-list-for-norm
           norm-axis :norm norm))
-   (send-super :init))
+   (send-super :init :gen-drawing? gen-drawing?))
   )
 
 (defclass min-max-contact-constraint
@@ -456,14 +457,14 @@
 
 (defmethod min-max-contact-constraint
   (:init
-   (v-axis v-limit-value &key (min/max :min))
+   (v-axis v-limit-value &key (min/max :min) (gen-drawing? t))
    "Calc constraint param for min max constraint.
     axis is axis of normal (such as fz).
     min/max is :min => min value limitation. min/max is :max => max value limitation."
    (setq limit-value v-limit-value)
    (setq constraint-param-list
          (calc-constraint-param-list-for-min-max v-axis v-limit-value :min/max min/max))
-   (send-super :init))
+   (send-super :init :gen-drawing? gen-drawing?))
   )
 
 (defclass 2D-translational-sliding-contact-constraint
@@ -473,7 +474,7 @@
 
 (defmethod 2D-translational-sliding-contact-constraint
   (:init
-   (tmp-mu-trans &key ((:norm-axis tmp-norm-axis) :fz) ((:slide-axis tmp-slide-axis) :x))
+   (tmp-mu-trans &key ((:norm-axis tmp-norm-axis) :fz) ((:slide-axis tmp-slide-axis) :x) (gen-drawing? t))
    "Calc conatraint param list for translational sliding.
    mu-trans is friction coefficient.
    norm-axis is axis of normal (such as fz).
@@ -490,7 +491,7 @@
            (list :matrix (apply #'append (mapcar #'(lambda (x) (cadr (memq :matrix x))) ret))
                  :vector (apply #'append (mapcar #'(lambda (x) (cadr (memq :vector x))) ret)))
            ))
-   (send-super :init))
+   (send-super :init :gen-drawing? gen-drawing?))
   (:gen-drawing-object
    (&key (z-length 200))
    (setq drawing-object
@@ -522,7 +523,8 @@
   (:init
    (&key (mu-trans) (mu-rot) (slide-axis)
          (l-max-x) (l-max-y) (l-min-x) (l-min-y)
-         (name) (max-fz))
+         (name) (max-fz)
+         (gen-drawing? t))
    "Calc default constraint matrix.
     This is include 2D friction force, 1D rotational friction moment, non-negative normal force, and 2D-COP constraint,
     e.g., for foot constraint."
@@ -531,17 +533,17 @@
           (list
            ;; friction
            (if slide-axis
-               (instance 2D-translational-sliding-contact-constraint :init mu-trans :slide-axis slide-axis)
-             (instance 2D-translational-friction-contact-constraint :init mu-trans))
-           (instance rotational-friction-contact-constraint :init mu-rot :fz)
+               (instance 2D-translational-sliding-contact-constraint :init mu-trans :slide-axis slide-axis :gen-drawing? gen-drawing?)
+             (instance 2D-translational-friction-contact-constraint :init mu-trans :gen-drawing? gen-drawing?))
+           (instance rotational-friction-contact-constraint :init mu-rot :fz :gen-drawing? gen-drawing?)
            ;; cop
-           (instance 2D-cop-contact-constraint :init l-max-x l-min-x l-max-y l-min-y)
+           (instance 2D-cop-contact-constraint :init l-max-x l-min-x l-max-y l-min-y :gen-drawing? gen-drawing?)
            ;; fz
-           (instance norm-contact-constraint :init :fz)
+           (instance norm-contact-constraint :init :fz :gen-drawing? gen-drawing?)
            )
           (if max-fz
               (list (instance min-max-contact-constraint :init :fz max-fz :min/max :max)))))
-   (send-super :init :name name)
+   (send-super :init :name name :gen-drawing? gen-drawing?)
    )
   )
 
@@ -551,7 +553,7 @@
 
 (defmethod no-contact-constraint
   (:init
-   (&key (name))
+   (&key (name) (gen-drawing? t))
    "Calc no-contact constraint matrix.
     Constraint is considered as C w = 0 <=> C w >=0 and C w <= 0.
     This can be used for swing foot phase for walking."
@@ -564,7 +566,7 @@
      (setq constraint-param-list
            (list :matrix (apply #'append (mapcar #'(lambda (x) (cadr (memq :matrix x))) ret))
                  :vector (apply #'append (mapcar #'(lambda (x) (cadr (memq :vector x))) ret)))))
-   (send-super :init :name name))
+   (send-super :init :name name :gen-drawing? gen-drawing?))
   )
 
 (defun force-axis->index (ax)
