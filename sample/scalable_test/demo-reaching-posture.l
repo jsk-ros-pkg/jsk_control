@@ -170,7 +170,9 @@
      (dotimes (i rarm-random-step-max)
        (setq rarm-coords (send *rarm-coords* :vector :org-coords caffe-root-link))
        (dotimes (j (length rarm-coords)) (setf (aref input (+ 6 j)) (aref rarm-coords j)))
-       (setq ret (apply 'demo-ik :input input :redundancy redundancy :ik-root-link ik-root-link :caffe-root-link caffe-root-link :ref-redundancy nil :support-limbs support-limbs :support-face support-face :ef-coords ef-coords :draw? draw? :step-max step-max :traj? traj? args))
+       (setq ret (apply 'demo-ik :input input :redundancy redundancy :ik-root-link ik-root-link :caffe-root-link caffe-root-link
+			:ref-redundancy nil
+			:support-limbs support-limbs :support-face support-face :ef-coords ef-coords :draw? draw? :step-max step-max :traj? traj? args))
        (if (send ret :get :ok) (return-from nil nil))))))
   (if (send ret :get :ok)
       (send *rarm-target-sphere* :set-color (float-vector 0 1 0))
@@ -181,12 +183,12 @@
   ret)
 
 (defun demo-main2
-  (&key (img-dir))
+  (&key (img-dir) (draw? nil))
   (dotimes (x 5)
     (dolist (z (if (eq x 0) (list 0 1 2 3 4 5) (list 0 1 2 5)))
       (send *rarm-target-sphere* :newcoords
 	    (make-coords :pos (float-vector (+ (* -100 x) 700) 0 (+ (* z 100) 300))))
-      (if (send (demo-main :draw? nil) :get :ok)
+      (if (send (demo-main :draw? draw? :rarm-random-step-max 50 :step-max 4) :get :ok)
 	  (draw-wrapper) (send *viewer* :draw-objects))
       (let* ((cmd (read-line)))
 	(if (and (> (length cmd) 0) (eq (aref cmd 0) #\q))
