@@ -294,7 +294,7 @@
   )
 
 (defun draw-traj-wrapper
-  (traj &key (output-dir nil) (traj-id 0) (elem-id 0) (sleep-step 10))
+  (traj &key (output-dir nil) (traj-id 0) (elem-id 0) (sleep-step 10) traj-id-str)
   (if (atom traj) (setq traj (list traj)))
   (dolist (trj traj)
     (incf traj-id)
@@ -304,12 +304,15 @@
       (draw-wrapper :conf (send elm :value)
 		    :support-face (or (send elm :get :support-face) *support-face*)
 		    :root-link-coords (send elm :get :root-link-coords))
-      (if output-dir
-	  (let* ((path (format nil "~A/~A_~A.jpg" output-dir traj-id elem-id)))
-	    (if (not (probe-file output-dir))
-		(unix::system (format nil "mkdir -p ~A" output-dir)))
-	    (if (not (probe-file path))
-		(send *viewer* :viewsurface :write-to-image-file path))))
+      (cond
+       (output-dir
+	(setq traj-id-str (format nil "~A" traj-id))
+	(while (< (length traj-id-str) 4) (setq traj-id-str (format nil "0~A" traj-id-str)))
+	(let* ((path (format nil "~A/~A_~A.jpg" output-dir traj-id-str elem-id)))
+	  (if (not (probe-file output-dir))
+	      (unix::system (format nil "mkdir -p ~A" output-dir)))
+	  (if (not (probe-file path))
+	      (send *viewer* :viewsurface :write-to-image-file path)))))
       (unix::usleep (* sleep-step 1000)))))
 
 (defun demo-ik
