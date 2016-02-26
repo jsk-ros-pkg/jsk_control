@@ -113,7 +113,7 @@
   (send *robot* :legs :toe-p :max-angle 16)
   (setq *links* (mapcar #'(lambda (j) (find-if #'(lambda (l) (eq (send l :get :joint) j)) (send *robot* :get :links))) *joint-list1*))
   ;;
-  (objects (flatten (list *seat* (cddr (send *table* :bodies)) *robot*)))
+  (objects (flatten (list *seat* (cddr (send *table* :bodies)) *robot* *arrow*)))
   (send *irtviewer* :change-background (float-vector 1 1 1))
   (send *viewer* :draw-objects)
   ;;
@@ -324,6 +324,11 @@
    &allow-other-keys
    )
   (dolist (efl ef-coords-list)
+    (if draw?
+	(mapcar
+	 '(lambda (ar c)
+	    (send ar :newcoords (send c :copy-worldcoords)))
+	 *arrow* (send-all (cadr (member :ef-coords efl)) :copy-worldcoords)))
     (push (apply 'demo-ik (append efl (list :target-centroid-pos target-centroid-pos :step-max step-max :draw? draw? :traj? traj? :step? nil :user-valid-check user-valid-check :ik-args ik-args) args)) ret)
     (setq *ret* ret)
     (setq *last-efl* efl)
