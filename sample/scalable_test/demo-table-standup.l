@@ -278,9 +278,36 @@
 	    (list sep-cnt depth vec (_sep-vector sep-cnt depth vec))))
   (cadddr *sep-vector*))
 
+;; irtviewer draw-string utils
+(in-package "GL")
+(defmethod glviewsurface
+  (:string
+   (x y str &optional (fid x:font-courb24)) ;;x::font-helvetica-bold-12))
+   (send self :makecurrent)
+   (glMatrixMode GL_PROJECTION)
+   (glPushMatrix)
+   (send self :2d-mode)
+   (unless (eq (get self :glxusexfont) fid)
+     (setf (get self :glxusexfont) fid)
+     (glxUseXfont fid 32 96 (+ 1000 32)))
+   (glRasterPos2i (round x) (- (send self :height) (round y)))
+   (glListBase 1000)
+   (glCallLists (length str) GL_UNSIGNED_BYTE str)
+   (send self :3d-mode)
+   (glMatrixMode GL_PROJECTION)
+   (glPopMatrix)
+   (glMatrixMode GL_MODELVIEW)
+   ))
+(in-package "USER")
+
 (defun draw-wrapper
   (&key (cog nil) (conf (eus_robot::get-configurations))
-	root-link-coords (support-face *support-face*))
+	root-link-coords (support-face *support-face*)
+	(i nil)
+	(message (if (vectorp i)
+		     (format nil "i: ~A" (map cons '(lambda (v) (* 0.1 (round (* v 10)))) i))))
+	(x 10) (y 30) (color (float-vector 0 0 0))
+	)
   ;; (send *robot* :reset-pose)
   (eus_robot::configuration-copy-from :conf conf :root-link-coords root-link-coords)
   ;; (if rleg-coords (send *robot* :fix-leg-to-coords rleg-coords :rleg))
@@ -289,6 +316,10 @@
       (send support-face :draw-on :flush nil :width 5 :color (float-vector 0.3 1 0.3)))
   (send (or cog (map float-vector '* (float-vector 1 1 0) (send *robot* :centroid)))
 	:draw-on :flush nil :color (float-vector 1 0.3 0.3) :size 100 :width 5)
+  (cond
+   (message
+    (send *viewer* :viewsurface :color color)
+    (send *viewer* :viewsurface :string x y message)))
   (send *viewer* :viewsurface :flush)
   (x::window-main-one)
   )
@@ -489,7 +520,7 @@
 	    (send traj-set :add-elem elem t)
 	    (if (funcall user-valid-check cog)
 		(send traj-set :add-valids elem)))
-	  (if (eq :only-valid draw?) (draw-wrapper :cog cog))
+	  (if (eq :only-valid draw?) (draw-wrapper :cog cog :i (subseq input (- (length input) (length redundancy)))))
 	  (if step? (read-line))
 	  (cond
 	   ((and (eq mode :first)
@@ -512,7 +543,7 @@
 	    (send traj-set :put :ok t)
 	    (return-from nil nil)))))))))
     ;;
-    (if (eq t draw?) (draw-wrapper :cog cog))
+    (if (eq t draw?) (draw-wrapper :cog cog :i (subseq input (- (length input) (length redundancy)))))
     )
   (if draw? (warning-message 6 "~A/~A samples are valid, traj=~A~%" suc-cnt cnt (send traj-set :get :valid)))
   (setf (aref event-tm 5)
