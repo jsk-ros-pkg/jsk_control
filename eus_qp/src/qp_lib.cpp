@@ -2,21 +2,6 @@
 #include <iostream>
 #include <Eigen/Dense>
 
-// hack
-#include <ros/common.h>
-#if ROS_VERSION_GE(ROS_VERSION_MAJOR, ROS_VERSION_MINOR, ROS_VERSION_PATCH, 1, 11, 10)
-namespace Eigen 
-{
-  namespace internal
-  {
-    float abs(float a) { return std::abs(a); }
-    float sqrt(float v) { return ::sqrt(v); }
-  }
-}
-#endif
-
-//#define Eigen::interal::abs std::abs
-
 #include "eiquadprog.hpp"
 
 using namespace Eigen;
