@@ -182,6 +182,7 @@
                      (send-all contact-coords-list :worldpos) :total-wrench total-wrench)))
         (contact-constraint-vector-list)
         (min-inequality-violation-weight) (min-inequality-violation-weight-vector)
+        ((:jacobi tmp-jacobi))
         (debug)
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
@@ -197,12 +198,14 @@
           (send robot :calc-grasp-matrix (send-all contact-coords-list :worldpos)))
          (equality-vector total-wrench)
          (jacobi
-          (send robot :calc-jacobian-from-link-list
-                link-list
-                :move-target contact-coords-list
-                :rotation-axis (mapcar #'(lambda (x) t) contact-coords-list)
-                :translation-axis (mapcar #'(lambda (x) t) contact-coords-list)
-                :transform-coords (mapcar #'(lambda (x) (make-coords)) contact-coords-list)))
+          (if tmp-jacobi
+              tmp-jacobi
+            (send robot :calc-jacobian-from-link-list
+                  link-list
+                  :move-target contact-coords-list
+                  :rotation-axis (mapcar #'(lambda (x) t) contact-coords-list)
+                  :translation-axis (mapcar #'(lambda (x) t) contact-coords-list)
+                  :transform-coords (mapcar #'(lambda (x) (make-coords)) contact-coords-list))))
          (jacobi^T (transpose jacobi))
          ;; inequality
          (inequality-matrix
