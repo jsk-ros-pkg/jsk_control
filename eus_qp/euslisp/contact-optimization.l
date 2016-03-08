@@ -298,7 +298,6 @@
            (make-matrix (length mat-list) (length (car mat-list)) mat-list)))
    (let ((vec-list (cadr (memq :vector constraint-param-list))))
      (setq constraint-vector (concatenate float-vector vec-list)))
-   (send self :gen-drawing-object)
    self)
   (:constraint-param-list () constraint-param-list)
   (:gen-drawing-object
@@ -307,6 +306,8 @@
    )
   (:draw-on
    (&key (flush t))
+   (unless drawing-object
+     (send self :gen-drawing-object))
    (when drawing-object
      (send drawing-object :worldcoords)
      (send* drawing-object :draw-on :flush flush (send drawing-object :get :draw-on-args)))
