@@ -75,6 +75,12 @@ namespace jsk_footstep_planner
                        double hole_rate);
     virtual void gaussian(pcl::PointCloud<PointT>& output,
                           double hole_rate);
+    virtual void flatPole(pcl::PointCloud<PointT>& output,
+                          double hole_rate);
+    virtual void addPole(pcl::PointCloud<PointT>& output,
+                         const Eigen::Vector3f& center,
+                         const double width,
+                         const double height);
   private:
     
   };

@@ -78,6 +78,7 @@ namespace jsk_footstep_planner
     virtual bool readSuccessors(ros::NodeHandle& nh);
     
     virtual void pointcloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
+    virtual void obstacleCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
     virtual void planCB(const jsk_footstep_msgs::PlanFootstepsGoal::ConstPtr& goal);
 
     // buildGraph is not thread safe, it is responsible for caller to take care
@@ -122,11 +123,15 @@ namespace jsk_footstep_planner
     ros::Publisher pub_open_list_;
     ros::Publisher pub_text_;
     ros::Subscriber sub_pointcloud_model_;
+    ros::Subscriber sub_obstacle_model_;
     ros::ServiceServer srv_project_footprint_;
     ros::ServiceServer srv_project_footprint_with_local_search_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_model_;
     FootstepGraph::Ptr graph_;
     std::vector<Eigen::Affine3f> successors_;
+    Eigen::Vector3f collision_bbox_size_;
+    Eigen::Affine3f collision_bbox_offset_;
     std_msgs::Header latest_header_;
     // Parameters
     bool rich_profiling_;
@@ -134,6 +139,7 @@ namespace jsk_footstep_planner
     bool use_lazy_perception_;
     bool use_local_movement_;
     bool use_transition_limit_;
+    bool use_obstacle_model_;
     bool use_global_transition_limit_;
     bool project_start_state_;
     bool project_goal_state_;
@@ -151,7 +157,7 @@ namespace jsk_footstep_planner
     double transition_limit_yaw_;
     double global_transition_limit_roll_;
     double global_transition_limit_pitch_;
-    
+    double obstacle_resolution_;
     double goal_pos_thr_;
     double goal_rot_thr_;
     int plane_estimation_max_iterations_;

@@ -24,7 +24,9 @@
     <rosparam>
       footstep_size_x: 0.24
       footstep_size_y: 0.14
-    </rosparam>
+      collision_bbox_size: [0.2, 0.6, 1.0]
+      collision_bbox_offset: [0, 0, 0.8]
+      </rosparam>
     <rosparam>
       successors:
       - x: 0

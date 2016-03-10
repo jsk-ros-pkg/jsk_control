@@ -1,16 +1,22 @@
 <launch>
   <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
     <remap from="~pointcloud_model" to="pointcloud_model_generator/output" />
+    <remap from="~obstacle_model" to="octomap_point_cloud_centers" />
     <rosparam>
       use_pointcloud_model: true
       use_lazy_perception: true
       use_local_movement: true
       project_start_state: true
       project_goal_state: true
+      #use_obstacle_model: false
+      use_obstacle_model: true
+      obstacle_resolution: 0.1
     </rosparam>
     <rosparam>
       footstep_size_x: 0.2
       footstep_size_y: 0.1
+      collision_bbox_size: [0.4, 1, 1.0]
+      collision_bbox_offset: [0, 0, 0.8]
     </rosparam>
     <!-- successors -->
     <rosparam>
@@ -71,31 +77,29 @@
         theta: -0.17
     </rosparam>
   </node>
-
-    <!-- marker -->
-  <node pkg="jsk_interactive_marker"
-        type="footstep_marker"
-        name="footstep_marker"
-        output="screen"
-        >
-    <!-- <remap from="move_marker" to="$(arg POSE_REMAP)" /> -->
-    <!-- <param name="wait_snapit_server" value="false" /> -->
-    <rosparam command="load" file="$(find jsk_footstep_controller)/config/JAXON.yaml" />
-    <remap from="project_footprint" to="/footstep_planner/project_footprint_with_local_search" />
+  <node pkg="jsk_footstep_planner" type="footstep_marker" name="footstep_marker" output="screen">
     <rosparam>
-        use_plane_snap: true
-        use_projection_service: true
-        use_projection_topic: false
-        use_footstep_planner: true
-        use_footstep_controller: false
-        use_initial_footstep_tf: false
-        initial_reference_frame: '/odom'
-        foot_size_x: 0.2
-        foot_size_y: 0.1
-        foot_size_z: 0.0001
+      disable_tf: true
+      footstep_size_x: 0.237418
+      footstep_size_y: 0.134017
+      lleg_footstep_offset: [0.015502, 0.010078, 0.0]
+      rleg_footstep_offset: [0.015502, -0.010078, 0.0]
     </rosparam>
-    <param name="frame_id" value="/odom" />
   </node>
+
+  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+    <param name="resolution" value="0.1" />
+    <!-- fixed map frame (set to 'map' if SLAM or localization running!) -->
+    <param name="frame_id" type="string" value="odom" />
+    
+    <!-- maximum range to integrate (speedup!) -->
+    <param name="sensor_model/max_range" value="5.0" />
+    
+    <!-- data source to integrate (PointCloud2) -->
+    <remap from="cloud_in" to="pointcloud_model_generator/output" />
+    
+  </node>
+
   <node pkg="jsk_footstep_planner" type="pointcloud_model_generator_node"
         name="pointcloud_model_generator">
   </node>

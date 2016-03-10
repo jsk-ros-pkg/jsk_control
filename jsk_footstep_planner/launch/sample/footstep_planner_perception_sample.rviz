@@ -3,7 +3,10 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /InteractiveMarkers1
+        - /Footstep1
+        - /PointCloud21
       Splitter Ratio: 0.5
     Tree Height: 639
   - Class: rviz/Selection
@@ -60,7 +63,7 @@ Visualization Manager:
       Enabled: true
       Name: Footstep
       Show Name: true
-      Topic: /footstep_from_marker
+      Topic: /footstep_marker/output/plan_result
       Use Group Coloring: false
       Value: true
       Width: 0.15
@@ -153,6 +156,35 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.01
+      Style: Flat Squares
+      Topic: /octomap_point_cloud_centers
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -178,7 +210,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.79892
+      Distance: 6.89729
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -190,10 +222,10 @@ Visualization Manager:
         Z: -0.52808
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.5598
+      Pitch: 1.0648
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.63731
+      Yaw: 4.08731
     Saved: ~
 Window Geometry:
   Displays:
@@ -211,5 +243,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1280
-  X: 461
+  X: 426
   Y: 279

@@ -95,33 +95,33 @@ namespace jsk_footstep_planner
           unsigned int error_state;
           FootstepState::Ptr projected_state = graph_->projectFootstep(target_node->getState(),
                                                                        error_state);
-          if (!projected_state) {
+          if (!projected_state) { // failed to project footstep
             if (graph_->localMovement() && error_state == projection_state::close_to_success) {
+              // try local movement
               std::vector<SolverNodePtr> locally_moved_nodes
                 = target_node->wrapWithSolverNodes(target_node->getParent(),
                                                    graph_->localMoveFootstepState(projected_state));
-              // TODO: need to check if they are included in close list?
-              if (limit && target_node->getParent()) {
-                for (size_t i = 0; i < locally_moved_nodes.size(); i++) {
-                  if (limit->check(target_node->getParent()->getState(),
-                                   locally_moved_nodes[i]->getState())) {
-                    addToOpenList(locally_moved_nodes[i]);
-                  }
+              for (size_t i = 0; i < locally_moved_nodes.size(); i++) {
+                if (graph_->isSuccessable(locally_moved_nodes[i]->getState(),
+                                          target_node->getParent()->getState())) {
+                  addToOpenList(locally_moved_nodes[i]);
                 }
               }
-              else {
-                addToOpenList(locally_moved_nodes);
-              }
             }
-            continue;
+            continue;           // back to the top of while loop
           }
           else {
-            if (limit &&
-                target_node->getParent() &&
-                !limit->check(target_node->getParent()->getState(), projected_state)) {
-              continue;
+            if (target_node->getParent()) {
+              if (graph_->isSuccessable(projected_state, target_node->getParent()->getState())) {
+                target_node->setState(projected_state);
+              }
+              else {
+                continue;
+              }
             }
-            target_node->setState(projected_state);
+            else {
+              target_node->setState(projected_state);
+            }
           }
         }
         if (graph_->isGoal(target_node->getState())) {
