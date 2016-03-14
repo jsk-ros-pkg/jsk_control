@@ -133,6 +133,7 @@
 
 (defun demo-robot-contact-wrench-distribution-common
   (&key (func #'test-wrench-distribute-by-qp) (press-enter-p t) (mu-trans 0.5) (ret-list nil)
+        (mu-margin-ratio 1.0) (cop-margin-ratio 1.0)
         (use-no-contact nil))
   (let ((ret))
     (send *robot* :put :contact-constraint-list
@@ -141,6 +142,7 @@
                           (instance no-contact-constraint :init)
                         (instance* default-contact-constraint
                                  :init
+                                 :mu-margin-ratio mu-margin-ratio :cop-margin-ratio cop-margin-ratio
                                  :mu-trans mu-trans
                                  :mu-rot 0.05
                                  (let* ((vs (mapcar #'(lambda (v) (send *robot* l :end-coords :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
@@ -216,6 +218,14 @@
   "Demo for robot contact wrench distribution with no-contact constraint. Only the second example successes."
   (let ((ret (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-qp :press-enter-p press-enter-p :use-no-contact t :ret-list t)))
     (and (not (elt ret 0)) (elt ret 1) (not (elt ret 2)) (not (elt ret 3)))
+    ))
+
+(defun demo-robot-contact-wrench-distribution-7
+  (&key (press-enter-p t))
+  "Demo for robot contact wrench distribution with mu/cop-margin-ratio."
+  (let ((ret (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :press-enter-p press-enter-p :ret-list t
+                                                            :mu-margin-ratio 0.5 :cop-margin-ratio 0.5)))
+    (and (elt ret 0) (not (elt ret 1)) (elt ret 2) (not (elt ret 3)))
     ))
 
 (defun demo-robot-contact-wrench-distribution-all

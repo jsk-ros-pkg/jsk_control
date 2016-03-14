@@ -526,22 +526,27 @@
 
 (defmethod default-contact-constraint
   (:init
-   (&key (mu-trans) (mu-rot) (slide-axis)
+   (&key (mu-margin-ratio 1.0) (cop-margin-ratio 1.0)
+         (mu-trans) (mu-rot) (slide-axis)
          (l-max-x) (l-max-y) (l-min-x) (l-min-y)
          (name) (max-fz))
    "Calc default constraint matrix.
     This is include 2D friction force, 1D rotational friction moment, non-negative normal force, and 2D-COP constraint,
-    e.g., for foot constraint."
+    e.g., for foot constraint.
+    mu-margin-ratio and cop-margin-ratio are in [0.0, 1.0] and used for reduce contact constraint boudaries.
+    If xx-margin-ratio is 1.0, contact constraint boudaries are same as original one.
+    If xx-margin-ratio is in (0.0, 1.0), contact constraint boudaries are reduced.
+    If xx-margin-ratio is 0.0, no friction or point contact."
    (setq contact-constraint-list
          (append
           (list
            ;; friction
            (if slide-axis
-               (instance 2D-translational-sliding-contact-constraint :init mu-trans :slide-axis slide-axis)
-             (instance 2D-translational-friction-contact-constraint :init mu-trans))
-           (instance rotational-friction-contact-constraint :init mu-rot :fz)
+               (instance 2D-translational-sliding-contact-constraint :init (* mu-margin-ratio mu-trans) :slide-axis slide-axis)
+             (instance 2D-translational-friction-contact-constraint :init (* mu-margin-ratio mu-trans)))
+           (instance rotational-friction-contact-constraint :init (* mu-margin-ratio mu-rot) :fz)
            ;; cop
-           (instance 2D-cop-contact-constraint :init l-max-x l-min-x l-max-y l-min-y)
+           (instance 2D-cop-contact-constraint :init (* cop-margin-ratio l-max-x) (* cop-margin-ratio l-min-x) (* cop-margin-ratio l-max-y) (* cop-margin-ratio l-min-y))
            ;; fz
            (instance norm-contact-constraint :init :fz)
            )
