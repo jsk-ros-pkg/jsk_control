@@ -556,6 +556,54 @@
    )
   )
 
+(defclass default-gripper-contact-constraint
+  :super contact-constraint
+  )
+
+(defmethod default-gripper-contact-constraint
+  (:init
+   (&key (mu-trans) (mu-rot)
+         (l-min) (l-max) (max-fx) (max-fy) (min-fy) (max-nx) (min-nx)
+         (mu-margin-ratio 1.0) (cop-margin-ratio 1.0)
+         (name))
+   "Calc default gripper constraint matrix.
+    Axes are set for default euslisp end-coords criteria, e.g,
+     X : Hand forward.
+     Y : Palm <-> back of the hand
+     Z : Gripper axis.
+    We linearlize friction constraints.
+    Here we assume |Fx| >= |Fy|.
+    For mu-margin-ratio and cop-margin-ratio, please see default-contact-constraint documentation."
+   (let ((ret
+          (list
+           ;; Friction (mu fx >= fz >= -mu fx)
+           (calc-constraint-param-list-for-translational-friction
+            (* mu-trans mu-margin-ratio) :fx :fz)
+           ;; Friction (mu fx >= nz >= -mu fx)
+           (calc-constraint-param-list-for-rotational-friction
+            (* mu-rot mu-margin-ratio) :fx :fric-axis :nz)
+           ;; Cop (l-max fx >= ny >= l-min fx)
+           (calc-constraint-param-list-for-1D-cop
+            (* l-max cop-margin-ratio) (* l-min cop-margin-ratio)
+            :force-axis :fx :moment-axis :ny)
+           ;; Fx >= 0
+           (calc-constraint-param-list-for-norm :fx)
+           ;; Fx max limit
+           (calc-constraint-param-list-for-min-max :fx max-fx :min/max :max)
+           ;; Fy limit
+           (calc-constraint-param-list-for-min-max :fy max-fy :min/max :max)
+           (calc-constraint-param-list-for-min-max :fy min-fy :min/max :min)
+           ;; Nx limit
+           (calc-constraint-param-list-for-min-max :nx max-nx :min/max :max)
+           (calc-constraint-param-list-for-min-max :nx min-nx :min/max :min)
+           )))
+     (setq constraint-param-list
+           (list :matrix (apply #'append (mapcar #'(lambda (x) (cadr (memq :matrix x))) ret))
+                 :vector (apply #'append (mapcar #'(lambda (x) (cadr (memq :vector x))) ret)))))
+     (send-super :init :name name)
+   )
+  )
+
 (defclass no-contact-constraint
   :super contact-constraint
   )
