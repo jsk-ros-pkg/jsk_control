@@ -4,6 +4,7 @@
   (l)
   (instance* default-contact-constraint
              :init
+             :name l
              :mu-trans 1.0
              :mu-rot 0.05
              (if (send *robot* :support-polygon l)
@@ -690,6 +691,10 @@
   (rs-list
    &key (robot *robot*))
   ;; draw contact wrench
+  (mapcar #'(lambda (cconst ccoords)
+              (send cconst :update-contact-coords ccoords))
+          (cadr (memq :contact-constraint-list rs-list))
+          (cadr (memq :end-coords rs-list)))
   (send-all (cadr (memq :contact-constraint-list rs-list)) :draw-on :flush nil)
   (mapcar
    #'(lambda (f m cc)

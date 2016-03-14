@@ -307,7 +307,9 @@
   (:draw-on
    (&key (flush t))
    (unless drawing-object
-     (send self :gen-drawing-object))
+     (send self :gen-drawing-object)
+     (if drawing-object
+         (send drawing-object :newcoords contact-coords)))
    (when drawing-object
      (send drawing-object :worldcoords)
      (send* drawing-object :draw-on :flush flush (send drawing-object :get :draw-on-args)))
