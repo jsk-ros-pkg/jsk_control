@@ -8,7 +8,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun wrench-distribute-from-total-wrench
   (contact-coords-list contact-constraint-matrix-list
-   &key (debug) (robot)
+   &key (debug t) (robot)
         (total-wrench (concatenate float-vector (send (car (send robot :links)) :force) (send (car (send robot :links)) :moment)))
         (initial-state ;; calc initial state from pseudo-inverse
          (send robot :wrench-list->wrench-vector
@@ -65,9 +65,9 @@
                   :inequality-matrix inequality-matrix
                   :inequality-min-vector inequality-min-vector
                   :check-status check-status
+                  :debug debug
                   (if use-min-inequality-violation-p
                       (list :state-min-vector state-min-vector))
-                  ;;:debug debug
                   )))
       (if ret
           (list :wrench-list (send robot :wrench-vector->wrench-list
@@ -94,7 +94,7 @@
                             (send robot :calc-contact-wrenches-from-total-wrench
                                   (send-all contact-coords-list :worldpos) :total-wrench total-wrench))
                       (instantiate float-vector (length inertial-torque))))
-        (debug)
+        (debug t)
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
         (qp-solver #'solve-qpoases)
@@ -154,7 +154,7 @@
                  :equality-matrix equality-matrix
                  :equality-vector equality-vector
                  :check-status check-status
-                 ;;:debug debug
+                 :debug debug
                  )))
       (if ret
           (list :wrench-list (send robot :wrench-vector->wrench-list
@@ -183,7 +183,7 @@
         (contact-constraint-vector-list)
         (min-inequality-violation-weight) (min-inequality-violation-weight-vector)
         ((:jacobi tmp-jacobi))
-        (debug)
+        (debug t)
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
         (qp-solver #'solve-qpoases-qp)
@@ -263,9 +263,9 @@
                  :equality-matrix equality-matrix
                  :equality-vector equality-vector
                  :check-status check-status
+                 :debug debug
                  (if use-min-inequality-violation-p
                      (list :state-min-vector state-min-vector))
-                 ;;:debug debug
                  )))
       (if ret
           (let ((ret-wrench (if use-min-inequality-violation-p (subseq ret 0 state-dim) ret)))
