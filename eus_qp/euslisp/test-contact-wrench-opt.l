@@ -551,6 +551,16 @@
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
    ))
 
+(defun demo-cbox-wrench-calc-17
+  ()
+  "Demo for cbox wrench calculation by 6d-min-max-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance 6d-min-max-contact-constraint :init (float-vector 1000 1000 1000 100 100 100)))
+   (list (send *cbox* :get :face-coords-2))
+   ))
+
+
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
   (let ((ret))
