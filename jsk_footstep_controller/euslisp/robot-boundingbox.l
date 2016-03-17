@@ -110,6 +110,9 @@
       ;; setup header for each box-msg
       (send-all box-msgs :header :stamp (send msg :header :stamp))
       (send-all box-msgs :header :frame_id "BODY")
+      (when (string= *analysis-level* "whole_links")
+        (ros::publish "/robot_bbox" (car box-msgs))
+        )
       (send bbox-msg-array :boxes box-msgs)
       (send bbox-msg-array :header (send (car box-msgs) :header))
       (ros::publish "/robot_bbox_array" bbox-msg-array)))
