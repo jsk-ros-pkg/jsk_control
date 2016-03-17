@@ -42,6 +42,7 @@
 #include <angles/angles.h>
 #include "jsk_footstep_planner/footstep_conversions.h"
 #include <jsk_topic_tools/rosparam_utils.h>
+#include <jsk_interactive_marker/SnapFootPrint.h>
 
 namespace jsk_footstep_planner
 {
@@ -264,8 +265,8 @@ namespace jsk_footstep_planner
     
     visualization_msgs::InteractiveMarker int_goal_marker;
     int_goal_marker.header.frame_id = odom_frame_id_;
-    lleg_goal_pose_ = leg_poses->midcoords() * Eigen::Translation3f(0, default_footstep_margin_ / 2.0, 0.0);
-    rleg_goal_pose_ = leg_poses->midcoords() * Eigen::Translation3f(0, - default_footstep_margin_ / 2.0, 0.0);
+    lleg_goal_pose_ = leg_poses->midcoords() * getDefaultLeftLegOffset();
+    rleg_goal_pose_ = leg_poses->midcoords() * getDefaultRightLegOffset();
     setupGoalMarker(leg_poses->midcoords(), int_goal_marker);
     if (is_2d_mode_) {
       add3Dof2DControl(int_goal_marker, false);
@@ -453,8 +454,30 @@ namespace jsk_footstep_planner
     std_msgs::Header header;
     header.frame_id = odom_frame_id_;
     header.stamp = ros::Time::now();
+    // first, project footstep using footstep_planner/project_footprint_with_local_search API.
+    jsk_interactive_marker::SnapFootPrint srv_arg;
+    
     PosePair::Ptr goal_pose_pair(new PosePair(lleg_goal_pose_, lleg_end_coords_,
                                               rleg_goal_pose_, rleg_end_coords_));
+    srv_arg.request.input_pose.header = header;
+    Eigen::Affine3f midcoords = goal_pose_pair->midcoords();
+    Eigen::Affine3f lleg_trans = lleg_goal_pose_ * midcoords.inverse();
+    Eigen::Affine3f rleg_trans = rleg_goal_pose_ * midcoords.inverse();
+    tf::poseEigenToMsg(midcoords, srv_arg.request.input_pose.pose);
+    tf::poseEigenToMsg(lleg_trans, srv_arg.request.lleg_pose);
+    tf::poseEigenToMsg(rleg_trans, srv_arg.request.rleg_pose);
+    if (ros::service::call("footstep_planner/project_footprint_with_local_search", srv_arg)) {
+      if (srv_arg.response.success) {
+        Eigen::Affine3f new_center_pose;
+        tf::poseMsgToEigen(srv_arg.response.snapped_pose.pose, new_center_pose);
+        goal_pose_pair.reset(new PosePair(new_center_pose * getDefaultLeftLegOffset(), lleg_end_coords_,
+                                          new_center_pose * getDefaultRightLegOffset(), rleg_end_coords_));
+      }
+      else {
+        ROS_ERROR("Failed to project goal");
+        return;
+      }
+    }
     jsk_footstep_msgs::PlanFootstepsGoal goal;
     goal.goal_footstep
       = footstepArrayFromPosePair(goal_pose_pair, header, true);
@@ -482,13 +505,18 @@ namespace jsk_footstep_planner
     }
   }
 
-  
+  Eigen::Affine3f FootstepMarker::getDefaultLeftLegOffset() {
+    return Eigen::Affine3f(Eigen::Translation3f(0, default_footstep_margin_ / 2.0, 0.0));
+  }
+
+  Eigen::Affine3f FootstepMarker::getDefaultRightLegOffset() {
+    return Eigen::Affine3f(Eigen::Translation3f(0, - default_footstep_margin_ / 2.0, 0.0));
+  }
   
   void FootstepMarker::processFeedbackCB(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
   {
     if (feedback->event_type == visualization_msgs::InteractiveMarkerFeedback::MOUSE_UP) {
-      
       cancelPlanning();
       plan(feedback);
     }
@@ -499,8 +527,8 @@ namespace jsk_footstep_planner
       // update position of goal footstep
       Eigen::Affine3f current_marker_pose;
       tf::poseMsgToEigen(feedback->pose, current_marker_pose);
-      lleg_goal_pose_ = current_marker_pose * Eigen::Translation3f(0, default_footstep_margin_ / 2.0, 0.0);
-      rleg_goal_pose_ = current_marker_pose * Eigen::Translation3f(0, - default_footstep_margin_ / 2.0, 0.0);
+      lleg_goal_pose_ = current_marker_pose * getDefaultLeftLegOffset();
+      rleg_goal_pose_ = current_marker_pose * getDefaultRightLegOffset();
       planIfPossible(feedback);
     }
     updateMarkerArray(feedback->header, feedback->pose);

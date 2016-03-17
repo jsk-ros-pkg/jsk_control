@@ -119,6 +119,8 @@ namespace jsk_footstep_planner
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void executeDoneCB(const actionlib::SimpleClientGoalState &state,
                                const ExecResult::ConstPtr &result);
+    virtual Eigen::Affine3f getDefaultLeftLegOffset();
+    virtual Eigen::Affine3f getDefaultRightLegOffset();
     // planner interface
     virtual void cancelPlanning();
     virtual void plan(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
