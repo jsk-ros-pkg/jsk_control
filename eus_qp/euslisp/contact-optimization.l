@@ -626,6 +626,31 @@
    (send-super :init :name name))
   )
 
+(defclass 6d-min-max-contact-constraint
+  :super contact-constraint
+  :slots (max-wrench)
+  )
+
+(defmethod 6d-min-max-contact-constraint
+  (:init
+   (tmp-max-wrench &key (name))
+   "Calc 6D wrench min-max constraint.
+    tmp-max-wrench should be 6D vector of max wrench.
+    Absolute values of min wrench and max wrench are same.
+    This can be used for approximating the grasping contact."
+   (setq max-wrench tmp-max-wrench)
+   (let ((ret (apply
+               #'append
+               (mapcar #'(lambda (axis max-value)
+                           (list (calc-constraint-param-list-for-min-max axis (- max-value) :min/max :min)
+                                 (calc-constraint-param-list-for-min-max axis max-value :min/max :max)))
+                       '(:fx :fy :fz :nx :ny :nz) (coerce max-wrench cons)))))
+     (setq constraint-param-list
+           (list :matrix (apply #'append (mapcar #'(lambda (x) (cadr (memq :matrix x))) ret))
+                 :vector (apply #'append (mapcar #'(lambda (x) (cadr (memq :vector x))) ret)))))
+   (send-super :init :name name))
+  )
+
 (defun force-axis->index (ax)
   (case ax
     (:fx 0) (:fy 1) (:fz 2)
