@@ -43,6 +43,7 @@
 #include "jsk_footstep_planner/footstep_conversions.h"
 #include <jsk_topic_tools/rosparam_utils.h>
 #include <jsk_interactive_marker/SnapFootPrint.h>
+#include <jsk_footstep_planner/CollisionBoundingBoxInfo.h>
 
 namespace jsk_footstep_planner
 {
@@ -143,6 +144,19 @@ namespace jsk_footstep_planner
       rleg_footstep_offset_[2] = rleg_footstep_offset[2];
     }
     
+    // query bbox size and offset
+    ros::NodeHandle nh;
+    ros::ServiceClient bbox_client = nh.serviceClient<jsk_footstep_planner::CollisionBoundingBoxInfo>("footstep_planner/collision_bounding_box_info", false);
+    ROS_INFO("waiting for %s", bbox_client.getService().c_str());
+    bbox_client.waitForExistence();
+    jsk_footstep_planner::CollisionBoundingBoxInfo bbox_info;
+    if (bbox_client.call(bbox_info)) {
+      collision_bbox_size_[0] = bbox_info.response.box_dimensions.x;
+      collision_bbox_size_[1] = bbox_info.response.box_dimensions.y;
+      collision_bbox_size_[2] = bbox_info.response.box_dimensions.z;
+      tf::poseMsgToEigen(bbox_info.response.box_offset, collision_bbox_offset_);
+    }
+
     pub_plan_result_ = pnh_.advertise<jsk_footstep_msgs::FootstepArray>("output/plan_result", 1);
     //JSK_ROS_INFO("waiting for footstep_planner");
     //ac_planner_.waitForServer();
@@ -658,15 +672,52 @@ namespace jsk_footstep_planner
     return marker;
   }
 
+  visualization_msgs::Marker FootstepMarker::originBoundingBoxMarker(
+      const std_msgs::Header& header, const geometry_msgs::Pose& pose)
+  {
+    visualization_msgs::Marker marker;
+    marker.header = header;
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.scale.x = collision_bbox_size_[0];
+    marker.scale.y = collision_bbox_size_[1];
+    marker.scale.z = collision_bbox_size_[2];
+    marker.color.a = 0.3;
+    marker.color.r = 1.0;
+    Eigen::Affine3f box_pose = original_foot_poses_->midcoords() * collision_bbox_offset_;
+    tf::poseEigenToMsg(box_pose, marker.pose);
+    return marker;
+  }
+
+  visualization_msgs::Marker FootstepMarker::goalBoundingBoxMarker(
+      const std_msgs::Header& header, const geometry_msgs::Pose& pose)
+  {
+    visualization_msgs::Marker marker;
+    marker.header = header;
+    marker.type = visualization_msgs::Marker::CUBE;
+    marker.scale.x = collision_bbox_size_[0];
+    marker.scale.y = collision_bbox_size_[1];
+    marker.scale.z = collision_bbox_size_[2];
+    marker.color.a = 0.3;
+    marker.color.r = 1.0;
+    Eigen::Affine3f input_pose;
+    tf::poseMsgToEigen(pose, input_pose);
+    Eigen::Affine3f box_pose = input_pose * collision_bbox_offset_;
+    tf::poseEigenToMsg(box_pose, marker.pose);
+    return marker;
+  }
+  
+
   void FootstepMarker::updateMarkerArray(const std_msgs::Header& header, const geometry_msgs::Pose& pose)
   {
     pub_marker_array_.insert("target arrow", targetArrow(header, pose));
     pub_marker_array_.insert("distance text", distanceTextMarker(header, pose));
     pub_marker_array_.insert("distance line", distanceLineMarker(header, pose));
     pub_marker_array_.insert("origin", originMarker(header, pose));
+    pub_marker_array_.insert("origin_bbox", originBoundingBoxMarker(header, pose));
+    pub_marker_array_.insert("goal_bbox", goalBoundingBoxMarker(header, pose));
     pub_marker_array_.publish();
   }
-  
+
   void FootstepMarker::processPoseUpdateCB(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
   {

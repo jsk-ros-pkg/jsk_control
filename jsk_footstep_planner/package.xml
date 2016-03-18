@@ -44,6 +44,9 @@
 
   <build_depend>message_generation</build_depend>
 
+  <build_depend>geometry_msgs</build_depend>
+  <run_depend>geometry_msgs</run_depend>
+
   <export>
 
   </export>

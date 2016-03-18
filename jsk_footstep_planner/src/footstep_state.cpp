@@ -445,6 +445,7 @@ namespace jsk_footstep_planner
     Eigen::Translation3f pos((Eigen::Vector3f(first.translation()) + Eigen::Vector3f(second.translation())) / 2.0);
     Eigen::Quaternionf rot = Eigen::Quaternionf(first.matrix().block<3, 3>(0, 0)).slerp(0.5, Eigen::Quaternionf(second.matrix().block<3, 3>(0, 0)));
     return pos * rot;
+    //return rot * pos;
   }
   
 }

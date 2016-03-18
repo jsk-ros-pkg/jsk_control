@@ -9,14 +9,14 @@ if(CCACHE_FOUND)
 endif(CCACHE_FOUND)
 
 find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_recognition_utils
-  message_generation jsk_topic_tools roscpp pcl_ros
+  message_generation jsk_topic_tools roscpp pcl_ros geometry_msgs
   jsk_interactive_marker visualization_msgs dynamic_reconfigure)
 find_package(PCL REQUIRED)
 add_service_files(FILES
-  ChangeSuccessor.srv)
+  ChangeSuccessor.srv CollisionBoundingBoxInfo.srv)
 generate_dynamic_reconfigure_options(
   cfg/FootstepPlanner.cfg cfg/PointCloudModelGenerator.cfg cfg/FootstepMarker.cfg)
-generate_messages()
+generate_messages(DEPENDENCIES geometry_msgs)
 #catkin_python_setup()
 catkin_package(
   DEPENDS

@@ -111,8 +111,7 @@ namespace jsk_footstep_planner
       int index = candidates->indices[i];
       const pcl::PointXYZ candidate_point = input_cloud->points[index];
       // convert candidate_point into `c' local representation.
-      const Eigen::Vector3f candidate_point_vector = candidate_point.getVector3fMap();
-      const Eigen::Vector3f local_p = inv_c * candidate_point_vector;
+      const Eigen::Vector3f local_p = inv_c * candidate_point.getVector3fMap();
       if (std::abs(local_p[0]) < collision_bbox_size_[0] / 2 &&
           std::abs(local_p[1]) < collision_bbox_size_[1] / 2 &&
           std::abs(local_p[2]) < collision_bbox_size_[2] / 2) {

@@ -144,7 +144,10 @@ namespace jsk_footstep_planner
       const std_msgs::Header& header, const geometry_msgs::Pose& pose);
     virtual visualization_msgs::Marker targetArrow(
       const std_msgs::Header& header, const geometry_msgs::Pose& pose);
-    
+    virtual visualization_msgs::Marker originBoundingBoxMarker(
+      const std_msgs::Header& header, const geometry_msgs::Pose& pose);
+    virtual visualization_msgs::Marker goalBoundingBoxMarker(
+      const std_msgs::Header& header, const geometry_msgs::Pose& pose);
     virtual void setupMenuHandler();
 
     virtual void configCallback(Config& config, uint32_t level);
@@ -181,6 +184,8 @@ namespace jsk_footstep_planner
     
     boost::mutex planner_mutex_;
     PlanningState planning_state_;
+    Eigen::Vector3f collision_bbox_size_;
+    Eigen::Affine3f collision_bbox_offset_;
   private:
     
   };
