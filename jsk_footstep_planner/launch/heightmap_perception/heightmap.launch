@@ -7,6 +7,11 @@
   <arg name="ROBOT_FRAME" default="body_on_odom" /> <!--it's not good-->
   <arg name="INPUT" default="/distance_filtered_laser_snapshots/output_cloud" />
   <arg name="DEBUG_VIEW" default="true" />
+  <node pkg="jsk_footstep_controller" type="robot-boundingbox.l" name="robot_bounding_box">
+    <rosparam>
+      analysis_level: whole_links
+    </rosparam>
+  </node>
   <node pkg="jsk_topic_tools" type="standalone_complexed_nodelet" name="$(arg NODELET_MANAGER_NAME)"
         output="screen" if="$(arg USE_NODELET_MANAGER)"/>
   <group ns="$(arg NODELET_MANAGER_NAME)">
@@ -63,12 +68,27 @@
           remappings:
             - from: ~input
               to: accumulated_heightmap_pointcloud/output
+        - name: robot_bbox_clipper
+          type: jsk_pcl/AttentionClipper
+          remappings:
+            - from: ~input/points
+              to: /robot_center_pointcloud/output
+            - from: ~input/box
+              to: /robot_bbox
+        - name: robot_center_pointcloud_bbox_clipped
+          type: jsk_pcl/ExtractIndices
+          remappings:
+            - from: ~input
+              to: /robot_center_pointcloud/output
+            - from: ~indices
+              to: /robot_bbox_clipper/output/point_indices
     </rosparam>
   </group>
   <rosparam param="map_origin_polygon" subst_value="true">
     use_message: true
     frame_ids: [$(arg STAND_FRAME)]
-    polygon_array: [[[0.25, 0.25, -0.01], [-0.25, 0.25, -0.01], [-0.25, -0.25, -0.01], [0.25, -0.25, -0.01]]]
+    #polygon_array: [[[0.25, 0.25, -0.01], [-0.25, 0.25, -0.01], [-0.25, -0.25, -0.01], [0.25, -0.25, -0.01]]]
+    polygon_array: [[[0.5, 0.5, -0.01], [-0.5, 0.5, -0.01], [-0.5, -0.5, -0.01], [0.5, -0.5, -0.01]]]
   </rosparam>
   <rosparam param="robot_center_map_origin_points" subst_value="true">
     target_frame_id: $(arg ROBOT_FRAME)
@@ -77,7 +97,7 @@
     target_frame_id: $(arg ROBOT_FRAME)
   </rosparam>
   <rosparam param="robot_center_pointcloud_with_map_origin_points" subst_value="true">
-    input_topics: ["/robot_center_pointcloud/output", "/robot_center_map_origin_points/output"]
+    input_topics: ["/robot_center_pointcloud_bbox_clipped/output", "/robot_center_map_origin_points/output"]
     output_frame: $(arg ROBOT_FRAME)
     max_queue_size: 50
   </rosparam>
@@ -95,6 +115,13 @@
   </rosparam>
   <rosparam param="accumulated_heightmap_pointcloud_static" subst_value="true">
     target_frame_id: $(arg STATIC_FRAME)
+  </rosparam>
+  <rosparam param="robot_bbox_clipper" subst_value="true">
+    use_multiple_attention: false
+    frame_id: $(arg ROBOT_FRAME)
+  </rosparam>
+  <rosparam param="robot_center_pointcloud_bbox_clipped" subst_value="true">
+    negative: true
   </rosparam>
   <group ns="heightmap_visualization">
     <group ns="latest">
