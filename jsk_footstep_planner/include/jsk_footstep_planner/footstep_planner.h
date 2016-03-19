@@ -52,7 +52,7 @@
 #include "jsk_footstep_planner/footstep_graph.h"
 #include "jsk_footstep_planner/astar_solver.h"
 #include "jsk_footstep_planner/footstep_astar_solver.h"
-
+#include <jsk_footstep_planner/CollisionBoundingBoxInfo.h>
 #include <jsk_interactive_marker/SnapFootPrint.h>
 
 namespace jsk_footstep_planner
@@ -109,6 +109,9 @@ namespace jsk_footstep_planner
     virtual bool projectFootPrintService(
       jsk_interactive_marker::SnapFootPrint::Request& req,
       jsk_interactive_marker::SnapFootPrint::Response& res);
+    virtual bool collisionBoundingBoxInfoService(
+      jsk_footstep_planner::CollisionBoundingBoxInfo::Request& req,
+      jsk_footstep_planner::CollisionBoundingBoxInfo::Response& res);
     virtual bool projectFootPrintWithLocalSearchService(
       jsk_interactive_marker::SnapFootPrint::Request& req,
       jsk_interactive_marker::SnapFootPrint::Response& res);
@@ -126,6 +129,7 @@ namespace jsk_footstep_planner
     ros::Subscriber sub_obstacle_model_;
     ros::ServiceServer srv_project_footprint_;
     ros::ServiceServer srv_project_footprint_with_local_search_;
+    ros::ServiceServer srv_collision_bounding_box_info_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_model_;
     FootstepGraph::Ptr graph_;
@@ -180,6 +184,7 @@ namespace jsk_footstep_planner
     double heuristic_second_rotation_weight_;
     double cost_weight_;
     double heuristic_weight_;
+    std::string pointcloud_model_frame_id_, obstacle_model_frame_id_;
   private:
     
   };

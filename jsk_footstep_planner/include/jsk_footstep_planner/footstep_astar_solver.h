@@ -67,6 +67,7 @@ namespace jsk_footstep_planner
       is_set_profile_function_(false),
       cost_weight_(cost_weight),
       heuristic_weight_(heuristic_weight),
+      is_cancelled_(false),
       AStarSolver<GraphT>(graph)
     {
       
@@ -89,7 +90,7 @@ namespace jsk_footstep_planner
       TransitionLimit::Ptr limit = graph_->getTransitionLimit();
       bool lazy_projection = graph_->lazyProjection();
       addToOpenList(start_state);
-      while (!isOpenListEmpty()  && isOK(start_time, timeout)) {
+      while (!is_cancelled_ && !isOpenListEmpty()  && isOK(start_time, timeout)) {
         SolverNodePtr target_node = popFromOpenList();
         if (graph_->usePointCloudModel() && lazy_projection) {
           unsigned int error_state;
@@ -145,10 +146,18 @@ namespace jsk_footstep_planner
           }
         }
       }
+      if (is_cancelled_) {
+        ROS_WARN("FootstepAStarSolver is cancelled");
+      }
       // Failed to search
       return std::vector<SolverNodePtr>();
     }
     
+    virtual void cancelSolve() {
+      is_cancelled_ = true;
+      ROS_FATAL("cancel planning");
+    }
+
     // Overtake closelist behavior from solver class
     virtual bool findInCloseList(StatePtr s)
     {
@@ -231,6 +240,7 @@ namespace jsk_footstep_planner
     using BestFirstSearchSolver<GraphT>::open_list_;
     const double cost_weight_;
     const double heuristic_weight_;
+    bool is_cancelled_;
   };
 }
 
