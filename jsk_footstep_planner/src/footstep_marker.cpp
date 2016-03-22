@@ -157,6 +157,9 @@ namespace jsk_footstep_planner
       tf::poseMsgToEigen(bbox_info.response.box_offset, collision_bbox_offset_);
     }
 
+    // pose stamped command interface
+    sub_pose_stamped_command_ = pnh_.subscribe("pose_stamped_command", 1, &FootstepMarker::poseStampedCommandCallback, this);
+
     pub_plan_result_ = pnh_.advertise<jsk_footstep_msgs::FootstepArray>("output/plan_result", 1);
     //JSK_ROS_INFO("waiting for footstep_planner");
     //ac_planner_.waitForServer();
@@ -766,6 +769,31 @@ namespace jsk_footstep_planner
     boost::mutex::scoped_lock lock(planner_mutex_);
     disable_tf_ = config.disable_tf;
     default_footstep_margin_ = config.default_footstep_margin;
+  }
+
+
+  void FootstepMarker::poseStampedCommandCallback(
+    const geometry_msgs::PoseStamped::ConstPtr& msg)
+  {
+    JSK_ROS_DEBUG("posestamped command is received");
+    std_msgs::Header tmp_header = msg->header;
+    tmp_header.frame_id = odom_frame_id_;
+    {
+      // apply target pose to goal marker
+      // mutex should be limited in this range because planIfPossible also lock planner_mutex_
+      boost::mutex::scoped_lock lock(planner_mutex_);
+      Eigen::Affine3f eigen_command_pose;
+      server_->setPose("movable_footstep_marker", msg->pose, tmp_header);
+      server_->applyChanges();
+    }
+    // forcely call processFeedbackCB to execute planning
+    visualization_msgs::InteractiveMarkerFeedback dummy_feedback;
+    dummy_feedback.header = tmp_header;
+    dummy_feedback.pose = msg->pose;
+    dummy_feedback.event_type = visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE;
+    const visualization_msgs::InteractiveMarkerFeedbackConstPtr dummy_feedback_ptr
+      = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
+    processFeedbackCB(dummy_feedback_ptr);
   }
   
 }
