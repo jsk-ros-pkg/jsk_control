@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.9 (2016-03-23)
+------------------
 * remove dynamic_reconfigure.parameter_generator, which only used for rosbuild
 * [jsk_footstep_controller] Add footstep-controller euslisp script for jaxon
 * [jsk_footstep_controller] Publish robot_bbox only when analysis_level is whole_links

@@ -2,8 +2,8 @@
 Changelog for package contact_states_observer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.9 (2016-03-23)
+------------------
 
 * [contact-states-observer.l] Add :init for contact state topic initialization.
 * [contact_states_observer/euslisp/contact-states-observer.l] Update for thk hand for jaxon.

@@ -2,8 +2,8 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.9 (2016-03-23)
+------------------
 * [jsk_calibration] Update camera config parameter for JAXON
   Modified:
   - jsk_calibration/jaxon_calibration/capture_data/hardware_config/cam_config.yaml

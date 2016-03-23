@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.9 (2016-03-23)
+------------------
 * remove dynamic_reconfigure.parameter_generator, which only used for rosbuild
 * [jsk_footstep_planner] Add command_pose_stampped to footstep_marker
 * [jsk_footstep_planner] Add bbox visalization and check goal status sanity before planning

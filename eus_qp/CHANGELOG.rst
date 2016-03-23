@@ -2,8 +2,8 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.9 (2016-03-23)
+------------------
 * Merge pull request #565 from mmurooka/6d-minmax-constraint
   [eus_qp/euslisp] add 6d-min-max-contact-constraint class and test
 * [eus_qp/euslisp] pass debug option to qp solve function.
