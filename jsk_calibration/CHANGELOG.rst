@@ -2,6 +2,18 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [jsk_calibration] Update camera config parameter for JAXON
+  Modified:
+  - jsk_calibration/jaxon_calibration/capture_data/hardware_config/cam_config.yaml
+* [jsk_calibration] Add forgotten config file for rviz viewer
+* [jsk_calibration] add utilitiy for jaxon_calibration
+* [jsk_calibration][JAXON_RED] update poses for calibration
+* [jsk_calibration] Add calibration viewer for manual calibration
+* {jsk_calibration, jsk_footstep_planner}/README.md: fix section/subsection
+* Contributors: Kei Okada, Ryohei Ueda, Yohei Kakiuchi, Iori Kumagai
+
 0.1.8 (2015-11-02)
 ------------------
 

@@ -2,6 +2,43 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* remove dynamic_reconfigure.parameter_generator, which only used for rosbuild
+* [jsk_footstep_planner] Add command_pose_stampped to footstep_marker
+* [jsk_footstep_planner] Add bbox visalization and check goal status sanity before planning
+* [jsk_footstep_planner] Remove points around the robot from robot_center_pointcloud before combine with robot_center_map_origin_points
+* [jsk_footstep_planner] Support projection from marker
+  Modified:
+  - jsk_footstep_planner/include/jsk_footstep_planner/footstep_marker.h
+  - jsk_footstep_planner/src/footstep_marker.cpp
+* Merge pull request #562 from garaemon/collision-avoidance
+  [jsk_footstep_planner] Support collision avoidance in footstep planner
+* [jsk_footstep_planner] Support collision check
+* [jsk_footstep_planner] Not use im_helpers::add3Dof2DControl for backward compatibility
+* [jsk_footstep_marker] Move footstep_marker from jsk_interactive_marker
+* [jsk_footstep_planner] Fix genjava problem with message_generation as build_depend
+  Modified:
+  - jsk_footstep_planner/package.xml
+* [jsk_footstep_planner] Only consider forward step
+  stride in heuristic estimation
+  Modified:
+  - jsk_footstep_planner/src/footstep_graph.cpp
+* [jsk_footstep_planner] Do not check pointcloud if no perception mode
+  Modified:
+  - jsk_footstep_planner/src/footstep_planner.cpp
+* [jsk_footstep_controller] Merge heightmap nodelets into multisense_laser nodelet to reduce tf related nodes
+* [jsk_footstep_planner] Add successors definitions for jaxon, jaxon_red
+  and hrp2jsknt
+* Update .travis to jsk-travis 0.2.1 and enable ccache
+* {jsk_calibration, jsk_footstep_planner}/README.md: fix section/subsection
+* [jsk_footstep_planner] Measure perception duration in collaborative
+  perception-planning scheduling
+* [jsk_footstep_planner] Fix skip_cropping=true behavior
+* [jsk_footstep_planner] Remove literal value from benchmark code
+* [jsk_footstep_planner] Remove ROBOT env from sample launch files
+* Contributors: Kei Okada, Kentaro Wada, Ryohei Ueda, Iori Kumagai
+
 0.1.8 (2015-11-02)
 ------------------
 

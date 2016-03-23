@@ -2,6 +2,34 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* remove dynamic_reconfigure.parameter_generator, which only used for rosbuild
+* [jsk_footstep_controller] Add footstep-controller euslisp script for jaxon
+* [jsk_footstep_controller] Publish robot_bbox only when analysis_level is whole_links
+* [footstep_visualizer] Call st only once
+* [footstep_visualizer] Support dynamic_reconfigure API
+  to toggle which point to draw.
+  And fix some error about tf conversion and nan computation
+* [jsk_footstep_controller] Wait for st service to be available
+* [jsk_footstep_controller] Ignore error in footstep_visualizer
+* [jsk_footstep_controller] Add use_footcoords option to select whether footcoords is used or not
+* [jsk_robot_startup] Forgot timestamp
+* [jsk_footstep_controller] Publish odom_init as transform and pose_stamped when odom_init is updated
+* [jsk_footstep_controller/footstep_visualizer] get leg_vertices from StabilizerService param
+* [jsk_footstep_controller] Fix indent of stabilizer_watcher.py
+* [jsk_footstep_controller/stabilizer_watcher] Do not call service call to hrpsys,
+  use /act_contact_states topic to detect st status
+* [jsk_footstep_controller/footstep_visualizer] Fix zmp location by taking
+  into account z componrnt.
+  closes #518
+* [jsk_footstep_planner/footstep_visualizer] Fix indent
+* [jsk_footstep_controller] Draw Convex Hull of Support Polygon
+* [jsk_footstep_controller/footstep_visualizer] Add Reference capture point and Actual capture point
+  and draw text
+* [jsk_footstep_planner] Fix skip_cropping=true behavior
+* Contributors: Kei Okada, Ryohei Ueda, Yuta Kojio, Iori Kumagai
+
 0.1.8 (2015-11-02)
 ------------------
 

@@ -2,6 +2,29 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge pull request #565 from mmurooka/6d-minmax-constraint
+  [eus_qp/euslisp] add 6d-min-max-contact-constraint class and test
+* [eus_qp/euslisp] pass debug option to qp solve function.
+* [eus_qp/euslisp] add 6d-min-max-contact-constraint class and test for that.
+* [eus_qp/euslisp/contact-optimization.l,test-contact-wrench-opt.l] Add contact constraint for hand gripper and add example.
+* [eus_qp/euslisp/contact-optimization.l, test-contact-wrench-opt.l] Add mu-margin-ration and cop-margin-ratio. Add example for these parameters.
+* [eus_qp/euslisp/contact-optimization.l] Fix updating of drawing object newcoords. If initialize, update coords.
+* [eus_qp/euslisp/contact-optimization.l] Generate drawing object when drawing (https://github.com/jsk-ros-pkg/jsk_control/pull/558).
+* [eus_qp/euslisp/contact-optimization.l] Enable to set jacobi from arg.
+* [eus_qp/CMakeLists.txt, package.xml, src/qp_lib.cpp] Revert Eigen usage hack by garaemon, because we can build this program on travis without this hack (https://github.com/jsk-ros-pkg/jsk_control/commit/4937ac04d0c1beceb8c4c92eac258c00549943f9)
+* [eus_qp/euslisp/contact-optimization.l] Just fix indent.
+* [eus_qp/euslisp/contact-optimization.l] Add max fz if necessary
+* [eus_qp/euslisp/model-predictive-control.l] Fix typos in MPC drift and output ports.
+* [eus_qp/euslisp/model-predictive-control.l,test-model-predictive-control.l] Update mpc to fix calculation for drift and output matrices
+* [eus_qp/test/test_model_predictive_control.test] Increase time-limit for MPC rostest
+* [eus_qp/euslisp/contact-optimization.l] Define concatenate matrix function for old euslisp environment.
+* [eus_qp/euslisp/test-model-predictive-control.l] Update for IK default argument for MPC examples.
+* [eus_qp/euslisp/contact-optimization.l] Moved concatenate matrix functions to jskeus (https://github.com/euslisp/jskeus/commit/5b1cf86398c4688f41c6ec654c00059e5cbd7bca)
+* [eus_qp/CMakeLists.txt] Add eus_qp MPC test for cmake rostest.
+* Contributors: Shunichi Nozawa, Masaki Murooka
+
 0.1.8 (2015-11-02)
 ------------------
 * Merge pull request `#512 <https://github.com/jsk-ros-pkg/jsk_control/issues/512>`_ from k-okada/fix_error
