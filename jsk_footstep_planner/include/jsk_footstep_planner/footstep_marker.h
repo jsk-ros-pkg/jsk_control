@@ -43,6 +43,7 @@
 #include <jsk_footstep_msgs/ExecFootstepsAction.h>
 #include <interactive_markers/interactive_marker_server.h>
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <interactive_markers/menu_handler.h>
 #include <tf2_ros/buffer_client.h>
 #include <Eigen/Geometry>
@@ -151,6 +152,7 @@ namespace jsk_footstep_planner
     virtual void setupMenuHandler();
 
     virtual void configCallback(Config& config, uint32_t level);
+    virtual void poseStampedCommandCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
@@ -159,6 +161,7 @@ namespace jsk_footstep_planner
     PlanningActionClient ac_planner_;
     ExecuteActionClient ac_exec_;
     ros::Publisher pub_plan_result_;
+    ros::Subscriber sub_pose_stamped_command_;
     
     std::string odom_frame_id_;
     std::string lleg_end_coords_, rleg_end_coords_;
