@@ -163,6 +163,7 @@ namespace jsk_footstep_planner
     // service servers
     srv_reset_marker_ = pnh_.advertiseService("reset_marker", &FootstepMarker::resetMarkerService, this);
     srv_execute_footstep_ = pnh_.advertiseService("execute_footstep", &FootstepMarker::executeFootstepService, this);
+    srv_get_footstep_marker_pose_ = pnh_.advertiseService("get_footstep_marker_pose", &FootstepMarker::getFootstepMarkerPoseService, this);
 
     pub_plan_result_ = pnh_.advertise<jsk_footstep_msgs::FootstepArray>("output/plan_result", 1);
     //JSK_ROS_INFO("waiting for footstep_planner");
@@ -823,6 +824,25 @@ namespace jsk_footstep_planner
       = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
     executeFootstepCB(dummy_feedback_ptr);
     return true;
+  }
+
+  bool FootstepMarker::getFootstepMarkerPoseService(
+    jsk_interactive_marker::GetTransformableMarkerPose::Request& req,
+    jsk_interactive_marker::GetTransformableMarkerPose::Response& res)
+  {
+    boost::mutex::scoped_lock lock(planner_mutex_);
+    std::string target_name = req.target_name;
+    visualization_msgs::InteractiveMarker int_marker;
+    if (server_->get(target_name, int_marker)) {
+      geometry_msgs::PoseStamped ret_pose_stamped;
+      ret_pose_stamped.header = int_marker.header;
+      ret_pose_stamped.pose = int_marker.pose;
+      res.pose_stamped = ret_pose_stamped;
+      return true;
+    } else {
+      ROS_WARN("There is no marker named %s", target_name.c_str());
+      return false;
+    }
   }
   
 }
