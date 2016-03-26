@@ -566,6 +566,7 @@
    (&key (mu-margin-ratio 1.0) (cop-margin-ratio 1.0)
          (mu-trans) (mu-rot) (slide-axis)
          (l-max-x) (l-max-y) (l-min-x) (l-min-y)
+         (contact-face)
          (name) (max-fz))
    "Calc default constraint matrix.
     This is include 2D friction force, 1D rotational friction moment, non-negative normal force, and 2D-COP constraint,
@@ -583,7 +584,9 @@
              (instance 2D-translational-friction-contact-constraint :init (* mu-margin-ratio mu-trans)))
            (instance rotational-friction-contact-constraint :init (* mu-margin-ratio mu-rot) :fz)
            ;; cop
-           (instance 2D-cop-contact-constraint :init (* cop-margin-ratio l-max-x) (* cop-margin-ratio l-min-x) (* cop-margin-ratio l-max-y) (* cop-margin-ratio l-min-y))
+           (if contact-face
+               (instance polygon-cop-contact-constraint :init contact-face)
+             (instance 2D-cop-contact-constraint :init (* cop-margin-ratio l-max-x) (* cop-margin-ratio l-min-x) (* cop-margin-ratio l-max-y) (* cop-margin-ratio l-min-y)))
            ;; fz
            (instance norm-contact-constraint :init :fz)
            )
