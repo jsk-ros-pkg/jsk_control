@@ -25,7 +25,7 @@ class JoyFootstepMarker(JoyPose6D):
     self.pose_pub = rospy.Publisher(self.getArg('pose', 'pose'), PoseStamped)
     self.current_goal_pose = None
     self.use_tf = self.getArg('use_tf', True)
-    self.sync_rate = self.getArg('sync_rate', 10)
+    self.pose_updated = False
   
     # make service proxy
     rospy.wait_for_service('/footstep_marker/reset_marker')
@@ -38,15 +38,10 @@ class JoyFootstepMarker(JoyPose6D):
     # initialize maker pose
     marker_pose = self.getCurrentMarkerPose("movable_footstep_marker")
     if marker_pose != None:
-      self.pre_pose = marker_pose 
+      self.pre_pose = marker_pose
+      
   def joyCB(self, status, history):
-    # synchronize marker_pose before publish pre_pose
-    now = rospy.Time.from_sec(time.time())    
-    if (now - self.prev_time).to_sec() > 1.0 / self.sync_rate:
-      marker_pose = self.getCurrentMarkerPose("movable_footstep_marker")
-      if marker_pose != None and not isSamePose(self.pre_pose.pose, marker_pose.pose):
-        self.pre_pose = marker_pose
-    
+    now = rospy.Time.from_sec(time.time())
     JoyPose6D.joyCB(self, status, history)
     latest = history.latest()
     if not latest:
@@ -63,10 +58,18 @@ class JoyFootstepMarker(JoyPose6D):
         self.pre_pose.pose.orientation.w = 1
 
     if self.current_goal_pose == None or not isSamePose(self.current_goal_pose.pose, self.pre_pose.pose):
+      if self.pose_updated == False:
+        marker_pose = self.getCurrentMarkerPose("movable_footstep_marker") # synchronize marker_pose only at first of pose update
+        if marker_pose != None and not isSamePose(self.pre_pose.pose, marker_pose.pose):
+          self.pre_pose = marker_pose
+        self.pose_updated = True
       if (now - self.prev_time).to_sec() > 1 / 30.0:
         self.pose_pub.publish(self.pre_pose)
         self.prev_time = now
         self.current_goal_pose = copy.deepcopy(self.pre_pose)
+    else:
+      self.pose_updated = False
+        
   def getCurrentMarkerPose(self, marker_name):
     try:      
       marker_pose = self.get_footstep_marker_pose_srv(marker_name).pose_stamped
