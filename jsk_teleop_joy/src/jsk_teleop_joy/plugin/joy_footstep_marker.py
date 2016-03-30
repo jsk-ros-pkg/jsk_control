@@ -62,7 +62,10 @@ class JoyFootstepMarker(JoyPose6D):
       elif status.circle and not latest.circle:
         self.menu.action = OverlayMenu.ACTION_CLOSE
         if self.menu.current_index == self.menu.menus.index("Yes"):
-          self.execute_footstep_srv()
+          try:
+            self.execute_footstep_srv()
+          except rospy.ServiceException, e:
+            rospy.logwarn("Execute Footsteps failed: %s", e)
         self.pub.publish(self.menu)
         self.menu = None
       elif status.cross and not latest.cross:
