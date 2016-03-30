@@ -8,7 +8,7 @@
 ;; ik-grid.
 (defclass ik-grid-cell
   :super propertied-object
-  :slots (center-pos indices value time-value dimension))
+  :slots (center-pos indices value time-value dimension cube))
 
 (defmethod ik-grid-cell
   (:init (acenter-pos aindices adimension)
@@ -21,18 +21,20 @@
   (:set-time-value (v) (setq time-value v))
   (:get-value () value)
   (:get-time-value () time-value)
-  (:cube (&optional (max-value 1.0))
+  (:cube (&optional (max-value 1.0) &key (updatep t))
     "instantiate cube for this cell"
-    (let ((c (make-cube dimension dimension dimension)))
-      (send c :locate center-pos :world)
-      ;;(setf (get c :face-color) :green)
-      (setf (get c :face-color)
-            (scale (/ 1.0 255.0)
-                   (coerce (his2rgb (* 180 (/ (or value 0.0) max-value)) 1.0 0.8)
-                           float-vector)))
-      (gl::transparent c 0.5)
-      (send c :worldpos)
-      c))
+    (when (or (not cube) updatep)
+      (let ((c (make-cube dimension dimension dimension)))
+        (send c :locate center-pos :world)
+        ;;(setf (get c :face-color) :green)
+        (setf (get c :face-color)
+              (scale (/ 1.0 255.0)
+                     (coerce (his2rgb (* 180 (/ (or value 0.0) max-value)) 1.0 0.8)
+                             float-vector)))
+        (gl::transparent c 0.5)
+        (send c :worldpos)
+        (setq cube c)))
+    cube)
   (:face (&optional (max-value 1.0))
     (let* ((d/2 (/ dimension 2.0))
            (-d/2 (- d/2))
