@@ -8,7 +8,7 @@
 ;; ik-grid.
 (defclass ik-grid-cell
   :super propertied-object
-  :slots (center-pos indices value time-value dimension))
+  :slots (center-pos indices value time-value dimension cube))
 
 (defmethod ik-grid-cell
   (:init (acenter-pos aindices adimension)
@@ -21,18 +21,20 @@
   (:set-time-value (v) (setq time-value v))
   (:get-value () value)
   (:get-time-value () time-value)
-  (:cube (&optional (max-value 1.0))
+  (:cube (&optional (max-value 1.0) &key (updatep t))
     "instantiate cube for this cell"
-    (let ((c (make-cube dimension dimension dimension)))
-      (send c :locate center-pos :world)
-      ;;(setf (get c :face-color) :green)
-      (setf (get c :face-color)
-            (scale (/ 1.0 255.0)
-                   (coerce (his2rgb (* 180 (/ (or value 0.0) max-value)) 1.0 0.8)
-                           float-vector)))
-      (gl::transparent c 0.5)
-      (send c :worldpos)
-      c))
+    (when (or (not cube) updatep)
+      (let ((c (make-cube dimension dimension dimension)))
+        (send c :locate center-pos :world)
+        ;;(setf (get c :face-color) :green)
+        (setf (get c :face-color)
+              (scale (/ 1.0 255.0)
+                     (coerce (his2rgb (* 180 (/ (or value 0.0) max-value)) 1.0 0.8)
+                             float-vector)))
+        (gl::transparent c 0.5)
+        (send c :worldpos)
+        (setq cube c)))
+    cube)
   (:face (&optional (max-value 1.0))
     (let* ((d/2 (/ dimension 2.0))
            (-d/2 (- d/2))
@@ -323,6 +325,12 @@
       (gl::glEnable gl::GL_LIGHTING)
       (gl::glPopAttrib)
       )
+  (:draw-on (&key (color (float-vector 1 1 1)))
+    (send-all (send self :get-cubes) :draw-on :flush nil :color color)
+    (when (send self :get :center-pos)
+      (send (send origin :transform-vector (send self :get :center-pos)) :draw-on :flush nil :size 50 :width 5 :color color))
+    (send *irtviewer* :viewer :flush)
+    )
   (:vertices ()
     "Return vertices of bounding box of the grid"
     (list (send self :indices-to-pos (list 0 0 0))
@@ -335,6 +343,20 @@
           (send self :indices-to-pos (list numx numy numz))))
   (:worldcoords ()
     origin)
+  (:get-cubes ()
+    (let ((cubes nil) cube)
+      (dolist (c (send self :valid-cells))
+        (setq cube (send c :cube 1.0 :updatep nil))
+        (send cube :newcoords (send (send origin :copy-worldcoords) :transform (make-coords :pos (send c :center-pos))))
+        (send cube :worldcoords)
+        (setq cubes (append cubes (list cube)))
+        )
+      cubes))
+  (:insidep (p)
+    (let ((cubes (send self :get-cubes)))
+      (and (send (make-bounding-box (flatten (send-all cubes :vertices)) 0) :inner p)
+           (not (every #'(lambda (x) (equal x :outside)) (send-all cubes :insidep p))))
+      ))
   )
   
 
@@ -394,9 +416,12 @@
 
 (defun ik-evaluation (robot grid limb ik-args
                       &key
+                      (move-target (send robot limb :end-coords))
                       (update-view nil)
                       (rotation (unit-matrix))
-                      (min-distance 0.0))
+                      (min-distance 0.0)
+                      (orient-centerp nil)
+                      (center-pos (float-vector 0 0 0)))
   (send robot :fix-leg-to-coords (make-coords))
   (let ((counter 0))
   (dolist (cell (send grid :cells))
@@ -406,9 +431,16 @@
           (warn "skip because it violtates min-distance~%")
           (send cell :set-value 0))
       (progn
-        (if (send* robot limb :inverse-kinematics
+        (when orient-centerp
+          (send grid :put :center-pos center-pos)
+          (setq rotation
+                (send (orient-coords-to-axis (make-coords :pos (send cell :center-pos)) (v- center-pos (send cell :center-pos))
+                                             (if (cadr (member :rotation-axis ik-args)) (cadr (member :rotation-axis ik-args)) :z)) :rot)))
+        (if (send* robot :inverse-kinematics
                    (make-coords :pos (send cell :center-pos)
                                 :rot rotation)
+                   :move-target move-target
+                   :link-list (send robot :link-list (send move-target :parent))
                    :dump-command nil
                    :warnp nil
                    ik-args)
@@ -531,6 +563,22 @@
   (objects (append (send-all (send *grid* :valid-cells) :cube (send *grid* :max-value)) (list *robot*)))
   (send (send (send *irtviewer* :viewer) :viewsurface)
           :write-to-image-file "input.png")
+  t)
+
+(defun test-with-hrp2jsknt-orient-center ()
+  (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
+  (setq *robot* (make-robot-model-from-name "hrp2jsknt"))
+  (objects (list *robot*))
+  (setq *grid* (instance ik-grid :init
+                         '(0.0 . 700.0) '(-500.0 . 1000.0) '(800.0 . 2000.0)
+                         :grid-step 100))
+  (format t "Start test~%")
+  (ik-evaluation *robot* *grid* :larm (list :rotation-axis :x :rthre pi/2) :update-view t
+                 :orient-centerp t :center-pos (float-vector 400 0 1000))
+  ;;(send *grid* :normalize-cells)
+  (objects (append (send-all (send *grid* :valid-cells) :cube (send *grid* :max-value)) (list *robot*)))
+  (send (send (send *irtviewer* :viewer) :viewsurface)
+        :write-to-image-file "input.png")
   t)
 
 (defun test-with-jaxon-zup ()
