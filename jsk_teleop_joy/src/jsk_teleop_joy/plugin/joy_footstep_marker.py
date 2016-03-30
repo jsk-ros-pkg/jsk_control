@@ -7,6 +7,7 @@ except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 
 import actionlib
+from jsk_rviz_plugins.msg import OverlayMenu
 from joy_pose_6d import JoyPose6D
 from jsk_interactive_marker.srv import GetTransformableMarkerPose
 from geometry_msgs.msg import PoseStamped
@@ -26,6 +27,10 @@ class JoyFootstepMarker(JoyPose6D):
     self.current_goal_pose = None
     self.use_tf = self.getArg('use_tf', True)
     self.pose_updated = False
+
+    # make publisher
+    self.pub = rospy.Publisher("joy_footstep_menu", OverlayMenu)    
+    self.menu = None
   
     # make service proxy
     rospy.wait_for_service('/footstep_marker/reset_marker')
@@ -42,12 +47,40 @@ class JoyFootstepMarker(JoyPose6D):
       
   def joyCB(self, status, history):
     now = rospy.Time.from_sec(time.time())
-    JoyPose6D.joyCB(self, status, history)
     latest = history.latest()
     if not latest:
       return
-    if status.circle and not latest.circle: # execute footsteps
-      self.execute_footstep_srv()
+
+    # menu mode
+    if self.menu != None:
+      if status.up and not latest.up:
+        self.menu.current_index = (self.menu.current_index - 1) % len(self.menu.menus)
+        self.pub.publish(self.menu)
+      elif status.down and not latest.down:
+        self.menu.current_index = (self.menu.current_index + 1) % len(self.menu.menus)
+        self.pub.publish(self.menu)        
+      elif status.circle and not latest.circle:
+        self.menu.action = OverlayMenu.ACTION_CLOSE
+        if self.menu.current_index == self.menu.menus.index("Yes"):
+          self.execute_footstep_srv()
+        self.pub.publish(self.menu)
+        self.menu = None
+      elif status.cross and not latest.cross:
+        self.menu.action = OverlayMenu.ACTION_CLOSE
+        self.pub.publish(self.menu)
+        self.menu = None
+      else:
+        self.pub.publish(self.menu)
+      return
+
+    # control mode    
+    JoyPose6D.joyCB(self, status, history)
+    if status.circle and not latest.circle: # go into execute footsteps menu
+      self.menu = OverlayMenu()
+      self.menu.title = "Execute Footsteps?"
+      self.menu.menus = ["Yes", "No"]
+      self.menu.current_index = 1
+      self.pub.publish(self.menu)
     elif status.cross and not latest.cross: # reset marker
       self.reset_marker_srv()
       marker_pose = self.getCurrentMarkerPose("initial_footstep_marker")
@@ -56,7 +89,6 @@ class JoyFootstepMarker(JoyPose6D):
       else:
         self.pre_pose = PoseStamped()
         self.pre_pose.pose.orientation.w = 1
-
     if self.current_goal_pose == None or not isSamePose(self.current_goal_pose.pose, self.pre_pose.pose):
       if self.pose_updated == False:
         marker_pose = self.getCurrentMarkerPose("movable_footstep_marker") # synchronize marker_pose only at first of pose update
