@@ -416,9 +416,12 @@
 
 (defun ik-evaluation (robot grid limb ik-args
                       &key
+                      (move-target (send robot limb :end-coords))
                       (update-view nil)
                       (rotation (unit-matrix))
-                      (min-distance 0.0))
+                      (min-distance 0.0)
+                      (orient-centerp nil)
+                      (center-pos (float-vector 0 0 0)))
   (send robot :fix-leg-to-coords (make-coords))
   (let ((counter 0))
   (dolist (cell (send grid :cells))
@@ -428,9 +431,16 @@
           (warn "skip because it violtates min-distance~%")
           (send cell :set-value 0))
       (progn
-        (if (send* robot limb :inverse-kinematics
+        (when orient-centerp
+          (send grid :put :center-pos center-pos)
+          (setq rotation
+                (send (orient-coords-to-axis (make-coords :pos (send cell :center-pos)) (v- center-pos (send cell :center-pos))
+                                             (if (cadr (member :rotation-axis ik-args)) (cadr (member :rotation-axis ik-args)) :z)) :rot)))
+        (if (send* robot :inverse-kinematics
                    (make-coords :pos (send cell :center-pos)
                                 :rot rotation)
+                   :move-target move-target
+                   :link-list (send robot :link-list (send move-target :parent))
                    :dump-command nil
                    :warnp nil
                    ik-args)
@@ -553,6 +563,22 @@
   (objects (append (send-all (send *grid* :valid-cells) :cube (send *grid* :max-value)) (list *robot*)))
   (send (send (send *irtviewer* :viewer) :viewsurface)
           :write-to-image-file "input.png")
+  t)
+
+(defun test-with-hrp2jsknt-orient-center ()
+  (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
+  (setq *robot* (make-robot-model-from-name "hrp2jsknt"))
+  (objects (list *robot*))
+  (setq *grid* (instance ik-grid :init
+                         '(0.0 . 700.0) '(-500.0 . 1000.0) '(800.0 . 2000.0)
+                         :grid-step 100))
+  (format t "Start test~%")
+  (ik-evaluation *robot* *grid* :larm (list :rotation-axis :x :rthre pi/2) :update-view t
+                 :orient-centerp t :center-pos (float-vector 400 0 1000))
+  ;;(send *grid* :normalize-cells)
+  (objects (append (send-all (send *grid* :valid-cells) :cube (send *grid* :max-value)) (list *robot*)))
+  (send (send (send *irtviewer* :viewer) :viewsurface)
+        :write-to-image-file "input.png")
   t)
 
 (defun test-with-jaxon-zup ()
