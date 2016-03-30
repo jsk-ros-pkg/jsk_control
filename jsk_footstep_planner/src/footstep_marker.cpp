@@ -361,6 +361,7 @@ namespace jsk_footstep_planner
       goal.footstep = plan_result_;
       ROS_INFO("Execute footsteps");
       ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
+      ac_exec_.waitForResult(ros::Duration(120.0));
     }
     else if (planning_state_ == ON_GOING) {
       ROS_FATAL("cannot execute footstep because planning state is ON_GOING");
@@ -824,6 +825,12 @@ namespace jsk_footstep_planner
       = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
     executeFootstepCB(dummy_feedback_ptr);
     return true;
+    // check footstep result
+    if (ac_exec_.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   bool FootstepMarker::getFootstepMarkerPoseService(
