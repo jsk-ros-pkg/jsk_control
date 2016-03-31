@@ -271,6 +271,21 @@
 (warn ";; (demo-robot-contact-wrench-distribution-all)~%")
 (warn ";; (test-compare-wrench-torque-calc)~%")
 
+(defun demo-robot-wrench-distribute-from-total-wrench-and-given-wrench
+  ()
+  ;; Currently calculation with contact constraints does not work.
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+  (send *robot* :calc-torque :calc-statics-p t) ;; Statics
+  (wrench-distribute-from-total-wrench-and-given-wrench
+   (send *robot* :arms :end-coords)
+   (send *robot* :legs :end-coords)
+   (list (float-vector 0 0 (* (send *robot* :weight) 1e-3 9.8 0.45) 0 0 0)
+         (float-vector 0 0 (* (send *robot* :weight) 1e-3 9.8 0.45) 0 0 0))
+   :robot *robot*)
+   )
+(warn ";; (demo-robot-wrench-distribute-from-total-wrench-and-given-wrench)~%")
+
 (defun calc-diff-wrench
   (tq-wr-list1 tq-wr-list2)
   (distance (send *robot* :wrench-list->wrench-vector (cadr (memq :wrench-list tq-wr-list1)))
