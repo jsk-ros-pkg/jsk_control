@@ -8,6 +8,8 @@
 
 (deftest test-samplerobot-distribute
   (assert (demo-robot-contact-wrench-distribution-all :press-enter-p nil)))
+(deftest test-samplerobot-distribute-with-given-wrench
+  (assert (demo-robot-wrench-distribute-from-total-wrench-and-given-wrench)))
 (deftest test-cbox-distribute
   (assert (demo-cbox-wrench-calc-all :press-enter-p nil)))
 
