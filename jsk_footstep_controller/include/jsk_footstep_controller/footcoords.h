@@ -46,6 +46,8 @@
 #include <message_filters/synchronizer.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+#include <jsk_recognition_utils/geo/plane.h>
+#include <pcl_msgs/ModelCoefficients.h>
 #include <jsk_footstep_controller/GroundContactState.h>
 #include <jsk_footstep_controller/FootCoordsLowLevelInfo.h>
 #include <jsk_footstep_controller/SynchronizedForces.h>
@@ -148,6 +150,7 @@ namespace jsk_footstep_controller
                                 tf::Vector3& lfoot_force, tf::Vector3& rfoot_force);
     virtual void periodicTimerCallback(const ros::TimerEvent& event);
     virtual void odomInitTriggerCallback(const std_msgs::Empty& trigger);
+    virtual void floorCoeffsCallback(const pcl_msgs::ModelCoefficients& coeffs);
     virtual void odomImuCallback(const nav_msgs::Odometry::ConstPtr& odom_msg,
                                  const sensor_msgs::Imu::ConstPtr& imu_msg);
     // This callback is called when robot is put on the ground.
@@ -187,6 +190,8 @@ namespace jsk_footstep_controller
     message_filters::Subscriber<sensor_msgs::JointState> sub_joint_states_;
     message_filters::Subscriber<geometry_msgs::PointStamped> sub_zmp_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
+    ros::Subscriber floor_coeffs_sub_;
+    jsk_recognition_utils::Plane::Ptr floor_plane_ptr_;
     KDL::Chain lfoot_chain_;
     KDL::Chain rfoot_chain_;
     tf::Pose lfoot_pose_;

@@ -38,8 +38,6 @@
 #include <std_msgs/String.h>
 #include <tf_conversions/tf_eigen.h>
 #include <jsk_pcl_ros/pcl_conversion_util.h>
-#include <tf_conversions/tf_eigen.h>
-#include <jsk_pcl_ros/pcl_conversion_util.h>
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainfksolvervel_recursive.hpp>
 #include <tf_conversions/tf_kdl.h>
@@ -50,7 +48,8 @@ namespace jsk_footstep_controller
 {
 
   Footcoords::Footcoords():
-    diagnostic_updater_(new diagnostic_updater::Updater)
+    diagnostic_updater_(new diagnostic_updater::Updater),
+    floor_plane_ptr_(new jsk_recognition_utils::Plane(Eigen::Vector3f(0, 0, 1), 0.0)) // z = 0
   {
     ros::NodeHandle nh, pnh("~");
     tf_listener_.reset(new tf::TransformListener());
@@ -136,6 +135,8 @@ namespace jsk_footstep_controller
     sub_rfoot_force_.subscribe(nh, "rfsensor", 50);
     sub_joint_states_.subscribe(nh, "joint_states",50);
     sub_zmp_.subscribe(nh, "zmp", 50);
+    floor_coeffs_sub_ = pnh.subscribe("/floor_coeffs", 1,
+                                      &Footcoords::floorCoeffsCallback, this);
     sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
     sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_, sub_joint_states_, sub_zmp_);
     sync_->registerCallback(boost::bind(&Footcoords::synchronizeForces, this, _1, _2, _3, _4));
@@ -989,7 +990,7 @@ namespace jsk_footstep_controller
     midcoords_.getRotation().normalize();
     Eigen::Affine3d odom_init_pose = (Eigen::Translation3d(odom_init_pose_.translation()[0],
                                                            odom_init_pose_.translation()[1],
-                                                           0.0) * 
+                                                           odom_init_pose_.translation()[2]) * 
                                       Eigen::AngleAxisd(getYaw(odom_init_pose_), Eigen::Vector3d::UnitZ()));
 
     tf::transformTFToMsg(midcoords_, ros_midcoords.transform);
@@ -1014,7 +1015,7 @@ namespace jsk_footstep_controller
   {
     boost::mutex::scoped_lock lock(mutex_);
     // Update odom_init_pose
-    odom_init_pose_ = odom_pose_;
+    floor_plane_ptr_->project(odom_pose_, odom_init_pose_);
     
     // publish odom_init topics
     // whether invert_odom_init is true or not odom_init_pose_stamped and odom_init_transform is described in odom coordinates.
@@ -1022,7 +1023,7 @@ namespace jsk_footstep_controller
     geometry_msgs::PoseStamped ros_odom_init_pose_stamped;
     Eigen::Affine3d odom_init_pose = (Eigen::Translation3d(odom_init_pose_.translation()[0],
                                                            odom_init_pose_.translation()[1],
-                                                           0.0) * 
+                                                           odom_init_pose_.translation()[2]) * 
                                       Eigen::AngleAxisd(getYaw(odom_init_pose_), Eigen::Vector3d::UnitZ()));
     ros_odom_init_coords.header.stamp = ros::Time::now();
     ros_odom_init_coords.header.frame_id = parent_frame_id_;
@@ -1035,6 +1036,37 @@ namespace jsk_footstep_controller
     ros_odom_init_pose_stamped.pose.position.z = ros_odom_init_coords.transform.translation.z;
     ros_odom_init_pose_stamped.pose.orientation = ros_odom_init_coords.transform.rotation;
     pub_odom_init_pose_stamped_.publish(ros_odom_init_pose_stamped);
+  }
+
+  void Footcoords::floorCoeffsCallback(const pcl_msgs::ModelCoefficients& coeffs)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    tf::StampedTransform floor_transform;
+
+    // floor_coords is expected to be described in parent_frame_id_ relative coordinate
+    if (coeffs.header.frame_id != parent_frame_id_) {
+      try {
+        tf_listener_->lookupTransform(odom_init_frame_id_, coeffs.header.frame_id, coeffs.header.stamp, floor_transform);
+      } catch (tf2::ConnectivityException &e) {
+        ROS_ERROR("[Footcoords::floorCoeffsCallback] transform error: %s", e.what());
+        return;
+      } catch (tf2::InvalidArgumentException &e) {
+        ROS_ERROR("[Footcoords::floorCoeffsCallback] transform error: %s", e.what());
+        return;
+      } catch (tf2::ExtrapolationException &e) {
+        ROS_ERROR("[Footcoords::floorCoeffsCallback] transform error: %s", e.what());
+        return;
+      } catch (tf2::LookupException &e) {
+        ROS_ERROR("[Footcoords::floorCoeffsCallback] transform error: %s", e.what());
+        return;
+      }
+      Eigen::Affine3d floor_transform_eigen;
+      tf::transformTFToEigen(floor_transform, floor_transform_eigen);
+      floor_plane_ptr_.reset(new jsk_recognition_utils::Plane(coeffs.values));
+      floor_plane_ptr_->transform(floor_transform_eigen);
+    } else {
+      floor_plane_ptr_.reset(new jsk_recognition_utils::Plane(coeffs.values));
+    }
   }
 
   void Footcoords::odomImuCallback(const nav_msgs::Odometry::ConstPtr& odom_msg,
