@@ -191,7 +191,7 @@ namespace jsk_footstep_controller
     message_filters::Subscriber<geometry_msgs::PointStamped> sub_zmp_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
     ros::Subscriber floor_coeffs_sub_;
-    jsk_recognition_utils::Plane::Ptr floor_plane_ptr_;
+    std::vector<float> floor_coeffs_;
     KDL::Chain lfoot_chain_;
     KDL::Chain rfoot_chain_;
     tf::Pose lfoot_pose_;

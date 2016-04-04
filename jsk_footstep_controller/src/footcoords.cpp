@@ -43,13 +43,13 @@
 #include <tf_conversions/tf_kdl.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <kdl_conversions/kdl_msg.h>
+#include <boost/assign/list_of.hpp>
 
 namespace jsk_footstep_controller
 {
 
   Footcoords::Footcoords():
-    diagnostic_updater_(new diagnostic_updater::Updater),
-    floor_plane_ptr_(new jsk_recognition_utils::Plane(Eigen::Vector3f(0, 0, 1), 0.0)) // z = 0
+    diagnostic_updater_(new diagnostic_updater::Updater)
   {
     ros::NodeHandle nh, pnh("~");
     tf_listener_.reset(new tf::TransformListener());
@@ -137,6 +137,7 @@ namespace jsk_footstep_controller
     sub_zmp_.subscribe(nh, "zmp", 50);
     floor_coeffs_sub_ = pnh.subscribe("/floor_coeffs", 1,
                                       &Footcoords::floorCoeffsCallback, this);
+    floor_coeffs_ = boost::assign::list_of(0)(0)(1)(0);
     sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
     sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_, sub_joint_states_, sub_zmp_);
     sync_->registerCallback(boost::bind(&Footcoords::synchronizeForces, this, _1, _2, _3, _4));
@@ -1015,7 +1016,10 @@ namespace jsk_footstep_controller
   {
     boost::mutex::scoped_lock lock(mutex_);
     // Update odom_init_pose
-    floor_plane_ptr_->project(odom_pose_, odom_init_pose_);
+    jsk_recognition_utils::Plane floor_plane(floor_coeffs_);
+    floor_plane.project(odom_pose_, odom_init_pose_); // this projection do not consider yaw orientations
+    odom_init_pose_ = (Eigen::Translation3d(odom_init_pose_.translation()) *
+                       Eigen::AngleAxisd(getYaw(odom_pose_), Eigen::Vector3d::UnitZ())); // assuming that projected plane is horizontal
     
     // publish odom_init topics
     // whether invert_odom_init is true or not odom_init_pose_stamped and odom_init_transform is described in odom coordinates.
@@ -1061,11 +1065,12 @@ namespace jsk_footstep_controller
         return;
       }
       Eigen::Affine3d floor_transform_eigen;
+      jsk_recognition_utils::Plane tmp_plane(coeffs.values);
       tf::transformTFToEigen(floor_transform, floor_transform_eigen);
-      floor_plane_ptr_.reset(new jsk_recognition_utils::Plane(coeffs.values));
-      floor_plane_ptr_->transform(floor_transform_eigen);
+      tmp_plane.transform(floor_transform_eigen);
+      floor_coeffs_ = tmp_plane.toCoefficients();
     } else {
-      floor_plane_ptr_.reset(new jsk_recognition_utils::Plane(coeffs.values));
+      floor_coeffs_ = coeffs.values;
     }
   }
 
