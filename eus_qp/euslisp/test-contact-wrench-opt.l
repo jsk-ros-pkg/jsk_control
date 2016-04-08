@@ -575,6 +575,15 @@
    (list (send *cbox* :get :face-coords-2))
    ))
 
+(defun demo-cbox-wrench-calc-18
+  ()
+  "Demo for cbox wrench calculation by polygon-cop-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance polygon-cop-contact-constraint :init (elt (send *cbox* :faces) 1))) ;; bottom face
+   (list (send *cbox* :worldcoords))
+   ))
+
 
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))

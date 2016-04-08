@@ -454,6 +454,43 @@
    )
   )
 
+(defclass polygon-cop-contact-constraint
+  :super contact-constraint
+  :slots (contact-face contact-face-coords)
+  )
+
+(defmethod polygon-cop-contact-constraint
+  (:init
+   (tmp-contact-face)
+  "Calc COP constraint with polygon contact region.
+   contact-face is face class instance of contact region
+   This class assumes that contact-face is vertical with z-axis."
+  (setq contact-face tmp-contact-face)
+  (let* ((x-vec (normalize-vector (v- (send (car (send contact-face :edges)) :direction))))
+         (z-vec (v- (send contact-face :normal)))
+         (y-vec (normalize-vector (v* z-vec x-vec)))
+         )
+    ;; x is parallel to first edge, z is parallel to face normal
+    (setq contact-face-coords (make-coords :pos (cadr (send contact-face :centroid)) :rot (transpose (matrix x-vec y-vec z-vec))))
+    )
+  (setq constraint-param-list
+        (calc-constraint-param-list-for-polygon-cop
+         contact-face contact-face-coords))
+  (send-super :init)
+  )
+  (:gen-drawing-object
+   ()
+   (setq drawing-object
+         (make-prism
+          (butlast
+           (mapcar #'(lambda (p) (concatenate float-vector (subseq p 0 2) (float-vector 0)))
+                   (mapcar #'(lambda (p) (send contact-face-coords :inverse-transform-vector p))
+                           (send contact-face :vertices))))
+          1))
+   (send drawing-object :put :draw-on-args (list :color #f(0 0 1) :width 3))
+   )
+  )
+
 (defclass norm-contact-constraint
   :super contact-constraint
   :slots (norm-axis)
@@ -545,6 +582,7 @@
    (&key (mu-margin-ratio 1.0) (cop-margin-ratio 1.0)
          (mu-trans) (mu-rot) (slide-axis)
          (l-max-x) (l-max-y) (l-min-x) (l-min-y)
+         (contact-face)
          (name) (max-fz))
    "Calc default constraint matrix.
     This is include 2D friction force, 1D rotational friction moment, non-negative normal force, and 2D-COP constraint,
@@ -562,7 +600,9 @@
              (instance 2D-translational-friction-contact-constraint :init (* mu-margin-ratio mu-trans)))
            (instance rotational-friction-contact-constraint :init (* mu-margin-ratio mu-rot) :fz)
            ;; cop
-           (instance 2D-cop-contact-constraint :init (* cop-margin-ratio l-max-x) (* cop-margin-ratio l-min-x) (* cop-margin-ratio l-max-y) (* cop-margin-ratio l-min-y))
+           (if contact-face
+               (instance polygon-cop-contact-constraint :init contact-face)
+             (instance 2D-cop-contact-constraint :init (* cop-margin-ratio l-max-x) (* cop-margin-ratio l-min-x) (* cop-margin-ratio l-max-y) (* cop-margin-ratio l-min-y)))
            ;; fz
            (instance norm-contact-constraint :init :fz)
            )
@@ -815,6 +855,31 @@
            (setf (elt (car ret) moment-idx) -1)
            (setf (elt (cadr ret) moment-idx) 1)))))
     (list :matrix ret :vector (list 0 0))
+    ))
+
+(defun calc-constraint-param-list-for-polygon-cop
+  (contact-face contact-face-coords)
+  "Calc constraint param for COP constraint with polygon contact region.
+   contact-face is face class instance of contact region
+   contact-face-coords is coordinate of contact face (x is parallel to first edge, z is parallel to face normal)
+   This function assumes that contact-face is vertical with z-axis."
+  (let* ((edge-num (length (send contact-face :edges)))
+         (ret (mapcar #'(lambda (x) (make-list 6 :initial-element 0))
+                      (make-list edge-num))))
+    (dotimes (i edge-num)
+      (let* ((tmp-edge (elt (send contact-face :edges) i)) ;; be carefull that edge is class name
+             (world-edge-dir (send tmp-edge :direction))
+             (local-edge-dir (send contact-face-coords :inverse-rotate-vector world-edge-dir))
+             (world-edge-point (send tmp-edge :point 0)) ;; [mm]
+             (local-edge-point (scale 1e-3 (send contact-face-coords :inverse-transform-vector world-edge-point))) ;; [m]
+             )
+        (setf (elt (elt ret i) 2) (- (* (elt local-edge-point 0) (elt local-edge-dir 1)) (* (elt local-edge-point 1) (elt local-edge-dir 0)))) ;; fz
+        (setf (elt (elt ret i) 3) (elt local-edge-dir 0)) ;; nx
+        (setf (elt (elt ret i) 4) (elt local-edge-dir 1)) ;; ny
+        (when (< (elt (elt ret i) 2) 0) ;; inequality is flipped depending on edge direction relative to centroid
+          (setf (elt ret i) (mapcar #'(lambda (x) (- x)) (elt ret i))))
+        ))
+    (list :matrix ret :vector (make-list edge-num :initial-element 0))
     ))
 
 (defun calc-constraint-param-list-for-translational-sliding
