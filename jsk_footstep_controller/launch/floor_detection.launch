@@ -1,0 +1,156 @@
+<launch>
+  <arg name="fixed_frame_id" default="odom" />
+  <!-- <arg name="input_cloud" default="/accumulated_heightmap_pointcloud_static/output"/> -->
+  <arg name="input_cloud" default="robot_center_pointcloud/output"/>
+  <node pkg="jsk_topic_tools"
+        type="standalone_complexed_nodelet"
+        name="floor_detection_manager"
+        output="screen">
+    <rosparam subst_value="true">
+    nodelets:
+      - name: floor_fixed_frame_pointcloud
+        type: jsk_pcl/TfTransformCloud
+        remappings:
+          - from: ~input
+            to: $(arg input_cloud)
+      - name: floor_laser_x_filter
+        type: pcl/PassThrough
+        remappings:
+          - from: ~input
+            to: floor_fixed_frame_pointcloud/output
+          - from: /tf
+            to: /tf_null
+      - name: floor_laser_y_filter
+        type: pcl/PassThrough
+        remappings:
+          - from: ~input
+            to: floor_laser_x_filter/output
+          - from: /tf
+            to: /tf_null
+      - name: floor_laser_z_filter
+        type: pcl/PassThrough
+        remappings:
+          - from: ~input
+            to: floor_laser_y_filter/output
+          - from: /tf
+            to: /tf_null
+      - name: floor_voxel_grid
+        type: pcl/VoxelGrid
+        remappings:
+          - from: ~input
+            to: floor_laser_z_filter/output
+          - from: /tf
+            to: /tf_null
+      - name: floor_normal_estimation
+        type: pcl/NormalEstimation
+        remappings:
+          - from: ~input
+            to: floor_voxel_grid/output
+          - from: /tf
+            to: /tf_null
+      - name: floor_planar_segmentation
+        type: pcl/SACSegmentationFromNormals
+        remappings:
+          - from: ~input
+            to: floor_voxel_grid/output
+          - from: ~normals
+            to: floor_normal_estimation/output
+          - from: /tf
+            to: /tf_null
+      - name: floor_extract_plane_indices
+        type: pcl/ExtractIndices
+        remappings:
+          - from: ~input
+            to: floor_voxel_grid/output
+          - from: ~indices
+            to: floor_planar_segmentation/inliers
+          - from: /tf
+            to: /tf_null
+      - name: floor_plane_coefficients_snapshot
+        type: jsk_topic_tools/Snapshot
+        remappings:
+          - from: ~input
+            to: floor_planar_segmentation/model
+          - from: ~output
+            to: /floor_coeffs
+    </rosparam>
+  </node>
+  <rosparam param="floor_fixed_frame_pointcloud" subst_value="true">
+    target_frame_id: $(arg fixed_frame_id)
+  </rosparam>
+  <group ns="floor_laser_x_filter">
+    <rosparam>
+      filter_field_name: x
+      filter_limit_min: -5.0
+      filter_limit_max: 1000.0
+    </rosparam>
+  </group>
+  <group ns="floor_laser_y_filter">
+    <rosparam>
+      filter_field_name: y
+      filter_limit_min: -5.0
+      filter_limit_max: 5.0
+    </rosparam>
+  </group>
+  <group ns="floor_laser_z_filter">
+    <rosparam>
+      filter_field_name: z
+      filter_limit_min: -0.2
+      filter_limit_max: 0.2
+    </rosparam>
+  </group>
+  <group ns="floor_voxel_grid">
+    <rosparam>
+      filter_field_name: z
+      filter_limit_min: -0.2
+      filter_limit_max: 0.2
+      filter_limit_negative: False
+      leaf_size: 0.01
+    </rosparam>
+  </group>
+  <group ns="floor_normal_estimation">
+    <rosparam>
+      # -[ Mandatory parameters
+      k_search: 0
+      radius_search: 0.015
+      # Set the spatial locator. Possible values are: 0 (ANN), 1 (FLANN), 2 (organized)
+      spatial_locator: 0
+    </rosparam>
+  </group>
+  <group ns="floor_planar_segmentation">  
+    <rosparam>
+      # -[ Mandatory parameters
+      # model_type:
+      # 0: SACMODEL_PLANE
+      # 1: SACMODEL_LINE
+      # 2: SACMODEL_CIRCLE2D
+      # 3: SACMODEL_CIRCLE3D
+      # 4: SACMODEL_SPHERE
+      # 5: SACMODEL_CYLINDER
+      # 6: SACMODEL_CONE
+      # 7: SACMODEL_TORUS
+      # 8: SACMODEL_PARALLEL_LINE
+      # 9: SACMODEL_PERPENDICULAR_PLANE
+      # 10: SACMODEL_PARALLEL_LINES
+      # 11: SACMODEL_NORMAL_PLANE
+      # 12: SACMODEL_NORMAL_SPHERE
+      # 13: SACMODEL_REGISTRATION
+      # 14: SACMODEL_REGISTRATION_2D
+      # 15: SACMODEL_PARALLEL_PLANE
+      # 16: SACMODEL_NORMAL_PARALLEL_PLANE
+      # 17: SACMODEL_STICK
+      model_type: 11
+      distance_threshold: 0.1
+      max_iterations: 1000
+      method_type: 0
+      optimize_coefficients: true
+      normal_distance_weight: 0.1
+      eps_angle: 0.09
+    </rosparam>
+  </group>
+  <group ns="floor_extract_plane_indices">  
+    <rosparam>
+      negative: false
+    </rosparam>
+  </group>
+</launch>
