@@ -1,4 +1,6 @@
 <launch>
+  <arg name="camera_ns" default="/multisense/left" />
+
   <node type="interval_intersection_action"
         pkg="interval_intersection"
         name="interval_intersection"
@@ -6,6 +8,6 @@
     <remap from="LARM_chain" to="LARM_chain/settled_interval" />
     <remap from="RARM_chain" to="RARM_chain/settled_interval" />
     <remap from="head_chain" to="head_chain/settled_interval" />
-    <remap from="head_camera" to="/multisense/left/settled_interval" />
+    <remap from="head_camera" to="$(arg camera_ns)/settled_interval" />
   </node>
 </launch>

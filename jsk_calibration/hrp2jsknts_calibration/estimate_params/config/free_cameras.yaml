@@ -2,7 +2,7 @@
   transforms:
     LARM_chain_cb: [1, 1, 1, 1, 1, 1]
     RARM_chain_cb: [1, 1, 1, 1, 1, 1]
-    hrp2_to_multisense: [1, 1, 1, 1, 1, 1]
+    camera_link_joint: [1, 1, 1, 1, 1, 1]
 
   chains:
     LARM_chain:

@@ -43,7 +43,7 @@ sensors:
   rectified_cams:
     head_camera:
       chain_id: head_chain  #TODO: get rid of this
-      frame_id: left_camera_optical_frame
+      frame_id: camera_rgb_optical_frame
 #      frame_id: HEAD_LINK1
       baseline_shift: 0.0
 #      baseline_rgbd: 0.075 ## comment out if we run all_pipelines.launch with use_kinect
