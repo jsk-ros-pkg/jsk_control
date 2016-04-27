@@ -1,4 +1,4 @@
-name: "redundancy_ik_net_16s_100m1_4d1_1i_12k_4d2_100m2"
+name: "redundancy_ik_net_28s_150m1_4d1_3i_18k_8d2_150m2"
 layer {
  name: "input"
  type: "MemoryData"
@@ -6,7 +6,7 @@ layer {
  top: "__dummy_label1"
  memory_data_param {
   batch_size: 32
-  channels: 9
+  channels: 28
   height: 1
   width: 1
  }
@@ -21,7 +21,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 100
+  num_output: 150
   weight_filler {
    type: "gaussian"
    std: 1
@@ -35,7 +35,7 @@ layer {
 }
 layer {
  name: "sig0"
- type: "Sigmoid"
+ type: "TanH"
  bottom: "ip0"
  top: "sig1"
 }
@@ -49,7 +49,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 100
+  num_output: 150
   weight_filler {
    type: "gaussian"
    std: 1
@@ -63,7 +63,7 @@ layer {
 }
 layer {
  name: "sig1"
- type: "Sigmoid"
+ type: "TanH"
  bottom: "ip1"
  top: "sig2"
 }
@@ -77,7 +77,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 100
+  num_output: 150
   weight_filler {
    type: "gaussian"
    std: 1
@@ -91,7 +91,7 @@ layer {
 }
 layer {
  name: "sig2"
- type: "Sigmoid"
+ type: "TanH"
  bottom: "ip2"
  top: "sig3"
 }
@@ -105,7 +105,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 100
+  num_output: 150
   weight_filler {
    type: "gaussian"
    std: 1
@@ -119,7 +119,7 @@ layer {
 }
 layer {
  name: "sig3"
- type: "Sigmoid"
+ type: "TanH"
  bottom: "ip3"
  top: "sig4"
 }
@@ -133,7 +133,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 1
+  num_output: 3
   weight_filler {
    type: "gaussian"
    std: 1
@@ -164,7 +164,7 @@ layer {
  top: "__dummy_label2"
  memory_data_param {
   batch_size: 32
-  channels: 6
+  channels: 18
   height: 1
   width: 1
  }
@@ -198,7 +198,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 100
+  num_output: 150
   weight_filler {
    type: "gaussian"
    std: 1
@@ -212,7 +212,7 @@ layer {
 }
 layer {
  name: "sig5"
- type: "Sigmoid"
+ type: "TanH"
  bottom: "ip5"
  top: "sig6"
 }
@@ -226,7 +226,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 100
+  num_output: 150
   weight_filler {
    type: "gaussian"
    std: 1
@@ -240,7 +240,7 @@ layer {
 }
 layer {
  name: "sig6"
- type: "Sigmoid"
+ type: "TanH"
  bottom: "ip6"
  top: "sig7"
 }
@@ -254,7 +254,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 100
+  num_output: 150
   weight_filler {
    type: "gaussian"
    std: 1
@@ -268,7 +268,7 @@ layer {
 }
 layer {
  name: "sig7"
- type: "Sigmoid"
+ type: "TanH"
  bottom: "ip7"
  top: "sig8"
 }
@@ -282,7 +282,7 @@ layer {
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 100
+  num_output: 150
   weight_filler {
    type: "gaussian"
    std: 1
@@ -296,21 +296,133 @@ layer {
 }
 layer {
  name: "sig8"
- type: "Sigmoid"
+ type: "TanH"
  bottom: "ip8"
  top: "sig9"
 }
 layer {
- name: "output"
+ name: "ip9"
  type: "InnerProduct"
  bottom: "sig9"
+ top: "ip9"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig9"
+ type: "TanH"
+ bottom: "ip9"
+ top: "sig10"
+}
+layer {
+ name: "ip10"
+ type: "InnerProduct"
+ bottom: "sig10"
+ top: "ip10"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig10"
+ type: "TanH"
+ bottom: "ip10"
+ top: "sig11"
+}
+layer {
+ name: "ip11"
+ type: "InnerProduct"
+ bottom: "sig11"
+ top: "ip11"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig11"
+ type: "TanH"
+ bottom: "ip11"
+ top: "sig12"
+}
+layer {
+ name: "ip12"
+ type: "InnerProduct"
+ bottom: "sig12"
+ top: "ip12"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig12"
+ type: "TanH"
+ bottom: "ip12"
+ top: "sig13"
+}
+layer {
+ name: "output"
+ type: "InnerProduct"
+ bottom: "sig13"
  top: "output"
  param {
   lr_mult: 1
   decay_mult: 1
  }
  inner_product_param {
-  num_output: 16
+  num_output: 28
   weight_filler {
    type: "gaussian"
    std: 1
