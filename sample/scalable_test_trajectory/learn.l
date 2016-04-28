@@ -128,20 +128,26 @@
   (&key
    (ef-coords *ef-coords*)
    (root-link *root-link*)
+   (joint-list *joint-list1*)
+   (robot *robot*)
    (offset-coords (make-list (length ef-coords)))
    (org-coords (send root-link :worldcoords))
    )
   (apply 'concatenate
          (cons float-vector
-               (mapcar #'(lambda (efc off)
-			   (send efc :vector :org-coords org-coords :offset-coords off))
-		       ef-coords offset-coords))))
+	       (append
+		(mapcar #'(lambda (efc off)
+			    (send efc :vector :org-coords org-coords :offset-coords off))
+			ef-coords offset-coords)
+		(list (map float-vector 'deg2rad (send-all joint-list :joint-angle)))))))
 
 (defun get-ef-coords-from-vector
   (&key
    (ef-coords *ef-coords*)
    (vector (get-vector-from-ef-coords))
    (root-link *root-link*)
+   (joint-list *joint-list1*)
+   (robot *robot*)
    (org-coords (send root-link :worldcoords))
    (i 0) len
    ret)
@@ -150,6 +156,14 @@
     (push (send efc :coords-from-vector (subseq vector i (+ i len))
                 :org-coords org-coords) ret)
     (setq i (+ i len)))
+  (map cons
+       #'(lambda (j av)
+	   (send j :joint-angle
+		 (- (rad2deg av) (send j :joint-angle))
+		 :relative t))
+       joint-list
+       (subseq vector (- (length vector) (length joint-list))
+	       (length vector)))
   (reverse ret))
 
 (defun shuffle-random-vector-map
