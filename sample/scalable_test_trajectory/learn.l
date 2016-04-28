@@ -3,7 +3,8 @@
 (require "package://eus_caffe/euslisp/eus-caffe.l")
 (require "package://eus_caffe/euslisp/eus-caffe-db.l")
 (require "package://eus_caffe/euslisp/eus-log.l")
-(require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
+;; (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
+(require "package://baxtereus/baxter.l")
 (require "models/arrow-object.l")
 (require "package://eus_caffe/sample/scalable_test/gen-solver.l")
 
@@ -93,18 +94,8 @@
    (c) (instance vector-coords :init (send (send self :copy-worldcoords) :transform c :world)))
   )
 
-(defvar *robot* (hrp2jsknt))
-(defvar *joint-list1* (append (butlast (send *robot* :rarm :joint-list))
-                              (send *robot* :torso :joint-list)))
-;; (setq *joint-list1* (list (send *robot* :rarm :elbow-p) (send *robot* :rarm :shoulder-p)))
-(defvar *joint-list2* (append (butlast (send *robot* :rarm :joint-list))
-                              (butlast (send *robot* :larm :joint-list))
-                              (send *robot* :torso :joint-list)))
-(defvar *joint-list3* (append (butlast (send *robot* :rarm :joint-list))
-                              (butlast (send *robot* :larm :joint-list))
-                              (butlast (send *robot* :rleg :joint-list))
-                              (butlast (send *robot* :lleg :joint-list))
-                              (send *robot* :torso :joint-list)))
+(defvar *robot* (baxter))
+(defvar *joint-list1* (send *robot* :rarm :joint-list))
 
 (defvar *ef-coords* (list (instance vector-coords :init (send *robot* :rarm :end-coords))))
 ;; (defvar *ef-coords-length* (list 6))
@@ -112,39 +103,11 @@
 (defvar *root-link* (car (send *robot* :links)))
 (defvar *root-link-fix-coords-func* nil)
 
-(defvar *learn-mode* :rarm-larm-rleg-lleg)
-(cond
- ((eq *learn-mode* :rarm-larm)
-  (setq *joint-list1* *joint-list2*)
-  (setq *ef-coords*
-        (mapcar
-         '(lambda (c mode) (instance vector-coords :init c :mode mode))
-         (list (send *robot* :larm :end-coords)
-               (send *robot* :rarm :end-coords))
-         (list :coords :coords :coords :pos))))
- ((eq *learn-mode* :rarm-larm-rleg-lleg)
-  (setq *joint-list1* *joint-list3*)
-  (setq *ef-coords*
-        (mapcar
-         '(lambda (c mode) (instance vector-coords :init c :mode mode))
-         (list (send *robot* :larm :end-coords)
-               (send *robot* :rarm :end-coords)
-               (send *robot* :lleg :end-coords)
-               ;; '(lambda (&rest args)
-               ;;    (make-coords :pos (send *robot* :centroid)))
-               )
-         (list :coords :coords :coords :pos)))
-  (setq *root-link* (car (last (butlast (send *robot* :rleg :links)))))
-  (setq *root-link-fix-coords-func*
-        '(lambda nil (send *root-link* :worldcoords)
-           (send *robot* :fix-leg-to-coords (make-coords) :rleg)))
-  ))
+(defvar *learn-mode* :rarm)
 
 (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (send-all (send *robot* :links) :set-val 'analysis-level :coords)
-(objects (flatten (list (car (send *robot* :links))
-                        (reverse (send-all *joint-list3* :child-link))
-                        *arrow*)))
+(objects (flatten (list *robot* *arrow*)))
 
 (defvar *sample-points* ;;96)
   (let* ((org
