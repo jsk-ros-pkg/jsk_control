@@ -108,19 +108,10 @@
 (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (send-all (send *robot* :links) :set-val 'analysis-level :coords)
 (objects (flatten (list *robot* *arrow*)))
+(send *irtviewer* :change-background (float-vector 1 1 1))
+(send *viewer* :draw-objects)
 
-(defvar *sample-points* ;;96)
-  (let* ((org
-          (min
-           (round 1e+6)
-           (expt (max
-                  (min (round (expt 1e+6 (/ 1.0 (length *joint-list1*))))
-                       4) 2) (length *joint-list1*))))
-         (sep 32))
-    (if (not (zerop (mod org sep)))
-        (max 1 (round (* (ceiling (/ (* 1.0 org) sep)) sep)))
-      org)))
-
+(defvar *sample-points* 1024)
 (defvar *angle-vector-map*)
 (defvar *ef-coords-map*)
 
