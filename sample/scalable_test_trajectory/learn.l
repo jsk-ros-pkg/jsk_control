@@ -702,12 +702,14 @@
                     (funcall root-link-fix-coords-func))
                 (send-all (send-all joint-list :child-link) :worldcoords)
                 (send-all ef-coords :worldcoords)))
-	(task (get-task-vector :ef-coords ef-coords :root-link root-link))
+	(random-task (get-task-vector :ef-coords ef-coords :root-link root-link))
 	;;
         (state (instantiate float-vector (* (send trajectory :id-max) (send trajectory :dimension))))
-	(random-task)
+	(task (copy-seq random-task))
         (initialize? (smart-initialize-net))
-        (redundancy (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
+        (redundancy ;;(instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
+	 (map float-vector '(lambda (hoge) (random 1.0))
+	      (make-list (- (caffe::get-blob-count "input") (length input)))))
 	;;
 	(after-callback-func)
 	(evaluation-callback-func
@@ -721,12 +723,12 @@
    tm
    (bench2
     (apply calc-forward
-           (list :isize (length task) :input task
+           (list :isize (length random-task) :input random-task
                  :osize (length state) :output state))
     ))
   (send trajectory :convert-gain-vector-to-gain-matrix (copy-seq state))
   ;;
-  (setq random-task
+  (setq task
 	(check-trajectory :bspline trajectory :joint-list joint-list
 			  :collide-check nil :draw? draw? :debug? :no-message
 			  :root-link-fix-coords-func root-link-fix-coords-func))
@@ -750,106 +752,20 @@
   (&rest
    args
    &key
-   (joint-list *joint-list1*)
-   (ef-coords *ef-coords*)
-   (root-link *root-link*)
-   (root-link-fix-coords-func *root-link-fix-coords-func*)
-   (random-angle
-    (mapcar '(lambda (j) (send j :joint-angle
-                               (-
-                                (+ (send j :min-angle)
-                                   (* (random 1.0)
-                                      (- (send j :max-angle)
-                                         (send j :min-angle))))
-                                (send j :joint-angle))
-                               :relative t))
-            joint-list))
-   (update-coords
-    (progn (if (functionp root-link-fix-coords-func)
-                    (funcall root-link-fix-coords-func))
-           (send-all (send-all joint-list :child-link) :worldcoords)
-           (send-all ef-coords :worldcoords)))
-   (c (send-all (send-all ef-coords :worldcoords) :copy-worldcoords))
-   (b (send root-link :copy-worldcoords))
-   (av (instantiate float-vector (length joint-list)))
-   (input (get-task-vector :ef-coords ef-coords :root-link root-link))
-   (initialize? (smart-initialize-net))
-   (redundancy
-    ;;(fill
-    (instantiate float-vector (- (caffe::get-blob-count "input") (length input)))
-    ;;0.0)
-    )
-   (step-max 300)
-   (redundancy-step
-    (/ 1.0 (expt step-max (/ 1.0 (length redundancy)))))
-   (redundancy-step-cnt
-    (max 1 (floor (/ 1.0 redundancy-step))))
-   (revert? nil) (draw? t)
-   tmp buf ret (cnt 0) (update-arrow-coords? t)
-   ;;
-   (stop-func)
+   random-task
    (evaluation-func
     '(lambda (val soa)
        (< (cdr (assoc :evaluation val))
 	  (cdr (assoc :evaluation soa)))))
+   (ret nil) (lp 100)
+   best
    &allow-other-keys
    )
-  (labels ((itter
-            (depth &optional (depth0 depth) (prev 0))
-            (cond
-             ((and (zerop depth) (eq prev 0))
-              (let* ((jmax (max 0 (- step-max (expt redundancy-step-cnt depth0)))))
-                ;; (warning-message 1 "~A~%" jmax)
-                (dotimes (j jmax)
-                  (setf (aref redundancy (random depth0)) (random 1.0))
-                  (itter depth depth0 -1))))
-             ((zerop depth)
-              ;; (print redundancy)
-              ;; (print (incf cnt))
-              (setq tmp (apply 'traj-random-test
-                               :random-angle random-angle :update-coords update-coords
-                               :c c :b b :av av :input input :redundancy redundancy
-			       :update-arrow-coords? update-arrow-coords?
-                               :initialize? nil :revert? revert? args))
-	      (if update-arrow-coords? (setq update-arrow-coords? nil))
-              ;;(push tmp buf)
-              (cond
-	       ((not tmp) 'nop)
-               ((not ret) (setq ret tmp))
-               ((and (functionp evaluation-func)
-		     (funcall evaluation-func tmp ret))
-		(setq ret tmp)))
-	      ;;
-	      (if (and (functionp stop-func)
-		       (funcall stop-func ret)) (throw :stop-func-end nil))
-	      )
-             (t
-              (dotimes (j redundancy-step-cnt)
-                (setf (aref redundancy (- depth 1)) (* j redundancy-step))
-                (itter (- depth 1) depth0 (+ prev (- redundancy-step-cnt j 1))))))))
-    (catch :stop-func-end (itter (length redundancy))))
-  ;; (dotimes (i (length redundancy))
-  ;;   (dotimes (j (round (/ 1.0 redundancy-step)))
-  ;;     (setf (aref redundancy i) (* j redundancy-step))
-  ;;     (push (apply 'traj-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil args) buf)))
-  ;; (setq *ret* buf)
-  ;; (setq ret (car (sort buf #'(lambda (a b) (< (cdr (assoc :state-diff-norm a))
-  ;; (cdr (assoc :state-diff-norm b)))))))
-  (cond
-   (revert?
-    (mapcar '(lambda (j av) (send j :joint-angle (- av (send j :joint-angle)) :relative t))
-	    joint-list random-angle)
-    (if (functionp root-link-fix-coords-func)
-	(funcall root-link-fix-coords-func)))
-   (ret
-    (map cons '(lambda (j av) (send j :joint-angle (- (rad2deg av) (send j :joint-angle))
-				    :relative t))
-	 joint-list (cdr (assoc :state ret)))
-    (if (functionp root-link-fix-coords-func)
-	(funcall root-link-fix-coords-func))))
-  (if (and draw? (or revert? ret)) (send *viewer* :draw-objects))
-  ret
-  )
+  (dotimes (i lp)
+    (push (apply 'traj-random-test-min :random-task random-task args) ret)
+    (if (not best) (setq best (car ret))
+      (if (funcall evaluation-func (car ret) best) (setq best (car ret)))))
+  best)
 
 (defun traj-random-test-min-average
   (&rest args &key (lp 100) (step-max 300) (variance (float-vector 0)) &allow-other-keys)
@@ -858,11 +774,9 @@
     (dotimes (i lp)
       (push (apply 'traj-random-test-min :initialize? nil :step-max step-max args) ret))
     (setq ret (remove nil ret))
-    (if (not (eq lp (length ret)))
-	(warning-message 1 "[traj-random-test-min-average] warn: traj-random-test-min sometimes redused? ~A/~A~%" (length ret) lp))
-    ;; (setq *ret* ret)
+    ;;
     (setq avr (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :evaluation d))) ret))
-		(length ret)))
+		 (length ret)))
     (setq var (mapcar #'(lambda (d) (- avr (cdr (assoc :evaluation d)))) ret))
     (setq var (apply '+ (mapcar '(lambda (d) (* d d)) var)))
     (setq var (sqrt (/ var (length ret))))
