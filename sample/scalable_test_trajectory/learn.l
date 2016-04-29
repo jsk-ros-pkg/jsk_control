@@ -282,7 +282,7 @@
 ;; (let* ((max 1000) (tm (bench2 (dotimes (i max) (let* ((a (integer-vector 0 0))) (gen-random-trajectory :draw? nil :error-cnt a :debug? :no-message)))))) (format t "~A x ~A = ~Asec~%" (/ tm max) max tm))
 (defun gen-random-trajectory
   (&rest args &key
-	 (debug? t) (draw? debug?)
+	 (debug? t) (draw? debug?) (revert? t) (collide-check :first)
 	 (error-cnt (instantiate integer-vector 2))
 	 (joint-list *joint-list1*)
 	 (dimension (length joint-list))
@@ -364,10 +364,19 @@
 	     ((setq col (check-all-collision))
 	      (setf (aref error-cnt 0) (+ (aref error-cnt 0) 1))
 	      (cond (draw? (random-test-check-all-collision nil) (unix::usleep (* 100 1000))))
-	      (if (not (eq debug? :no-message)) (warning-message 1 "  -- collision ~A~%" col))))
+	      (if (not (eq debug? :no-message)) (warning-message 1 "  -- collision ~A~%" col))
+	      (if (eq collide-check :first) (return-from gen-random-trajectory nil))
+	      ))
 	    ;;
 	    (setq x (+ x x-step)))))
     )
+  (cond
+   (revert?
+    (map cons '(lambda (J av) (send j :joint-angle
+				    (- (rad2deg av) (send j :joint-angle))
+				    :relative t))
+	 joint-list start-pos)
+    (if (not (eq debug? :no-message)) (warning-message 6 "reverted~%"))))
   bspline
   )
 
@@ -387,7 +396,7 @@
 	 #'(lambda (&rest args)
 	     (let* ((errcnt (integer-vector 0 0))
 		    (ret
-		     (gen-random-trajectory :debug? :no-message
+		     (gen-random-trajectory :debug? :no-message :revert? t
 					    :draw? nil :error-cnt errcnt)))
 	       (if (and ret (zerop (aref errcnt 0)))
 		   (send ret :gain-vector)))))
@@ -404,49 +413,41 @@
           (instantiate float-vector
                        (* control-points (length joint-list) sample-points)))))
   (cond
-   ((not (eq (length *state-map*)
+   ((not (eq (length *task-map*)
              (* len sample-points)))
-    (warning-message 1 "state-map alloc~%")
-    (setq *state-map*
+    (warning-message 1 "task-map alloc~%")
+    (setq *task-map*
           (instantiate float-vector (* len sample-points)))))
   ;;
-  (let* (val)
-    (dotimes (_i sample-points)
-      (if (>= i sample-points) (return-from nil nil))
+  (let* (task traj)
+    (while (< i sample-points)
       (if (and (> sample-points 100)
-               (zerop (mod _i (round (/ sample-points 100)))))
-          (warning-message 3 "~A%~%" (/ _i (round (/ sample-points 100)))))
-      ;; (dolist (j joint-list)
-      ;;   (send j :joint-angle
-      ;;         (-
-      ;;          (+ (send j :min-angle)
-      ;;     (* (random 1.0)
-      ;;        (- (send j :max-angle) (send j :min-angle))))
-      ;;          (send j :joint-angle))
-      ;;         :relative t)
-      ;;   )
-      (if (functionp gen-random-angle-vector-func)
-          (funcall gen-random-angle-vector-func joint-list)
-        (warning-message 1 "invalid gen-random-angle-vector-func~%"))
-      (send-all (send-all joint-list :child-link) :worldcoords)
-      (send-all ef-coords :worldcoords)
-      (dotimes (j (length joint-list))
-        (setf (aref *state-map* (+ j (* i (length joint-list))))
-              (deg2rad (send (nth j joint-list) :joint-angle))))
-      ;;
-      (setq val (get-task-vector :ef-coords ef-coords :root-link root-link))
-      (dotimes (j len)
-        (setf (aref *state-map* (+ j (* i len))) (aref val j)))
-      ;;
-      (incf i)
-      )
+               (zerop (mod i (round (/ sample-points 100)))))
+          (warning-message 3 "~A%~%" (/ i (round (/ sample-points 100)))))
+      (if (functionp gen-random-traj-vector-func)
+          (setq traj (funcall gen-random-traj-vector-func))
+        (throw :invalid-gen-random-angle-vector-func nil))
+      (cond
+       ((and (vectorp traj)
+	     (eq (length traj) (* control-points (length joint-list))))
+	;;
+	(dotimes (j (length traj))
+	  (setf (aref *state-map* (+ (* i (length traj)) j)) (aref traj j)))
+	;;
+	(send-all (send-all joint-list :child-link) :worldcoords)
+	(send-all ef-coords :worldcoords)
+	(setq task (get-task-vector :ef-coords ef-coords :root-link root-link))
+	(dotimes (j len) (setf (aref *task-map* (+ j (* i len))) (aref task j)))
+	;;
+	(incf i)
+	)))
     (if dump? (dump-ik-learning-data :surfix surfix))
     ))
 
 ;; gen-random-ik-learning-data-with-thre :sample-points 3 :thre 0.3 :max-time 5
 ;; check-test-data 0
 ;; ik-random-test-min :revert? t :random-angle (send-all *joint-list1* :joint-angle)
-(defun gen-random-ik-learning-data-with-thre
+(defun gen-random-traj-learning-data-with-thre
   (&rest args
          &key
          (draw? t)
@@ -508,20 +509,19 @@
   ret
   )
 
-
 (defun load-ik-learning-data
   (&key (root "teacher") (surfix ""))
   (setq *state-map* (cpplog::read-vector (format nil "~A/state-map.dat~A" root surfix)))
-  (setq *state-map* (cpplog::read-vector (format nil "~A/state-map.dat~A" root surfix)))
-  (length *state-map*))
+  (setq *task-map* (cpplog::read-vector (format nil "~A/task-map.dat~A" root surfix)))
+  (length *task-map*))
 
 (defun dump-ik-learning-data
   (&key (root "teacher") (surfix ""))
   (unix::system (format nil "mkdir -p ~A" root))
   (cpplog::write-vector (format nil "~A/state-map.dat~A" root surfix)
                         *state-map*)
-  (cpplog::write-vector (format nil "~A/state-map.dat~A" root surfix)
-                        *state-map*))
+  (cpplog::write-vector (format nil "~A/task-map.dat~A" root surfix)
+                        *task-map*))
 
 (defun ik-learn
   (&key (solver "ik_solver.prototxt")
@@ -529,29 +529,21 @@
         &allow-other-keys)
   (cond
    ((or (zerop (length *state-map*))
-        (zerop (length *state-map*)))
+        (zerop (length *task-map*)))
     (load-ik-learning-data)
     (setq *sample-points* ;;96)
-          (/ (length *state-map*)
-             (length *joint-list1*)))
-    ))
-  ;; (caffe::create-solver :solver solver :solverstate "")
-  ;; (caffe::reset-memory-layer :name "input"
-  ;;      :size (length *state-map*)
-  ;;      :data *state-map*)
-  ;; (caffe::reset-memory-layer :name "target"
-  ;;      :size (length *state-map*)
-  ;;      :data *state-map*)
+          (/ (length *state-map*) (* 3 (length *joint-list1*))))))
+  ;;
   (cond
    ((or (zerop (length *state-map*))
-        (zerop (length *state-map*)))
+        (zerop (length *task-map*)))
     (warning-message 1 "zero training DB~%"))
    (t
     (caffe::learn
      :solver solver
      :solverstate solverstate
      :size *sample-points*
-     :ddata *state-map*
+     :ddata *task-map*
      :idata *state-map*
      ))))
 
@@ -982,95 +974,3 @@
     avr))
 
 #|
-
-(smart-initialize-net)
-(cpplog::change-output-stream "/dev/null")
-
-(defvar *collision-check-pair*
-  (let* ((init (progn (send *robot* :init-pose)
-		      (send-all (send *robot* :links) :worldcoords)))
-	 (pair (send *robot* :collision-check-pairs))
-	 bl1 bl2)
-    (setq bl1 (send *robot* :self-collision-check))
-    ;;
-    (send *robot* :reset-manip-pose)
-    (send-all (send *robot* :links) :worldcoords)
-    (setq bl2 (send *robot* :self-collision-check))
-    (setq pair
-	  (remove-if
-	   #'(lambda (ll)
-	       (find-if #'(lambda (bl)
-			    (or (and (eq (car ll) (car bl))
-				     (eq (cdr ll) (cdr bl)))
-				(and (eq (car ll) (cdr bl))
-				     (eq (cdr ll) (car bl)))))
-			(append bl1 bl2)))
-	   pair))
-    pair))
-
-
-(let* ((ik-fail-cnt 0)
-       (cl-fail-cnt 0)
-       (joint-list *joint-list1*)
-       (random-angle
-	(progn
-	  (while (progn
-		   (mapcar '(lambda (j) (send j :joint-angle
-					      (-
-					       (+ (send j :min-angle)
-						  (* (random 1.0)
-						     (- (send j :max-angle)
-							(send j :min-angle))))
-					       (send j :joint-angle))
-					      :relative t))
-			   joint-list)
-		   (send *robot* :self-collision-check :pairs *collision-check-pair*)))
-	  (send-all joint-list :joint-angle)))
-       (ret
-	(bench
-	 (ik-random-test-min
-	  :initialize? nil
-	  :random-angle random-angle
-	  :step-max 30
-	  :after-callback-func
-	  #'(lambda (av c ef-coords)
-	      (let* ((ret
-		      (send *robot* :fullbody-inverse-kinematics
-			    (cons (make-coords) (send-all c :copy-worldcoords))
-			    :move-target
-			    (cons (send *robot* :rleg :end-coords)
-				  (send-all *ef-coords* :get-val 'coords))
-			    :link-list
-			    (mapcar
-			     '(lambda (mt) (send *robot* :link-list (send mt :parent)))
-			     (cons (send *robot* :rleg :end-coords)
-				   (send-all *ef-coords* :get-val 'coords)))
-			    :debug-view nil
-			    :target-centroid-pos nil
-			    :stop 8 :min-loop 0
-			    :min (fill (instantiate float-vector 6) -1000)
-			    :max (fill (instantiate float-vector 6) +1000)
-			    :root-link-virtual-joint-weight
-			    (fill (instantiate float-vector 6) 1)
-			    :warnp nil
-			    :revert-if-fail t))
-		     (col))
-		(cond
-		 ((not ret) (incf ik-fail-cnt) nil)
-		 ((setq col (send *robot* :self-collision-check
-				  :pairs *collision-check-pair*))
-		  (incf cl-fail-cnt) nil)
-		 (t (and ret (not col))))))
-	  :evaluation-callback-func
-	  '(lambda (target-state target-task state task)
-	     (norm (send *robot* :calc-torque)))
-	  ;; :stop-func '(lambda (ret) ret)
-	  :draw? t
-	  )
-	 )))
-  (send *viewer* :draw-objects)
-  (format t "ik: ~A, col:~A~%" ik-fail-cnt cl-fail-cnt)
-  ret
-  )
-
-;; (progn (smart-initialize-net) (cpplog::change-output-stream "/dev/null") (let* ((var (float-vector 0)) avr (log (open "ik_random_test_min.log" :direction :output))) (setq avr (ik-random-test-min-average :draw? nil :variance var)) (format log "~A ~A~%" avr (aref var 0)) (close log) (unix::system "cat ik_random_test_min.log")))
