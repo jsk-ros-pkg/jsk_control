@@ -326,6 +326,8 @@
 	 (x-step 0.1) (x-max-called)
 	 (debug? t) (draw? debug?) (revert? t) (collide-check :first)
 	 (error-cnt (instantiate integer-vector 2))
+	 ;;
+	 (root-link-fix-coords-func *root-link-fix-coords-func*)
 	 &allow-other-keys
 	 )
   (let* ((pos0 (send bspline :calc x-min))
@@ -368,6 +370,7 @@
 			  (send j :joint-angle (- (rad2deg av) (send j :joint-angle)) :relative t)
 			(send j :joint-angle (rad2deg av))))
 	     joint-list pos)
+	(if (functionp root-link-fix-coords-func) (funcall root-link-fix-coords-func))
 	(send-all (send-all joint-list :child-link) :worldcoords)
 	(send (car *arrow*) :newcoords
 	      (send (send *robot* :rarm :end-coords :worldcoords) :copy-worldcoords))
@@ -701,20 +704,16 @@
                 (send-all ef-coords :worldcoords)))
 	(task (get-task-vector :ef-coords ef-coords :root-link root-link))
 	;;
-        (c (send-all (send-all ef-coords :worldcoords) :copy-worldcoords))
-        (b (send root-link :copy-worldcoords))
-	;;
         (state (instantiate float-vector (* (send trajectory :id-max) (send trajectory :dimension))))
+	(random-task)
         (initialize? (smart-initialize-net))
         (redundancy (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
 	;;
 	(after-callback-func)
 	(evaluation-callback-func
 	 '(lambda (target-state target-task state task)
-	    (sqrt
-	     (/ (norm2 (map float-vector '(lambda (a b) (deg2rad (- a b)))
-			    target-state (send-all state :joint-angle)))
-		(length target-state)))))
+	    (sqrt (/ (norm2 (v- target-state state)) (length target-state)))))
+	evaled-value
         &allow-other-keys
         )
   (setq input (concatenate float-vector input redundancy))
@@ -726,47 +725,25 @@
                  :osize (length state) :output state))
     ))
   (send trajectory :convert-gain-vector-to-gain-matrix (copy-seq state))
-  (cond
-   (update-arrow-coords?
-    (mapcar
-     '(lambda (ar c)
-	(send ar :newcoords (send c :copy-worldcoords)))
-     *arrow* c)))
   ;;
-  (map cons #'(lambda (j a) (send j :joint-angle
-                                  (- (rad2deg a) (send j :joint-angle))
-                                  :relative t))
-       joint-list av)
-  (if (functionp root-link-fix-coords-func)
-      (funcall root-link-fix-coords-func))
+  (setq random-task
+	(check-trajectory :bspline trajectory :joint-list joint-list
+			  :collide-check nil :draw? draw? :debug? :no-message
+			  :root-link-fix-coords-func root-link-fix-coords-func))
+  ;;
+  (if evaluation-callback-func
+      (setq evaled-value (funcall evaluation-callback-func random-state random-task state task)))
+  ;;
   (cond
    ((or (not (functionp after-callback-func))
 	(funcall after-callback-func av c ef-coords))
-    (cond
-     (draw?
-      (send *viewer* :draw-objects :flush nil)
-      (send *viewer* :viewsurface :flush)))
     (list
      (cons :time tm)
-     (cons :state (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
+     (cons :state state)
      (cons :redundancy (copy-seq redundancy))
-     (cons :task-diff
-	   (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (scale 1e-3 (send c :difference-position ec)) (send c :difference-rotation ec))) (send-all ef-coords :worldcoords) c))))
-	   )
-     (cons :state-diff
-	   (map float-vector '(lambda (a b) (deg2rad (- a b)))
-		random-angle (send-all joint-list :joint-angle)))
-     (cons :evaluation
-	   (if (functionp evaluation-callback-func)
-	       (funcall evaluation-callback-func random-angle c joint-list ef-coords)))
-     (cons :revert?
-	   (cond
-	    (revert?
-	     (mapcar '(lambda (j av) (send j :joint-angle (- av (send j :joint-angle))
-					   :relative t))
-		     joint-list random-angle)
-	     (if (functionp root-link-fix-coords-func)
-		 (funcall root-link-fix-coords-func)))))
+     (cons :task-diff (v- random-task task))
+     (cons :state-diff (v- random-state state))
+     (cons :evaluation evaled-value)
      ))))
 
 (defun traj-random-test-min
