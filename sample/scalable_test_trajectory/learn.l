@@ -237,6 +237,20 @@
       (setq *collidable-pairs* buf))))
 
 (defun check-all-collision nil (send *robot* :self-collision-check :pairs *collidable-pairs*))
+(defun random-test-check-all-collision
+  nil
+  (map cons
+       '(lambda (j) (send j :joint-angle
+			  (+ (* (random 1.0)
+				(- (send j :max-angle) (send j :min-angle)))
+			     (send j :min-angle))))
+       *joint-list1*)
+  (send *viewer* :draw-objects)
+  (let* ((ret (send *robot* :self-collision-check :pairs *collidable-pairs*)))
+    (send-all (flatten ret) :draw-on :flush nil)
+    (send *viewer* :viewsurface :flush)
+    ret)
+  )
 
 (defun gen-random-trajectory
   (&rest args &key
