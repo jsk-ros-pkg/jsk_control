@@ -548,8 +548,9 @@
       (throw :settings-not-found nil)))
     (warning-message 3 "regenrate random traning DB~%")
     (if (numberp thre)
-        (gen-random-traj-learning-data-with-thre :draw? nil :thre thre)
-      (gen-random-traj-learning-data))
+	(warning-message 1 "gen-random-traj-learning-data, thre not supported~%"))
+    ;; (gen-random-traj-learning-data-with-thre :draw? nil :thre thre))
+    (gen-random-traj-learning-data)
     (warning-message 3 "update solver~%")
     (let* ((p (apply 'update-solver :input "traj_solver.best.prototxt" args)))
       (unix::system (format nil "ln -snf ~A traj_solver.best.prototxt" p)))
@@ -624,45 +625,6 @@
       )
     ;; (setq *ret* ret)
     ret))
-
-(defun check-test-data
-  (&optional
-   (i (random *sample-points*)) ;;0)
-   (joint-list *joint-list1*)
-   (ef-coords *ef-coords*)
-   (root-link *root-link*)
-   (len (length (get-task-vector)))
-   (input (instantiate float-vector len))
-   (output (instantiate float-vector (length joint-list)))
-   (root-link-fix-coords-func *root-link-fix-coords-func*)
-   c c-buf
-   )
-  (dotimes (j (length joint-list))
-    (setf (aref output j)
-          (aref *state-map* (+ (* i (length joint-list)) j))))
-  (map cons #'(lambda (j a) (send j :joint-angle
-                                  (- (rad2deg a) (send j :joint-angle))
-                                  :relative t))
-       joint-list output)
-  (send-all (send-all joint-list :child-link) :worldcoords)
-  (send-all ef-coords :worldcoords)
-  ;;
-  (if (functionp root-link-fix-coords-func)
-      (funcall root-link-fix-coords-func))
-  ;;
-  (setq c-buf
-        (get-ef-coords-from-task-vector
-         :ef-coords ef-coords
-         :vector (subseq *state-map* (* i len) (* (+ i 1) len))
-         :root-link root-link))
-  (mapcar
-   '(lambda (ar c)
-      (send ar :newcoords (send c :copy-worldcoords)))
-   *arrow* c-buf)
-  (send *viewer* :draw-objects :flush nil)
-  (send *viewer* :viewsurface :flush)
-  (print (apply 'concatenate (cons float-vector (flatten (mapcar '(lambda (ec c) (list (send c :difference-position ec) (send c :difference-rotation ec))) (send-all ef-coords :worldcoords) c-buf)))))
-  )
 
 (defun smart-initialize-net
   nil
