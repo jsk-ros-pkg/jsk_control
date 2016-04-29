@@ -119,8 +119,8 @@
   (let* ((dof (* 3 (length *joint-list1*)))
 	 (org
           (min
-           (round 1e+6)
-           (expt (max (min (round (expt 1e+6 (/ 1.0 dof))) 4) 2) dof)))
+           (round 1e+5)
+           (expt (max (min (round (expt 1e+5 (/ 1.0 dof))) 4) 2) dof)))
 	 (sep 32))
     (if (not (zerop (mod org sep)))
         (max 1 (round (* (ceiling (/ (* 1.0 org) sep)) sep)))
@@ -355,6 +355,13 @@
   bspline
   )
 
+(defun gen-random-valid-trajectory-vector
+  (&rest args)
+  (let* (ret)
+    (while (not ret)
+      (setq ret (apply #'gen-random-trajectory (append args (list :debug? :no-message :draw? nil :revert? t :collide-check :first)))))
+    (send ret :gain-vector)))
+
 (defun gen-random-traj-learning-data
   (&key (sample-points *sample-points*)
         (joint-list *joint-list1*)
@@ -367,14 +374,14 @@
         (dump? t)
         (surfix (if dump?
                     (format nil ".~A" (unix-command-line "basename `pwd`"))))
-        (gen-random-traj-vector-func
-	 #'(lambda (&rest args)
-	     (let* ((errcnt (integer-vector 0 0))
-		    (ret
-		     (gen-random-trajectory :debug? :no-message :revert? t
-					    :draw? nil :error-cnt errcnt)))
-	       (if (and ret (zerop (aref errcnt 0)))
-		   (send ret :gain-vector)))))
+        (gen-random-traj-vector-func 'gen-random-valid-trajectory-vector)
+	 ;; #'(lambda (&rest args)
+	 ;;     (let* ((errcnt (integer-vector 0 0))
+	 ;; 	    (ret
+	 ;; 	     (gen-random-trajectory :debug? :no-message :revert? t
+	 ;; 				    :draw? nil :error-cnt errcnt)))
+	 ;;       (if (and ret (zerop (aref errcnt 0)))
+	 ;; 	   (send ret :gain-vector)))))
         ;;
         (len (length (get-task-vector)))
 	(skip-cnt 0)
