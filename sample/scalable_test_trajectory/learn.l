@@ -186,7 +186,44 @@
         (dotimes (j len)
           (swap cc-map (+ j (* i len)) (+ j (* r len))))))))
 
-
+(defvar *collidable-pairs*)
+(defun test-gen-collidable-pairs
+  (&key
+   (robot *robot*)
+   (joint-list *joint-list1*)
+   (draw? t)
+   (max-cnt (if draw? 100 10000)))
+  (let* ((all-pairs (send robot :collision-check-pairs))
+	 (col-cnt (instantiate integer-vector (length all-pairs)))
+	 ret)
+    (warning-message 6 "[test-gen-collidable-pairs] start~%")
+    (dotimes (i max-cnt)
+      (if (eq 0 (mod i (/ max-cnt 100))) (warning-message 6 "  ~A%~%" (/ (* 100.0 i) max-cnt)))
+      (map cons
+	   '(lambda (j) (send j :joint-angle
+			      (+ (* (random 1.0)
+				    (- (send j :max-angle) (send j :min-angle)))
+				 (send j :min-angle))))
+	   joint-list)
+      (if draw? (send *viewer* :draw-objects))
+      (let* ((buf) (j 0))
+	(dolist (ll all-pairs)
+	  (setq buf (user::pqp-collision-check (car ll) (cdr ll)))
+	  (if (plusp buf) (setf (aref col-cnt j) (+ (aref col-cnt j) 1)))
+	  (incf j))))
+    ;;
+    (let* ((buf) (j 0))
+      (dolist (ll all-pairs)
+	(cond
+	 ((eq max-cnt (aref col-cnt j))
+	  (warning-message 1 " ~A always collided? ... skip~%" (send-all (flatten ll) :name)))
+	 ((zerop (aref col-cnt j))
+	  (warning-message 1 " ~A(~A) never collide~%" (send-all (flatten ll) :name) (aref col-cnt j)))
+	 (t ;;(plusp (aref col-cnt j))
+	  (warning-message 6 " ~A(~A) collidable~%" (send-all (flatten ll) :name) (aref col-cnt j))
+	  (push ll buf)))
+	(incf j))
+      (setq *collidable-pairs* buf))))
 
 (defun gen-random-trajectory
   (&rest args &key
