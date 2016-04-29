@@ -419,18 +419,18 @@
 	)
        (t (incf skip-cnt))
        ))
-    (if dump? (dump-ik-learning-data :surfix surfix))
+    (if dump? (dump-traj-learning-data :surfix surfix))
     (warning-message 6 "~A + ~A = ~A sampling~%" sample-points skip-cnt (+ sample-points skip-cnt))
     skip-cnt
     ))
 
-(defun load-ik-learning-data
+(defun load-traj-learning-data
   (&key (root "teacher") (surfix ""))
   (setq *state-map* (cpplog::read-vector (format nil "~A/state-map.dat~A" root surfix)))
   (setq *task-map* (cpplog::read-vector (format nil "~A/task-map.dat~A" root surfix)))
   (length *task-map*))
 
-(defun dump-ik-learning-data
+(defun dump-traj-learning-data
   (&key (root "teacher") (surfix ""))
   (unix::system (format nil "mkdir -p ~A" root))
   (cpplog::write-vector (format nil "~A/state-map.dat~A" root surfix)
@@ -445,7 +445,7 @@
   (cond
    ((or (zerop (length *state-map*))
         (zerop (length *task-map*)))
-    (load-ik-learning-data)
+    (load-traj-learning-data)
     (setq *sample-points* ;;96)
           (/ (length *state-map*) (* 3 (length *joint-list1*))))))
   ;;
