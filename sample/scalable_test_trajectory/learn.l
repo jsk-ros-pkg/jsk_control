@@ -178,6 +178,14 @@
            (send j :joint-angle))
           :relative t)))
 
+(defun set-angle-vector
+  (&optional av (joint-list *joint-list1*))
+  (map cons '(lambda (av j)
+	       (send j :joint-angle
+		     (- (rad2deg av) (send j :joint-angle))
+		     :relative t))
+       av joint-list))
+
 (defun get-task-vector
   (&key
    (ef-coords *ef-coords*)
@@ -285,9 +293,6 @@
 	 (mid-pos (progn (gen-random-angle-vector joint-list)
 			 (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
 	 (end-pos (progn (gen-random-angle-vector joint-list)
-			 (send-all (send-all joint-list :child-link) :worldcoords)
-			 (send (car *arrow*) :newcoords
-			       (send (send *robot* :rarm :end-coords :worldcoords) :copy-worldcoords))
 			 (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
 	 (pos-coeff-matrix
 	  (matrix-append
@@ -301,70 +306,97 @@
 	  (concatenate float-vector start-pos mid-pos end-pos))
 	 (gain-vector (transform (pseudo-inverse pos-coeff-matrix) pos-vector))
 	 (gain-matrix (send bspline :convert-gain-vector-to-gain-matrix gain-vector))
+	 ;;
+	 check
 	 &allow-other-keys
 	 )
-  bspline
   (if debug?
-      (let* ((pos0 (send bspline :calc x-min))
-	     (pos1 (send bspline :calc x-mid))
-	     (pos2 (send bspline :calc x-max))
-	     (dif0 (norm (v- pos0 start-pos)))
-	     (dif1 (norm (v- pos1 mid-pos)))
-	     (dif2 (norm (v- pos2 end-pos)))
-	     (thre 1e-3))
-	(if (not (eq debug? :no-message)) (warning-message 6 "[gen-random-trajectory]::debug~%"))
-	;;
-	(if (not (eq debug? :no-message))
-	    (warning-message 6 "start-pos: ~A - ~A = ~A < ~A ?~%" pos0 start-pos dif0 thre))
-	(if (> dif0 thre) (warning-message 1 "  -- start-pos not satisfied!!!~%"))
-	(if (not (eq debug? :no-message))
-	    (warning-message 6 "mid-pos:   ~A - ~A = ~A < ~A ?~%" pos1 mid-pos dif1 thre))
-	(if (> dif1 thre) (warning-message 1 "  -- mid-pos   not satisfied!!!~%"))
-	(if (not (eq debug? :no-message))
-	    (warning-message 6 "end-pos:   ~A - ~A = ~A < ~A ?~%" pos2 end-pos dif2 thre))
-	(if (> dif2 thre) (warning-message 1 "  -- end-pos   not satisfied!!!~%"))
-	;;
-	(let* ((x-step 0.1) (x x-min)
-	       (pos)
-	       (range-min (map float-vector 'deg2rad (send-all joint-list :min-angle)))
-	       (range-max (map float-vector 'deg2rad (send-all joint-list :max-angle)))
-	       col)
-	  (cond
-	   ((not (eq debug? :no-message))
-	    (warning-message 6 "range&collision-check:~%")
-	    (warning-message 6 "  -- min: ~A~%" range-min)
-	    (warning-message 6 "  -- max: ~A~%" range-max)))
-	  (while (<= x x-max)
-	    (setq pos (send bspline :calc x))
-	    (map cons #'(lambda (j av)
-			  (if (eq debug? :no-message)
-			      (send j :joint-angle (- (rad2deg av) (send j :joint-angle)) :relative t)
-			    (send j :joint-angle (rad2deg av))))
-		 joint-list pos)
-	    (send-all (send-all joint-list :child-link) :worldcoords)
-	    (cond
-	     (draw? (send *viewer* :draw-objects) (unix::usleep (* 100 1000))))
-	    (if (not (eq debug? :no-message)) (warning-message 6 "  -- ~A: ~A E ?~%" x pos))
-	    ;;
-	    (cond
-	     ((setq col (check-all-collision))
-	      (setf (aref error-cnt 0) (+ (aref error-cnt 0) 1))
-	      (cond (draw? (random-test-check-all-collision nil) (unix::usleep (* 100 1000))))
-	      (if (not (eq debug? :no-message)) (warning-message 1 "  -- collision ~A~%" col))
-	      (if (eq collide-check :first) (return-from gen-random-trajectory nil))
-	      ))
-	    ;;
-	    (setq x (+ x x-step)))))
-    )
-  (cond
-   (revert?
-    (map cons '(lambda (J av) (send j :joint-angle
-				    (- (rad2deg av) (send j :joint-angle))
-				    :relative t))
-	 joint-list start-pos)
-    (if (not (eq debug? :no-message)) (warning-message 6 "reverted~%"))))
-  bspline
+      (setq check (apply #'check-trajectory :bspline bspline :joint-list joint-list :start-pos start-pos :mid-pos mid-pos :end-pos end-pos  :error-cnt error-cnt :debug? debug? :draw? draw? :revert? revert? :collide-check collide-check args)))
+  (if (and debug? (not check)) nil bspline)
   )
+
+(defun check-trajectory
+  (&rest args &key
+	 (bspline *trajectory*)
+	 (joint-list *joint-list1*)
+	 (x-min (send bspline :x-min)) (x-max (send bspline :x-max))
+	 (x-mid (/ (+ x-min x-max) 2.0))
+	 start-pos end-pos mid-pos
+	 ;;
+	 (x-step 0.1) (x-max-called)
+	 (debug? t) (draw? debug?) (revert? t) (collide-check :first)
+	 (error-cnt (instantiate integer-vector 2))
+	 &allow-other-keys
+	 )
+  (let* ((pos0 (send bspline :calc x-min))
+	 (pos1 (send bspline :calc x-mid))
+	 (pos2 (send bspline :calc x-max))
+	 (dif0 (if start-pos (norm (v- pos0 start-pos))))
+	 (dif1 (if mid-pos (norm (v- pos1 mid-pos))))
+	 (dif2 (if end-pos (norm (v- pos2 end-pos))))
+	 (thre 1e-3))
+    (if (not (eq debug? :no-message)) (warning-message 6 "[check-trajectory]::debug~%"))
+    ;;
+    (cond
+     (start-pos
+      (if (not (eq debug? :no-message))
+	  (warning-message 6 "start-pos: ~A - ~A = ~A < ~A ?~%" pos0 start-pos dif0 thre))
+      (if (> dif0 thre) (warning-message 1 "  -- start-pos not satisfied!!!~%"))))
+    (cond
+     (mid-pos
+      (if (not (eq debug? :no-message))
+	  (warning-message 6 "mid-pos:   ~A - ~A = ~A < ~A ?~%" pos1 mid-pos dif1 thre))
+      (if (> dif1 thre) (warning-message 1 "  -- mid-pos   not satisfied!!!~%"))))
+    (cond
+     (end-pos
+      (if (not (eq debug? :no-message))
+	  (warning-message 6 "end-pos:   ~A - ~A = ~A < ~A ?~%" pos2 end-pos dif2 thre))
+      (if (> dif2 thre) (warning-message 1 "  -- end-pos   not satisfied!!!~%"))))
+    ;;
+    (let* ((x x-min) (pos) col
+	   (range-min (map float-vector 'deg2rad (send-all joint-list :min-angle)))
+	   (range-max (map float-vector 'deg2rad (send-all joint-list :max-angle))))
+      (cond
+       ((not (eq debug? :no-message))
+	(warning-message 6 "range&collision-check:~%")
+	(warning-message 6 "  -- min: ~A~%" range-min)
+	(warning-message 6 "  -- max: ~A~%" range-max)))
+      (while (<= x x-max)
+	(setq pos (send bspline :calc x))
+	(map cons #'(lambda (j av)
+		      (if (eq debug? :no-message)
+			  (send j :joint-angle (- (rad2deg av) (send j :joint-angle)) :relative t)
+			(send j :joint-angle (rad2deg av))))
+	     joint-list pos)
+	(send-all (send-all joint-list :child-link) :worldcoords)
+	(send (car *arrow*) :newcoords
+	      (send (send *robot* :rarm :end-coords :worldcoords) :copy-worldcoords))
+	(cond
+	 (draw? (send *viewer* :draw-objects) (unix::usleep (* 100 1000))))
+	(if (not (eq debug? :no-message)) (warning-message 6 "  -- ~A: ~A E ?~%" x pos))
+	    ;;
+	(cond
+	 ((setq col (check-all-collision))
+	  (setf (aref error-cnt 0) (+ (aref error-cnt 0) 1))
+	  (cond (draw? (random-test-check-all-collision nil) (unix::usleep (* 100 1000))))
+	  (if (not (eq debug? :no-message)) (warning-message 1 "  -- collision ~A~%" col))
+	  (if (eq collide-check :first) (return-from check-trajectory nil))
+	  ))
+	;;
+	(setq x (+ x x-step))
+	(if (and (not x-max-called) (>= x x-max)) (progn (setq x-max-called t) (setq x x-max)))
+	)
+      ;;
+      (cond
+       (revert?
+	(map cons '(lambda (J av) (send j :joint-angle
+					(- (rad2deg av) (send j :joint-angle))
+					:relative t))
+	     joint-list start-pos)
+	(if (not (eq debug? :no-message)) (warning-message 6 "reverted~%"))))
+      ;;
+      (get-task-vector)
+      )))
 
 (defun gen-random-valid-trajectory-vector
   (&rest args)
@@ -656,6 +688,7 @@
   (&key (calc-forward 'caffe::calc-forward-double) ;;'caffe::memory-calc-forward)
         (draw? t) (revert? nil) (update-arrow-coords? t)
         tm
+	(trajectory *trajectory*)
         (joint-list *joint-list1*)
         (ef-coords *ef-coords*)
         (root-link *root-link*)
@@ -666,10 +699,12 @@
                     (funcall root-link-fix-coords-func))
                 (send-all (send-all joint-list :child-link) :worldcoords)
                 (send-all ef-coords :worldcoords)))
+	(task (get-task-vector :ef-coords ef-coords :root-link root-link))
+	;;
         (c (send-all (send-all ef-coords :worldcoords) :copy-worldcoords))
         (b (send root-link :copy-worldcoords))
-        (state (instantiate float-vector (* 3 (length joint-list))))
-        (task (get-task-vector :ef-coords ef-coords :root-link root-link))
+	;;
+        (state (instantiate float-vector (* (send trajectory :id-max) (send trajectory :dimension))))
         (initialize? (smart-initialize-net))
         (redundancy (instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
 	;;
@@ -690,18 +725,20 @@
            (list :isize (length task) :input task
                  :osize (length state) :output state))
     ))
-  (map cons #'(lambda (j a) (send j :joint-angle
-                                  (- (rad2deg a) (send j :joint-angle))
-                                  :relative t))
-       joint-list av)
-  (if (functionp root-link-fix-coords-func)
-      (funcall root-link-fix-coords-func))
+  (send trajectory :convert-gain-vector-to-gain-matrix (copy-seq state))
   (cond
    (update-arrow-coords?
     (mapcar
      '(lambda (ar c)
 	(send ar :newcoords (send c :copy-worldcoords)))
      *arrow* c)))
+  ;;
+  (map cons #'(lambda (j a) (send j :joint-angle
+                                  (- (rad2deg a) (send j :joint-angle))
+                                  :relative t))
+       joint-list av)
+  (if (functionp root-link-fix-coords-func)
+      (funcall root-link-fix-coords-func))
   (cond
    ((or (not (functionp after-callback-func))
 	(funcall after-callback-func av c ef-coords))
