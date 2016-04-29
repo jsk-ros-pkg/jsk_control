@@ -146,6 +146,17 @@
 		    (t (cons l1 l2)))))
 	     '(("base" "right_upper_forearm_visual") ("base" "right_upper_forearm") ("base" "right_lower_forearm") ("base" "right_wrist") ("torso" "right_upper_elbow_visual") ("torso" "right_upper_elbow") ("torso" "right_lower_elbow") ("torso" "right_upper_forearm_visual") ("torso" "right_upper_forearm") ("torso" "right_lower_forearm") ("torso" "right_wrist") ("torso" "right_hand") ("torso" "right_hand_range") ("torso" "right_hand_camera") ("torso" "right_hand_accelerometer") ("torso" "right_gripper_base") ("torso" "right_gripper") ("collision_head_link_2" "right_lower_elbow") ("collision_head_link_2" "right_upper_forearm_visual") ("collision_head_link_2" "right_upper_forearm") ("collision_head_link_1" "right_lower_elbow") ("collision_head_link_1" "right_upper_forearm_visual") ("collision_head_link_1" "right_upper_forearm") ("sonar_ring" "right_lower_elbow") ("sonar_ring" "right_upper_forearm_visual") ("sonar_ring" "right_upper_forearm") ("sonar_ring" "right_lower_forearm") ("sonar_ring" "right_wrist") ("sonar_ring" "right_hand") ("sonar_ring" "right_hand_accelerometer") ("sonar_ring" "right_gripper_base") ("right_arm_mount" "right_upper_forearm_visual") ("right_arm_mount" "right_upper_forearm") ("right_arm_mount" "right_lower_forearm") ("pedestal" "right_upper_forearm_visual") ("pedestal" "right_upper_forearm") ("pedestal" "right_lower_forearm") ("pedestal" "right_wrist") ("pedestal" "right_hand") ("pedestal" "right_hand_range") ("pedestal" "right_hand_camera") ("pedestal" "right_hand_accelerometer") ("pedestal" "right_gripper_base") ("pedestal" "right_gripper") ("left_arm_mount" "right_upper_forearm_visual") ("left_arm_mount" "right_upper_forearm") ("left_arm_mount" "right_lower_forearm") ("left_arm_mount" "right_wrist") ("head" "right_upper_elbow_visual") ("head" "right_upper_elbow") ("head" "right_lower_elbow") ("head" "right_upper_forearm_visual") ("head" "right_upper_forearm") ("head" "right_lower_forearm") ("head" "right_wrist") ("head" "right_hand") ("head" "right_hand_range") ("head" "right_hand_camera") ("head" "right_hand_accelerometer") ("head" "right_gripper_base") ("right_upper_shoulder" "right_upper_elbow_visual") ("right_upper_shoulder" "right_upper_elbow") ("right_upper_shoulder" "right_upper_forearm_visual") ("right_upper_shoulder" "right_upper_forearm") ("right_upper_shoulder" "right_lower_forearm") ("right_upper_shoulder" "right_wrist") ("right_upper_shoulder" "right_hand") ("right_upper_shoulder" "right_hand_range") ("right_upper_shoulder" "right_hand_camera") ("right_upper_shoulder" "right_hand_accelerometer") ("right_upper_shoulder" "right_gripper_base") ("right_upper_shoulder" "right_gripper") ("right_lower_shoulder" "right_lower_forearm") ("right_lower_shoulder" "right_wrist") ("right_lower_shoulder" "right_hand") ("right_lower_shoulder" "right_hand_range") ("right_lower_shoulder" "right_hand_camera") ("right_lower_shoulder" "right_hand_accelerometer") ("right_lower_shoulder" "right_gripper_base") ("right_lower_shoulder" "right_gripper") ("right_upper_elbow_visual" "right_upper_forearm_visual") ("right_upper_elbow_visual" "right_upper_forearm") ("right_upper_elbow_visual" "screen") ("right_upper_elbow_visual" "display") ("right_upper_elbow" "right_upper_forearm_visual") ("right_upper_elbow" "right_upper_forearm") ("right_upper_elbow" "screen") ("right_upper_elbow" "display") ("right_lower_elbow" "screen") ("right_lower_elbow" "display") ("right_upper_forearm_visual" "left_upper_shoulder") ("right_upper_forearm_visual" "left_lower_shoulder") ("right_upper_forearm_visual" "left_upper_elbow_visual") ("right_upper_forearm_visual" "left_upper_elbow") ("right_upper_forearm_visual" "screen") ("right_upper_forearm_visual" "display") ("right_upper_forearm" "left_upper_shoulder") ("right_upper_forearm" "left_lower_shoulder") ("right_upper_forearm" "left_upper_elbow_visual") ("right_upper_forearm" "left_upper_elbow") ("right_upper_forearm" "left_lower_elbow") ("right_upper_forearm" "screen") ("right_upper_forearm" "display") ("right_lower_forearm" "left_upper_shoulder") ("right_lower_forearm" "left_lower_shoulder") ("right_lower_forearm" "left_upper_elbow_visual") ("right_lower_forearm" "left_upper_elbow") ("right_lower_forearm" "left_lower_elbow") ("right_lower_forearm" "left_upper_forearm_visual") ("right_lower_forearm" "left_upper_forearm") ("right_lower_forearm" "screen") ("right_lower_forearm" "display") ("right_wrist" "left_upper_shoulder") ("right_wrist" "left_lower_shoulder") ("right_wrist" "left_upper_elbow_visual") ("right_wrist" "left_upper_elbow") ("right_wrist" "left_lower_elbow") ("right_wrist" "left_upper_forearm_visual") ("right_wrist" "left_upper_forearm") ("right_wrist" "left_wrist") ("right_wrist" "left_hand") ("right_wrist" "left_hand_camera") ("right_wrist" "screen") ("right_wrist" "display") ("right_hand" "left_upper_shoulder") ("right_hand" "left_lower_shoulder") ("right_hand" "left_upper_elbow_visual") ("right_hand" "left_upper_elbow") ("right_hand" "left_lower_elbow") ("right_hand" "left_upper_forearm_visual") ("right_hand" "left_upper_forearm") ("right_hand" "left_wrist") ("right_hand" "left_hand") ("right_hand" "screen") ("right_hand" "display") ("right_hand_range" "left_upper_shoulder") ("right_hand_range" "left_lower_shoulder") ("right_hand_range" "left_upper_elbow_visual") ("right_hand_range" "left_wrist") ("right_hand_range" "screen") ("right_hand_camera" "left_upper_shoulder") ("right_hand_camera" "left_lower_shoulder") ("right_hand_camera" "left_upper_elbow_visual") ("right_hand_camera" "left_upper_elbow") ("right_hand_camera" "left_upper_forearm_visual") ("right_hand_camera" "left_hand") ("right_hand_camera" "screen") ("right_hand_accelerometer" "left_upper_shoulder") ("right_hand_accelerometer" "left_lower_shoulder") ("right_hand_accelerometer" "screen") ("right_gripper_base" "left_upper_shoulder") ("right_gripper_base" "left_lower_shoulder") ("right_gripper_base" "left_upper_elbow_visual") ("right_gripper_base" "left_upper_elbow") ("right_gripper_base" "left_lower_elbow") ("right_gripper_base" "left_upper_forearm_visual") ("right_gripper_base" "left_upper_forearm") ("right_gripper_base" "screen") ("right_gripper_base" "display") ("right_gripper" "left_upper_shoulder") ("right_gripper" "left_lower_shoulder") ("right_gripper" "left_upper_elbow") ("right_gripper" "left_lower_elbow") ("right_gripper" "left_wrist") ("right_gripper" "screen"))))))
 
+(defun gen-random-angle-vector
+  (&optional (joint-list *joint-list1*))
+  (dolist (j joint-list)
+    (send j :joint-angle
+          (-
+           (+ (send j :min-angle)
+              (* (random 1.0)
+                 (- (send j :max-angle) (send j :min-angle))))
+           (send j :joint-angle))
+          :relative t)))
+
 (defun get-vector-from-ef-coords
   (&key
    (ef-coords *ef-coords*)
@@ -225,12 +236,7 @@
     (warning-message 6 "[test-gen-collidable-pairs] start~%")
     (dotimes (i max-cnt)
       (if (eq 0 (mod i (/ max-cnt 100))) (warning-message 6 "  ~A%~%" (/ (* 100.0 i) max-cnt)))
-      (map cons
-	   '(lambda (j) (send j :joint-angle
-			      (+ (* (random 1.0)
-				    (- (send j :max-angle) (send j :min-angle)))
-				 (send j :min-angle))))
-	   joint-list)
+      (gen-random-angle-vector joint-list)
       (if draw? (send *viewer* :draw-objects))
       (let* ((buf) (j 0))
 	(dolist (ll all-pairs)
@@ -254,13 +260,7 @@
 (defun check-all-collision nil (send *robot* :self-collision-check :pairs *collidable-pairs*))
 (defun random-test-check-all-collision
   (&optional
-   (init
-    (map cons
-	 '(lambda (j) (send j :joint-angle
-			    (+ (* (random 1.0)
-				  (- (send j :max-angle) (send j :min-angle)))
-			       (send j :min-angle))))
-	 *joint-list1*)))
+   (init (gen-random-angle-vector *joint-list1*)))
   (send *viewer* :draw-objects)
   (let* ((ret (send *robot* :self-collision-check :pairs *collidable-pairs*)))
     (send-all (flatten ret) :draw-on :flush nil)
@@ -282,16 +282,10 @@
 	  (let ((id -1)) (mapcar #'(lambda (a) (incf id)) (make-list dimension))))
 	 (x-min 0.0) (x-max 1.0) (x-mid (/ (+ x-min x-max) 2.0))
 	 (start-pos (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
-	 (end-pos (map float-vector
-		       '(lambda (j) (deg2rad (+ (* (random 1.0)
-						   (- (send j :max-angle) (send j :min-angle)))
-						(send j :min-angle))))
-		       joint-list))
-	 (mid-pos (map float-vector
-		       '(lambda (j) (deg2rad (+ (* (random 1.0)
-						   (- (send j :max-angle) (send j :min-angle)))
-						(send j :min-angle))))
-		       joint-list))
+	 (end-pos (progn (gen-random-angle-vector joint-list)
+			 (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
+	 (mid-pos (progn (gen-random-angle-vector joint-list)
+			 (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
 	 (bspline
 	  (instance* partition-spline-vector
 		     :init
@@ -358,7 +352,7 @@
 	    (cond
 	     ((setq col (check-all-collision))
 	      (setf (aref error-cnt 0) (+ (aref error-cnt 0) 1))
-	      (cond (draw? (random-test-check-all-collision nil) (unix::sleep 1)))
+	      (cond (draw? (random-test-check-all-collision nil) (unix::usleep (* 100 1000))))
 	      (if (not (eq debug? :no-message)) (warning-message 1 "  -- collision ~A~%" col))))
 	    ;;
 	    (setq x (+ x x-step)))))
@@ -466,17 +460,6 @@
       (warning-message 1 "write to file .~A~%" surfix)
       (dump-ik-learning-data :surfix surfix)
       ))))
-
-(defun gen-random-angle-vector
-  (&optional (joint-list *joint-list1*))
-  (dolist (j joint-list)
-    (send j :joint-angle
-          (-
-           (+ (send j :min-angle)
-              (* (random 1.0)
-                 (- (send j :max-angle) (send j :min-angle))))
-           (send j :joint-angle))
-          :relative t)))
 
 (defun gen-random-ik-learning-data
   (&key (sample-points *sample-points*)
