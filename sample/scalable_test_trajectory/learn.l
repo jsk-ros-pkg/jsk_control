@@ -8,6 +8,8 @@
 (require "models/arrow-object.l")
 (require "package://eus_caffe/sample/scalable_test/gen-solver.l")
 
+(require "package://contact_behavior_generation/euslisp/util/partition-spline/partition-spline.lisp")
+
 (defclass vector-coords
   :super propertied-object
   :slots (coords mode v-buf c-buf))
@@ -107,6 +109,8 @@
 
 (setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (send-all (send *robot* :links) :set-val 'analysis-level :coords)
+(send-all (send *robot* :joint-list) :set-val 'joint-min-max-table nil)
+(send-all (send *robot* :joint-list) :set-val 'joint-min-max-target nil)
 (objects (flatten (list *robot* *arrow*)))
 (send *irtviewer* :change-background (float-vector 1 1 1))
 (send *viewer* :draw-objects)
@@ -181,6 +185,91 @@
                 (+ j (* (length joint-list) r))))
         (dotimes (j len)
           (swap cc-map (+ j (* i len)) (+ j (* r len))))))))
+
+
+
+(defun gen-random-trajectory
+  (&rest args &key
+	 (debug? t)
+	 (joint-list *joint-list1*)
+	 (dimension (length joint-list))
+	 (id-max 3)
+	 (recursive-order (make-list dimension :initial-element 2))
+	 (dim-list
+	  (let ((id -1)) (mapcar #'(lambda (a) (incf id)) (make-list dimension))))
+	 (x-min 0.0) (x-max 1.0) (x-mid (/ (+ x-min x-max) 2.0))
+	 (start-pos (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
+	 (end-pos (map float-vector
+		       '(lambda (j) (deg2rad (+ (* (random 1.0)
+						   (- (send j :max-angle) (send j :min-angle)))
+						(send j :min-angle))))
+		       joint-list))
+	 (mid-pos (map float-vector
+		       '(lambda (j) (deg2rad (+ (* (random 1.0)
+						   (- (send j :max-angle) (send j :min-angle)))
+						(send j :min-angle))))
+		       joint-list))
+	 (bspline
+	  (instance* partition-spline-vector
+		     :init
+		     :dimension dimension :id-max id-max
+		     :x-min x-min :x-max x-max :recursive-order recursive-order
+		     args))
+	 (pos-coeff-matrix
+	  (matrix-append
+	   (mapcar
+	    #'(lambda (pos tm)
+		(send bspline :calc-pos-constraints-coeff-matrix-for-gain-vector
+		      :dim-list dim-list :tm tm))
+	    (list start-pos mid-pos end-pos) (list x-min x-mid x-max))
+	   '(1 0)))
+	 (pos-vector
+	  (concatenate float-vector start-pos mid-pos end-pos))
+	 (gain-vector (transform (pseudo-inverse pos-coeff-matrix) pos-vector))
+	 (gain-matrix (send bspline :convert-gain-vector-to-gain-matrix gain-vector))
+	 &allow-other-keys
+	 )
+  bspline
+  (if debug?
+      (let* ((pos0 (send bspline :calc x-min))
+	     (pos1 (send bspline :calc x-mid))
+	     (pos2 (send bspline :calc x-max))
+	     (dif0 (norm (v- pos0 start-pos)))
+	     (dif1 (norm (v- pos1 mid-pos)))
+	     (dif2 (norm (v- pos2 end-pos)))
+	     (thre 1e-3))
+	(if (not (eq debug? :no-message)) (warning-message 6 "[gen-random-trajectory]::debug~%"))
+	;;
+	(if (not (eq debug? :no-message))
+	    (warning-message 6 "start-pos: ~A - ~A = ~A < ~A ?~%" pos0 start-pos dif0 thre))
+	(if (> dif0 thre) (warning-message 1 "  -- start-pos not satisfied!!!~%"))
+	(if (not (eq debug? :no-message))
+	    (warning-message 6 "mid-pos:   ~A - ~A = ~A < ~A ?~%" pos1 mid-pos dif1 thre))
+	(if (> dif1 thre) (warning-message 1 "  -- mid-pos   not satisfied!!!~%"))
+	(if (not (eq debug? :no-message))
+	    (warning-message 6 "end-pos:   ~A - ~A = ~A < ~A ?~%" pos2 end-pos dif2 thre))
+	(if (> dif2 thre) (warning-message 1 "  -- end-pos   not satisfied!!!~%"))
+	;;
+	(if (not (eq debug? :no-message))
+	    (let* ((x-step 0.1) (x x-min)
+		   (pos)
+		   (range-min (map float-vector 'deg2rad (send-all joint-list :min-angle)))
+		   (range-max (map float-vector 'deg2rad (send-all joint-list :max-angle))))
+	      (warning-message 6 "range-check:~%")
+	      (warning-message 6 "  -- min: ~A~%" range-min)
+	      (warning-message 6 "  -- max: ~A~%" range-max)
+	      (while (<= x x-max)
+		(setq pos (send bspline :calc x))
+		(map cons '(lambda (j av) (send j :joint-angle (rad2deg av)))
+		     joint-list pos)
+		(send *viewer* :draw-objects) (unix::usleep (* 100 1000))
+		(warning-message 6 "  -- ~A: ~A E ?~%" x pos)
+		;; (if (v< pos range-min) (warning-message 1 "  -- min-range error~%"))
+		;; (if (v> pos range-max) (warning-message 1 "  -- max-range error~%"))
+		(setq x (+ x x-step)))))
+	))
+  bspline
+  )
 
 (defun gen-ik-learning-data
   (&key (sample-points *sample-points*)
@@ -423,6 +512,7 @@
   (cpplog::change-output-stream "")
   ret
   )
+
 
 (defun load-ik-learning-data
   (&key (root "teacher") (surfix ""))
