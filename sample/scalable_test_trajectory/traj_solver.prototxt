@@ -8,5 +8,5 @@ max_iter: 100000
 momentum: 0.9
 display: 1000
 snapshot: 100000
-snapshot_prefix: traj_net_0.001blr_0id
+snapshot_prefix: "traj_net_0.001blr_0id"
 solver_mode: CPU
