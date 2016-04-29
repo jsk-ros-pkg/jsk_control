@@ -402,6 +402,7 @@
 		   (send ret :gain-vector)))))
         ;;
         (len (length (get-task-vector)))
+	(skip-cnt 0)
         &allow-other-keys
         )
   (setq *sample-points* sample-points)
@@ -440,8 +441,12 @@
 	(dotimes (j len) (setf (aref *task-map* (+ j (* i len))) (aref task j)))
 	;;
 	(incf i)
-	)))
+	)
+       (t (incf skip-cnt))
+       ))
     (if dump? (dump-ik-learning-data :surfix surfix))
+    (warning-message 6 "~A + ~A = ~A sampling~%" sample-points skip-cnt (+ sample-points skip-cnt))
+    skip-cnt
     ))
 
 ;; gen-random-ik-learning-data-with-thre :sample-points 3 :thre 0.3 :max-time 5
