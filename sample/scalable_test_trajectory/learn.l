@@ -99,15 +99,14 @@
 (defvar *robot* (baxter))
 (defvar *joint-list1* (send *robot* :rarm :joint-list))
 
-(defvar *ef-coords* (list (instance vector-coords :init (send *robot* :rarm :end-coords))))
+(defvar *arrow* (list (arrow)))
+(defvar *ef-coords* (list (instance vector-coords :init (send (car *arrow*) :worldcoords))))
 ;; (defvar *ef-coords-length* (list 6))
-(defvar *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (defvar *root-link* (car (send *robot* :links)))
 (defvar *root-link-fix-coords-func* nil)
 
 (defvar *learn-mode* :rarm)
 
-(setq *arrow* (mapcar '(lambda (ec) (arrow)) *ef-coords*))
 (send-all (send *robot* :links) :set-val 'analysis-level :coords)
 (send-all (send *robot* :joint-list) :set-val 'joint-min-max-table nil)
 (send-all (send *robot* :joint-list) :set-val 'joint-min-max-target nil)
@@ -171,6 +170,7 @@
   (&key
    (ef-coords *ef-coords*)
    (root-link *root-link*)
+   (arrow *arrow*)
    (joint-list *joint-list1*)
    (robot *robot*)
    (offset-coords (make-list (length ef-coords)))
@@ -268,9 +268,12 @@
 	 (x-min 0.0) (x-max 1.0) (x-mid (/ (+ x-min x-max) 2.0))
 	 (start-pos (progn (gen-random-angle-vector joint-list)
 			   (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
-	 (end-pos (progn (gen-random-angle-vector joint-list)
-			 (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
 	 (mid-pos (progn (gen-random-angle-vector joint-list)
+			 (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
+	 (end-pos (progn (gen-random-angle-vector joint-list)
+			 (send-all (send-all joint-list :child-link) :worldcoords)
+			 (send (car *arrow*) :newcoords
+			       (send (send *robot* :rarm :end-coords :worldcoords) :copy-worldcoords))
 			 (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
 	 (bspline
 	  (instance* partition-spline-vector
@@ -649,16 +652,7 @@
         (ef-coords *ef-coords*)
         (root-link *root-link*)
         (root-link-fix-coords-func *root-link-fix-coords-func*)
-        (random-angle
-         (mapcar '(lambda (j) (send j :joint-angle
-                                    (-
-                                     (+ (send j :min-angle)
-                                        (* (random 1.0)
-                                           (- (send j :max-angle)
-                                              (send j :min-angle))))
-                                     (send j :joint-angle))
-                                    :relative t))
-                 joint-list))
+        (random-state (gen-random-valid-trajectory-vector))
         (update-coords
          (progn (if (functionp root-link-fix-coords-func)
                     (funcall root-link-fix-coords-func))
@@ -666,8 +660,8 @@
                 (send-all ef-coords :worldcoords)))
         (c (send-all (send-all ef-coords :worldcoords) :copy-worldcoords))
         (b (send root-link :copy-worldcoords))
-        (av (instantiate float-vector (length joint-list)))
-        (input (get-task-vector :ef-coords ef-coords :root-link root-link))
+        (state (instantiate float-vector (length joint-list)))
+        (task (get-task-vector :ef-coords ef-coords :root-link root-link))
         (initialize? (smart-initialize-net))
         (redundancy;; (float-vector 0.5))
          ;;(fill
