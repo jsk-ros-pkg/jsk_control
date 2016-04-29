@@ -124,7 +124,9 @@
   (let* ((all-link (union (flatten (send *robot* :collision-check-pairs)) nil))
 	 (black-list '(("right_upper_shoulder" "right_upper_elbow_visual")
 		       ("right_upper_elbow" "right_upper_forearm")
-		       ("right_upper_elbow" "right_upper_forearm_visual"))))
+		       ("right_upper_elbow" "right_upper_forearm_visual")
+		       ("right_upper_shoulder" "right_upper_elbow")
+		       )))
     (remove nil
 	    (mapcar
 	     #'(lambda (name-name)
@@ -251,13 +253,14 @@
 
 (defun check-all-collision nil (send *robot* :self-collision-check :pairs *collidable-pairs*))
 (defun random-test-check-all-collision
-  nil
-  (map cons
-       '(lambda (j) (send j :joint-angle
-			  (+ (* (random 1.0)
-				(- (send j :max-angle) (send j :min-angle)))
-			     (send j :min-angle))))
-       *joint-list1*)
+  (&optional
+   (init
+    (map cons
+	 '(lambda (j) (send j :joint-angle
+			    (+ (* (random 1.0)
+				  (- (send j :max-angle) (send j :min-angle)))
+			       (send j :min-angle))))
+	 *joint-list1*)))
   (send *viewer* :draw-objects)
   (let* ((ret (send *robot* :self-collision-check :pairs *collidable-pairs*)))
     (send-all (flatten ret) :draw-on :flush nil)
@@ -265,9 +268,12 @@
     ret)
   )
 
+;; (let* ((a (integer-vector 0 0))) (gen-random-trajectory :draw? t :error-cnt a :debug? :no-message) (print a))
+;; (format t "~A sec~%" (/ (bench2 (dotimes (i 1000) (let* ((a (integer-vector 0 0))) (gen-random-trajectory :draw? nil :error-cnt a :debug? :no-message)))) 1000.0))
 (defun gen-random-trajectory
   (&rest args &key
-	 (debug? t)
+	 (debug? t) (draw? debug?)
+	 (error-cnt (instantiate integer-vector 2))
 	 (joint-list *joint-list1*)
 	 (dimension (length joint-list))
 	 (id-max 3)
@@ -327,24 +333,36 @@
 	    (warning-message 6 "end-pos:   ~A - ~A = ~A < ~A ?~%" pos2 end-pos dif2 thre))
 	(if (> dif2 thre) (warning-message 1 "  -- end-pos   not satisfied!!!~%"))
 	;;
-	(if (not (eq debug? :no-message))
-	    (let* ((x-step 0.1) (x x-min)
-		   (pos)
-		   (range-min (map float-vector 'deg2rad (send-all joint-list :min-angle)))
-		   (range-max (map float-vector 'deg2rad (send-all joint-list :max-angle))))
-	      (warning-message 6 "range-check:~%")
-	      (warning-message 6 "  -- min: ~A~%" range-min)
-	      (warning-message 6 "  -- max: ~A~%" range-max)
-	      (while (<= x x-max)
-		(setq pos (send bspline :calc x))
-		(map cons '(lambda (j av) (send j :joint-angle (rad2deg av)))
-		     joint-list pos)
-		(send *viewer* :draw-objects) (unix::usleep (* 100 1000))
-		(warning-message 6 "  -- ~A: ~A E ?~%" x pos)
-		;; (if (v< pos range-min) (warning-message 1 "  -- min-range error~%"))
-		;; (if (v> pos range-max) (warning-message 1 "  -- max-range error~%"))
-		(setq x (+ x x-step)))))
-	))
+	(let* ((x-step 0.1) (x x-min)
+	       (pos)
+	       (range-min (map float-vector 'deg2rad (send-all joint-list :min-angle)))
+	       (range-max (map float-vector 'deg2rad (send-all joint-list :max-angle)))
+	       col)
+	  (cond
+	   ((not (eq debug? :no-message))
+	    (warning-message 6 "range&collision-check:~%")
+	    (warning-message 6 "  -- min: ~A~%" range-min)
+	    (warning-message 6 "  -- max: ~A~%" range-max)))
+	  (while (<= x x-max)
+	    (setq pos (send bspline :calc x))
+	    (map cons #'(lambda (j av)
+			  (if (eq debug? :no-message)
+			      (send j :joint-angle (- (rad2deg av) (send j :joint-angle)) :relative t)
+			    (send j :joint-angle (rad2deg av))))
+		 joint-list pos)
+	    (send-all (send-all joint-list :child-link) :worldcoords)
+	    (cond
+	     (draw? (send *viewer* :draw-objects) (unix::usleep (* 100 1000))))
+	    (if (not (eq debug? :no-message)) (warning-message 6 "  -- ~A: ~A E ?~%" x pos))
+	    ;;
+	    (cond
+	     ((setq col (check-all-collision))
+	      (setf (aref error-cnt 0) (+ (aref error-cnt 0) 1))
+	      (cond (draw? (random-test-check-all-collision nil) (unix::sleep 1)))
+	      (if (not (eq debug? :no-message)) (warning-message 1 "  -- collision ~A~%" col))))
+	    ;;
+	    (setq x (+ x x-step)))))
+    )
   bspline
   )
 
