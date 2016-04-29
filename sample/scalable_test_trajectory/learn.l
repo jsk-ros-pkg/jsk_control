@@ -269,7 +269,7 @@
   )
 
 ;; (let* ((a (integer-vector 0 0))) (gen-random-trajectory :draw? t :error-cnt a :debug? :no-message) (print a))
-;; (format t "~A sec~%" (/ (bench2 (dotimes (i 1000) (let* ((a (integer-vector 0 0))) (gen-random-trajectory :draw? nil :error-cnt a :debug? :no-message)))) 1000.0))
+;; (let* ((max 1000) (tm (bench2 (dotimes (i max) (let* ((a (integer-vector 0 0))) (gen-random-trajectory :draw? nil :error-cnt a :debug? :no-message)))))) (format t "~A x ~A = ~Asec~%" (/ tm max) max tm))
 (defun gen-random-trajectory
   (&rest args &key
 	 (debug? t) (draw? debug?)
