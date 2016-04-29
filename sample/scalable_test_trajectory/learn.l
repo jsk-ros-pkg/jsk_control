@@ -492,14 +492,14 @@
     (unix-command-line
      (format nil "ls ~A*solverstate -t | head -n 1" best-snap)))
    (solver-lnk
-    (format nil "ln -snf ~A ik_solver.best.prototxt" best-path))
+    (format nil "ln -snf ~A traj_solver.best.prototxt" best-path))
    (caffe-lnk
-    (format nil "ln -snf ~A ik.best.caffemodel" caffe-snap))
+    (format nil "ln -snf ~A traj.best.caffemodel" caffe-snap))
    (solverstate-lnk
-    (format nil "ln -snf ~A ik.best.solverstate" solver-snap)))
+    (format nil "ln -snf ~A traj.best.solverstate" solver-snap)))
   ;;
   (warning-message 3 (format nil "~A~%" solver-lnk))
-  (if (string-equal solver "ik_solver.best.prototxt")
+  (if (string-equal solver "traj_solver.best.prototxt")
       (print 'skip)
     (unix::system solver-lnk))
   (warning-message 3 (format nil "~A~%" caffe-lnk))
@@ -508,7 +508,7 @@
   (unix::system solverstate-lnk)
   )
 
-(defun ik-learn-with-all-solver
+(defun traj-learn-with-all-solver
   (&rest args)
   (let* ((ret
           (sort
@@ -516,9 +516,9 @@
             #'(lambda (solver)
                 (cons
                  solver
-                 (apply 'ik-learn :solver solver args)))
+                 (apply 'traj-learn :solver solver args)))
             (remove-if-not
-             #'(lambda (str) (and (substringp "ik_solver" str)
+             #'(lambda (str) (and (substringp "traj_solver" str)
                                   (substringp "prototxt" str)))
              (directory)))
            #'(lambda (a b) (< (cdr a) (cdr b)))))
@@ -526,18 +526,18 @@
     (link-best-settings (car (car ret)))
     ret))
 
-(defun ik-learn-best
+(defun traj-learn-best
   (&rest args &key (thre) &allow-other-keys)
   (let* (config state)
     ;; detect solver config
     (setq config
-          (or (unix-command-line "ls ik_solver.best.prototxt")
-              (unix-command-line "ls -t ik_solver*prototxt")))
+          (or (unix-command-line "ls traj_solver.best.prototxt")
+              (unix-command-line "ls -t traj_solver*prototxt")))
     ;;
     ;; detect solver state
     (setq state
-          (or (unix-command-line "ls ik.best.solverstate")
-              (unix-command-line "ls -t ik*solverstate")
+          (or (unix-command-line "ls traj.best.solverstate")
+              (unix-command-line "ls -t traj*solverstate")
               ""))
     ;;
     (warning-message 3 "config: ~A, state: ~A~%" config state)
@@ -548,24 +548,24 @@
       (throw :settings-not-found nil)))
     (warning-message 3 "regenrate random traning DB~%")
     (if (numberp thre)
-        (gen-random-ik-learning-data-with-thre :draw? nil :thre thre)
-      (gen-random-ik-learning-data))
+        (gen-random-traj-learning-data-with-thre :draw? nil :thre thre)
+      (gen-random-traj-learning-data))
     (warning-message 3 "update solver~%")
-    (let* ((p (apply 'update-solver :input "ik_solver.best.prototxt" args)))
-      (unix::system (format nil "ln -snf ~A ik_solver.best.prototxt" p)))
+    (let* ((p (apply 'update-solver :input "traj_solver.best.prototxt" args)))
+      (unix::system (format nil "ln -snf ~A traj_solver.best.prototxt" p)))
     (warning-message 3 "start learning ... ~%")
-    (apply 'ik-learn :solver config :solverstate state args)
-    ;; (ik-learn :solver solver :solverstate state)
+    (apply 'traj-learn :solver config :solverstate state args)
+    ;; (traj-learn :solver solver :solverstate state)
     (warning-message 3 "done~%")
-    (link-best-settings "ik_solver.best.prototxt")
+    (link-best-settings "traj_solver.best.prototxt")
     (warning-message 3 "evaluate network~%")
     (cpplog::change-output-stream "/dev/null")
-    (let* ((ret (ik-random-test-min-average :draw? nil)))
+    (let* ((ret (traj-random-test-min-average :draw? nil)))
       (cpplog::change-output-stream "")
       ret)
     ))
 
-(defun ik-learn-best-loop
+(defun traj-learn-best-loop
   (&rest args
          &key
          (lp 10)
@@ -578,7 +578,7 @@
          (thre
           (progn
             (cpplog::change-output-stream "/dev/null")
-            (let* ((ret (ik-random-test-min-average :draw? nil)))
+            (let* ((ret (traj-random-test-min-average :draw? nil)))
               (cpplog::change-output-stream "")
               ret)))
          ;;
@@ -587,7 +587,7 @@
     (push thre ret)
     (dotimes (i lp)
       (unix::gc)
-      (push (apply 'ik-learn-best :base_lr-gain base_lr-gain :thre (car ret) args) ret)
+      (push (apply 'traj-learn-best :base_lr-gain base_lr-gain :thre (car ret) args) ret)
       (setq prev now)
       (setq now (car ret))
       ;; update base_lr-gain
@@ -610,9 +610,9 @@
         (incf vain-cnt)
         ))
       (warning-message
-       3 (format nil "~A~%" (unix-command-line "ls -l ik.best.caffemodel | sed -e \"s/ /\\\n/g\" | tail -1")))
+       3 (format nil "~A~%" (unix-command-line "ls -l traj.best.caffemodel | sed -e \"s/ /\\\n/g\" | tail -1")))
       (warning-message
-       3 (format nil "~A~%" (unix-command-line "ls -l ik.best.solverstate | sed -e \"s/ /\\\n/g\" | tail -1")))
+       3 (format nil "~A~%" (unix-command-line "ls -l traj.best.solverstate | sed -e \"s/ /\\\n/g\" | tail -1")))
       (warning-message 3 "update base_lr-gain: ~A, vain: ~A, now: ~A~%"
                        base_lr-gain vain-cnt now)
       ;; convergence
@@ -668,11 +668,11 @@
   nil
   (let* ((caffemodel (unix-command-line "ls -t | grep -e \"caffemodel$\" | head -n 1")))
     (warning-message 6 "load caffe model ~A~%" caffemodel)
-    (caffe::gen-test-net :netproto "predict_ik_net.prototxt"
+    (caffe::gen-test-net :netproto "predict_traj_net.prototxt"
                          :caffemodel caffemodel))
   )
 
-(defun ik-random-test
+(defun traj-random-test
   (&key (calc-forward 'caffe::calc-forward-double) ;;'caffe::memory-calc-forward)
         (draw? t) (revert? nil) (update-arrow-coords? t)
         tm
@@ -765,7 +765,7 @@
 		 (funcall root-link-fix-coords-func)))))
      ))))
 
-(defun ik-random-test-min
+(defun traj-random-test-min
   (&rest
    args
    &key
@@ -825,7 +825,7 @@
              ((zerop depth)
               ;; (print redundancy)
               ;; (print (incf cnt))
-              (setq tmp (apply 'ik-random-test
+              (setq tmp (apply 'traj-random-test
                                :random-angle random-angle :update-coords update-coords
                                :c c :b b :av av :input input :redundancy redundancy
 			       :update-arrow-coords? update-arrow-coords?
@@ -850,7 +850,7 @@
   ;; (dotimes (i (length redundancy))
   ;;   (dotimes (j (round (/ 1.0 redundancy-step)))
   ;;     (setf (aref redundancy i) (* j redundancy-step))
-  ;;     (push (apply 'ik-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil args) buf)))
+  ;;     (push (apply 'traj-random-test :random-angle random-angle :update-coords update-coords :c c :b b :av av :input input :redundancy redundancy :initialize? nil args) buf)))
   ;; (setq *ret* buf)
   ;; (setq ret (car (sort buf #'(lambda (a b) (< (cdr (assoc :state-diff-norm a))
   ;; (cdr (assoc :state-diff-norm b)))))))
@@ -870,15 +870,15 @@
   ret
   )
 
-(defun ik-random-test-min-average
+(defun traj-random-test-min-average
   (&rest args &key (lp 100) (step-max 300) (variance (float-vector 0)) &allow-other-keys)
   (let* ((ret) avr var)
     (smart-initialize-net)
     (dotimes (i lp)
-      (push (apply 'ik-random-test-min :initialize? nil :step-max step-max args) ret))
+      (push (apply 'traj-random-test-min :initialize? nil :step-max step-max args) ret))
     (setq ret (remove nil ret))
     (if (not (eq lp (length ret)))
-	(warning-message 1 "[ik-random-test-min-average] warn: ik-random-test-min sometimes redused? ~A/~A~%" (length ret) lp))
+	(warning-message 1 "[traj-random-test-min-average] warn: traj-random-test-min sometimes redused? ~A/~A~%" (length ret) lp))
     ;; (setq *ret* ret)
     (setq avr (/ (apply '+ (mapcar '(lambda (d) (cdr (assoc :evaluation d))) ret))
 		(length ret)))
