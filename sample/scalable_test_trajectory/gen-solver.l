@@ -2,7 +2,7 @@
 
 (defun gen-solver
   (&key
-   (net "\"ik_net.prototxt\"")
+   (net "\"traj_net.prototxt\"")
    (solver_type "NESTEROV")
    (base_lr 0.1)
    (stop_lr (* base_lr 0.1))
@@ -15,7 +15,7 @@
    (snapshot_prefix "\"snapshot\"")
    (solver_mode "CPU")
    (momentum 0.9)
-   (path "ik_solver.prototxt"))
+   (path "traj_solver.prototxt"))
   (let* ((p (open path :direction :output)))
     (mapcar
      #'(lambda (sym)
@@ -26,7 +26,7 @@
 
 (defun parse-solver
   (&key
-   (path "ik_solver.best.prototxt"))
+   (path "traj_solver.best.prototxt"))
   (let* ((p (open path :direction :input))
 	 buf tmp compos tag value)
     (while (setq tmp (read-line p nil))
@@ -47,7 +47,7 @@
   (&rest
    args
    &key
-   (input "ik_solver.best.prototxt")
+   (input "traj_solver.best.prototxt")
    (output-surfix (car (unix::gettimeofday)))
    (output (format nil "~A.~A" input output-surfix))
    (data (parse-solver :path input))

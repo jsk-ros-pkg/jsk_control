@@ -1,4 +1,4 @@
-name: "redundancy_ik_net_28s_150m1_4d1_3i_18k_8d2_150m2"
+name: "redundancy_traj_net_28s_150m1_4d1_3i_18k_8d2_150m2"
 layer {
  name: "input"
  type: "MemoryData"

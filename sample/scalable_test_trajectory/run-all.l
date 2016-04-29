@@ -1,6 +1,6 @@
 #!/usr/bin/env roseus
 
-(require "gen-ik-net.l")
+(require "gen-traj-net.l")
 
 (defun get-load-average
   nil
@@ -33,9 +33,9 @@
                    (list s m 4 i k 8 m)
                    )
                   )
-           (fileoutput-layer-string "ik_net.prototxt" (apply 'gen-redundancy-ik-net param))
-           (fileoutput-layer-string "predict_ik_net.prototxt"
-                                    (apply 'gen-predict-ik-net param))
+           (fileoutput-layer-string "traj_net.prototxt" (apply 'gen-redundancy-traj-net param))
+           (fileoutput-layer-string "predict_traj_net.prototxt"
+                                    (apply 'gen-predict-traj-net param))
            (unix::system (format nil "BASE_LR_LIST=\"~A\" ./run_once.sh &" base-lr-list))
            (if (plusp (+ 1 (decf skip))) (unix::sleep 10)
              (progn (unix::sleep (* 3 60))

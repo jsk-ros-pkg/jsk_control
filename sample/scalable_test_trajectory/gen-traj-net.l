@@ -110,7 +110,7 @@
   (gen-config-string
    (gen-simple-layer-list name "Concat" (list bottom1 bottom2) top)))
 
-(defun gen-redundancy-ik-net
+(defun gen-redundancy-traj-net
   (s m1 d1 i k d2 m2)
   (if (numberp m1) (setq m1 (make-list d1 :initial-element m1)))
   (if (numberp m2) (setq m2 (make-list d2 :initial-element m2)))
@@ -118,7 +118,7 @@
     (flatten
      (list
       (format nil
-	      "name: \"redundancy_ik_net_~As_~Am1_~Ad1_~Ai_~Ak_~Ad2_~Am2\""
+	      "name: \"redundancy_traj_net_~As_~Am1_~Ad1_~Ai_~Ak_~Ad2_~Am2\""
 	      s (car m1) d1 i k d2 (car m2))
       (gen-memory-layer-string
        "input" "input" "__dummy_label1" 32 s)
@@ -181,7 +181,7 @@
        "loss" "output" "input" "loss")
       ))))
 
-(defun gen-predict-ik-net
+(defun gen-predict-traj-net
   (s m1 d1 i k d2 m2)
   (if (numberp m1) (setq m1 (make-list d1 :initial-element m1)))
   (if (numberp m2) (setq m2 (make-list d2 :initial-element m2)))
@@ -190,7 +190,7 @@
     (flatten
      (list
       (format nil
-	      "name: \"redundancy_ik_net_~As_~Am1_~Ad1_~Ai_~Ak_~Ad2_~Am2\""
+	      "name: \"redundancy_traj_net_~As_~Am1_~Ad1_~Ai_~Ak_~Ad2_~Am2\""
 	      s (car m1) d1 i k d2 (car m2))
       (format nil "input: \"input\"")
       (format nil "input_dim: 1 ## num")
@@ -228,4 +228,4 @@
     (dolist (str lstr)
       (format p "~A~%" str))
     (close p)))
-;; fileoutput-layer-string "test.prototxt" (gen-redundancy-ik-net 9 100 3 3 6 3 100)
+;; fileoutput-layer-string "test.prototxt" (gen-redundancy-traj-net 9 100 3 3 6 3 100)
