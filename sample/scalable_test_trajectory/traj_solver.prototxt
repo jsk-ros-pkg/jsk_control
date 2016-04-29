@@ -1,11 +1,12 @@
 net: "traj_net.prototxt"
 solver_type: NESTEROV
-base_lr: 0.3
+base_lr: 0.001
 lr_policy: "step"
-gamma: 0.99999
-stepsize: 1000 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
-max_iter: 5000000
+gamma: 0.977237
+stepsize: 1000
+max_iter: 100000
 momentum: 0.9
 display: 1000
-snapshot_prefix: "traj_net_NESTEROV_d4_n100_r3"
+snapshot: 100000
+snapshot_prefix: traj_net_0.001blr_0id
 solver_mode: CPU
