@@ -115,7 +115,17 @@
 (send *irtviewer* :change-background (float-vector 1 1 1))
 (send *viewer* :draw-objects)
 
-(defvar *sample-points* 1024)
+(defvar *sample-points*
+  (let* ((dof (* 3 (length *joint-list1*)))
+	 (org
+          (min
+           (round 1e+6)
+           (expt (max (min (round (expt 1e+6 (/ 1.0 dof))) 4) 2) dof)))
+	 (sep 32))
+    (if (not (zerop (mod org sep)))
+        (max 1 (round (* (ceiling (/ (* 1.0 org) sep)) sep)))
+      org)))
+
 (defvar *angle-vector-map*)
 (defvar *ef-coords-map*)
 
@@ -360,7 +370,7 @@
   bspline
   )
 
-(defun gen-ik-learning-data
+(defun gen-traj-learning-data
   (&key (sample-points *sample-points*)
         (joint-list *joint-list1*)
         (ef-coords *ef-coords*)
