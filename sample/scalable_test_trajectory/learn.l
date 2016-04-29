@@ -209,31 +209,6 @@
 	       (length vector)))
   (reverse ret))
 
-(defun shuffle-random-vector-map
-  (&key
-   (sample-points *sample-points*)
-   (joint-list *joint-list1*)
-   (ef-coords *ef-coords*)
-   ;; (ef-coords-length *ef-coords-length*)
-   (av-map *state-map*)
-   (cc-map *task-map*)
-   ;;
-   (len (length (get-task-vector))) ;;(apply '+ ef-coords-length))
-   )
-  (labels
-      ((swap (a i j)
-             (let* ((c (aref a i)))
-               (setf (aref a i) (aref a j))
-               (setf (aref a j) c))))
-    (dotimes (i sample-points)
-      (let* ((r (random sample-points)))
-        (dotimes (j (length joint-list))
-          (swap av-map
-                (+ j (* (length joint-list) i))
-                (+ j (* (length joint-list) r))))
-        (dotimes (j len)
-          (swap cc-map (+ j (* i len)) (+ j (* r len))))))))
-
 (defun test-gen-collidable-pairs
   (&key
    (robot *robot*)
@@ -449,71 +424,6 @@
     skip-cnt
     ))
 
-;; gen-random-ik-learning-data-with-thre :sample-points 3 :thre 0.3 :max-time 5
-;; check-test-data 0
-;; ik-random-test-min :revert? t :random-angle (send-all *joint-list1* :joint-angle)
-(defun gen-random-traj-learning-data-with-thre
-  (&rest args
-         &key
-         (draw? t)
-         (thre 0.3)
-         (start-time (car (unix::gettimeofday)))
-         (max-time (* 15 60))
-         (_max-time (+ start-time max-time))
-         (time-over-flag nil)
-         (overthre-cnt 0)
-         (nop-cnt 1)
-         ret
-         &allow-other-keys)
-  (smart-initialize-net)
-  (cpplog::change-output-stream "/dev/null")
-  (setq
-   ret
-   (apply 'gen-random-ik-learning-data
-          :gen-random-angle-vector-func
-          #'(lambda (joint-list)
-              (gen-random-angle-vector joint-list)
-              (cond
-               (time-over-flag
-                (incf nop-cnt);; (print 'nop)
-                )
-               ((< _max-time (car (unix::gettimeofday)))
-                (setq time-over-flag t)
-                (warning-message 1 "time exceeded ~A~%" max-time))
-               (t
-                (let* ((dif))
-                  (setq dif (apply 'ik-random-test-min
-                                   ;; :redundancy-step 0.1
-                                   :step-max 10
-                                   :revert? t :initialize? nil
-                                   :draw? draw? args))
-                  (while (and
-                          (not time-over-flag)
-                          (not (setq time-over-flag (< _max-time (car (unix::gettimeofday)))))
-                          (< (cdr (assoc :evaluation dif)) thre))
-                    (if draw? (warning-message 6 "random av rejected: ~A < ~A~%" dif thre))
-                    ;; (gen-random-angle-vector joint-list)
-                    (setq dif (apply 'ik-random-test-min
-                                     ;; :redundancy-step 0.1
-                                     :step-max 10
-                                     :revert? t :initialize? nil
-                                     :draw? draw? args))
-                    )
-                  (cond
-                   ((not time-over-flag) ;; (>= (cdr (assoc :state-diff-norm dif)) thre)
-                    (incf overthre-cnt)
-                    (if draw?
-                        (warning-message 5 "random av accepted~A: ~A < ~A~%" overthre-cnt dif thre)))
-                   ;; (t (incf nop-cnt))
-                   )
-                  ))))
-          args))
-  (warning-message 1 "[gen-random-ik-learning-data-with-thre] thre: ~A, over: ~A, nop: ~A~%"
-                   thre overthre-cnt nop-cnt)
-  (cpplog::change-output-stream "")
-  ret
-  )
-
 (defun load-ik-learning-data
   (&key (root "teacher") (surfix ""))
   (setq *state-map* (cpplog::read-vector (format nil "~A/state-map.dat~A" root surfix)))
@@ -528,8 +438,8 @@
   (cpplog::write-vector (format nil "~A/task-map.dat~A" root surfix)
                         *task-map*))
 
-(defun ik-learn
-  (&key (solver "ik_solver.prototxt")
+(defun traj-learn
+  (&key (solver "traj_solver.prototxt")
         (solverstate "")
         &allow-other-keys)
   (cond
