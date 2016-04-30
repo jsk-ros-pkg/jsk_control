@@ -321,8 +321,8 @@
 	 (joint-list *joint-list1*)
 	 (x-min (send bspline :x-min)) (x-max (send bspline :x-max))
 	 (x-mid (/ (+ x-min x-max) 2.0))
-	 (start-pos (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
-	 end-pos mid-pos
+	 start-pos end-pos mid-pos
+	 (_start-pos (or start-pos (map float-vector 'deg2rad (send-all joint-list :joint-angle))))
 	 ;;
 	 (x-step 0.1) (x-max-called)
 	 (debug? t) (draw? debug?) (revert? t) (collide-check :first)
@@ -375,6 +375,7 @@
 	(send-all (send-all joint-list :child-link) :worldcoords)
 	(send (car *arrow*) :newcoords
 	      (send (send *robot* :rarm :end-coords :worldcoords) :copy-worldcoords))
+	(send-all *arrow* :worldcoords)
 	(cond
 	 (draw? (send *viewer* :draw-objects) (unix::usleep (* 100 1000))))
 	(if (not (eq debug? :no-message)) (warning-message 6 "  -- ~A: ~A E ?~%" x pos))
@@ -396,7 +397,7 @@
 	(map cons '(lambda (av j) (send j :joint-angle
 					(- (rad2deg av) (send j :joint-angle))
 					:relative t))
-	     start-pos joint-list)
+	     _start-pos joint-list)
 	(if (not (eq debug? :no-message)) (warning-message 6 "reverted~%"))))
       ;;
       (get-task-vector)
