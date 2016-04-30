@@ -777,12 +777,12 @@
     '(lambda (val soa)
        (< (cdr (assoc :evaluation val))
 	  (cdr (assoc :evaluation soa)))))
-   (ret nil) (lp 100)
+   (ret nil) (step-max 100)
    best
    &allow-other-keys
    )
   (cpplog::change-output-stream "/dev/null")
-  (dotimes (i lp)
+  (dotimes (i step-max)
     (push (apply 'traj-random-test :draw? draw? :joint-list joint-list :ef-coords ef-coords :root-link root-link :random-state random-state :update-coords update-coords :random-task random-task :initialize? nil :root-link-fix-coords-func root-link-fix-coords-func args) ret)
     (if (not best) (setq best (car ret))
       (if (funcall evaluation-func (car ret) best) (setq best (car ret)))))
