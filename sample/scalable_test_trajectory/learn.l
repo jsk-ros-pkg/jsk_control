@@ -477,6 +477,28 @@
     skip-cnt
     ))
 
+(defun random-check-traning-db
+  nil
+  (cond
+   ((or (zerop (length *state-map*))
+        (zerop (length *task-map*)))
+    (load-traj-learning-data)
+    (setq *sample-points* ;;96)
+          (/ (length *state-map*) (* (send *trajectory* :id-max) (send *trajectory* :dimension))))))
+  (let* ((state) (task) (target-task) (rpos (random *sample-points*))
+	 (stated (/ (length *state-map*) *sample-points*))
+	 (taskd (/ (length *task-map*) *sample-points*))
+	 (task-diff) (thre 1e-3))
+    (setq state (subseq *state-map* (* (+ rpos 0) stated) (* (+ rpos 1) stated)))
+    (setq task (subseq *task-map* (* (+ rpos 0) taskd) (* (+ rpos 1) taskd)))
+    (send *trajectory* :convert-gain-vector-to-gain-matrix (copy-seq state))
+    (check-trajectory)
+    (setq target-task (get-task-vector))
+    ;;
+    (setq task-diff (v- task target-task))
+    (if (> (norm task-diff) thre) (warning-message 1 "[random-check-traning-db] too large error~%"))
+    task-diff))
+
 (defun load-traj-learning-data
   (&key (root "teacher") (surfix ""))
   (setq *state-map* (cpplog::read-vector (format nil "~A/state-map.dat~A" root surfix)))
