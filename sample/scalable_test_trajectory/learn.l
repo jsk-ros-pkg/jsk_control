@@ -317,11 +317,12 @@
 
 (defun check-trajectory
   (&rest args &key
-	 (bspline *trajectory*)
+	 (bspline *trajectory*)5A
 	 (joint-list *joint-list1*)
 	 (x-min (send bspline :x-min)) (x-max (send bspline :x-max))
 	 (x-mid (/ (+ x-min x-max) 2.0))
-	 start-pos end-pos mid-pos
+	 (start-pos (map float-vector 'deg2rad (send-all joint-list :joint-angle)))
+	 end-pos mid-pos
 	 ;;
 	 (x-step 0.1) (x-max-called)
 	 (debug? t) (draw? debug?) (revert? t) (collide-check :first)
@@ -392,10 +393,10 @@
       ;;
       (cond
        (revert?
-	(map cons '(lambda (J av) (send j :joint-angle
+	(map cons '(lambda (av j) (send j :joint-angle
 					(- (rad2deg av) (send j :joint-angle))
 					:relative t))
-	     joint-list start-pos)
+	     start-pos joint-list)
 	(if (not (eq debug? :no-message)) (warning-message 6 "reverted~%"))))
       ;;
       (get-task-vector)
@@ -478,26 +479,28 @@
     ))
 
 (defun random-check-traning-db
-  nil
-  (cond
-   ((or (zerop (length *state-map*))
-        (zerop (length *task-map*)))
-    (load-traj-learning-data)
-    (setq *sample-points* ;;96)
-          (/ (length *state-map*) (* (send *trajectory* :id-max) (send *trajectory* :dimension))))))
-  (let* ((state) (task) (target-task) (rpos (random *sample-points*))
-	 (stated (/ (length *state-map*) *sample-points*))
-	 (taskd (/ (length *task-map*) *sample-points*))
-	 (task-diff) (thre 1e-3))
-    (setq state (subseq *state-map* (* (+ rpos 0) stated) (* (+ rpos 1) stated)))
-    (setq task (subseq *task-map* (* (+ rpos 0) taskd) (* (+ rpos 1) taskd)))
-    (send *trajectory* :convert-gain-vector-to-gain-matrix (copy-seq state))
-    (check-trajectory)
-    (setq target-task (get-task-vector))
-    ;;
-    (setq task-diff (v- task target-task))
-    (if (> (norm task-diff) thre) (warning-message 1 "[random-check-traning-db] too large error~%"))
-    task-diff))
+  (&key
+   (init
+    (cond
+     ((or (zerop (length *state-map*))
+	  (zerop (length *task-map*)))
+      (load-traj-learning-data)
+      (setq *sample-points* ;;96)
+	    (/ (length *state-map*) (* (send *trajectory* :id-max) (send *trajectory* :dimension)))))))
+   (rpos (random *sample-points*))
+   (stated (/ (length *state-map*) *sample-points*))
+   (taskd (/ (length *task-map*) *sample-points*))
+   (task-diff) (thre 1e-3)
+   (state (subseq *state-map* (* (+ rpos 0) stated) (* (+ rpos 1) stated)))
+   (task (subseq *task-map* (* (+ rpos 0) taskd) (* (+ rpos 1) taskd)))
+   (target-task))
+  (send *trajectory* :convert-gain-vector-to-gain-matrix (copy-seq state))
+  (check-trajectory)
+  (setq target-task (get-task-vector))
+  ;;
+  (setq task-diff (v- task target-task))
+  (if (> (norm task-diff) thre) (warning-message 1 "[random-check-traning-db] too large error~%"))
+  task-diff)
 
 (defun load-traj-learning-data
   (&key (root "teacher") (surfix ""))
