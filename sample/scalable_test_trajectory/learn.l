@@ -317,7 +317,7 @@
 
 (defun check-trajectory
   (&rest args &key
-	 (bspline *trajectory*)5A
+	 (bspline *trajectory*)
 	 (joint-list *joint-list1*)
 	 (x-min (send bspline :x-min)) (x-max (send bspline :x-max))
 	 (x-mid (/ (+ x-min x-max) 2.0))
@@ -329,6 +329,7 @@
 	 (error-cnt (instantiate integer-vector 2))
 	 ;;
 	 (root-link-fix-coords-func *root-link-fix-coords-func*)
+	 ret
 	 &allow-other-keys
 	 )
   (let* ((pos0 (send bspline :calc x-min))
@@ -364,33 +365,34 @@
 	(warning-message 6 "range&collision-check:~%")
 	(warning-message 6 "  -- min: ~A~%" range-min)
 	(warning-message 6 "  -- max: ~A~%" range-max)))
-      (while (<= x x-max)
-	(setq pos (send bspline :calc x))
-	(map cons #'(lambda (j av)
-		      (if (eq debug? :no-message)
-			  (send j :joint-angle (- (rad2deg av) (send j :joint-angle)) :relative t)
-			(send j :joint-angle (rad2deg av))))
-	     joint-list pos)
-	(if (functionp root-link-fix-coords-func) (funcall root-link-fix-coords-func))
-	(send-all (send-all joint-list :child-link) :worldcoords)
-	(send (car *arrow*) :newcoords
-	      (send (send *robot* :rarm :end-coords :worldcoords) :copy-worldcoords))
-	(send-all *arrow* :worldcoords)
-	(cond
-	 (draw? (send *viewer* :draw-objects) (unix::usleep (* 100 1000))))
-	(if (not (eq debug? :no-message)) (warning-message 6 "  -- ~A: ~A E ?~%" x pos))
-	    ;;
-	(cond
-	 ((setq col (check-all-collision))
-	  (setf (aref error-cnt 0) (+ (aref error-cnt 0) 1))
-	  (cond (draw? (random-test-check-all-collision nil) (unix::usleep (* 100 1000))))
-	  (if (not (eq debug? :no-message)) (warning-message 1 "  -- collision ~A~%" col))
-	  (if (eq collide-check :first) (return-from check-trajectory nil))
+      (catch :collision-detected-message
+	(while (<= x x-max)
+	  (setq pos (send bspline :calc x))
+	  (map cons #'(lambda (j av)
+			(if (eq debug? :no-message)
+			    (send j :joint-angle (- (rad2deg av) (send j :joint-angle)) :relative t)
+			  (send j :joint-angle (rad2deg av))))
+	       joint-list pos)
+	  (if (functionp root-link-fix-coords-func) (funcall root-link-fix-coords-func))
+	  (send-all (send-all joint-list :child-link) :worldcoords)
+	  (send (car *arrow*) :newcoords
+		(send (send *robot* :rarm :end-coords :worldcoords) :copy-worldcoords))
+	  (send-all *arrow* :worldcoords)
+	  (cond
+	   (draw? (send *viewer* :draw-objects) (unix::usleep (* 100 1000))))
+	  (if (not (eq debug? :no-message)) (warning-message 6 "  -- ~A: ~A E ?~%" x pos))
+	  ;;
+	  (cond
+	   ((setq col (check-all-collision))
+	    (setf (aref error-cnt 0) (+ (aref error-cnt 0) 1))
+	    (cond (draw? (random-test-check-all-collision nil) (unix::usleep (* 100 1000))))
+	    (if (not (eq debug? :no-message)) (warning-message 1 "  -- collision ~A~%" col))
+	    (if (eq collide-check :first) (throw :collision-detected-message (setq ret :collide)))
+	    ))
+	  ;;
+	  (setq x (+ x x-step))
+	  (if (and (not x-max-called) (>= x x-max)) (progn (setq x-max-called t) (setq x x-max)))
 	  ))
-	;;
-	(setq x (+ x x-step))
-	(if (and (not x-max-called) (>= x x-max)) (progn (setq x-max-called t) (setq x x-max)))
-	)
       ;;
       (cond
        (revert?
@@ -400,7 +402,7 @@
 	     _start-pos joint-list)
 	(if (not (eq debug? :no-message)) (warning-message 6 "reverted~%"))))
       ;;
-      (get-task-vector)
+      (if (eq ret :collide) nil (get-task-vector))
       )))
 
 (defun gen-random-valid-trajectory-vector
@@ -414,7 +416,7 @@
   (&key (sample-points *sample-points*)
         (joint-list *joint-list1*)
         (ef-coords *ef-coords*)
-	(control-points 3)
+	(control-points (send *trajectory* :id-max))
         (root-link *root-link*)
 	;;
         (i 0)
@@ -455,6 +457,7 @@
       (if (and (> sample-points 100)
                (zerop (mod i (round (/ sample-points 100)))))
           (warning-message 3 "~A%~%" (/ i (round (/ sample-points 100)))))
+      (setq traj nil)
       (if (functionp gen-random-traj-vector-func)
           (setq traj (funcall gen-random-traj-vector-func))
         (throw :invalid-gen-random-angle-vector-func nil))
