@@ -32,8 +32,7 @@ cd $TMP_DIR;
 
 ln -s $ORG_DIR/learn.l;
 mkdir teacher;
-ln -s $ORG_DIR/teacher/angle-vector-map.dat teacher/;
-ln -s $ORG_DIR/teacher/ef-coords-map.dat teacher/;
+ln -s $ORG_DIR/teacher/*.dat teacher/;
 cp $ORG_DIR/traj_net.prototxt .;
 ## cp $ORG_DIR/traj_solver.prototxt .;
 cp $ORG_DIR/gen_solver.sh .;
