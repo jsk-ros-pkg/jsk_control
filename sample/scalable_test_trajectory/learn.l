@@ -473,6 +473,9 @@
 	(setq task (get-task-vector :ef-coords ef-coords :root-link root-link))
 	(dotimes (j len) (setf (aref *task-map* (+ j (* i len))) (aref task j)))
 	;;
+	;; (random-check-traning-db :state (subseq *state-map* (* i (length traj)) (* (+ i 1) (length traj)))
+	;; :task (subseq *task-map* (* i (length task)) (* (+ i 1) (length task))))
+	;;
 	(incf i)
 	)
        (t (incf skip-cnt))
@@ -482,6 +485,7 @@
     skip-cnt
     ))
 
+;; random-check-traning-db :state (gen-random-valid-trajectory-vector) :task (progn (send-all (send-all *joint-list1* :child-link) :worldcoords) (send-all *ef-coords* :worldcoords) (get-task-vector :ef-coords *ef-coords* :root-link *root-link*))
 (defun random-check-traning-db
   (&key
    (init
@@ -499,7 +503,7 @@
    (task (subseq *task-map* (* (+ rpos 0) taskd) (* (+ rpos 1) taskd)))
    (target-task))
   (send *trajectory* :convert-gain-vector-to-gain-matrix (copy-seq state))
-  (check-trajectory)
+  (check-trajectory :start-pos (subseq task (- (length task) (length *joint-list1*)) (length task)))
   (setq target-task (get-task-vector))
   ;;
   (setq task-diff (v- task target-task))
