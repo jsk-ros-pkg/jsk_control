@@ -1,141 +1,13 @@
 name: "redundancy_traj_net_21s_150m1_2d1_3i_13k_4d2_150m2"
-layer {
- name: "input"
- type: "MemoryData"
- top: "input"
- top: "__dummy_label1"
- memory_data_param {
-  batch_size: 32
-  channels: 21
-  height: 1
-  width: 1
- }
-}
-layer {
- name: "ip0"
- type: "InnerProduct"
- bottom: "input"
- top: "ip0"
- param {
-  lr_mult: 1
-  decay_mult: 1
- }
- inner_product_param {
-  num_output: 150
-  weight_filler {
-   type: "gaussian"
-   std: 1
-   sparse: 1
-  }
-  bias_filler {
-   type: "constant"
-   value: 0
-  }
- }
-}
-layer {
- name: "sig0"
- type: "TanH"
- bottom: "ip0"
- top: "sig1"
-}
-layer {
- name: "ip1"
- type: "InnerProduct"
- bottom: "sig1"
- top: "ip1"
- param {
-  lr_mult: 1
-  decay_mult: 1
- }
- inner_product_param {
-  num_output: 150
-  weight_filler {
-   type: "gaussian"
-   std: 1
-   sparse: 1
-  }
-  bias_filler {
-   type: "constant"
-   value: 0
-  }
- }
-}
-layer {
- name: "sig1"
- type: "TanH"
- bottom: "ip1"
- top: "sig2"
-}
-layer {
- name: "redundancy"
- type: "InnerProduct"
- bottom: "sig2"
- top: "redundancy"
- param {
-  lr_mult: 1
-  decay_mult: 1
- }
- inner_product_param {
-  num_output: 3
-  weight_filler {
-   type: "gaussian"
-   std: 1
-   sparse: 1
-  }
-  bias_filler {
-   type: "constant"
-   value: 0
-  }
- }
-}
-layer {
- name: "normalized_redundancy"
- type: "Sigmoid"
- bottom: "redundancy"
- top: "normalized_redundancy"
-}
-layer {
- name: "_debug_redundancy"
- type: "Sigmoid"
- bottom: "redundancy"
- top: "_debug_redundancy"
-}
-layer {
- name: "target"
- type: "MemoryData"
- top: "_target"
- top: "__dummy_label2"
- memory_data_param {
-  batch_size: 32
-  channels: 13
-  height: 1
-  width: 1
- }
-}
-layer {
- name: "target_reshape"
- type: "Reshape"
- bottom: "_target"
- top: "target"
- reshape_param {
-  shape {
-   dim: 0
-   dim: -1
-  }
- }
-}
-layer {
- name: "concate"
- type: "Concat"
- bottom: "target"
- bottom: "normalized_redundancy"
- top: "sig3"
-}
+input: "input"
+input_dim: 1 ## num
+input_dim: 16 ## channel
+input_dim: 1 ## w
+input_dim: 1 ## h
 layer {
  name: "ip3"
  type: "InnerProduct"
- bottom: "sig3"
+ bottom: "input"
  top: "ip3"
  param {
   lr_mult: 1
@@ -265,11 +137,4 @@ layer {
    value: 0
   }
  }
-}
-layer {
- name: "loss"
- type: "EuclideanLoss"
- bottom: "output"
- bottom: "input"
- top: "loss"
 }
