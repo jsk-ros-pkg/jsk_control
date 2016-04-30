@@ -753,7 +753,20 @@
   (&rest
    args
    &key
-   random-task
+   ;;
+   (joint-list *joint-list1*)
+   (ef-coords *ef-coords*)
+   (root-link *root-link*)
+   (random-state (gen-random-valid-trajectory-vector))
+   (root-link-fix-coords-func *root-link-fix-coords-func*)
+   (update-coords
+    (progn (if (functionp root-link-fix-coords-func)
+	       (funcall root-link-fix-coords-func))
+	   (send-all (send-all joint-list :child-link) :worldcoords)
+	   (send-all ef-coords :worldcoords)))
+   (random-task (get-task-vector :ef-coords ef-coords :root-link root-link))
+   (initialize? (smart-initialize-net))
+   ;;
    (evaluation-func
     '(lambda (val soa)
        (< (cdr (assoc :evaluation val))
@@ -763,7 +776,7 @@
    &allow-other-keys
    )
   (dotimes (i lp)
-    (push (apply 'traj-random-test-min :random-task random-task args) ret)
+    (push (apply 'traj-random-test :joint-list joint-list :ef-coords ef-coords :root-link root-link :random-state random-state :update-coords update-coords :random-task random-task :initialize? nil :root-link-fix-coords-func root-link-fix-coords-func args) ret)
     (if (not best) (setq best (car ret))
       (if (funcall evaluation-func (car ret) best) (setq best (car ret)))))
   best)
