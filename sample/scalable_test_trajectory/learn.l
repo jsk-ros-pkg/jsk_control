@@ -703,13 +703,14 @@
                 (send-all (send-all joint-list :child-link) :worldcoords)
                 (send-all ef-coords :worldcoords)))
 	(random-task (get-task-vector :ef-coords ef-coords :root-link root-link))
+	_random-task
 	;;
         (state (instantiate float-vector (* (send trajectory :id-max) (send trajectory :dimension))))
 	(task (copy-seq random-task))
         (initialize? (smart-initialize-net))
         (redundancy ;;(instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
 	 (map float-vector '(lambda (hoge) (random 1.0))
-	      (make-list (- (caffe::get-blob-count "input") (length input)))))
+	      (make-list (- (caffe::get-blob-count "input") (length random-task)))))
 	;;
 	(after-callback-func)
 	(evaluation-callback-func
@@ -718,12 +719,12 @@
 	evaled-value
         &allow-other-keys
         )
-  (setq input (concatenate float-vector input redundancy))
+  (setq _random-task (concatenate float-vector random-task redundancy))
   (setq
    tm
    (bench2
     (apply calc-forward
-           (list :isize (length random-task) :input random-task
+           (list :isize (length _random-task) :input _random-task
                  :osize (length state) :output state))
     ))
   (send trajectory :convert-gain-vector-to-gain-matrix (copy-seq state))
