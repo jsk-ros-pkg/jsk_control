@@ -41,6 +41,12 @@ public:
     return this->get_blob_count(this->test_net, name);
   }
 
+  int get_train_net_blob_count (char* name) {
+    if ( ! this->_check(this->solver, "solver") ) return -1 ;
+    boost::shared_ptr<caffe::Net<double>> net = this->solver->net();
+    return this->get_blob_count( net, name);
+  }
+
   int get_blob_data (boost::shared_ptr<caffe::Blob<double> > blob, double* ret, int osize) {
     if ( ! this->_check(blob, "blob") ) return -1 ;
     if (this->output_log) std::cout << "[i E " << blob->count() << "] = "<< " (";
@@ -262,6 +268,7 @@ boost::shared_ptr<eus_caffe> ec(new eus_caffe);
 extern "C" {
   int eus_caffe_output_log (int val){ return (int)ec->set_output_log((bool)val);  }
   int eus_caffe_get_blob_count (char* name){ return ec->get_blob_count(name); }
+  int eus_caffe_get_train_net_blob_count (char* name){ return ec->get_train_net_blob_count(name); }
   int eus_caffe_get_blob_data (char* name, double* ret, int osize){ return ec->get_blob_data(name,ret,osize); }
   int eus_caffe_get_train_net_blob_data (char* name, double* ret, int osize){ return ec->get_train_net_blob_data(name,ret,osize); }
   int eus_caffe_get_layer_blob_data (char* name, int blob_id, double* ret, int osize) { return ec->get_layer_blob_data(name,blob_id,ret,osize); }
