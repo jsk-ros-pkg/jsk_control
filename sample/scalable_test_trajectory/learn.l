@@ -6,7 +6,7 @@
 ;; (require "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
 (require "package://baxtereus/baxter.l")
 (require "models/arrow-object.l")
-(require "package://eus_caffe/sample/scalable_test/gen-solver.l")
+(require "package://eus_caffe/sample/scalable_test_trajectory/gen-solver.l")
 
 (require "package://contact_behavior_generation/euslisp/util/partition-spline/partition-spline.lisp")
 
