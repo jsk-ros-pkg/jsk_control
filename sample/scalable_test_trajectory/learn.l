@@ -706,7 +706,8 @@
 	_random-task
 	;;
         (state (instantiate float-vector (* (send trajectory :id-max) (send trajectory :dimension))))
-	(task (copy-seq random-task))
+	(task nil) ;; (copy-seq random-task))
+	(collide?)
         (initialize? (smart-initialize-net))
         (redundancy ;;(instantiate float-vector (- (caffe::get-blob-count "input") (length input))))
 	 (map float-vector '(lambda (hoge) (random 1.0))
@@ -714,8 +715,10 @@
 	;;
 	(after-callback-func)
 	(evaluation-callback-func
-	 '(lambda (target-state target-task state task)
-	    (sqrt (/ (norm2 (v- target-state state)) (length target-state)))))
+	 '(lambda (target-state target-task state task collide?)
+	    (if collide?
+		*inf*
+	      (sqrt (/ (norm2 (v- target-state state)) (length target-state))))))
 	evaled-value
         &allow-other-keys
         )
@@ -729,13 +732,14 @@
     ))
   (send trajectory :convert-gain-vector-to-gain-matrix (copy-seq state))
   ;;
-  (setq task
+  (setq collide?
 	(check-trajectory :bspline trajectory :joint-list joint-list
-			  :collide-check nil :draw? draw? :debug? :no-message
+			  :collide-check :first :draw? draw? :debug? :no-message
 			  :root-link-fix-coords-func root-link-fix-coords-func))
+  (setq task (or collide? (get-task-vector)))
   ;;
   (if evaluation-callback-func
-      (setq evaled-value (funcall evaluation-callback-func random-state random-task state task)))
+      (setq evaled-value (funcall evaluation-callback-func random-state random-task state task (not collide?))))
   ;;
   (cond
    ((or (not (functionp after-callback-func))
@@ -747,6 +751,7 @@
      (cons :task-diff (v- random-task task))
      (cons :state-diff (v- random-state state))
      (cons :evaluation evaled-value)
+     (cons :collide? (not collide?))
      ))))
 
 (defun traj-random-test-min
@@ -754,6 +759,7 @@
    args
    &key
    ;;
+   (draw? nil)
    (joint-list *joint-list1*)
    (ef-coords *ef-coords*)
    (root-link *root-link*)
@@ -775,10 +781,12 @@
    best
    &allow-other-keys
    )
+  (cpplog::change-output-stream "/dev/null")
   (dotimes (i lp)
-    (push (apply 'traj-random-test :joint-list joint-list :ef-coords ef-coords :root-link root-link :random-state random-state :update-coords update-coords :random-task random-task :initialize? nil :root-link-fix-coords-func root-link-fix-coords-func args) ret)
+    (push (apply 'traj-random-test :draw? draw? :joint-list joint-list :ef-coords ef-coords :root-link root-link :random-state random-state :update-coords update-coords :random-task random-task :initialize? nil :root-link-fix-coords-func root-link-fix-coords-func args) ret)
     (if (not best) (setq best (car ret))
       (if (funcall evaluation-func (car ret) best) (setq best (car ret)))))
+  (cpplog::change-output-stream "")
   best)
 
 (defun traj-random-test-min-average
