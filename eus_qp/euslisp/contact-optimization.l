@@ -705,6 +705,27 @@
            (list :matrix (apply #'append (mapcar #'(lambda (x) (cadr (memq :matrix x))) ret))
                  :vector (apply #'append (mapcar #'(lambda (x) (cadr (memq :vector x))) ret)))))
    (send-super :init :name name))
+  (:gen-drawing-object
+   (&key (object-scale 0.1))
+   (let ((top (float-vector 0 0 (elt max-wrench 2)))
+         (middles (list (float-vector (elt max-wrench 0) 0 0)
+                        (float-vector 0 (elt max-wrench 1) 0)
+                        (float-vector (- (elt max-wrench 0)) 0 0)
+                        (float-vector 0 (- (elt max-wrench 1)) 0)))
+         (bottom (float-vector 0 0 (- (elt max-wrench 2))))
+         upper-faces lower-faces)
+     ;; apply object scale
+     (setq top (scale object-scale top))
+     (setq middles (mapcar #'(lambda (x) (list (scale object-scale x))) middles)) ;; middle elements should be list for make-face-from-vertices
+     (setq bottom (scale object-scale bottom))
+     ;; make faces
+     (make-face-from-vertices middles)
+     (setq upper-faces (geometry::make-conic-side-faces (list top) middles :upper)
+           lower-faces (geometry::make-conic-side-faces (list bottom) (reverse middles) :lower))
+     ;; make body instance
+     (setq drawing-object (send (instantiate *body-class*) :init :faces (flatten (append upper-faces lower-faces)) :approximated t))
+     (send drawing-object :put :draw-on-args (list :color #f(1 1 1) :width 2))
+     ))
   )
 
 (defun force-axis->index (ax)
