@@ -751,7 +751,10 @@
 	 '(lambda (target-state target-task state task collide?)
 	    (if collide?
 		*inf*
-	      (sqrt (/ (norm2 (v- target-state state)) (length target-state))))))
+	      ;; (sqrt (/ (norm2 (v- target-state state)) (length target-state)))
+	      ;; (sqrt (/ (norm2 (v- target-task task)) (length target-task)))
+	      (sqrt (/ (norm2 (subseq (v- target-task task) 0 6)) 6))
+	      )))
 	evaled-value
         &allow-other-keys
         )
@@ -767,6 +770,8 @@
   ;;
   (setq collide?
 	(check-trajectory :bspline trajectory :joint-list joint-list
+			  ;; :start-pos (subseq random-task (- (length random-task) (length joint-list))
+			  ;; (length random-task))
 			  :collide-check :first :draw? draw? :debug? :no-message
 			  :root-link-fix-coords-func root-link-fix-coords-func))
   (setq task (or collide? (get-task-vector)))
