@@ -21,7 +21,9 @@
 ;;        (qp-solver #'solve-octave-qp))
         (qp-solver #'solve-qpoases-qp)
         (check-status t)
-        (min-inequality-violation-weight) (min-inequality-violation-weight-vector))
+        (min-inequality-violation-weight) (min-inequality-violation-weight-vector)
+        (equality-error-weight) (equality-error-weight-vector) ;; equality-error-weight is for example 1e8
+        )
   "Wrench distribution function."
   (let* (;; inequality
          (inequality-matrix (apply #'concatenate-matrix-diagonal contact-constraint-matrix-list))
@@ -39,6 +41,7 @@
          (eval-coeff-vector (instantiate float-vector (length wrench-optimize-weight-vector)))
          (state-dim (array-dimension inequality-matrix 1))
          (use-min-inequality-violation-p (or min-inequality-violation-weight min-inequality-violation-weight-vector))
+         (use-equality-error-p (or equality-error-weight equality-error-weight-vector))
          (state-min-vector))
     (when use-min-inequality-violation-p
       (let* ((ineq-dim (length inequality-min-vector))
@@ -55,20 +58,41 @@
               state-min-vector (concatenate float-vector
                                             (fill (instantiate float-vector state-dim) -1e35)
                                             (instantiate float-vector ineq-dim)))))
+    ;; Use equality error.
+    ;;   For ex, Ax = b => (Ax - b)^T W (Ax - b) in evaluation function
+    (when use-equality-error-p
+      (let* ((equality-error-weight-matrix
+              (if equality-error-weight-vector
+                  (diagonal equality-error-weight-vector)
+                (scale-matrix equality-error-weight (unit-matrix (array-dimension equality-matrix 0)))))
+             (G^TW (m* (transpose equality-matrix) equality-error-weight-matrix)))
+        (setq eval-weight-matrix (m+
+                                  (m* G^TW equality-matrix)
+                                  eval-weight-matrix)
+              eval-coeff-vector (v+
+                                 (scale -1 (transform G^TW equality-vector))
+                                 eval-coeff-vector
+                                 ))))
     (let ((ret
            (apply qp-solver
                   :initial-state initial-state
                   :eval-weight-matrix eval-weight-matrix
                   :eval-coeff-vector eval-coeff-vector
-                  :equality-matrix equality-matrix
-                  :equality-vector equality-vector
                   :inequality-matrix inequality-matrix
                   :inequality-min-vector inequality-min-vector
                   :check-status check-status
                   :debug debug
-                  (if use-min-inequality-violation-p
-                      (list :state-min-vector state-min-vector))
+                  (append
+                   (if use-min-inequality-violation-p
+                       (list :state-min-vector state-min-vector))
+                   (unless use-equality-error-p
+                     (list :equality-matrix equality-matrix
+                           :equality-vector equality-vector)
+                     ))
                   )))
+      (when (and use-equality-error-p ret (> (distance (transform equality-matrix ret) equality-vector) 1e-4)) ;; [N], [Nm]
+        (warn ";; too large equality error in wrench torque opt ~A~%" (distance (transform equality-matrix ret) equality-vector))
+        (setq ret nil))
       (if ret
           (list :wrench-list (send robot :wrench-vector->wrench-list
                                    (if use-min-inequality-violation-p (subseq ret 0 state-dim) ret))))
@@ -187,6 +211,7 @@
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
         (qp-solver #'solve-qpoases-qp)
+        (equality-error-weight) (equality-error-weight-vector) ;; equality-error-weight is for example 1e8
         (check-status t))
   "Wrench + torque distribution function."
   (let* ((contact-matrix (apply #'concatenate-matrix-diagonal contact-constraint-matrix-list))
@@ -237,7 +262,8 @@
                                 (m* tq-weight-matrix jacobi^T)))
          (state-dim (array-dimension contact-matrix 1))
          (state-min-vector)
-         (use-min-inequality-violation-p (or min-inequality-violation-weight min-inequality-violation-weight-vector)))
+         (use-min-inequality-violation-p (or min-inequality-violation-weight min-inequality-violation-weight-vector))
+         (use-equality-error-p (or equality-error-weight equality-error-weight-vector)))
     (when use-min-inequality-violation-p
       (let* ((ineq-dim (length inequality-min-vector))
              (violation-state-weight-matrix
@@ -253,20 +279,41 @@
               state-min-vector (concatenate float-vector
                                             (fill (instantiate float-vector state-dim) -1e35)
                                             (instantiate float-vector ineq-dim)))))
+    (setq eval-coeff-vector (array-entity eval-coeff-vector)) ;; array->float-vector
+    ;; Use equality error.
+    ;;   For ex, Ax = b => (Ax - b)^T W (Ax - b) in evaluation function
+    (when use-equality-error-p
+      (let* ((equality-error-weight-matrix
+              (if equality-error-weight-vector
+                  (diagonal equality-error-weight-vector)
+                (scale-matrix equality-error-weight (unit-matrix (array-dimension equality-matrix 0)))))
+             (G^TW (m* (transpose equality-matrix) equality-error-weight-matrix)))
+        (setq eval-weight-matrix (m+
+                                  (m* G^TW equality-matrix)
+                                  eval-weight-matrix)
+              eval-coeff-vector (v+
+                                 (scale -1 (transform G^TW equality-vector))
+                                 eval-coeff-vector
+                                 ))))
     (let* ((ret (apply
                  qp-solver
                  :initial-state initial-state
                  :eval-weight-matrix eval-weight-matrix
-                 :eval-coeff-vector (array-entity eval-coeff-vector)
+                 :eval-coeff-vector eval-coeff-vector
                  :inequality-matrix inequality-matrix
                  :inequality-min-vector inequality-min-vector
-                 :equality-matrix equality-matrix
-                 :equality-vector equality-vector
                  :check-status check-status
                  :debug debug
-                 (if use-min-inequality-violation-p
-                     (list :state-min-vector state-min-vector))
+                 (append
+                  (if use-min-inequality-violation-p
+                      (list :state-min-vector state-min-vector))
+                  (unless use-equality-error-p
+                    (list :equality-matrix equality-matrix
+                          :equality-vector equality-vector)))
                  )))
+      (when (and use-equality-error-p ret (> (distance (transform equality-matrix ret) equality-vector) 1e-4)) ;; [N], [Nm]
+        (warn ";; too large equality error in wrench torque opt ~A~%" (distance (transform equality-matrix ret) equality-vector))
+        (setq ret nil))
       (if ret
           (let ((ret-wrench (if use-min-inequality-violation-p (subseq ret 0 state-dim) ret)))
             (list :wrench-list (send robot :wrench-vector->wrench-list ret-wrench)

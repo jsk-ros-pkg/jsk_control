@@ -74,6 +74,7 @@
 
 (defun test-wrench-distribute-by-pseudo-inverse
   (&key (limbs '(:rleg :lleg))
+        (equality-error-weight) ;; dummy
         (contact-coords-list (mapcar #'(lambda (l) (send *robot* l :end-coords)) limbs)))
   (let ((ret
          (list :wrench-list
@@ -91,7 +92,8 @@
   (&key (limbs '(:rleg :lleg))
         (contact-coords-list (mapcar #'(lambda (l) (send *robot* l :end-coords)) limbs))
         (contact-constraint-matrix-list)
-        (min-inequality-violation-weight))
+        (min-inequality-violation-weight)
+        (equality-error-weight))
   (unless contact-constraint-matrix-list
     (setq contact-constraint-matrix-list
           (mapcar #'(lambda (c-constraint c-coords)
@@ -103,6 +105,7 @@
           contact-coords-list contact-constraint-matrix-list
           :robot *robot*
           :min-inequality-violation-weight min-inequality-violation-weight
+          :equality-error-weight equality-error-weight
           :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector))))
     (draw-force-value ret :limbs limbs)
     (send *irtviewer* :viewer :viewsurface :flush)
@@ -113,6 +116,7 @@
         (contact-coords-list (mapcar #'(lambda (l) (send *robot* l :end-coords)) limbs))
         (contact-constraint-matrix-list)
         (min-inequality-violation-weight)
+        (equality-error-weight)
         (func #'wrench-torque-distribute-from-total-wrench-inertial-torque))
   (unless contact-constraint-matrix-list
     (setq contact-constraint-matrix-list
@@ -129,6 +133,7 @@
                        :robot *robot*
                        :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector)
                        :min-inequality-violation-weight min-inequality-violation-weight
+                       :equality-error-weight equality-error-weight
                        )))
     (draw-force-value ret :union-link-list union-link-list :limbs limbs)
     (send *irtviewer* :viewer :viewsurface :flush)
@@ -137,6 +142,7 @@
 (defun demo-robot-contact-wrench-distribution-common
   (&key (func #'test-wrench-distribute-by-qp) (press-enter-p t) (mu-trans 0.5) (ret-list nil)
         (mu-margin-ratio 1.0) (cop-margin-ratio 1.0)
+        (equality-error-weight (if (boundp '*force-use-equality-error-weight*) 1e8))
         (use-no-contact nil) (use-hand))
   (let ((ret) (limbs))
     (send *robot* :put :contact-constraint-list
@@ -171,7 +177,7 @@
     (if use-hand (send *robot* :arms :shoulder-p :joint-angle -40))
     (send *robot* :fix-leg-to-coords (make-coords))
     (send *irtviewer* :draw-objects)
-    (push (funcall func :limbs limbs) ret)
+    (push (funcall func :limbs limbs :equality-error-weight equality-error-weight) ret)
     (when press-enter-p (format t ";; press enter~%") (read-line))
     (send *robot* :reset-pose)
     (send *robot* :fix-leg-to-coords (make-coords))
@@ -181,14 +187,14 @@
     (if use-hand (send *robot* :arms :shoulder-p :joint-angle -40))
     (send *robot* :move-centroid-on-foot :rleg '(:rleg :lleg))
     (send *irtviewer* :draw-objects)
-    (push (funcall func :limbs limbs) ret)
+    (push (funcall func :limbs limbs :equality-error-weight equality-error-weight) ret)
     (when press-enter-p (format t ";; press enter~%") (read-line))
     (send *robot* :reset-pose)
     (if use-hand (send *robot* :arms :shoulder-p :joint-angle -40))
     (send *robot* :fix-leg-to-coords (make-coords :pos #f(200 200 300)))
     (send *robot* :move-centroid-on-foot :both '(:rleg :lleg))
     (send *irtviewer* :draw-objects)
-    (push (funcall func :limbs limbs) ret)
+    (push (funcall func :limbs limbs :equality-error-weight equality-error-weight) ret)
     (when press-enter-p (format t ";; press enter~%") (read-line))
     (send *robot* :reset-pose)
     (send *robot* :fix-leg-to-coords (make-coords))
@@ -202,7 +208,7 @@
     (if use-hand (send *robot* :arms :shoulder-p :joint-angle -40))
     (send *robot* :move-centroid-on-foot :both '(:rleg :lleg))
     (send *irtviewer* :draw-objects)
-    (push (funcall func :limbs limbs) ret)
+    (push (funcall func :limbs limbs :equality-error-weight equality-error-weight) ret)
     (if ret-list
         (reverse ret)
       (every #'identity (reverse ret)))))
@@ -254,13 +260,16 @@
   (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :press-enter-p press-enter-p :ret-list t :use-hand t))
 
 (defun demo-robot-contact-wrench-distribution-all
-  (&key (press-enter-p t))
+  (&key (press-enter-p t) (force-use-equality-error-weight))
   "for all test"
   (let ((ret))
+    (makunbound '*force-use-equality-error-weight*)
+    (if force-use-equality-error-weight (setq *force-use-equality-error-weight* t))
     (dotimes (i (apply #'max (remove-if-not #'numberp (mapcar #'(lambda (x) (let ((str (string-left-trim "DEMO-ROBOT-CONTACT-WRENCH-DISTRIBUTION-" (string x)))) (unless (string= "" str) (read-from-string str)))) (apropos-list 'demo-robot-contact-wrench-distribution)))))  ;; Get max number of demo function
       (format t ";; demo-robot-contact-wrench-distribution-~d~%" (1+ i))
       (push (funcall (eval (read-from-string (format nil "#'demo-robot-contact-wrench-distribution-~d" (1+ i)))) :press-enter-p press-enter-p) ret)
       (when press-enter-p (format t ";; press enter~%") (read-line)))
+    (print (mapcar #'(lambda (x) (not (not x))) ret))
     (every #'identity ret)
     ))
 
@@ -269,6 +278,7 @@
   (warn ";;   (demo-robot-contact-wrench-distribution-~d) ;; ~A~%" (1+ i)
         (documentation (read-from-string (format nil "demo-robot-contact-wrench-distribution-~d" (1+ i))))))
 (warn ";; (demo-robot-contact-wrench-distribution-all)~%")
+(warn ";; (demo-robot-contact-wrench-distribution-all :force-use-equality-error-weight t)~%")
 (warn ";; (test-compare-wrench-torque-calc)~%")
 
 (defun demo-robot-wrench-distribute-from-total-wrench-and-given-wrench
