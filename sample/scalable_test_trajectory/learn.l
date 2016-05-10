@@ -100,6 +100,7 @@
 (defvar *joint-list1* (send *robot* :rarm :joint-list))
 
 (defvar *arrow* (list (arrow)))
+(defvar *goal-arrow* (copy-object *arrow*))
 (defvar *ef-coords* (list (instance vector-coords :init (send (car *arrow*) :worldcoords))))
 ;; (defvar *ef-coords-length* (list 6))
 (defvar *root-link* (car (send *robot* :links)))
@@ -110,7 +111,7 @@
 (send-all (send *robot* :links) :set-val 'analysis-level :coords)
 (send-all (send *robot* :joint-list) :set-val 'joint-min-max-table nil)
 (send-all (send *robot* :joint-list) :set-val 'joint-min-max-target nil)
-(objects (flatten (list *robot* *arrow*)))
+(objects (flatten (list *robot* *arrow* *goal-arrow*)))
 (send *irtviewer* :change-background (float-vector 1 1 1))
 (send *viewer* :draw-objects)
 
@@ -734,7 +735,10 @@
          (progn (if (functionp root-link-fix-coords-func)
                     (funcall root-link-fix-coords-func))
                 (send-all (send-all joint-list :child-link) :worldcoords)
-                (send-all ef-coords :worldcoords)))
+                (send-all ef-coords :worldcoords)
+		(mapcar '(lambda (ar ar2) (send ar :newcoords (send ar2 :copy-worldcoords)))
+			*goal-arrow* *arrow*)
+		(send-all *goal-arrow* :worldcoords)))
 	(random-task (get-task-vector :ef-coords ef-coords :root-link root-link))
 	_random-task
 	;;
@@ -751,9 +755,9 @@
 	 '(lambda (target-state target-task state task collide?)
 	    (if collide?
 		*inf*
-	      ;; (sqrt (/ (norm2 (v- target-state state)) (length target-state)))
+	      (sqrt (/ (norm2 (v- target-state state)) (length target-state)))
 	      ;; (sqrt (/ (norm2 (v- target-task task)) (length target-task)))
-	      (sqrt (/ (norm2 (subseq (v- target-task task) 0 6)) 6))
+	      ;; (sqrt (/ (norm2 (subseq (v- target-task task) 0 6)) 6))
 	      )))
 	evaled-value
         &allow-other-keys
@@ -807,7 +811,10 @@
     (progn (if (functionp root-link-fix-coords-func)
 	       (funcall root-link-fix-coords-func))
 	   (send-all (send-all joint-list :child-link) :worldcoords)
-	   (send-all ef-coords :worldcoords)))
+	   (send-all ef-coords :worldcoords)
+	   (mapcar '(lambda (ar ar2) (send ar :newcoords (send ar2 :copy-worldcoords)))
+		   *goal-arrow* *arrow*)
+	   (send-all *goal-arrow* :worldcoords)))
    (random-task (get-task-vector :ef-coords ef-coords :root-link root-link))
    (initialize? (smart-initialize-net))
    ;;
@@ -815,7 +822,7 @@
     '(lambda (val soa)
        (< (cdr (assoc :evaluation val))
 	  (cdr (assoc :evaluation soa)))))
-   (ret nil) (step-max 100)
+   (ret nil) (step-max 5000)
    best
    &allow-other-keys
    )
