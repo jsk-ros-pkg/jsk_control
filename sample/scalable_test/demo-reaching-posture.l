@@ -8,7 +8,7 @@
   ;; load files
   (require "learn.l")
   (require "package://contact_behavior_generation/euslisp/model/four-leg-seat.lisp")
-  (require "package://eus_robot/euslisp/eus_robot_ik.l")
+  (require "package://eus_robot/euslisp/eus_ik.l")
   (require "package://eus_robot/euslisp/eus_qp_collide.l")
   ;;
   ;; create environment objects
@@ -70,10 +70,10 @@
   (eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
   (eus_robot::forward-kinematics 0)
   (eus_robot::print-link-tree)
-  (eus_robot_ik::clear-all)
-  (eus_robot_ik::add-target :limb :larm)
-  (eus_robot_ik::add-target :limb :rarm :rotation-axis-rot (make-matrix 3 3))
-  (eus_robot_ik::add-target :limb :lleg)
+  (eus_ik::clear-all)
+  (eus_ik::add-target :limb :larm)
+  (eus_ik::add-target :limb :rarm :rotation-axis-rot (make-matrix 3 3))
+  (eus_ik::add-target :limb :lleg)
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
   (send *robot* :legs :toe-p :min-angle -60)
@@ -327,18 +327,18 @@
 ;;       (bench2
 ;;        (progn
 ;; 	 ;; aho
-;; 	 ;; (eus_robot_ik::clear-all)
-;; 	 ;; (eus_robot_ik::add-target :limb :rarm :target-coords (send *rarm-coords* :coords-from-vector rarm-coords :org-coords *root-link*))
-;; 	 (eus_robot_ik::change-target-coords 1 (send *rarm-coords* :coords-from-vector rarm-coords :org-coords *root-link*))
-;; 	 ;; (eus_robot_ik::add-target :limb :larm)
-;; 	 ;; (eus_robot_ik::add-target :limb :lleg)
+;; 	 ;; (eus_ik::clear-all)
+;; 	 ;; (eus_ik::add-target :limb :rarm :target-coords (send *rarm-coords* :coords-from-vector rarm-coords :org-coords *root-link*))
+;; 	 (eus_ik::change-target-coords 1 (send *rarm-coords* :coords-from-vector rarm-coords :org-coords *root-link*))
+;; 	 ;; (eus_ik::add-target :limb :larm)
+;; 	 ;; (eus_ik::add-target :limb :lleg)
 ;; 	 ;;
 ;; 	 (map cons
 ;; 	      '(lambda (l pos)
 ;; 		 (eus_robot::set-configuration (send l :get :id) pos 1))
 ;; 	      *links* av)
 ;; 	 (eus_robot::forward-kinematics 0)
-;; 	 (setq ret (eus_robot_ik::solve-ik :max 15))
+;; 	 (setq ret (eus_ik::solve-ik :max 15))
 ;; 	 ;; check centroid
 ;; 	 (eus_robot::forward-kinematics 0)
 ;; 	 (eus_robot::calc-links-centroid :ret cog)

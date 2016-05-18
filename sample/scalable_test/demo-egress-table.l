@@ -9,7 +9,7 @@
   ;; load files
   (require "learn.l")
   (require "package://contact_behavior_generation/euslisp/model/four-leg-seat.lisp")
-  (require "package://eus_robot/euslisp/eus_robot_ik.l")
+  (require "package://eus_robot/euslisp/eus_ik.l")
   (require "package://eus_robot/euslisp/eus_qp_collide.l")
   ;;
   ;; create environment objects
@@ -99,12 +99,12 @@
   (eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
   (eus_robot::forward-kinematics 0)
   (eus_robot::print-link-tree)
-  (eus_robot_ik::clear-all)
-  (eus_robot_ik::add-target :limb :larm)
-  (eus_robot_ik::add-target :limb :rarm)
-  (eus_robot_ik::add-target :limb :lleg)
+  (eus_ik::clear-all)
+  (eus_ik::add-target :limb :larm)
+  (eus_ik::add-target :limb :rarm)
+  (eus_ik::add-target :limb :lleg)
   ;;
-  ;; (eus_robot_ik::set-cog-target :cog-gain 0.01)
+  ;; (eus_ik::set-cog-target :cog-gain 0.01)
   ;;
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
@@ -316,7 +316,7 @@
    (step? nil)
    (animate? t)
    (user-valid-check #'(lambda (cog) t)); (< (abs (aref cog 0)) 70)))
-   (target-centroid-pos (plusp (eus_robot_ik::is-cog-mode)))
+   (target-centroid-pos (plusp (eus_ik::is-cog-mode)))
    (ik-args (append nil ;;(list :pthre (* 1e-3 10) :rthre (deg2rad 5))
 		    (if target-centroid-pos (list :cog-thre 1e+10))))
    ret

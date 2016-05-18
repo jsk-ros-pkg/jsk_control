@@ -6,7 +6,7 @@
 (defun demo-setup
   nil
   (require "learn.l")
-  (require "package://eus_robot/euslisp/eus_robot_ik.l")
+  (require "package://eus_robot/euslisp/eus_ik.l")
   (require "package://eus_robot/euslisp/eus_qp_collide.l")
   ;;
   (send-all (send *robot* :joint-list) :set-val 'joint-min-max-table nil)
@@ -24,10 +24,10 @@
   (eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
   (eus_robot::forward-kinematics 0)
   (eus_robot::print-link-tree)
-  (eus_robot_ik::clear-all)
-  (eus_robot_ik::add-target :limb :larm)
-  (eus_robot_ik::add-target :limb :rarm)
-  (eus_robot_ik::add-target :limb :lleg)
+  (eus_ik::clear-all)
+  (eus_ik::add-target :limb :larm)
+  (eus_ik::add-target :limb :rarm)
+  (eus_ik::add-target :limb :lleg)
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
   (send *robot* :legs :toe-p :min-angle -60)

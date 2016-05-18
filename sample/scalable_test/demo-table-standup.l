@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
 (if (not (find-package "EUS_ROBOT")) (make-package "EUS_ROBOT"))
-(if (not (find-package "EUS_ROBOT_IK")) (make-package "EUS_ROBOT_IK"))
+(if (not (find-package "EUS_IK")) (make-package "EUS_IK"))
 (if (not (find-package "EUS_QP_COLLIDE")) (make-package "EUS_QP_COLLIDE"))
 (if (not (find-package "CPPLOG")) (make-package "CPPLOG"))
 (if (not (find-package "CAFFE")) (make-package "CAFFE"))
@@ -122,7 +122,7 @@
   ;; load files
   (require "learn.l")
   (require "package://contact_behavior_generation/euslisp/model/four-leg-seat.lisp")
-  (require "package://eus_robot/euslisp/eus_robot_ik.l")
+  (require "package://eus_robot/euslisp/eus_ik.l")
   (require "package://eus_robot/euslisp/eus_qp_collide.l")
   ;;
   ;; create environment objects
@@ -181,10 +181,10 @@
   (eus_robot::copy-robot :set-parameter-for-eus-robot-args (list :root-limb :rleg))
   (eus_robot::forward-kinematics 0)
   (eus_robot::print-link-tree)
-  (eus_robot_ik::clear-all)
-  (eus_robot_ik::add-target :limb :larm)
-  (eus_robot_ik::add-target :limb :rarm)
-  (eus_robot_ik::add-target :limb :lleg)
+  (eus_ik::clear-all)
+  (eus_ik::add-target :limb :larm)
+  (eus_ik::add-target :limb :rarm)
+  (eus_ik::add-target :limb :lleg)
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
   ;;
@@ -435,7 +435,7 @@
   (eus_robot::forward-kinematics 0)
   ;;
   (dotimes (i (length ef-coords))
-    (eus_robot_ik::change-target-coords
+    (eus_ik::change-target-coords
      i
      (let* ((_c (send (nth i ef-coords) :worldcoords))
 	    (off (nth i offset-coords))
@@ -444,9 +444,9 @@
   ;;
   (cond
    (target-centroid-pos
-    (eus_robot_ik::set-cog-borders support-face)
+    (eus_ik::set-cog-borders support-face)
     (if (vectorp target-centroid-pos)
-	(eus_robot_ik::change-cog-target-coords (scale 1e-3 target-centroid-pos)))))
+	(eus_ik::change-cog-target-coords (scale 1e-3 target-centroid-pos)))))
   ;;
   (dotimes (i step-max)
     ;;
@@ -478,7 +478,7 @@
 		(eus_robot::set-configuration (send l :get :id) pos 1))
 	     *links* av)
 	(eus_robot::forward-kinematics 0)
-	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_robot_ik::solve-ik (append ik-args (list :max 15))))))
+	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_ik::solve-ik (append ik-args (list :max 15))))))
 	)))
     (setf (aref event-cnt 1) (+ (aref event-cnt 1) 1))
     (setf (aref event-tm 1) (+ (aref event-tm 1) tm))
