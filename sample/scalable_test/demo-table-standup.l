@@ -307,10 +307,18 @@
 	(message (if (vectorp i)
 		     (format nil "i: ~A" (map cons '(lambda (v) (* 0.1 (round (* v 10)))) i))))
 	(x 10) (y 30) (color (float-vector 0 0 0))
+	(update-arrow-coords (and *ef-coords* *arrow*))
 	)
   ;; (send *robot* :reset-pose)
   (eus_robot::configuration-copy-from :conf conf :root-link-coords root-link-coords)
   ;; (if rleg-coords (send *robot* :fix-leg-to-coords rleg-coords :rleg))
+  (cond
+   (update-arrow-coords
+    (mapcar
+     '(lambda (ar c)
+	(send ar :newcoords (send c :copy-worldcoords)))
+     *arrow* (send-all *ef-coords* :copy-worldcoords))))
+  ;;
   (send *viewer* :draw-objects :flush nil)
   (if support-face
       (send support-face :draw-on :flush nil :width 5 :color (float-vector 0.3 1 0.3)))
