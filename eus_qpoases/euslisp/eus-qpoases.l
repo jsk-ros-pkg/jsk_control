@@ -35,6 +35,76 @@
    )
   :string)
 
+(defforeign _solve-qpoases-qp-with-hotstart
+  *libeusqpoases*
+  "solve_qpoases_qp_with_hotstart"
+  (:string ;; ret
+   :string ;; eval-weight-matrix
+   :string ;; eval-coeff-vector
+   :string ;; state-min-vector
+   :string ;; state-max-vector
+   :string ;; inequality-matrix
+   :string ;; inequality-min-vector
+   :string ;; inequality-max-vector
+   :integer ;; state_len
+   :integer ;; inequality_len
+   :integer ;; print-level
+   :string ;; return status
+   )
+  :string)
+
+(defforeign _solve-qpoases-lp-with-hotstart
+  *libeusqpoases*
+  "solve_qpoases_lp_with_hotstart"
+  (:string ;; ret
+   :string ;; eval-coeff-vector
+   :string ;; state-min-vector
+   :string ;; state-max-vector
+   :string ;; inequality-matrix
+   :string ;; inequality-min-vector
+   :string ;; inequality-max-vector
+   :integer ;; state_len
+   :integer ;; inequality_len
+   :integer ;; print-level
+   :string ;; return status
+   )
+  :string)
+
+(defforeign _solve-qpoases-sqp-with-hotstart
+  *libeusqpoases*
+  "solve_qpoases_sqp_with_hotstart"
+  (:string ;; ret
+   :string ;; eval-weight-matrix
+   :string ;; eval-coeff-vector
+   :string ;; state-min-vector
+   :string ;; state-max-vector
+   :string ;; inequality-matrix
+   :string ;; inequality-min-vector
+   :string ;; inequality-max-vector
+   :integer ;; state_len
+   :integer ;; inequality_len
+   :integer ;; print-level
+   :string ;; return status
+   )
+  :string)
+
+(defforeign _solve-qpoases-slp-with-hotstart
+  *libeusqpoases*
+  "solve_qpoases_slp_with_hotstart"
+  (:string ;; ret
+   :string ;; eval-coeff-vector
+   :string ;; state-min-vector
+   :string ;; state-max-vector
+   :string ;; inequality-matrix
+   :string ;; inequality-min-vector
+   :string ;; inequality-max-vector
+   :integer ;; state_len
+   :integer ;; inequality_len
+   :integer ;; print-level
+   :string ;; return status
+   )
+  :string)
+
 (defun solve-qpoases
   (&rest args)
   (warning-message 1 ";; solve-qpoases is deprecated!! Use solve-qpoases-qp function!!~%")
@@ -58,6 +128,7 @@
         (debug t)
         (status (float-vector 0))
         (check-status t)
+        (solve-qp-mode :qp)
         )
   (if (and inequality-matrix (= (length inequality-min-vector) 0))
       (setq inequality-min-vector (fill (instantiate float-vector inequality-dim) (- inf-var))))
@@ -86,7 +157,12 @@
       (setq inequality-matrix (make-matrix 1 state-dim))
       (setq inequality-min-vector (fill (instantiate float-vector 1) (- inf-var)))
       (setq inequality-max-vector (fill (instantiate float-vector 1) inf-var)))
-    (_solve-qpoases-qp
+    (funcall
+     (case
+      solve-qp-mode
+      (:qp #'_solve-qpoases-qp)
+      (:qp-with-hotstart #'_solve-qpoases-qp-with-hotstart)
+      (:sqp-with-hotstart #'_solve-qpoases-sqp-with-hotstart))
      ret
      (array-entity eval-weight-matrix)
      eval-coeff-vector
@@ -117,7 +193,9 @@
                (1 :QP-could-not-be-solved-within-given-number-of-iterations)
                (-1 :QP-could-not-be-solved-due-to-an-internal-error)
                (-2 :QP-is-infeasible-and-thus-could-not-be-solved)
-               (-3 :QP-is-unbounded-and-thus-could-not-be-solved)))))
+               (-3 :QP-is-unbounded-and-thus-could-not-be-solved)
+               (-100 :QP-problem-not-solved) ;; Not qpOASES original, check isSolved(). For example, hotstart.
+               ))))
       ;; Return value
       (cond
        ((not check-status) ret)
@@ -143,6 +221,7 @@
         (debug t)
         (status (float-vector 0))
         (check-status t)
+        (solve-lp-mode :lp)
         )
   (if (and inequality-matrix (= (length inequality-min-vector) 0))
       (setq inequality-min-vector (fill (instantiate float-vector inequality-dim) (- inf-var))))
@@ -171,7 +250,12 @@
       (setq inequality-matrix (make-matrix 1 state-dim))
       (setq inequality-min-vector (fill (instantiate float-vector 1) (- inf-var)))
       (setq inequality-max-vector (fill (instantiate float-vector 1) inf-var)))
-    (_solve-qpoases-lp
+    (funcall
+     (case
+      solve-lp-mode
+      (:lp #'_solve-qpoases-lp)
+      (:lp-with-hotstart #'_solve-qpoases-lp-with-hotstart)
+      (:slp-with-hotstart #'_solve-qpoases-slp-with-hotstart))
      ret
      eval-coeff-vector
      state-min-vector
@@ -201,7 +285,9 @@
                (1 :QP-could-not-be-solved-within-given-number-of-iterations)
                (-1 :QP-could-not-be-solved-due-to-an-internal-error)
                (-2 :QP-is-infeasible-and-thus-could-not-be-solved)
-               (-3 :QP-is-unbounded-and-thus-could-not-be-solved)))))
+               (-3 :QP-is-unbounded-and-thus-could-not-be-solved)
+               (-100 :QP-problem-not-solved) ;; Not qpOASES original, check isSolved(). For example, hotstart.
+               ))))
       ;; Return value
       (cond
        ((not check-status) ret)
