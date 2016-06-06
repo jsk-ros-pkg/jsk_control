@@ -41,9 +41,11 @@
 #include <actionlib/client/simple_action_client.h>
 #include <jsk_footstep_msgs/PlanFootstepsAction.h>
 #include <jsk_footstep_msgs/ExecFootstepsAction.h>
+#include <jsk_interactive_marker/GetTransformableMarkerPose.h>
 #include <interactive_markers/interactive_marker_server.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <std_srvs/Empty.h>
 #include <interactive_markers/menu_handler.h>
 #include <tf2_ros/buffer_client.h>
 #include <Eigen/Geometry>
@@ -154,6 +156,16 @@ namespace jsk_footstep_planner
     virtual void configCallback(Config& config, uint32_t level);
     virtual void poseStampedCommandCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
+    virtual bool resetMarkerService(
+      std_srvs::Empty::Request& req,
+      std_srvs::Empty::Response& res);
+    virtual bool executeFootstepService(
+      std_srvs::Empty::Request& req,
+      std_srvs::Empty::Response& res);
+    virtual bool getFootstepMarkerPoseService(
+      jsk_interactive_marker::GetTransformableMarkerPose::Request& req,
+      jsk_interactive_marker::GetTransformableMarkerPose::Response& res);
+    
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
 
@@ -162,6 +174,9 @@ namespace jsk_footstep_planner
     ExecuteActionClient ac_exec_;
     ros::Publisher pub_plan_result_;
     ros::Subscriber sub_pose_stamped_command_;
+    ros::ServiceServer srv_reset_marker_;
+    ros::ServiceServer srv_execute_footstep_;
+    ros::ServiceServer srv_get_footstep_marker_pose_;    
     
     std::string odom_frame_id_;
     std::string lleg_end_coords_, rleg_end_coords_;

@@ -26,4 +26,6 @@
   </class>
   <class name="VehicleJoyController" type="jsk_teleop_joy.plugin.vehicle.VehicleJoyController">
   </class>
+  <class name="JoyFootstepMarker" type="jsk_teleop_joy.plugin.joy_footstep_marker.JoyFootstepMarker">
+  </class>
 </library>
