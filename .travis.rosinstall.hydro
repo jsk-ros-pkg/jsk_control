@@ -1,0 +1,5 @@
+# for footcoords in jsk_footstep_controller
+- git:
+    local-name: jsk_recognition
+    uri: 'https://github.com/jsk-ros-pkg/jsk_recognition.git'
+    version: 0.3.20
