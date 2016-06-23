@@ -46,7 +46,7 @@ Uncalibrated urdf file is `robot_uncalibrated_YYYY_MM_DD_HH_SS.xml`.
 1. kill `/hrpsys_state_publisher`
 
   ```
-$ rosnode kill /hrpsys_state_publishe
+$ rosnode kill /hrpsys_state_publisher
 ```
 2. update `/robot_description`
 
