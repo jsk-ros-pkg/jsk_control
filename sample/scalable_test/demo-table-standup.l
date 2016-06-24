@@ -185,6 +185,7 @@
   (eus_ik::add-target :limb :larm)
   (eus_ik::add-target :limb :rarm)
   (eus_ik::add-target :limb :lleg)
+  ;; (eus_ik::setup-comb)
   (eus_robot::configuration-copy-to :robot user::*robot*)
   ;;
   ;;
@@ -478,7 +479,7 @@
 		(eus_robot::set-configuration (send l :get :id) pos 1))
 	     *links* av)
 	(eus_robot::forward-kinematics 0)
-	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_ik::solve-ik (append ik-args (list :max 15))))))
+	(setq ok? (or (not solve-ik?) (plusp (apply 'eus_ik::solve-ik (append ik-args (list :comb 0 :all-comb 0 :max 15))))))
 	)))
     (setf (aref event-cnt 1) (+ (aref event-cnt 1) 1))
     (setf (aref event-tm 1) (+ (aref event-tm 1) tm))

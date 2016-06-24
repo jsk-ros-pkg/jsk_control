@@ -103,6 +103,7 @@
   (eus_ik::add-target :limb :larm)
   (eus_ik::add-target :limb :rarm)
   (eus_ik::add-target :limb :lleg)
+  ;; (eus_ik::setup-comb)
   ;;
   ;; (eus_ik::set-cog-target :cog-gain 0.01)
   ;;
