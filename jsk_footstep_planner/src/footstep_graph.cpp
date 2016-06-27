@@ -171,6 +171,7 @@ namespace jsk_footstep_planner
     ss << "  support_check_x_sampling: " << support_check_x_sampling_ << std::endl;
     ss << "  support_check_y_sampling: " << support_check_y_sampling_ << std::endl;
     ss << "  support_check_vertex_neighbor_threshold: " << support_check_vertex_neighbor_threshold_ << std::endl;
+    ss << "  skip_cropping: " << skip_cropping_ << std::endl;
     
     return ss.str();
   }
@@ -290,7 +291,8 @@ namespace jsk_footstep_planner
       plane_estimation_min_inliers_,
       support_check_x_sampling_,
       support_check_y_sampling_,
-      support_check_vertex_neighbor_threshold_);
+      support_check_vertex_neighbor_threshold_,
+      skip_cropping_);
     ros::WallTime end_time = ros::WallTime::now();
     perception_duration_ = perception_duration_ + (end_time  - start_time);
     return projected_footstep;

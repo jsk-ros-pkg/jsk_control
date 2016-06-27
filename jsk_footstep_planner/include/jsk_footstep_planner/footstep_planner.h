@@ -170,6 +170,7 @@ namespace jsk_footstep_planner
     int support_check_x_sampling_;
     int support_check_y_sampling_;
     double support_check_vertex_neighbor_threshold_;
+    bool skip_cropping_;
     double resolution_x_;
     double resolution_y_;
     double resolution_theta_;
