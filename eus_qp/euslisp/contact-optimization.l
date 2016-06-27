@@ -21,6 +21,7 @@
 ;;        (qp-solver #'solve-octave-qp))
         (qp-solver #'solve-qpoases-qp)
         (check-status t)
+        (solve-qp-mode :qp)
         (min-inequality-violation-weight) (min-inequality-violation-weight-vector)
         (equality-error-weight) (equality-error-weight-vector) ;; equality-error-weight is for example 1e8
         )
@@ -81,6 +82,7 @@
                   :inequality-matrix inequality-matrix
                   :inequality-min-vector inequality-min-vector
                   :check-status check-status
+                  :solve-qp-mode solve-qp-mode
                   :debug debug
                   (append
                    (if use-min-inequality-violation-p
@@ -211,6 +213,7 @@
 ;;        (qp-solver #'solve-eiquadprog))
 ;;        (qp-solver #'solve-octave-qp))
         (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp)
         (equality-error-weight) (equality-error-weight-vector) ;; equality-error-weight is for example 1e8
         (check-status t))
   "Wrench + torque distribution function."
@@ -303,6 +306,7 @@
                  :inequality-matrix inequality-matrix
                  :inequality-min-vector inequality-min-vector
                  :check-status check-status
+                 :solve-qp-mode solve-qp-mode
                  :debug debug
                  (append
                   (if use-min-inequality-violation-p
