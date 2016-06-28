@@ -240,7 +240,7 @@
            )))
      mat))
   (:proc-model-predictive-control
-   (&key (calc-state-value-list t))
+   (&key (calc-state-value-list t) (solve-qp-mode :qp))
    "Solve QP for one predictive control calculation."
    ;; Parameter list for all k = 0, ..., N-1
    (let* ((system-matrix-list (mapcar #'(lambda (x) (send x :system-matrix)) param-list))
@@ -343,6 +343,7 @@
                   :inequality-min-vector total-inequality-min-vector
                   :equality-matrix total-equality-matrix
                   :equality-vector total-equality-vector
+                  :solve-qp-mode solve-qp-mode
                   ;;:print-level :pl-low
                   )
                  tmp-input-state-value (transform total-input-matrix total-input-value-vector))))
