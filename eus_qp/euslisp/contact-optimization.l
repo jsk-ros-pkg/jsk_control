@@ -93,7 +93,7 @@
                      ))
                   )))
       (when (and use-equality-error-p ret (> (distance (transform equality-matrix ret) equality-vector) 1e-4)) ;; [N], [Nm]
-        (warn ";; too large equality error in wrench torque opt ~A~%" (distance (transform equality-matrix ret) equality-vector))
+        (when debug (warn ";; too large equality error in wrench torque opt ~A~%" (distance (transform equality-matrix ret) equality-vector)))
         (setq ret nil))
       (if ret
           (list :wrench-list (send robot :wrench-vector->wrench-list
@@ -316,7 +316,7 @@
                           :equality-vector equality-vector)))
                  )))
       (when (and use-equality-error-p ret (> (distance (transform equality-matrix ret) equality-vector) 1e-4)) ;; [N], [Nm]
-        (warn ";; too large equality error in wrench torque opt ~A~%" (distance (transform equality-matrix ret) equality-vector))
+        (when debug (warn ";; too large equality error in wrench torque opt ~A~%" (distance (transform equality-matrix ret) equality-vector)))
         (setq ret nil))
       (if ret
           (let ((ret-wrench (if use-min-inequality-violation-p (subseq ret 0 state-dim) ret)))
