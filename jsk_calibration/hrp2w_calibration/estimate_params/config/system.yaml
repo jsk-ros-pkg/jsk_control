@@ -1,0 +1,72 @@
+
+base_link: BODY
+
+sensors:
+
+  chains:
+    LARM_chain:
+      root: CHEST_LINK1
+      tip: LARM_cb_jig
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    RARM_chain:
+      root: CHEST_LINK1
+      tip: RARM_cb_jig
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    head_chain:
+      root: CHEST_LINK1
+      tip: HEAD_LINK1
+      cov:
+       joint_angles: [0.01, 0.01]
+      gearing: [1.0, 1.0]
+    torso_chain:
+      root: BODY
+      tip: CHEST_LINK1
+      cov:
+       joint_angles: [0.01, 0.01]
+      gearing: [1.0, 1.0]
+    LLEG_chain:
+      root: BODY
+      tip: LLEG_LINK6 # LLEG_LINK5?
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    RLEG_chain:
+      root: BODY
+      tip: RLEG_LINK6 # RLEG_LINK5?
+      cov:
+       joint_angles: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      gearing: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+  rectified_cams:
+    head_camera:
+      chain_id: head_chain  #TODO: get rid of this
+      frame_id: left_camera_optical_frame
+#      frame_id: HEAD_LINK1
+      baseline_shift: 0.0
+#      baseline_rgbd: 0.075 ## comment out if we run all_pipelines.launch with use_kinect
+      f_shift: 0.0
+      cx_shift: 0.0
+      cy_shift: 0.0
+      cov: {u: 0.25, v: 0.25, x: 0.25}
+
+  tilting_lasers: {}
+
+checkerboards:
+  mmurooka_board:
+    corners_x: 6
+    corners_y: 5
+    spacing_x: 0.03
+    spacing_y: 0.03
+
+transforms:
+  LARM_chain_cb:   [-0.1, 0, 0, 0, 0, 0]
+  RARM_chain_cb:   [0, 0, 0, 0, 0, 0]
+default_floating_initial_pose: [0.3, 0, 0.2, -1.2092, 1.2092, -1.2092]
+#default_floating_initial_pose: [0, 0, 0, 0, 0, 0]
+initial_poses: "/tmp/hrp2jsknt_calibration/initial_poses.yaml"
+# xyz: [-0.002956968077825933, 0.16898467170866147, -0.20050853695600393]
+# rpy: (-0.04425102767135782, 0.01876497698337332, -0.019873022766080706)
+

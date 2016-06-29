@@ -1,0 +1,51 @@
+
+  transforms:
+    LARM_JOINT0:     [ 0, 0, 0, 0.0, 1.0, 0.0 ]
+    LARM_JOINT1:     [ 0, 0, 0, 1.0, 0.0, 0.0 ]
+    LARM_JOINT2:     [ 0, 0, 0, 0.0, 0.0, 1.0 ]
+    LARM_JOINT3:     [ 0, 0, 0, 0.0, 1.0, 0.0 ]
+    LARM_JOINT4:     [ 0, 0, 0, 0.0, 0.0, 1.0 ]
+    LARM_JOINT5:     [ 0, 0, 0, 1.0, 0.0, 0.0 ]
+    LARM_JOINT6:     [ 0, 0, 0, 0.0, 0.0, 0.0 ] # do not move the last joint
+
+    RARM_JOINT0:     [ 0, 0, 0, 0.0, 1.0, 0.0 ]
+    RARM_JOINT1:     [ 0, 0, 0, 1.0, 0.0, 0.0 ]
+    RARM_JOINT2:     [ 0, 0, 0, 0.0, 0.0, 1.0 ]
+    RARM_JOINT3:     [ 0, 0, 0, 0.0, 1.0, 0.0 ]
+    RARM_JOINT4:     [ 0, 0, 0, 0.0, 0.0, 1.0 ]
+    RARM_JOINT5:     [ 0, 0, 0, 1.0, 0.0, 0.0 ]
+    RARM_JOINT6:     [ 0, 0, 0, 0.0, 0.0, 0.0 ] # do not move the last joint
+
+    HEAD_JOINT0:     [ 0, 0, 0, 0, 0, 1 ]
+    # HEAD_JOINT1:     [ 0, 0, 0, 0, 1, 0 ]
+    LARM_chain_cb:   [1, 1, 1, 1, 0, 1] # the axis which is the same direction as parent joint axis should not be caliblated
+    RARM_chain_cb:   [1, 1, 1, 1, 0, 1] # the axis which is the same direction as parent joint axis should not be caliblated 
+    hrp2_to_multisense: [1, 1, 1, 1, 1, 1]
+
+  chains:
+    LARM_chain:
+      gearing: [0, 0, 0, 0, 0, 0, 0]
+    RARM_chain:
+      gearing: [0, 0, 0, 0, 0, 0, 0]
+    LLEG_chain:
+      gearing: [0, 0, 0, 0, 0, 0]
+    RLEG_chain:
+      gearing: [0, 0, 0, 0, 0, 0]
+    head_chain:
+      gearing: [0, 0]
+    torso_chain:
+      gearing: [0, 0]
+
+  rectified_cams:
+    head_camera:
+      baseline_shift: 0
+      f_shift: 0
+      cx_shift: 0
+      cy_shift: 0
+
+  tilting_lasers: {}
+
+  checkerboards:
+    mmurooka_board:
+      spacing_x: 0
+      spacing_y: 0

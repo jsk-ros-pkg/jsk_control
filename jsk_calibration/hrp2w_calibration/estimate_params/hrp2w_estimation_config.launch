@@ -1,0 +1,49 @@
+<launch>
+
+  <group ns="calibration_config" clear_params="true">
+    <rosparam file="$(find jsk_calibration)/hrp2w_calibration/estimate_params/config/system.yaml" command="load" />
+
+    <group ns="cal_steps">
+
+      <group ns="hrp2w - 00 - Estimating Checkerboard Locations">
+        <param name="free_params" textfile="$(find jsk_calibration)/hrp2w_calibration/estimate_params/config/free_cb_locations.yaml" />
+        <param name="use_cov" type="bool" value="False" />
+        <rosparam>
+          sensors:
+          - LARM_chain
+          - RARM_chain
+          - head_camera
+        </rosparam>
+        <param name="output_filename" type="string" value="cb_calib_0" />
+      </group>
+
+      <group ns="hrp2w - 01 - Adding Camera Locations">
+        <param name="free_params" textfile="$(find jsk_calibration)/hrp2w_calibration/estimate_params/config/free_cameras.yaml" />
+        <param name="use_cov" type="bool" value="True" />
+        <rosparam>
+          sensors:
+          - LARM_chain
+          - RARM_chain
+          - head_camera
+        </rosparam>
+        <param name="output_filename" type="string" value="cam_calib_1" />
+      </group>
+
+      <group ns="hrp2w - 02 - Joint Offset">
+        <param name="free_params" textfile="$(find jsk_calibration)/hrp2w_calibration/estimate_params/config/free_arms.yaml" />
+        <param name="use_cov" type="bool" value="True" />
+        <rosparam>
+          sensors:
+          - LARM_chain
+          - RARM_chain
+          - head_chain
+          - head_camera
+        </rosparam>
+        <param name="output_filename" type="string" value="jt_calib_2" />
+      </group>
+
+    </group>
+
+  </group>
+
+</launch>
