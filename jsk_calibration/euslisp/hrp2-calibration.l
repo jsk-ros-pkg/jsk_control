@@ -568,69 +568,81 @@
                       :robot-model robot
                       :reset-method :reset-pose
                       :camera-method camera-method
-                      :filter-sampling-coords
-                      '(lambda (c)
-                         (> (elt (send c :worldpos) 1) 0))
+                      ;;:filter-sampling-coords
+                      ;;'(lambda (c)
+                      ;;(> (elt (send c :worldpos) 1) 0))
                       :sampling-joint
                       (list
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-p)
+                                 :max-angle 35
+                                 :min-angle -10
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
-                                 :min-angle 0
-                                 :step-angle 15))
+                                 :max-angle 36
+                                 :min-angle -6
+                                 :step-angle 14))
                       :distances
-                      (range-equivalents 520 640 60)
+                      (range-equivalents 500 700 50)
                       :angles
-                      (range-equivalents (deg2rad -30) (deg2rad 120) (deg2rad 30))
+                      (list (deg2rad 40) (deg2rad 65) (deg2rad 90) (deg2rad 105))
                       :x-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -15) (deg2rad -5) (deg2rad 5))
                       :y-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad 30) (deg2rad 15) (deg2rad 0))
                       :board (make-mmurooka-board)
                       :end-effector-offset
-                      (let ((c (make-coords :pos (float-vector (+ 40) (+ 70 65 80) 0))))
-                        (send c :rotate (deg2rad -90) :y)
-                        (send c :rotate (deg2rad 90) :z)
-                        c)))
+                      (make-coords :pos (float-vector 165 0 45)
+                                   :rpy (list 0 0 0))
+                      ;;(let ((c (make-coords :pos (float-vector (+ 40) (+ 70 65 80) 0))))
+                      ;;(send c :rotate (deg2rad -90) :y)
+                      ;;(send c :rotate (deg2rad 90) :z)
+                      ;;c)
+                      ))
       (send self :add-motion :rarm
             (instance calibration-motion
                       :init
                       :prompt "Please put the checkerboard in the right hand"
                       :chain-ids '("RARM_chain" "head_chain")
                       :limb :rarm
-                      :angles           ;-90
-                      ;;(list (deg2rad -30))
-                      (range-equivalents (deg2rad -100) (deg2rad 0) (deg2rad 30))
+                      :angles
+                      (list (deg2rad 75) (deg2rad 90) (deg2rad 115) (deg2rad 140))
                       :x-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad -5) (deg2rad 5) (deg2rad 15))
                       :y-angles
-                      (list (deg2rad -10) (deg2rad 0) (deg2rad 10))
+                      (list (deg2rad 0) (deg2rad 15) (deg2rad 30))
                       :collision-links collision-links
                       :robot-model robot
                       :reset-method :reset-pose
                       :camera-method camera-method
-                      :filter-sampling-coords
-                      '(lambda (c)
-                         (< (elt (send c :worldpos) 1) 0))
+                      ;;:filter-sampling-coords
+                      ;;'(lambda (c)
+                      ;;   (< (elt (send c :worldpos) 1) 0))
                       :sampling-joint
                       (list
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-p)
+                                 :max-angle 35
+                                 :min-angle -10
                                  :step-angle 15)
                        (instance sample-joint-information :init
                                  :joint (send robot :head :neck-y)
-                                 :step-angle 15))
+                                 :max-angle  6
+                                 :min-angle -36
+                                 :step-angle 14))
                       :distances
-                      (range-equivalents 520 720 60)
+                      (range-equivalents 500 700 50)
                       :board (make-mmurooka-board)
                       :end-effector-offset
-                      (let ((c (make-coords
-                                :pos (float-vector (+ 40) (- (+ 70 65 80)) 0))))
-                        (send c :rotate (deg2rad -90) :y)
-                        (send c :rotate (deg2rad 90) :z)
-                        c)))
+                      (make-coords :pos (float-vector 165 0 45)
+                                   :rpy (list 0 0 0))
+                      ;;(let ((c (make-coords
+                      ;;:pos (float-vector (+ 40) (- (+ 70 65 80)) 0))))
+                      ;;(send c :rotate (deg2rad -90) :y)
+                      ;;(send c :rotate (deg2rad 90) :z)
+                      ;;c)
+                      ))
       self)))
 
 
@@ -691,10 +703,11 @@
                           :init
                           :model-file "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2w-interface.l"
                           :model-class 'hrp2w-robot
+                          :head-camera-config "/camera/left"
                           :camera-method :CAMERA_C
-			  ))
+                          ))
   (send *calib* :generate-motions)
-  (send *calib* :generate-files "package://jsk_calibration/hrp2jsknt_calibration")
+  (send *calib* :generate-files "package://jsk_calibration/hrp2w_calibration")
   )
 ;; (load "hrp2-calibration.l")
 ;; (test)

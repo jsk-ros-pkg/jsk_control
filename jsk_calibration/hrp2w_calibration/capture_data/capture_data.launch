@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="jsk_calibration" type="joint_states_appender.py" name="joint_states_appender"/>
+  <group>
+    <remap from="/joint_states" to="/joint_states_appended" />
+    <include file="$(find jsk_calibration)/hrp2jsknt_calibration/capture_data/all_viewers.launch"/>
+    <include file="$(find jsk_calibration)/hrp2jsknt_calibration/capture_data/all_pipelines.launch"/>
+    <include file="$(find jsk_calibration)/hrp2jsknt_calibration/capture_data/capture_exec.launch"/>
+  </group>
+</launch>
