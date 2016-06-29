@@ -11,7 +11,7 @@
 ;;     =>X=|x1 x2|, H=2*|1 1/2;1/2 2|
 ;; =>2.85714 2.28571
 (defun demo-eus-qpOASES1
-  ()
+  (&key (solve-qp-mode :qp))
   "Demo for unbounded QP."
   (let* ((X0 (float-vector 0 0))
          (H (scale-matrix
@@ -23,7 +23,8 @@
          (ret (solve-qpoases-qp
                :initial-state x0
                :eval-weight-matrix H
-               :eval-coeff-vector q)))
+               :eval-coeff-vector q
+               :solve-qp-mode solve-qp-mode)))
     (warn ";; solution ~A => ~A~%"
           ret
           (setq ret
@@ -39,7 +40,7 @@
 ;; s.t. |2 1|X = 2
 ;; =>-0.142857 2.28571
 (defun demo-eus-qpOASES2
-  ()
+  (&key (solve-qp-mode :qp))
   "Demo for QP with equality constraint."
   (let* ((X0 (float-vector 10 10))
          (H (scale-matrix
@@ -57,7 +58,8 @@
                :eval-weight-matrix H
                :eval-coeff-vector q
                :equality-matrix A
-               :equality-vector B)))
+               :equality-vector B
+               :solve-qp-mode solve-qp-mode)))
     (warn ";; solution ~A => ~A~%"
           ret
           (setq ret (eps-v= (float-vector (/ -1.0 7.0) (/ 16.0 7.0)) ret)))
@@ -73,7 +75,7 @@
 ;;      X>=0
 ;; =>0.285714 0.357143
 (defun demo-eus-qpOASES3
-  ()
+  (&key (solve-qp-mode :qp))
   "Demo for simply-bounded QP with equality constraint."
   (let* ((X0 (float-vector 10 10))
          (H (make-matrix
@@ -91,7 +93,8 @@
                :eval-coeff-vector q
                :equality-matrix A
                :equality-vector B
-               :state-min-vector LB)))
+               :state-min-vector LB
+               :solve-qp-mode solve-qp-mode)))
     (warn ";; solution ~A => ~A~%"
           ret
           (setq ret (eps-v= (float-vector (/ 2.0 7.0) (/ 5.0 14.0)) ret)))
@@ -101,7 +104,7 @@
 
 ;; In feasible
 (defun demo-eus-qpOASES4
-  ()
+  (&key (solve-qp-mode :qp))
   "Demo for infeasible QP."
   (let* ((X0 (float-vector 0 0))
          (H (scale-matrix
@@ -120,6 +123,7 @@
                 :eval-coeff-vector q
                 :state-min-vector LB
                 :state-max-vector UB
+                :solve-qp-mode solve-qp-mode
                 ))
          ;; check-status = nil => something is returned.
          (ret1 (solve-qpoases-qp
@@ -129,6 +133,7 @@
                 :state-min-vector LB
                 :state-max-vector UB
                 :check-status nil
+                :solve-qp-mode solve-qp-mode
                 )))
     (warn ";; solution => ~A, ~A~%" ret0 ret1)
     ;; correct solution
@@ -149,7 +154,7 @@
 ;;    |x1 x2|>=0
 ;;=>[22.5 22.5]
 (defun demo-eus-qpOASES5
-  ()
+  (&key (solve-lp-mode :lp))
   "Demo for LP with inequality."
   (let* ((X0 (float-vector 0 0 0 0))
          (q (scale -1 (float-vector 5 4)))
@@ -165,6 +170,7 @@
                :state-min-vector (float-vector 0 0)
                :inequality-matrix A
                :inequality-max-vector ubA
+               :solve-lp-mode solve-lp-mode
                )))
     (warn ";; solution ~A => ~A~%"
           ret
@@ -185,7 +191,7 @@
 ;;      X>=0
 ;; =>[18/5, 8/5, 0, 0]
 (defun demo-eus-qpOASES6
-  ()
+  (&key (solve-lp-mode :lp))
   "Demo for LP with equality."
   (let* ((X0 (float-vector 0 0 0 0))
          (q (float-vector -1 -1 0 0))
@@ -200,6 +206,7 @@
                :state-min-vector (float-vector 0 0 0 0)
                :equality-matrix A
                :equality-vector ubA
+               :solve-lp-mode solve-lp-mode
                )))
     (warn ";; solution ~A => ~A~%"
           ret
@@ -217,7 +224,7 @@
 ;;        |-inf 0 0|<=X<=|inf inf inf|
 ;; =>[2.0 0.0 0.0]
 (defun demo-eus-qpOASES7
-  ()
+  (&key (solve-lp-mode :lp))
   "Demo for LP with equality + unbound."
   (let* ((X0 (float-vector 0 0 0 0))
          (q (float-vector 1 1 0))
@@ -231,6 +238,7 @@
                :state-min-vector (float-vector -1e35 0 0)
                :equality-matrix A
                :equality-vector ubA
+               :solve-lp-mode solve-lp-mode
                )))
     (warn ";; solution ~A => ~A~%"
           ret
@@ -240,6 +248,25 @@
     ret
     ))
 
+;;
+(defun demo-eus-qpOASES-all
+  (&key (mode :qp/lp))
+  "Demo for all QP and LP."
+  (let ((qp-mode (case mode
+                       (:qp/lp :qp)
+                       (:sqp/slp-with-hotstart :sqp-with-hotstart)))
+        (lp-mode (case mode
+                       (:qp/lp :lp)
+                       (:sqp/slp-with-hotstart :slp-with-hotstart))))
+    (and (demo-eus-qpOASES1 :solve-qp-mode qp-mode)
+         (demo-eus-qpOASES2 :solve-qp-mode qp-mode)
+         (demo-eus-qpOASES3 :solve-qp-mode qp-mode)
+         (demo-eus-qpOASES4 :solve-qp-mode qp-mode)
+         (demo-eus-qpOASES5 :solve-lp-mode lp-mode)
+         (demo-eus-qpOASES6 :solve-lp-mode lp-mode)
+         (demo-eus-qpOASES7 :solve-lp-mode lp-mode))
+    ))
+
 (warn ";; (demo-eus-qpOASES1) ;; ~A~%" (documentation 'demo-eus-qpOASES1))
 (warn ";; (demo-eus-qpOASES2) ;; ~A~%" (documentation 'demo-eus-qpOASES2))
 (warn ";; (demo-eus-qpOASES3) ;; ~A~%" (documentation 'demo-eus-qpOASES3))
@@ -247,3 +274,5 @@
 (warn ";; (demo-eus-qpOASES5) ;; ~A~%" (documentation 'demo-eus-qpOASES5))
 (warn ";; (demo-eus-qpOASES6) ;; ~A~%" (documentation 'demo-eus-qpOASES6))
 (warn ";; (demo-eus-qpOASES7) ;; ~A~%" (documentation 'demo-eus-qpOASES7))
+(warn ";; (demo-eus-qpOASES-all) ;; ~A~%" (documentation 'demo-eus-qpOASES-all))
+(warn ";; (demo-eus-qpOASES-all :mode :sqp/slp-with-hotstart) ;; ~A with hotstart~%" (documentation 'demo-eus-qpOASES-all))
