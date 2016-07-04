@@ -1,15 +1,15 @@
 <launch>
   <!-- <arg name="fixed_frame_id" default="odom" /> -->
   <arg name="fixed_frame_id" default="lleg_end_coords" />
-  <arg name="image_input" default="/multisense_local/organized_image_points2_color" />
+  <arg name="stereo_input" default="/multisense_local/organized_image_points2_color" />
   <arg name="laser_input" default="/full_cloud2" />
 
   <include file="$(find jsk_pcl_ros)/launch/visualize_plane_distance.launch">
-    <arg name="namespace" value="visualize_iamge_error"/>
+    <arg name="namespace" value="visualize_stereo_error"/>
     <arg name="fixed_frame_id" value="$(arg fixed_frame_id)"/>
-    <arg name="input" value="$(arg image_input)"/>
+    <arg name="input" value="$(arg stereo_input)"/>
   </include>
-  
+
   <include file="$(find jsk_pcl_ros)/launch/visualize_plane_distance.launch">
     <arg name="namespace" value="visualize_laser_error"/>
     <arg name="fixed_frame_id" value="$(arg fixed_frame_id)"/>
@@ -20,5 +20,4 @@
   <node name="jaxon_gazebo_rviz" pkg="rviz" type="rviz"
         args="-sync -d $(find jsk_calibration)/config/camera_calib.rviz"
         respawn="true"/>
-  
 </launch>

@@ -520,7 +520,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.01
       Style: Flat Squares
-      Topic: /visualize_iamge_error/colorize_points/output
+      Topic: /visualize_stereo_error/colorize_points/output
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
