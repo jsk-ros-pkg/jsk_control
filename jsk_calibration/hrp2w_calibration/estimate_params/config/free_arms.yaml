@@ -20,6 +20,7 @@
     # HEAD_JOINT1:     [ 0, 0, 0, 0, 1, 0 ]
     LARM_chain_cb:   [1, 1, 1, 1, 0, 1] # the axis which is the same direction as parent joint axis should not be caliblated
     RARM_chain_cb:   [1, 1, 1, 1, 0, 1] # the axis which is the same direction as parent joint axis should not be caliblated 
+    # camera_ns
     hrp2_to_multisense: [1, 1, 1, 1, 1, 1]
 
   chains:

@@ -1,7 +1,8 @@
 head_camera:
-  cb_detector_config: /camera/left/cb_detector_config
-  led_detector_config: /camera/left/led_detector
-  settler_config: /camera/left/monocam_settler_config
+  # camera_ns
+  cb_detector_config:  /multisense/left/cb_detector_config
+  led_detector_config: /multisense/left/led_detector
+  settler_config:      /multisense/left/monocam_settler_config
   configs:
     mmurooka_board:
       settler:
