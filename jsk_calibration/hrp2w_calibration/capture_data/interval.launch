@@ -7,8 +7,8 @@
         output="screen">
     <remap from="LARM_chain" to="LARM_chain/settled_interval" />
     <remap from="RARM_chain" to="RARM_chain/settled_interval" />
-    <remap from="LLEG_chain" to="LLEG_chain/settled_interval" />
-    <remap from="torso_chain" to="torso_chain/settled_interval" />
+    <remap from="head_chain" to="head_chain/settled_interval" />
+    <!--remap from="torso_chain" to="torso_chain/settled_interval" /-->
     <remap from="head_camera" to="$(arg camera_ns)/settled_interval" />
   </node>
 </launch>

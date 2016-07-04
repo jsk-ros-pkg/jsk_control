@@ -3,7 +3,7 @@
 
   <include file="$(find jsk_calibration)/hrp2w_calibration/capture_data/settler.launch" />
 
-  <include file="$(find calibration_launch)/capture_data/monocam_pipeline.launch" ns="($arg camera_ns)">
+  <include file="$(find calibration_launch)/capture_data/monocam_pipeline.launch" ns="$(arg camera_ns)">
     <arg name="image_topic" value="image_rect_color"/> <!-- this should be image proc -->
   </include>
   <include file="$(find jsk_calibration)/hrp2w_calibration/capture_data/interval.launch" />
