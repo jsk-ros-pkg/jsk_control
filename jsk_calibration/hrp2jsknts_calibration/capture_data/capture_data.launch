@@ -1,9 +1,21 @@
 <launch>
+  <!-- <arg name="camera_ns" value="/multisense/left" /> -->
+  <arg name="camera_ns" default="/camera_remote/rgb" />
+
+  <!-- <remap from="$(arg camera_ns)/image_rect_throttle" to="$(arg camera_ns)/image_rect_color" /> -->
+  <!-- <node pkg="topic_tools" type="throttle" /> -->
+
   <node pkg="jsk_calibration" type="joint_states_appender.py" name="joint_states_appender"/>
   <group>
     <remap from="/joint_states" to="/joint_states_appended" />
-    <include file="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/all_viewers.launch"/>
-    <include file="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/all_pipelines.launch"/>
-    <include file="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/capture_exec.launch"/>
+    <include file="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/all_viewers.launch">
+      <arg name="camera_ns" value="$(arg camera_ns)" />
+    </include>
+    <include file="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/all_pipelines.launch">
+      <arg name="camera_ns" value="$(arg camera_ns)" />
+    </include>
+    <include file="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/capture_exec.launch">
+      <arg name="camera_ns" value="$(arg camera_ns)" />
+    </include>
   </group>
 </launch>
