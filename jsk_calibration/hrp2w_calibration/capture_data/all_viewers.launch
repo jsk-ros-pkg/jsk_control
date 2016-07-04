@@ -8,7 +8,7 @@
   <param name="/multisense/left/annotated_viewer/filename_format" type="string" value="/tmp/hrp2w_calibration/cb_fail/cb_monocam_%04i.jpg" />
 
   <include file="$(find calibration_launch)/capture_data/annotated_viewer.launch"
-           ns="($arg camera_ns)" >
+           ns="$(arg camera_ns)" >
     <arg name="image_topic" value="image_rect_annotated" />
   </include>
 

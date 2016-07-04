@@ -28,10 +28,6 @@
       gearing: [0, 0, 0, 0, 0, 0, 0]
     RARM_chain:
       gearing: [0, 0, 0, 0, 0, 0, 0]
-    LLEG_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
-    RLEG_chain:
-      gearing: [0, 0, 0, 0, 0, 0]
     head_chain:
       gearing: [0, 0]
     torso_chain:

@@ -44,23 +44,14 @@ RARM_chain:
           - 0.002
         max_step: 1.0
         cache_size: 1500
-LLEG_chain:
-  settler_config: /LLEG_chain/settler_config
+head_chain:
+  settler_config: /head_chain/settler_config
   configs:
     tight_tol:
       settler:
         joint_names:
-        tolerances:
-        max_step: 1.0
-        cache_size: 1500
-torso_chain:
-  settler_config: /torso_chain/settler_config
-  configs:
-    tight_tol:
-      settler:
-        joint_names:
-          - CHEST_JOINT0
-          - CHEST_JOINT1
+          - HEAD_JOINT0
+          - HEAD_JOINT1
         tolerances:
           - 0.002
           - 0.002
