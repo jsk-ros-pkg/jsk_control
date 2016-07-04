@@ -1,13 +1,15 @@
 <launch>
+  <arg name="camera_ns" default="/camera_remote/rgb" />
+  <!-- <arg name="camera_ns" default="/multisense/left" /> -->
   <node type="capture_exec.py"
         pkg="calibration_launch"
         name="calibration_exec"
         args="$(find jsk_calibration)/hrp2jsknts_calibration/capture_data/samples/ $(find jsk_calibration)/hrp2jsknts_calibration/capture_data/hardware_config $(find jsk_calibration)/hrp2jsknts_calibration/estimate_params/config/system.yaml"
         output="screen" >
-    <remap from="head_camera/camera_info" to="/multisense/left/camera_info"/>
-    <remap from="head_camera/image_rect"  to="/multisense/left/image_rect_throttle"/>
-    <remap from="head_camera/image"       to="/multisense/left/image_rect_throttle"/>
-    <remap from="head_camera/features"    to="/multisense/left/features"/>
+    <remap from="head_camera/camera_info" to="$(arg camera_ns)/camera_info"/>
+    <remap from="head_camera/image_rect"  to="$(arg camera_ns)/image_rect_throttle"/>
+    <remap from="head_camera/image"       to="$(arg camera_ns)/image_rect_throttle"/>
+    <remap from="head_camera/features"    to="$(arg camera_ns)/features"/>
   </node>
 
   <node type="urdf_pub.py" pkg="calibration_launch" name="urdf_pub"/>

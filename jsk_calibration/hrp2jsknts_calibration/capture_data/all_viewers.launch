@@ -1,13 +1,14 @@
 <launch>
+  <arg name="camera_ns" default="/multisense/left" />
 
   <!-- Hack to create the directory -->
   <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/hrp2jsknts_calibration" />
   <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/hrp2jsknts_calibration/cb_fail" />
 
-  <param name="/multisense/left/annotated_viewer/filename_format" type="string" value="/tmp/hrp2jsknts_calibration/cb_fail/cb_monocam_%04i.jpg" />
+  <param name="$(arg camera_ns)/annotated_viewer/filename_format" type="string" value="/tmp/hrp2jsknts_calibration/cb_fail/cb_monocam_%04i.jpg" />
 
   <include file="$(find calibration_launch)/capture_data/annotated_viewer.launch"
-           ns="/multisense/left" >
+           ns="$(arg camera_ns)" >
     <arg name="image_topic" value="image_rect_annotated" />
   </include>
 

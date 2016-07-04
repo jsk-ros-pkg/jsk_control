@@ -3,19 +3,19 @@
 ## How to hand/eye calibrate
 ### 1. Setup
 0. Compile `hrpsys_ros_bridge_tutorials` with HRP2JSKNTS model (The model is not public).
-
-  ```
+```
 $ catkin build hrpsys_ros_bridge_tutorials
 ```
+0. You may have to change frame_id or other sensor related codes hard coded in system.yaml, cam_config.yaml, free_arms.yaml, free_cb_locations.yaml, system.yaml
 1. Before calibrate hand/eye, Please confirm that your intrinsic parameter is calibrated.
 
 ### 2. Capture data
-1. run `capture_data.launch`
-
-  ```
+1. run `capture_data.launch` (You may have to set camera_ns to your camera ns)
+```
 $ roscd jsk_calibration/hrp2jsknts_calibration/capture_data
 $ roslaunch capture_data.launch
 ```
+
 1. Robot moves LEFT arm. Please attach checker board to its left hand.
 2. Press enter to run capturing
 3. After a while robot moves RIGHT arm. Please attach checker board to right hand.
