@@ -26,19 +26,20 @@ you run `capture_data.launch`
 
 ### 3. Estimate parameter
 1. If you have some samples failed to capture data, please remove line from initial_poses.yaml
-2. start roscore
+2. Check `spacing_x:` and `spacing_y:` values of `checkerboards:` in `estimate_params/config/system.yaml`. Please edit these values to be measurement values for actual checkerboard.
+3. start roscore
 
   ```
 $ rossetlocal
 $ roscore
 ```
-3. run `calibrate_hrp2jsknts.sh`.
+4. run `calibrate_hrp2jsknts.sh`.
 
   ```
 $ rosssetlocal
 $ ./calibrate_hrp2jsknts.sh
 ```
-4. After a while (1 hour), you will get calibrated urdf file. The name of urdf file is
+5. After a while (1 hour), you will get calibrated urdf file. The name of urdf file is
 `robot_calibrated_YYYY_MM_DD_HH_SS.xml`.
 Uncalibrated urdf file is `robot_uncalibrated_YYYY_MM_DD_HH_SS.xml`.
 
