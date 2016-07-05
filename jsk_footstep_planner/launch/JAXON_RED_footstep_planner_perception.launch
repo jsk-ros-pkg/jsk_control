@@ -1,0 +1,107 @@
+<launch>
+  <arg name="use_joy" default="true"/>
+  <arg name="joy_dev" default="/dev/input/js1"/>
+
+  <include file="$(find jsk_robot_startup)/launch/slam_octomap.launch"/>
+  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
+    <remap from="~pointcloud_model" to="/accumulated_heightmap_pointcloud_static/output" />
+    <remap from="~obstacle_model" to="octomap_point_cloud_centers" />
+    <rosparam>
+      use_pointcloud_model: true
+      use_lazy_perception: true
+      use_local_movement: true
+      project_start_state: true
+      project_goal_state: true
+      #use_obstacle_model: false
+      use_obstacle_model: true
+      obstacle_resolution: 0.1
+    </rosparam>
+    <rosparam>
+      footstep_size_x: 0.24
+      footstep_size_y: 0.14
+      collision_bbox_size: [0.4, 1.2, 1.0]
+      collision_bbox_offset: [0, 0, 0.8]
+    </rosparam>
+    <!-- successors -->
+    <rosparam>
+      successors:
+      - x: 0
+        y: -0.2
+        theta: 0
+      - x: 0
+        y: -0.3
+        theta: 0
+      - x: 0
+        y: -0.15
+        theta: 0
+      - x: 0.15
+        y: -0.2
+        theta: 0
+#      - x: 0.25
+#        y: -0.2
+#        theta: 0
+#      - x: 0.3
+#        y: -0.2
+#        theta: 0
+      - x: 0.1
+        y: -0.2
+        theta: 0
+      - x: -0.1
+        y: -0.2
+        theta: 0
+      - x: 0
+        y: -0.2
+        theta: 0.17
+      - x: 0
+        y: -0.3
+        theta: 0.17
+      - x: 0.2
+        y: -0.2
+        theta: 0.17
+#      - x: 0.25
+#        y: -0.2
+#        theta: 0.17
+      - x: 0.1
+        y: -0.2
+        theta: 0.17
+      - x: 0
+        y: -0.2
+        theta: -0.17
+      - x: 0
+        y: -0.3
+        theta: -0.17
+      - x: 0.15
+        y: -0.2
+        theta: -0.17
+#      - x: 0.25
+#        y: -0.2
+#        theta: -0.17
+      - x: 0.1
+        y: -0.2
+        theta: -0.17
+    </rosparam>
+  </node>
+  <node pkg="jsk_footstep_planner" type="footstep_marker" name="footstep_marker" output="screen">
+    <remap from="/footstep_controller" to="jaxon_footstep_controller"/>
+    <rosparam subst_value="true">
+      disable_tf: false
+      frame_id: map
+      footstep_size_x: 0.237418
+      footstep_size_y: 0.134017
+      lleg_footstep_offset: [0.015502, 0.010078, 0.0]
+      rleg_footstep_offset: [0.015502, -0.010078, 0.0]
+    </rosparam>
+  </node>
+
+  <node pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find iori_sandbox)/config/jaxon_footstep_planner_perception.rviz" />
+  <node pkg="jsk_footstep_controller" type="jaxon-footstep-controller.l" name="jaxon_footstep_controller"
+        output="screen">
+  </node>
+  <group if="$(arg use_joy)">
+    <include file="$(find iori_sandbox)/launch/joy_pose6d.launch">
+      <arg name="CONTROLLER_DEV" value="$(arg joy_dev)"/>
+    </include>
+  </group>
+
+</launch>

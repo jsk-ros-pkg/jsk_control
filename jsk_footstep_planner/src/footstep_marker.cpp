@@ -160,6 +160,11 @@ namespace jsk_footstep_planner
     // pose stamped command interface
     sub_pose_stamped_command_ = pnh_.subscribe("pose_stamped_command", 1, &FootstepMarker::poseStampedCommandCallback, this);
 
+    // service servers
+    srv_reset_marker_ = pnh_.advertiseService("reset_marker", &FootstepMarker::resetMarkerService, this);
+    srv_execute_footstep_ = pnh_.advertiseService("execute_footstep", &FootstepMarker::executeFootstepService, this);
+    srv_get_footstep_marker_pose_ = pnh_.advertiseService("get_footstep_marker_pose", &FootstepMarker::getFootstepMarkerPoseService, this);
+
     pub_plan_result_ = pnh_.advertise<jsk_footstep_msgs::FootstepArray>("output/plan_result", 1);
     //JSK_ROS_INFO("waiting for footstep_planner");
     //ac_planner_.waitForServer();
@@ -354,7 +359,9 @@ namespace jsk_footstep_planner
     if (planning_state_ == FINISHED) {
       jsk_footstep_msgs::ExecFootstepsGoal goal;
       goal.footstep = plan_result_;
+      ROS_INFO("Execute footsteps");
       ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
+      ac_exec_.waitForResult(ros::Duration(120.0));
     }
     else if (planning_state_ == ON_GOING) {
       ROS_FATAL("cannot execute footstep because planning state is ON_GOING");
@@ -794,6 +801,55 @@ namespace jsk_footstep_planner
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr dummy_feedback_ptr
       = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
     processFeedbackCB(dummy_feedback_ptr);
+  }
+  
+  bool FootstepMarker::resetMarkerService(
+    std_srvs::Empty::Request& req,
+    std_srvs::Empty::Response& res)
+  {
+    // forcely call resetMarkerCB to reset marker. feedback msg does not used in restMarkerCB.
+    visualization_msgs::InteractiveMarkerFeedback dummy_feedback;
+    const visualization_msgs::InteractiveMarkerFeedbackConstPtr dummy_feedback_ptr
+      = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
+    resetMarkerCB(dummy_feedback_ptr);
+    return true;
+  }
+
+  bool FootstepMarker::executeFootstepService(
+    std_srvs::Empty::Request& req,
+    std_srvs::Empty::Response& res)
+  {
+    // forcely call executeFootstepCB to execute footstep. feedback msg does not used in executeFootstepCB.
+    visualization_msgs::InteractiveMarkerFeedback dummy_feedback;
+    const visualization_msgs::InteractiveMarkerFeedbackConstPtr dummy_feedback_ptr
+      = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
+    executeFootstepCB(dummy_feedback_ptr);
+    return true;
+    // check footstep result
+    if (ac_exec_.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  bool FootstepMarker::getFootstepMarkerPoseService(
+    jsk_interactive_marker::GetTransformableMarkerPose::Request& req,
+    jsk_interactive_marker::GetTransformableMarkerPose::Response& res)
+  {
+    boost::mutex::scoped_lock lock(planner_mutex_);
+    std::string target_name = req.target_name;
+    visualization_msgs::InteractiveMarker int_marker;
+    if (server_->get(target_name, int_marker)) {
+      geometry_msgs::PoseStamped ret_pose_stamped;
+      ret_pose_stamped.header = int_marker.header;
+      ret_pose_stamped.pose = int_marker.pose;
+      res.pose_stamped = ret_pose_stamped;
+      return true;
+    } else {
+      ROS_WARN("There is no marker named %s", target_name.c_str());
+      return false;
+    }
   }
   
 }
