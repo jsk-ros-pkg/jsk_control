@@ -46,8 +46,8 @@ checkerboards:
   mmurooka_board:
     corners_x: 6
     corners_y: 5
-    spacing_x: 0.02752
-    spacing_y: 0.02752
+    spacing_x: 0.03
+    spacing_y: 0.03
 
 transforms:
   LARM_chain_cb:   [0.128, 0, 0.075, 0, 0, 0]
