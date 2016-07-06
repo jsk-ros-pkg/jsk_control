@@ -1,0 +1,27 @@
+<launch>
+  <arg name="CMDVEL_REMAP" default="/cmd_vel" />
+  <arg name="CONTROLLER_TYPE" default="xbox" />
+
+  <node pkg="joy" type="joy_node" name="ps3_joy0" output="screen" >
+    <param name="dev" type="string" value="/dev/input/js0" />
+    <param name="deadzone" value="0.2" />
+    <param name="autorepeat_rate" value="40" />
+    <param name="coalesce_interval" value="0.025" />
+    <remap from="/joy" to="/joy_cmd_vel/joy" />
+  </node>
+
+  <node pkg="jsk_teleop_joy" type="joy.py" name="joy" output="screen">
+    <param name="controller_type" value="$(arg CONTROLLER_TYPE)" />
+    <rosparam subst_value="true">
+      plugins:
+        'cmd-vel':
+           class: 'JoyCmdVel'
+           args:
+             follow_view: true
+             cmd_vel: $(arg CMDVEL_REMAP)
+             publish_cmd_vel: true
+    </rosparam>
+    <remap from="/joy" to="/joy_cmd_vel/joy" />
+  </node>
+  
+</launch>
