@@ -131,8 +131,9 @@ namespace jsk_footstep_controller
     virtual bool computeMidCoords(const ros::Time& stamp);
     virtual bool computeMidCoordsFromSingleLeg(const ros::Time& stamp,
                                                bool use_left_leg);
-    virtual bool waitForEndEffectorTrasnformation(const ros::Time& stamp);
-    virtual bool waitForSensorFrameTransformation(const ros::Time& stamp,
+    virtual bool waitForEndEffectorTransformation(const ros::Time& stamp);
+    virtual bool waitForSensorFrameTransformation(const ros::Time& lstamp,
+                                                  const ros::Time& rstamp,
                                                   const std::string& lsensor_frame,
                                                   const std::string& rsensor_frame);
     virtual bool updateGroundTF();
