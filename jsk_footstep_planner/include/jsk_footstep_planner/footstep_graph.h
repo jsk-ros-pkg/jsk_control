@@ -76,6 +76,7 @@ namespace jsk_footstep_planner
       support_check_x_sampling_(3),
       support_check_y_sampling_(3),
       support_check_vertex_neighbor_threshold_(0.02),
+      skip_cropping_(false),
       zero_state_(new FootstepState(0,
                                     Eigen::Affine3f::Identity(),
                                     Eigen::Vector3f::UnitX(),
@@ -203,6 +204,7 @@ namespace jsk_footstep_planner
     virtual void setSupportCheckXSampling(int n) { support_check_x_sampling_ = n; }
     virtual void setSupportCheckYSampling(int n) { support_check_y_sampling_ = n; }
     virtual void setSupportCheckVertexNeighborThreshold(double d) { support_check_vertex_neighbor_threshold_ = d; }
+    virtual void setSkipCropping(bool v) { skip_cropping_ = v; }
     virtual void setTransitionLimit(TransitionLimit::Ptr limit) { transition_limit_ = limit; }
     virtual TransitionLimit::Ptr getTransitionLimit() { return transition_limit_; }
     virtual void setGlobalTransitionLimit(TransitionLimit::Ptr limit) { global_transition_limit_ = limit; }
@@ -263,6 +265,7 @@ namespace jsk_footstep_planner
     int support_check_x_sampling_;
     int support_check_y_sampling_;
     double support_check_vertex_neighbor_threshold_;
+    bool skip_cropping_;
     ros::WallDuration perception_duration_;
   private:
 

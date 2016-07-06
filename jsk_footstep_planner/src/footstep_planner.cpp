@@ -461,6 +461,7 @@ namespace jsk_footstep_planner
     graph_->setPlaneEstimationOutlierThreshold(plane_estimation_outlier_threshold_);
     graph_->setSupportCheckXSampling(support_check_x_sampling_);
     graph_->setSupportCheckYSampling(support_check_y_sampling_);
+    graph_->setSkipCropping(skip_cropping_);
     graph_->setSupportCheckVertexNeighborThreshold(support_check_vertex_neighbor_threshold_);
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
@@ -700,6 +701,7 @@ namespace jsk_footstep_planner
     support_check_x_sampling_ = config.support_check_x_sampling;
     support_check_y_sampling_ = config.support_check_y_sampling;
     support_check_vertex_neighbor_threshold_ = config.support_check_vertex_neighbor_threshold;
+    skip_cropping_ = config.skip_cropping;
     footstep_size_x_ = config.footstep_size_x;
     footstep_size_y_ = config.footstep_size_y;
     project_start_state_ = config.project_start_state;
