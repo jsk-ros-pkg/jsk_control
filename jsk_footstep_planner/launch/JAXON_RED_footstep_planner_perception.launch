@@ -94,12 +94,12 @@
   </node>
 
   <node pkg="rviz" type="rviz" name="rviz"
-        args="-d $(find iori_sandbox)/config/jaxon_footstep_planner_perception.rviz" />
+        args="-d $(find jsk_footstep_planner)/config/jaxon_footstep_planner_perception.rviz" />
   <node pkg="jsk_footstep_controller" type="jaxon-footstep-controller.l" name="jaxon_footstep_controller"
         output="screen">
   </node>
   <group if="$(arg use_joy)">
-    <include file="$(find iori_sandbox)/launch/joy_pose6d.launch">
+    <include file="$(find jsk_teleop_joy)/launch/joy_footstep_marker.launch">
       <arg name="CONTROLLER_DEV" value="$(arg joy_dev)"/>
     </include>
   </group>

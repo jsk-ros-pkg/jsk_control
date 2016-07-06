@@ -1,0 +1,27 @@
+<launch>
+    <arg name="CONTROLLER_DEV" default="/dev/input/js0"/>
+    <arg name="OUTPUT" default="/footstep_marker/pose_stamped_command"/>
+    <node pkg="joy" type="joy_node" name="joy_driver" output="screen" >
+      <param name="dev" type="string" value="$(arg CONTROLLER_DEV)" />
+      <param name="deadzone" value="0.2" />
+      <param name="autorepeat_rate" value="50" />
+      <param name="coalesce_interval" value="0.01" />
+      <remap from="/joy" to="joy" />
+    </node>
+    <node pkg="jsk_teleop_joy" type="joy.py" name="joy_manager" output="screen"
+          clear_params="true">
+      <remap from="/joy" to="joy" />
+      <remap from="/pose" to="$(arg OUTPUT)" />
+      <param name="controller_type" value="auto" />
+      <rosparam subst_value="true">
+        plugins:
+         'FootstepMarker':
+            class: 'JoyFootstepMarker'
+            args:
+              frame_id: map
+              set_pose: set_pose
+              use_tf: false
+              sync_rate: 1.0
+      </rosparam>
+    </node>
+</launch>
