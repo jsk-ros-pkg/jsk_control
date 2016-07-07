@@ -203,7 +203,7 @@ namespace jsk_footstep_controller
                                   tf::Vector3& rfoot_force)
   {
     try {
-      if (!waitForEndEffectorTrasnformation(lfoot.header.stamp)) {
+      if (!waitForSensorFrameTransformation(lfoot.header.stamp, rfoot.header.stamp, lfoot.header.frame_id, rfoot.header.frame_id)) {
         ROS_ERROR("[Footcoords::resolveForceTf] failed to lookup transformation for sensor value");
         return false;
       }
@@ -758,7 +758,7 @@ namespace jsk_footstep_controller
   bool Footcoords::computeMidCoordsFromSingleLeg(const ros::Time& stamp,
                                                  bool use_left_leg)
   {
-    if (!waitForEndEffectorTrasnformation(stamp)) {
+    if (!waitForEndEffectorTransformation(stamp)) {
       ROS_ERROR("[Footcoords::computeMidCoordsFromSingleLeg] Failed to lookup endeffector transformation");
       return false;
     }
@@ -802,7 +802,7 @@ namespace jsk_footstep_controller
   
   bool Footcoords::computeMidCoords(const ros::Time& stamp)
   {
-    if (!waitForEndEffectorTrasnformation(stamp)) {
+    if (!waitForEndEffectorTransformation(stamp)) {
       ROS_ERROR("[Footcoords::computeMidCoords] Failed to lookup endeffector transformation");
       return false;
     }
@@ -848,20 +848,21 @@ namespace jsk_footstep_controller
     }
   }
 
-  bool Footcoords::waitForSensorFrameTransformation(const ros::Time& stamp,
+  bool Footcoords::waitForSensorFrameTransformation(const ros::Time& lstamp,
+                                                    const ros::Time& rstamp,
                                                    const std::string& lsensor_frame,
                                                    const std::string& rsensor_frame)
   {
     // lfsensor -> lleg_end_coords
     if (!tf_listener_->waitForTransform(
-          lsensor_frame, lfoot_sensor_frame_, stamp, ros::Duration(1.0))) {
+          lsensor_frame, lfoot_sensor_frame_, lstamp, ros::Duration(1.0))) {
       ROS_ERROR("[Footcoords::waitForSensorFrameTransformation] failed to lookup transform between %s and %s",
                 lsensor_frame.c_str(),
                 lfoot_sensor_frame_.c_str());
       return false;
     }
     if (!tf_listener_->waitForTransform(
-          rsensor_frame, rfoot_sensor_frame_, stamp, ros::Duration(1.0))) {
+          rsensor_frame, rfoot_sensor_frame_, rstamp, ros::Duration(1.0))) {
       ROS_ERROR("[Footcoords::waitForSensorFrameTransformation] failed to lookup transform between %s and %s",
                 rsensor_frame.c_str(),
                 rfoot_sensor_frame_.c_str());
@@ -870,7 +871,7 @@ namespace jsk_footstep_controller
     return true;
   }
 
-  bool Footcoords::waitForEndEffectorTrasnformation(const ros::Time& stamp)
+  bool Footcoords::waitForEndEffectorTransformation(const ros::Time& stamp)
   {
     // odom -> lfoot
     if (!tf_listener_->waitForTransform(
