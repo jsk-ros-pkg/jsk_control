@@ -1,0 +1,11 @@
+<launch>
+  <arg name="use_correction" default="true"/>
+  <node pkg="jsk_footstep_planner" type="footstep-corrector-node.l" name="footstep_corrector"
+        output="screen" >
+    <rosparam subst_value="true">
+      map_frame: map
+      odom_frame: odom_init
+      use_correction: $(arg use_correction)
+    </rosparam>
+  </node>
+</launch>
