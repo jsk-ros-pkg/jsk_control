@@ -421,11 +421,13 @@
                       (rotation (unit-matrix))
                       (min-distance 0.0)
                       (orient-centerp nil)
-                      (center-pos (float-vector 0 0 0)))
-  (send robot :fix-leg-to-coords (make-coords))
+                      (center-pos (float-vector 0 0 0))
+                      (fullbody nil)
+                      (initial-pose nil))
   (let ((counter 0))
   (dolist (cell (send grid :cells))
-    (send robot :reset-pose)
+    (if initial-pose (send robot :angle-vector initial-pose) (send robot :reset-pose))
+    (if fullbody (send robot :fix-leg-to-coords (make-coords)))
     (if (< (distance2d (send robot :worldpos) (send cell :center-pos)) min-distance)
         (progn
           (warn "skip because it violtates min-distance~%")
@@ -436,14 +438,24 @@
           (setq rotation
                 (send (orient-coords-to-axis (make-coords :pos (send cell :center-pos)) (v- center-pos (send cell :center-pos))
                                              (if (cadr (member :rotation-axis ik-args)) (cadr (member :rotation-axis ik-args)) :z)) :rot)))
-        (if (send* robot :inverse-kinematics
-                   (make-coords :pos (send cell :center-pos)
-                                :rot rotation)
-                   :move-target move-target
-                   :link-list (send robot :link-list (send move-target :parent))
-                   :dump-command nil
-                   :warnp nil
-                   ik-args)
+        (if (if fullbody
+                (send* robot :fullbody-inverse-kinematics
+                       (append (list (make-coords :pos (send cell :center-pos)
+                                                  :rot rotation))
+                               (send-all (send robot :legs :end-coords) :copy-worldcoords))
+                       :move-target (append (list move-target) (send robot :legs :end-coords))
+                       :link-list (mapcar #'(lambda (mt) (send robot :link-list (send mt :parent))) (append (list move-target) (send robot :legs :end-coords)))
+                       :dump-command nil
+                       :warnp nil
+                       ik-args)
+              (send* robot :inverse-kinematics
+                     (make-coords :pos (send cell :center-pos)
+                                  :rot rotation)
+                     :move-target move-target
+                     :link-list (send robot :link-list (send move-target :parent))
+                     :dump-command nil
+                     :warnp nil
+                     ik-args))
             (send cell :set-value 1)
           (send cell :set-value 0))
         (when update-view
