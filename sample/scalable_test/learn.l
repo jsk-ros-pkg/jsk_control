@@ -112,7 +112,13 @@
 (defvar *root-link* (car (send *robot* :links)))
 (defvar *root-link-fix-coords-func* nil)
 
-(defvar *learn-mode* :rarm-larm-rleg-lleg)
+;;(defvar *learn-mode* :rarm-larm-rleg-lleg)
+(defvar *learn-mode*
+  (cond
+   ((read-line (piped-fork "head predict_ik_net.prototxt -n 1 | grep 9s") nil) :rarm)
+   ((read-line (piped-fork "head predict_ik_net.prototxt -n 1 | grep 16s") nil) :rarm-larm)
+   ((read-line (piped-fork "head predict_ik_net.prototxt -n 1 | grep 28s") nil) :rarm-larm-rleg-lleg)
+   (t :rarm-larm-rleg-lleg)))
 (cond
  ((eq *learn-mode* :rarm-larm)
   (setq *joint-list1* *joint-list2*)
