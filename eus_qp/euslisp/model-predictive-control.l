@@ -95,6 +95,9 @@
           state-value-list ;; Result state value list
           output-value-list ;; Result output value list
           error-weight-vector
+          ;; Parameters for skip receding horizon count
+          receding-horizon-proc-count
+          counter
           )
   )
 
@@ -105,13 +108,17 @@
          ((:output-dim tmp-output-dim) 0)
          (error-weight-vector (fill (instantiate float-vector tmp-state-dim) 1.0))
          (output-weight-vector (fill (instantiate float-vector tmp-output-dim) 1.0))
+         ((:receding-horizon-proc-count rhpc) 1)
          )
-   "Model Predictive Control initialization for linear time-variant system."
+   "Model Predictive Control initialization for linear time-variant system.
+    receding-horizon-proc-count is 1 by default. Normal receding horizon."
    (setq preview-window tmp-preview-window
          state-dim tmp-state-dim output-dim tmp-output-dim)
    (setq current-state initial-state)
    (setq error-weight-matrix (send self :calc-weight-matrix-for-preview-window error-weight-vector preview-window))
    (setq output-weight-matrix (send self :calc-weight-matrix-for-preview-window output-weight-vector preview-window))
+   (setq receding-horizon-proc-count rhpc)
+   (setq counter 0)
    self)
   (:calc-total-system-matrix ;; A
    (Ak-list) ;; Ak = system matrix
@@ -278,6 +285,7 @@
                                            (send self :calc-total-output-drift-matrix system-matrix-list output-matrix-list)))
             (no-input-value (every #'null input-matrix-list)) ;; e.g., in the air
             (tmp-input-state-value))
+       (when (= (mod counter receding-horizon-proc-count) 0)
        (unless no-input-value
          (let* (;; B
                (total-input-matrix (send self :calc-total-input-matrix system-matrix-list input-matrix-list))
@@ -347,9 +355,11 @@
                   ;;:print-level :pl-low
                   )
                  tmp-input-state-value (transform total-input-matrix total-input-value-vector))))
+       ) ;; when (= (mod counter receding-horizon-proc-count) 0)
        ;;(format t ";; no-input ~A, use-drift ~A, use-output ~A~%" no-input-value use-drift-coeff use-output-matrix)
        ;; Calculate X and x_1,... and u_0, ...
        (when calc-state-value-list
+         (when (= (mod counter receding-horizon-proc-count) 0)
          (let ((state-values (if no-input-value
                                  (transform total-system-matrix current-state)
                                (v+ (transform total-system-matrix current-state) tmp-input-state-value)))
@@ -373,8 +383,14 @@
            (setq input-value-list (reverse input-value-list) state-value-list (reverse state-value-list))
            (if use-output-matrix
                (setq output-value-list (reverse output-value-list)))
-           (setq current-state (car state-value-list))
-           ))
+           )) ;; when (= (mod counter receding-horizon-proc-count) 0)
+         (when (> (mod counter receding-horizon-proc-count) 0)
+           (Setq input-value-list (cdr input-value-list))
+           (Setq state-value-list (cdr state-value-list))
+           )
+         (setq current-state (car state-value-list))
+         ) ;; when calc-state-value-list
+       (incf counter)
        total-input-value-vector
        )))
   (:set-param-list
@@ -676,6 +692,7 @@
                                 (setf (elt ww 5) error-angular-momentum-weight)
                                 ww))
          (output-dim 0) (output-weight-vector)
+         ((:receding-horizon-proc-count rhpc) 1)
          )
    "Model Predictive Control for COG X Y (trans, rot) motion from Ngasaka 2012 paper.
     tmp-preview-window is preview window size."
@@ -684,7 +701,8 @@
                :initial-state initial-state
                :error-weight-vector error-weight-vector
                :output-dim output-dim
-               :output-weight-vector output-weight-vector)
+               :output-weight-vector output-weight-vector
+               :receding-horizon-proc-count rhpc)
    )
   (:get-cog-from-preview-index
    (&optional (preview-index 0))
@@ -718,14 +736,16 @@
                                 (setf (elt ww 1) error-momentum-weight)
                                 ww))
          ((:output-weight-vector ovec))
-         ((:output-dim odim) 0))
+         ((:output-dim odim) 0)
+         ((:receding-horizon-proc-count rhpc) 1))
    "Model Predictive Control for COG Z motion.
     tmp-preview-window is preview window size."
    (send-super :init
                tmp-preview-window state-dim
                :initial-state initial-state
                :error-weight-vector error-weight-vector
-               :output-dim odim :output-weight-vector ovec)
+               :output-dim odim :output-weight-vector ovec
+               :receding-horizon-proc-count rhpc)
    )
   (:get-cog-z-from-preview-index
    (&optional (preview-index 0))

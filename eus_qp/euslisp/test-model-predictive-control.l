@@ -29,7 +29,8 @@
 (defun demo-MPC-gen-motion-1
   (&key (limbs '(:rleg :lleg))
         (foot-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
-        (foot-rot-diff (list (list 0 0 0) (list 0 0 0))))
+        (foot-rot-diff (list (list 0 0 0) (list 0 0 0)))
+        ((:receding-horizon-proc-count rhpc) 1))
   "COG XY MPC test. Move COG in X and Y axes."
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -56,7 +57,8 @@
                         0 0))
          (mpc (instance MPC-horizontal-cog-motion-generator
                         :init preview-window
-                        :initial-state initial-state))
+                        :initial-state initial-state
+                        :receding-horizon-proc-count rhpc))
          (prm-list) (cog-ret))
     (setq prm-list
           (append
@@ -111,7 +113,8 @@
                           (mapcar #'(lambda (x) (elt (cadr (memq :refcog x)) 1)) cog-ret))))
     cog-ret))
 
-(defun demo-MPC-gen-motion-2 ()
+(defun demo-MPC-gen-motion-2
+  (&key ((:receding-horizon-proc-count rhpc) 1))
   "COG-Z MPC test. Vertical jumping."
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -123,7 +126,8 @@
          (initial-state (float-vector (* total-mass 1e-3 (elt (send *robot* :centroid) 2)) 0))
          (mpc (instance MPC-vertical-cog-motion-generator
                         :init preview-window
-                        :initial-state initial-state))
+                        :initial-state initial-state
+                        :receding-horizon-proc-count rhpc))
          (contact-constraint-list
           (mapcar #'(lambda (l)
                       (instance* default-contact-constraint
@@ -214,7 +218,8 @@
 (defun demo-MPC-gen-motion-3
   (&key (limbs '(:rleg :lleg))
         (foot-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
-        (foot-rot-diff (list (list 0 0 0) (list 0 0 0))))
+        (foot-rot-diff (list (list 0 0 0) (list 0 0 0)))
+        ((:receding-horizon-proc-count rhpc) 1))
   "COG XY MPC test. Walking by changing contact constraints"
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -242,7 +247,8 @@
                         0 0))
          (mpc (instance MPC-horizontal-cog-motion-generator
                         :init preview-window
-                        :initial-state initial-state))
+                        :initial-state initial-state
+                        :receding-horizon-proc-count rhpc))
          (prm-list) (cog-ret)
          (count -1))
     (setq prm-list
@@ -328,7 +334,8 @@
 (defun demo-MPC-gen-motion-4
   (&key (limbs '(:rleg :lleg :rarm :larm))
         (ee-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
-        (ee-rot-diff (list (list 0 0 0) (list 0 0 0))))
+        (ee-rot-diff (list (list 0 0 0) (list 0 0 0)))
+        ((:receding-horizon-proc-count rhpc) 1))
   "COG XY MPC test. Walking by changing contact constraints trot 4leg."
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -365,7 +372,8 @@
                         0 0))
          (mpc (instance MPC-horizontal-cog-motion-generator
                         :init preview-window
-                        :initial-state initial-state))
+                        :initial-state initial-state
+                        :receding-horizon-proc-count rhpc))
          (prm-list) (cog-ret)
          (count -1))
     (setq prm-list
@@ -472,11 +480,11 @@
         (documentation (read-from-string (format nil "demo-mpc-gen-motion-~d" (1+ i))))))
 
 (defun demo-mpc-gen-motion-all
-  ()
+  (&key ((:receding-horizon-proc-count rhpc) 1))
   (let ((ret))
     (dotimes (i (get-max-id-for-demo-functions 'demo-mpc-gen-motion-))  ;; Get max number of demo function
       (format t ";; demo-mpc-gen-motion-~d~%" (1+ i))
-      (push (funcall (eval (read-from-string (format nil "#'demo-mpc-gen-motion-~d" (1+ i))))) ret)
+      (push (funcall (eval (read-from-string (format nil "#'demo-mpc-gen-motion-~d" (1+ i)))) :receding-horizon-proc-count rhpc) ret)
       )
     ret))
 (warn ";;   (demo-mpc-gen-motion-all)~%")
