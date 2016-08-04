@@ -286,104 +286,104 @@
             (no-input-value (every #'null input-matrix-list)) ;; e.g., in the air
             (tmp-input-state-value))
        (when (= (mod counter receding-horizon-proc-count) 0)
-       (unless no-input-value
-         (let* (;; B
-               (total-input-matrix (send self :calc-total-input-matrix system-matrix-list input-matrix-list))
-               ;; X^{ref}
-               (reference-state
-                (if use-drift-coeff
-                    (v- (apply #'concatenate float-vector reference-state-list) (transform total-drift-matrix total-drift-coeff-vector))
-                  (apply #'concatenate float-vector reference-state-list)))
-               ;; Y^{ref}
-               (reference-output
-                (if use-output-matrix
-                    (if use-drift-coeff
-                        (v- (apply #'concatenate float-vector reference-output-list) (transform total-output-drift-matrix total-drift-coeff-vector))
-                      (apply #'concatenate float-vector reference-output-list))))
-               ;; G
-               (total-inequality-matrix (if (every #'identity inequality-matrix-list)
-                                            (apply #'concatenate-matrix-diagonal inequality-matrix-list)))
-               ;; H
-               (total-inequality-min-vector (if (every #'identity inequality-min-vector-list)
-                                                (apply #'concatenate float-vector inequality-min-vector-list)))
-               ;; I
-               (total-equality-matrix (if (every #'identity equality-matrix-list)
-                                          (apply #'concatenate-matrix-diagonal equality-matrix-list)))
-               ;; J
-               (total-equality-vector (if (every #'identity equality-vector-list)
-                                          (apply #'concatenate float-vector equality-vector-list)))
-               ;; W2
-               (input-weight-matrix (apply #'concatenate-matrix-diagonal input-weight-matrix-list))
-               ;; B^T W1
-               (projected-error-weight-matrix (m* (transpose total-input-matrix) error-weight-matrix))
-               ;; A x0
-               (projected-current-state (transform total-system-matrix current-state))
-               ;; C x0
-               (projected-output-current-state (if use-output-matrix (transform total-output-matrix current-state)))
-               ;; error component in eval-coeff-vector
-               (error-eval-coeff-vector (transform projected-error-weight-matrix (v- projected-current-state reference-state)))
-               ;; error component in eval-weight-matrix
-               (error-eval-weight-matrix (m* projected-error-weight-matrix total-input-matrix))
-               ;; D^T W2
-               (projected-output-error-weight-matrix
-                (if use-output-matrix
-                    (m* (transpose total-feedforward-matrix) output-weight-matrix)))
-               ;; output component in eval-coeff-vector
-               (output-eval-coeff-vector
-                (if use-output-matrix
-                    (transform projected-output-error-weight-matrix (v- projected-output-current-state reference-output))))
-               ;; output component in eval-weight-matrix
-               (output-eval-weight-matrix
-                (if use-output-matrix
-                    (m* projected-output-error-weight-matrix total-feedforward-matrix)))
-               )
-           (setq total-input-value-vector
-                 (solve-qpoases-qp
-                  :eval-weight-matrix
-                  (if use-output-matrix
-                      (m+ (m+ error-eval-weight-matrix input-weight-matrix) output-eval-weight-matrix)
-                    (m+ error-eval-weight-matrix input-weight-matrix))
-                  :eval-coeff-vector
-                  (if use-output-matrix
-                      (v+ error-eval-coeff-vector output-eval-coeff-vector)
-                    error-eval-coeff-vector)
-                  :inequality-matrix total-inequality-matrix
-                  :inequality-min-vector total-inequality-min-vector
-                  :equality-matrix total-equality-matrix
-                  :equality-vector total-equality-vector
-                  :solve-qp-mode solve-qp-mode
-                  ;;:print-level :pl-low
+         (unless no-input-value
+           (let* (;; B
+                  (total-input-matrix (send self :calc-total-input-matrix system-matrix-list input-matrix-list))
+                  ;; X^{ref}
+                  (reference-state
+                   (if use-drift-coeff
+                       (v- (apply #'concatenate float-vector reference-state-list) (transform total-drift-matrix total-drift-coeff-vector))
+                     (apply #'concatenate float-vector reference-state-list)))
+                  ;; Y^{ref}
+                  (reference-output
+                   (if use-output-matrix
+                       (if use-drift-coeff
+                           (v- (apply #'concatenate float-vector reference-output-list) (transform total-output-drift-matrix total-drift-coeff-vector))
+                         (apply #'concatenate float-vector reference-output-list))))
+                  ;; G
+                  (total-inequality-matrix (if (every #'identity inequality-matrix-list)
+                                               (apply #'concatenate-matrix-diagonal inequality-matrix-list)))
+                  ;; H
+                  (total-inequality-min-vector (if (every #'identity inequality-min-vector-list)
+                                                   (apply #'concatenate float-vector inequality-min-vector-list)))
+                  ;; I
+                  (total-equality-matrix (if (every #'identity equality-matrix-list)
+                                             (apply #'concatenate-matrix-diagonal equality-matrix-list)))
+                  ;; J
+                  (total-equality-vector (if (every #'identity equality-vector-list)
+                                             (apply #'concatenate float-vector equality-vector-list)))
+                  ;; W2
+                  (input-weight-matrix (apply #'concatenate-matrix-diagonal input-weight-matrix-list))
+                  ;; B^T W1
+                  (projected-error-weight-matrix (m* (transpose total-input-matrix) error-weight-matrix))
+                  ;; A x0
+                  (projected-current-state (transform total-system-matrix current-state))
+                  ;; C x0
+                  (projected-output-current-state (if use-output-matrix (transform total-output-matrix current-state)))
+                  ;; error component in eval-coeff-vector
+                  (error-eval-coeff-vector (transform projected-error-weight-matrix (v- projected-current-state reference-state)))
+                  ;; error component in eval-weight-matrix
+                  (error-eval-weight-matrix (m* projected-error-weight-matrix total-input-matrix))
+                  ;; D^T W2
+                  (projected-output-error-weight-matrix
+                   (if use-output-matrix
+                       (m* (transpose total-feedforward-matrix) output-weight-matrix)))
+                  ;; output component in eval-coeff-vector
+                  (output-eval-coeff-vector
+                   (if use-output-matrix
+                       (transform projected-output-error-weight-matrix (v- projected-output-current-state reference-output))))
+                  ;; output component in eval-weight-matrix
+                  (output-eval-weight-matrix
+                   (if use-output-matrix
+                       (m* projected-output-error-weight-matrix total-feedforward-matrix)))
                   )
-                 tmp-input-state-value (transform total-input-matrix total-input-value-vector))))
-       ) ;; when (= (mod counter receding-horizon-proc-count) 0)
+             (setq total-input-value-vector
+                   (solve-qpoases-qp
+                    :eval-weight-matrix
+                    (if use-output-matrix
+                        (m+ (m+ error-eval-weight-matrix input-weight-matrix) output-eval-weight-matrix)
+                      (m+ error-eval-weight-matrix input-weight-matrix))
+                    :eval-coeff-vector
+                    (if use-output-matrix
+                        (v+ error-eval-coeff-vector output-eval-coeff-vector)
+                      error-eval-coeff-vector)
+                    :inequality-matrix total-inequality-matrix
+                    :inequality-min-vector total-inequality-min-vector
+                    :equality-matrix total-equality-matrix
+                    :equality-vector total-equality-vector
+                    :solve-qp-mode solve-qp-mode
+                    ;;:print-level :pl-low
+                    )
+                   tmp-input-state-value (transform total-input-matrix total-input-value-vector))))
+         ) ;; when (= (mod counter receding-horizon-proc-count) 0)
        ;;(format t ";; no-input ~A, use-drift ~A, use-output ~A~%" no-input-value use-drift-coeff use-output-matrix)
        ;; Calculate X and x_1,... and u_0, ...
        (when calc-state-value-list
          (when (= (mod counter receding-horizon-proc-count) 0)
-         (let ((state-values (if no-input-value
-                                 (transform total-system-matrix current-state)
-                               (v+ (transform total-system-matrix current-state) tmp-input-state-value)))
-               (output-values (if use-output-matrix
-                                  (v+ (transform total-output-matrix current-state)
-                                      (transform total-feedforward-matrix total-input-value-vector))))
-               (tmp-count 0))
-           (when use-drift-coeff
-             (setq state-values (v+ state-values (transform total-drift-matrix (apply #'concatenate float-vector drift-coeff-list))))
-             (if use-output-matrix
-                 (setq output-values (v+ output-values (transform total-output-drift-matrix (apply #'concatenate float-vector drift-coeff-list))))))
-           (setq input-value-list nil state-value-list nil output-value-list nil)
-           (dotimes (i preview-window)
-             (let ((idim (send (elt param-list i) :input-dim)))
-               (push (subseq total-input-value-vector tmp-count (+ tmp-count idim)) input-value-list)
-               (push (subseq state-values (* i state-dim) (* (1+ i) state-dim)) state-value-list)
+           (let ((state-values (if no-input-value
+                                   (transform total-system-matrix current-state)
+                                 (v+ (transform total-system-matrix current-state) tmp-input-state-value)))
+                 (output-values (if use-output-matrix
+                                    (v+ (transform total-output-matrix current-state)
+                                        (transform total-feedforward-matrix total-input-value-vector))))
+                 (tmp-count 0))
+             (when use-drift-coeff
+               (setq state-values (v+ state-values (transform total-drift-matrix (apply #'concatenate float-vector drift-coeff-list))))
                (if use-output-matrix
-                   (push (subseq output-values (* i output-dim) (* (1+ i) output-dim)) output-value-list))
-               (setq tmp-count (+ tmp-count idim))
-               ))
-           (setq input-value-list (reverse input-value-list) state-value-list (reverse state-value-list))
-           (if use-output-matrix
-               (setq output-value-list (reverse output-value-list)))
-           )) ;; when (= (mod counter receding-horizon-proc-count) 0)
+                   (setq output-values (v+ output-values (transform total-output-drift-matrix (apply #'concatenate float-vector drift-coeff-list))))))
+             (setq input-value-list nil state-value-list nil output-value-list nil)
+             (dotimes (i preview-window)
+               (let ((idim (send (elt param-list i) :input-dim)))
+                 (push (subseq total-input-value-vector tmp-count (+ tmp-count idim)) input-value-list)
+                 (push (subseq state-values (* i state-dim) (* (1+ i) state-dim)) state-value-list)
+                 (if use-output-matrix
+                     (push (subseq output-values (* i output-dim) (* (1+ i) output-dim)) output-value-list))
+                 (setq tmp-count (+ tmp-count idim))
+                 ))
+             (setq input-value-list (reverse input-value-list) state-value-list (reverse state-value-list))
+             (if use-output-matrix
+                 (setq output-value-list (reverse output-value-list)))
+             )) ;; when (= (mod counter receding-horizon-proc-count) 0)
          (when (> (mod counter receding-horizon-proc-count) 0)
            (Setq input-value-list (cdr input-value-list))
            (Setq state-value-list (cdr state-value-list))
