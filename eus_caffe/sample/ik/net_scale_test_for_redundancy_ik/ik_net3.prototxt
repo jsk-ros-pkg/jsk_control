@@ -1,0 +1,33 @@
+layer {
+  name: "output"
+  type: "InnerProduct"
+  top: "_ip@DEPTH@"
+  bottom: "_sigmoid@DEPTH_1@"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 7
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "sigmoid@DEPTH@"
+  bottom: "_ip@DEPTH@"
+  top: "loss"
+}

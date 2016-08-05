@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package>
+  <name> eus_caffe </name>
+  <description>
+    eus_caffe package
+  </description>
+  <version>0.0.1</version>
+  <maintainer email="s-noda@jsk.t.u-tokyo.ac.jp">Noda Shintaro</maintainer>
+  <license>NYLS</license>
+  <export> </export>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>euslisp</build_depend>
+  <build_depend>cmake_modules</build_depend>
+
+  <run_depend>euslisp</run_depend>
+</package>

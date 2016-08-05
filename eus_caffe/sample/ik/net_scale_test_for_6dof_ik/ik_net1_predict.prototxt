@@ -1,0 +1,6 @@
+name: "ik_net"
+input: "sigmoid@DEPTH@"
+input_dim: 1 ## num
+input_dim: 6 ## channel
+input_dim: 1 ## w
+input_dim: 1 ## h
