@@ -11,10 +11,19 @@
     (send irtviewer :resize 300 300)
     (send irtviewer :set-val 'x::draw-origin nil)
     (send irtviewer :set-val 'x::draw-floor nil)
-    (objects (append *arrow* (send-all *joint-list1* :child-link)))
-    (send irtviewer :viewer :viewing :look #f(2531.18 1116.03 2930.59) #f(260.394 -91.3679 1195.88))
+    (objects (append (if (eq *learn-mode* :rarm-larm-rleg-lleg) (list (car (send *robot* :links))) nil)
+		     *arrow* (send-all *joint-list1* :child-link)))
+    ;; (send irtviewer :viewer :viewing :look #f(2531.18 1116.03 2930.59) #f(260.394 -91.3679 1195.88))
     (send irtviewer :viewer :draw-objects)
     irtviewer))
+
+(defun draw-mview
+  nil
+  (mapcar
+   '(lambda (ar c) (send ar :newcoords (send c :copy-worldcoords)))
+   *arrow*
+   (send-all *ef-coords* :worldcoords))
+  (send-all (list *mview1* *mview2*) :draw-objects))
 
 (defun draw-util
   (irtviewer redundancy &optional (viewer (send irtviewer :viewer)))
@@ -122,8 +131,14 @@
 			    target-coords
 			    :move-target move-target
 			    :link-list (mapcar '(lambda (mt) (send *robot* :link-list (send mt :parent))) move-target)
-			    :stop 30
+			    :stop 50
+			    :thre (make-list (length target-coords) :initial-element 10)
+			    :rthre (make-list (length target-coords) :initial-element (deg2rad 8))
 			    :warnp nil
+			    ;; :target-centroid-pos nil
+			    ;; :root-link-virtual-joint-weight (fill (instantiate float-vector 6) 1)
+			    ;; :min (fill (instantiate float-vector 6) -400)
+			    ;; :max (fill (instantiate float-vector 6) +400)
 			    :revert-if-fail t)))
 		(draw-util *mview2* redundancy))))
 	     (t
@@ -135,10 +150,11 @@
   (cpplog::change-output-stream "")
   )
 
+;; (format t "~A ~A~%" (send *mview2* :viewer :viewing :viewpoint) (send *mview2* :viewtarget))
 (defun demo-redundancy1
   nil
-  (send *mview1* :viewer :viewing :look #f(2531.18 1116.03 2930.59) #f(260.394 -91.3679 1195.88))
-  (send *mview2* :viewer :viewing :look #f(2531.18 1116.03 2930.59) #f(260.394 -91.3679 1195.88))
+  (send-all (list  *mview1* *mview2*) :viewer :viewing :look #f(2531.18 1116.03 2930.59) #f(260.394 -91.3679 1195.88))
+  (send-all (list  *mview1* *mview2*) :draw-objects)
   (if (not (y-or-n-p)) (return-from demo-redundancy1 nil))
   (send *robot* :reset-manip-pose)
   (send *robot* :rarm :move-end-pos (float-vector 300 0 0) :world)
@@ -156,6 +172,38 @@
   (send *robot* :rarm :move-end-pos (float-vector 200 0 0) :world)
   (send *robot* :rarm :shoulder-p :joint-angle -70 :relative t)
   (send *viewer* :draw-objects)
+  (ik-random-test-loop :random-angle (send-all *joint-list1* :joint-angle))
+  ;;
+  )
+
+(defun demo-redundancy2
+  nil
+  (send-all (list  *mview1* *mview2*) :viewer :viewing :look #f(2531.18 1116.03 2930.59) #f(-10.5957 0.45322 671.917))
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (draw-mview)
+  (if (not (y-or-n-p)) (return-from demo-redundancy2 nil))
+  (ik-random-test-loop :random-angle (send-all *joint-list1* :joint-angle))
+  ;;
+  (send *robot* :reset-manip-pose)
+  (send *robot* :legs :crotch-p :joint-angle -70 :relative t)
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (draw-mview)
+  (if (not (y-or-n-p)) (return-from demo-redundancy2 nil))
+  (ik-random-test-loop :random-angle (send-all *joint-list1* :joint-angle))
+  ;;
+  (send *robot* :reset-pose)
+  (send *robot* :larm :shoulder-p :joint-angle 40 :relative t)
+  (send *robot* :larm :shoulder-r :joint-angle 10 :relative t)
+  (send *robot* :rarm :elbow-p :joint-angle -30 :relative t)
+  (send *robot* :rarm :shoulder-p :joint-angle -40 :relative t)
+  (send *robot* :lleg :crotch-p :joint-angle 20 :relative t)
+  (send *robot* :lleg :knee-p :joint-angle 40 :relative t)
+  (send *robot* :lleg :crotch-r :joint-angle 30 :relative t)
+  (send *robot* :rleg :move-end-pos (float-vector 0 0 100) :world)
+  (send *robot* :fix-leg-to-coords (make-coords) :rleg)
+  (draw-mview)
+  (if (not (y-or-n-p)) (return-from demo-redundancy2 nil))
   (ik-random-test-loop :random-angle (send-all *joint-list1* :joint-angle))
   ;;
   )
