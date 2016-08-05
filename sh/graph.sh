@@ -1,4 +1,4 @@
-B1;3201;0c#!/usr/bin/env bash
+#!/usr/bin/env bash
 
 function gen_loss_graph(){
     log=$1;
