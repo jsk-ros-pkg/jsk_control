@@ -24,6 +24,7 @@ class JoyCmdVel(JSKJoyPlugin):
     self.publish_cmd_vel = self.getArg('publish_cmd_vel', True)
     self.max_vel = self.getArg('max_vel', 0.2)
     self.max_omega = self.getArg('max_omega', 0.17) # 10[deg]
+    self.orthogonal_axis_mode = self.getArg('orthogonal_axis_mode', True)
     self.prev_time = rospy.Time.now()
     if self.publish_cmd_vel:
       self.twist_pub = rospy.Publisher(self.getArg('cmd_vel', 'cmd_vel'), Twist, queue_size = 1)
@@ -37,10 +38,21 @@ class JoyCmdVel(JSKJoyPlugin):
     # currently only support 2D plane movement
     if not status.R3:
       # xy
-      dist = numpy.sqrt(status.left_analog_y * status.left_analog_y + status.left_analog_x * status.left_analog_x) # dist is assumed to be 0 < dist < 1
+      dist = numpy.sqrt(status.left_analog_y * status.left_analog_y + status.left_analog_x * status.left_analog_x) # dist is assumed to be 0 < dist < 1      
       scale_v = self.max_vel * dist
-      x_diff = status.left_analog_y * scale_v
-      y_diff = status.left_analog_x * scale_v
+      if self.orthogonal_axis_mode:
+        if abs(status.left_analog_y) - abs(status.left_analog_x) > 0.2:
+          x_diff = status.left_analog_y * scale_v
+          y_diff = 0.0
+        elif abs(status.left_analog_y) - abs(status.left_analog_x) < -0.2:
+          x_diff = 0.0
+          y_diff = status.left_analog_x * scale_v
+        else:
+          x_diff = 0.0
+          y_diff = 0.0
+      else:
+        x_diff = status.left_analog_y * scale_v
+        y_diff = status.left_analog_x * scale_v
     else:
       x_diff = 0.0
       y_diff = 0.0
