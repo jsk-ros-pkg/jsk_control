@@ -71,7 +71,7 @@ class JoyManager():
                      "%d plugins are loaded" % (len(self.plugin_instances)))
         stat.add("instances", ", ".join([p.name for p in self.plugin_instances]))
     return stat
-  def __init__(self):
+  def __init__(self, plugin_package="jsk_teleop_joy"):
     self.state = self.STATE_INITIALIZATION
     self.pre_status = None
     self.history = StatusHistory(max_length=10)
@@ -112,7 +112,7 @@ class JoyManager():
         else:
           r.sleep()
     self.diagnostic_updater.update()
-    self.plugin_manager = PluginManager('jsk_teleop_joy')
+    self.plugin_manager = PluginManager(plugin_package)
     self.loadPlugins()
   def loadPlugins(self):
     self.plugin_manager.loadPlugins()
