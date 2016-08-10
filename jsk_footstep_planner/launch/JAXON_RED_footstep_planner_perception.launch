@@ -97,6 +97,7 @@
         args="-d $(find jsk_footstep_planner)/config/jaxon_footstep_planner_perception.rviz" />
   <node pkg="jsk_footstep_controller" type="jaxon-footstep-controller.l" name="jaxon_footstep_controller"
         output="screen">
+    <param name="use_step_refine" value="true" />
   </node>
   <group if="$(arg use_joy)">
     <include file="$(find jsk_teleop_joy)/launch/joy_footstep_marker.launch">

@@ -118,6 +118,10 @@ namespace jsk_footstep_planner
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void enableLineCB(
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+    virtual void enableSingleCB(
+      const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+    virtual void enableContinuousCB(
+      const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void executeFootstepCB(
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void executeDoneCB(const actionlib::SimpleClientGoalState &state,
@@ -194,8 +198,11 @@ namespace jsk_footstep_planner
     interactive_markers::MenuHandler::EntryHandle entry_3d_mode_;
     interactive_markers::MenuHandler::EntryHandle cube_mode_;
     interactive_markers::MenuHandler::EntryHandle line_mode_;
+    interactive_markers::MenuHandler::EntryHandle single_mode_;
+    interactive_markers::MenuHandler::EntryHandle cont_mode_;
     bool is_2d_mode_;
     bool is_cube_mode_;
+    bool is_single_mode_;
     
     double foot_size_x_, foot_size_y_, foot_size_z_;
     bool disable_tf_;
@@ -204,6 +211,10 @@ namespace jsk_footstep_planner
     PlanningState planning_state_;
     Eigen::Vector3f collision_bbox_size_;
     Eigen::Affine3f collision_bbox_offset_;
+
+    bool have_last_step_;
+    jsk_footstep_msgs::Footstep last_steps_[2];
+
   private:
     
   };

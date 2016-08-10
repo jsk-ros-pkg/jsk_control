@@ -32,3 +32,31 @@ You can create `*ri*' like
       "package://naoeus/euslisp/nao-interface.l")
      (t (error "uknown robot ~A" name))
      )))
+
+(defun footstep->coords (f)
+  (let ((c (ros::tf-pose->coords (send f :pose))))
+    (cond ((= (send f :leg) jsk_footstep_msgs::Footstep::*LEFT*)
+           (send c :name :lleg))
+          ((= (send f :leg) jsk_footstep_msgs::Footstep::*RIGHT*)
+           (send c :name :rleg)))
+    c))
+(defun footstep-array->coords (arr)
+  (mapcar #'(lambda (f)
+              (footstep->coords f))
+          (send arr :footsteps)))
+
+(defun print-readable-coords (coords)
+  (dolist (c coords)
+    (format t "(make-coords :pos ~A :rpy ~A)~%"
+            (send c :worldpos)
+            (car (send c :rpy-angle)))))
+
+(defun append-steps (now-steps next-steps)
+  (cond
+   ((eq (send (car (last now-steps)) :name) (send (car next-steps) :name))
+    (append now-steps (cdr next-steps))
+    )
+   (t ;; different last/first foot
+    ;;(append now-steps2 next-steps2)
+    (append (butlast now-steps) (cdr next-steps))
+    )))

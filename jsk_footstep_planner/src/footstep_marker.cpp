@@ -116,7 +116,7 @@ namespace jsk_footstep_planner
   FootstepMarker::FootstepMarker():
     pnh_("~"), ac_planner_("footstep_planner", true), ac_exec_("footstep_controller", true),
     pub_marker_array_(pnh_, "marker_array"),
-    is_2d_mode_(true), is_cube_mode_(false),
+    is_2d_mode_(true), is_cube_mode_(false), is_single_mode_(true), have_last_step_(false),
     planning_state_(NOT_STARTED)
   {
     srv_ = boost::make_shared <dynamic_reconfigure::Server<Config> > (pnh_);
@@ -270,12 +270,23 @@ namespace jsk_footstep_planner
   
   void FootstepMarker::resetInteractiveMarker()
   {
+    ROS_INFO("reset marker");
     PosePair::Ptr leg_poses;
     if (disable_tf_) {
       leg_poses = getDefaultFootstepPair();
     }
     else {
-      leg_poses = getLatestCurrentFootstepPoses();
+      if(is_single_mode_ || !have_last_step_) {
+        leg_poses = getLatestCurrentFootstepPoses();
+      } else { // !single_mode && have_last_step_
+        Eigen::Affine3f lleg_pose;
+        Eigen::Affine3f rleg_pose;
+        tf::poseMsgToEigen(last_steps_[0].pose, lleg_pose);
+        tf::poseMsgToEigen(last_steps_[1].pose, rleg_pose);
+        leg_poses =
+          PosePair::Ptr(new PosePair(lleg_pose, lleg_end_coords_,
+                                     rleg_pose, rleg_end_coords_));
+      }
     }
     original_foot_poses_ = leg_poses;
     visualization_msgs::InteractiveMarker int_marker;
@@ -336,11 +347,24 @@ namespace jsk_footstep_planner
       menu_handler_.setCheckState(cube_mode_, interactive_markers::MenuHandler::UNCHECKED);
       menu_handler_.setCheckState(line_mode_, interactive_markers::MenuHandler::CHECKED);
     }
+
+    interactive_markers::MenuHandler::EntryHandle p_mode_handle = menu_handler_.insert("Plan Mode");
+    single_mode_ = menu_handler_.insert(p_mode_handle, "Single", boost::bind(&FootstepMarker::enableSingleCB, this, _1));
+    cont_mode_ = menu_handler_.insert(p_mode_handle, "Continuous", boost::bind(&FootstepMarker::enableContinuousCB, this, _1));
+    if (is_single_mode_) {
+      menu_handler_.setCheckState(single_mode_, interactive_markers::MenuHandler::CHECKED);
+      menu_handler_.setCheckState(cont_mode_, interactive_markers::MenuHandler::UNCHECKED);
+    }
+    else {
+      menu_handler_.setCheckState(single_mode_, interactive_markers::MenuHandler::UNCHECKED);
+      menu_handler_.setCheckState(cont_mode_, interactive_markers::MenuHandler::CHECKED);
+    }
   }
 
   void FootstepMarker::resetMarkerCB(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
   {
+    have_last_step_ = false;
     resetInteractiveMarker();
   }
 
@@ -358,10 +382,43 @@ namespace jsk_footstep_planner
     boost::mutex::scoped_lock lock(planner_mutex_);
     if (planning_state_ == FINISHED) {
       jsk_footstep_msgs::ExecFootstepsGoal goal;
+      planning_state_ = NOT_STARTED;
       goal.footstep = plan_result_;
-      ROS_INFO("Execute footsteps");
-      ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
-      ac_exec_.waitForResult(ros::Duration(120.0));
+      if (is_single_mode_) {
+        //if(ac_exec_.getState() == actionlib::SimpleClientGoalState::ACTIVE) {
+        //  ac_exec_.waitForResult(ros::Duration(120.0));
+        //  return;
+        //}
+        goal.strategy = jsk_footstep_msgs::ExecFootstepsGoal::NEW_TARGET;
+        have_last_step_ = false;
+
+        ROS_INFO("Execute footsteps single");
+        ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
+      } else { // continuous mode
+        if (have_last_step_ ) {
+          goal.strategy = jsk_footstep_msgs::ExecFootstepsGoal::RESUME;
+        } else {
+          goal.strategy = jsk_footstep_msgs::ExecFootstepsGoal::NEW_TARGET;
+        }
+
+        int size = plan_result_.footsteps.size();
+        if(plan_result_.footsteps[size-1].leg == jsk_footstep_msgs::Footstep::LEFT) {
+          last_steps_[0] = plan_result_.footsteps[size-1]; // left
+          last_steps_[1] = plan_result_.footsteps[size-2]; // right
+        } else {
+          last_steps_[0] = plan_result_.footsteps[size-2]; // left
+          last_steps_[1] = plan_result_.footsteps[size-1]; // right
+        }
+        have_last_step_ = true;
+        if (goal.strategy == jsk_footstep_msgs::ExecFootstepsGoal::NEW_TARGET) {
+          ROS_INFO("Execute footsteps continuous(new)");
+        } else {
+          ROS_INFO("Execute footsteps continuous(added)");
+        }
+        // wait result or ...
+        ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
+        resetInteractiveMarker();
+      }
     }
     else if (planning_state_ == ON_GOING) {
       ROS_FATAL("cannot execute footstep because planning state is ON_GOING");
@@ -370,7 +427,6 @@ namespace jsk_footstep_planner
       ROS_FATAL("cannot execute footstep because planning state is NOT_STARTED");
     }
   }
-
   
   void FootstepMarker::enableCubeCB(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
@@ -431,6 +487,34 @@ namespace jsk_footstep_planner
     }
   }
   
+  void FootstepMarker::enableSingleCB(
+    const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
+  {
+    interactive_markers::MenuHandler::CheckState check_state;
+    menu_handler_.getCheckState(single_mode_, check_state);
+    if (check_state == interactive_markers::MenuHandler::UNCHECKED) {
+      menu_handler_.setCheckState(single_mode_, interactive_markers::MenuHandler::CHECKED);
+      menu_handler_.setCheckState(cont_mode_, interactive_markers::MenuHandler::UNCHECKED);
+      menu_handler_.reApply(*server_);
+      is_single_mode_ = true;
+      resetInteractiveMarker();
+    }
+  }
+
+  void FootstepMarker::enableContinuousCB(
+    const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
+  {
+    interactive_markers::MenuHandler::CheckState check_state;
+    menu_handler_.getCheckState(cont_mode_, check_state);
+    if (check_state == interactive_markers::MenuHandler::UNCHECKED) {
+      menu_handler_.setCheckState(single_mode_, interactive_markers::MenuHandler::UNCHECKED);
+      menu_handler_.setCheckState(cont_mode_, interactive_markers::MenuHandler::CHECKED);
+      menu_handler_.reApply(*server_);
+      is_single_mode_ = false;
+      resetInteractiveMarker();
+    }
+  }
+
   void FootstepMarker::processMenuFeedbackCB(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
   {
