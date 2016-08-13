@@ -419,7 +419,11 @@ namespace jsk_footstep_planner
           ROS_INFO("Execute footsteps continuous(added)");
         }
         // wait result or ...
-        ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
+        if (ac_exec_.isServerConnected()) {
+          ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
+        } else {
+          ROS_FATAL("actionlib server is not connected");
+        }
         resetInteractiveMarker();
       }
     }
