@@ -364,7 +364,10 @@ namespace jsk_footstep_planner
   void FootstepMarker::resetMarkerCB(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
   {
-    have_last_step_ = false;
+    actionlib::SimpleClientGoalState state = ac_exec_.getState();
+    if (state.isDone()) { // Do not reset last step while footsteps are executed
+      have_last_step_ = false;
+    }
     resetInteractiveMarker();
   }
 
