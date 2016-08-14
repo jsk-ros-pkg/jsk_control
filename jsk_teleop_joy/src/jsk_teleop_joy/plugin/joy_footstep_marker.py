@@ -35,6 +35,8 @@ class JoyFootstepMarker(JoyPose6D):
     # make service proxy
     rospy.wait_for_service('/footstep_marker/reset_marker')
     self.reset_marker_srv = rospy.ServiceProxy('/footstep_marker/reset_marker', Empty)
+    rospy.wait_for_service('/footstep_marker/toggle_footstep_marker_mode')
+    self.toggle_footstep_marker_mode_srv = rospy.ServiceProxy('/footstep_marker/toggle_footstep_marker_mode', Empty)
     rospy.wait_for_service('/footstep_marker/execute_footstep')
     self.execute_footstep_srv = rospy.ServiceProxy('/footstep_marker/execute_footstep', Empty)
     rospy.wait_for_service('/footstep_marker/get_footstep_marker_pose')
@@ -92,6 +94,10 @@ class JoyFootstepMarker(JoyPose6D):
       else:
         self.pre_pose = PoseStamped()
         self.pre_pose.pose.orientation.w = 1
+    elif status.start and not latest.start: # toggle footstep_marker mode
+      self.toggle_footstep_marker_mode_srv()
+
+    # synchronize marker_pose, which may be modified by interactive marker
     if self.current_goal_pose == None or not isSamePose(self.current_goal_pose.pose, self.pre_pose.pose):
       if self.pose_updated == False:
         marker_pose = self.getCurrentMarkerPose("movable_footstep_marker") # synchronize marker_pose only at first of pose update

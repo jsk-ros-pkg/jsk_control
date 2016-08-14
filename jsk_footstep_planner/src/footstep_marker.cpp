@@ -162,10 +162,13 @@ namespace jsk_footstep_planner
 
     // service servers
     srv_reset_marker_ = pnh_.advertiseService("reset_marker", &FootstepMarker::resetMarkerService, this);
+    srv_toggle_footstep_marker_mode_ = pnh_.advertiseService("toggle_footstep_marker_mode", &FootstepMarker::toggleFootstepMarkerModeService, this);    
     srv_execute_footstep_ = pnh_.advertiseService("execute_footstep", &FootstepMarker::executeFootstepService, this);
     srv_get_footstep_marker_pose_ = pnh_.advertiseService("get_footstep_marker_pose", &FootstepMarker::getFootstepMarkerPoseService, this);
 
     pub_plan_result_ = pnh_.advertise<jsk_footstep_msgs::FootstepArray>("output/plan_result", 1);
+    pub_current_marker_mode_ = pnh_.advertise<jsk_rviz_plugins::OverlayText>("marker_mode", 1, true);
+
     //JSK_ROS_INFO("waiting for footstep_planner");
     //ac_planner_.waitForServer();
     //JSK_ROS_INFO("waiting for footstep_controller");
@@ -174,6 +177,7 @@ namespace jsk_footstep_planner
     // build menu handler
     setupMenuHandler();
     resetInteractiveMarker();
+    publishCurrentMarkerMode();
     JSK_ROS_INFO("initialization done");
   }
 
@@ -364,7 +368,10 @@ namespace jsk_footstep_planner
   void FootstepMarker::resetMarkerCB(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
   {
-    have_last_step_ = false;
+    actionlib::SimpleClientGoalState state = ac_exec_.getState();
+    if (state.isDone()) { // Do not reset last step while footsteps are executed
+      have_last_step_ = false;
+    }
     resetInteractiveMarker();
   }
 
@@ -416,7 +423,11 @@ namespace jsk_footstep_planner
           ROS_INFO("Execute footsteps continuous(added)");
         }
         // wait result or ...
-        ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
+        if (ac_exec_.isServerConnected()) {
+          ac_exec_.sendGoal(goal, boost::bind(&FootstepMarker::executeDoneCB, this, _1, _2));
+        } else {
+          ROS_FATAL("actionlib server is not connected");
+        }
         resetInteractiveMarker();
       }
     }
@@ -498,6 +509,7 @@ namespace jsk_footstep_planner
       menu_handler_.reApply(*server_);
       is_single_mode_ = true;
       resetInteractiveMarker();
+      publishCurrentMarkerMode();
     }
   }
 
@@ -512,6 +524,7 @@ namespace jsk_footstep_planner
       menu_handler_.reApply(*server_);
       is_single_mode_ = false;
       resetInteractiveMarker();
+      publishCurrentMarkerMode();
     }
   }
 
@@ -886,7 +899,7 @@ namespace jsk_footstep_planner
       = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
     processFeedbackCB(dummy_feedback_ptr);
   }
-  
+ 
   bool FootstepMarker::resetMarkerService(
     std_srvs::Empty::Request& req,
     std_srvs::Empty::Response& res)
@@ -899,6 +912,27 @@ namespace jsk_footstep_planner
     return true;
   }
 
+  bool FootstepMarker::toggleFootstepMarkerModeService(
+    std_srvs::Empty::Request& req,
+    std_srvs::Empty::Response& res)
+  {
+    visualization_msgs::InteractiveMarkerFeedback dummy_feedback;
+    const visualization_msgs::InteractiveMarkerFeedbackConstPtr dummy_feedback_ptr
+      = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
+    if (is_single_mode_) {
+      // single -> continuous
+      enableContinuousCB(dummy_feedback_ptr);
+      menu_handler_.setCheckState(single_mode_, interactive_markers::MenuHandler::UNCHECKED);
+      menu_handler_.setCheckState(cont_mode_, interactive_markers::MenuHandler::CHECKED);
+    } else {
+      // continuous -> single
+      enableSingleCB(dummy_feedback_ptr);
+      menu_handler_.setCheckState(single_mode_, interactive_markers::MenuHandler::CHECKED);
+      menu_handler_.setCheckState(cont_mode_, interactive_markers::MenuHandler::UNCHECKED);
+    }
+    return true;
+  }
+  
   bool FootstepMarker::executeFootstepService(
     std_srvs::Empty::Request& req,
     std_srvs::Empty::Response& res)
@@ -934,6 +968,32 @@ namespace jsk_footstep_planner
       ROS_WARN("There is no marker named %s", target_name.c_str());
       return false;
     }
+  }
+  void FootstepMarker::publishCurrentMarkerMode()
+  {
+    std_msgs::ColorRGBA color;
+    color.r = 0.3568627450980392;
+    color.g = 0.7529411764705882;
+    color.b = 0.8705882352941177;
+    color.a = 1.0;
+
+    std::string text;
+    if (is_single_mode_) {
+      text = "Single Mode";
+    } else {
+      text = "Continuous Mode";
+    }
+    
+    jsk_rviz_plugins::OverlayText msg;
+    msg.text = text;
+    msg.width = 1000;
+    msg.height = 1000;
+    msg.top = 10;
+    msg.left = 10;
+    msg.bg_color.a = 0.0;
+    msg.fg_color = color;
+    msg.text_size = 24;
+    pub_current_marker_mode_.publish(msg);
   }
   
 }

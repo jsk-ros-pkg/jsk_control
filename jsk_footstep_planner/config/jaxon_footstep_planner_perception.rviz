@@ -4,12 +4,15 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
+        - /Status1
         - /InteractiveMarkers1
         - /Footstep1
         - /model1
         - /PointCloud21
         - /MarkerArray1
         - /OverlayMenu1
+        - /OverlayText1
       Splitter Ratio: 0.5
     Tree Height: 1135
   - Class: rviz/Selection
@@ -67,6 +70,7 @@ Visualization Manager:
       Name: Footstep
       Show Name: true
       Topic: /footstep_marker/output/plan_result
+      Unreliable: false
       Use Group Coloring: false
       Value: true
       Width: 0.15
@@ -98,6 +102,7 @@ Visualization Manager:
       Size (m): 0.01
       Style: Flat Squares
       Topic: /footstep_planner/close_list
+      Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -127,6 +132,7 @@ Visualization Manager:
       Size (m): 0.01
       Style: Flat Squares
       Topic: /footstep_planner/open_list
+      Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -156,6 +162,7 @@ Visualization Manager:
       Size (m): 0.01
       Style: Flat Squares
       Topic: /accumulated_heightmap_pointcloud_static/output
+      Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -185,6 +192,7 @@ Visualization Manager:
       Size (m): 0.01
       Style: Flat Squares
       Topic: /octomap_point_cloud_centers
+      Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -193,7 +201,7 @@ Visualization Manager:
       Marker Topic: /footstep_marker/marker_array
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: jsk_rviz_plugin/OverlayMenu
@@ -201,10 +209,28 @@ Visualization Manager:
       Name: OverlayMenu
       Topic: /joy_footstep_menu
       Value: true
+    - Background Alpha: 0.8
+      Background Color: 0; 0; 0
+      Class: jsk_rviz_plugin/OverlayText
+      Enabled: true
+      Foreground Alpha: 0.8
+      Foreground Color: 25; 255; 240
+      Name: OverlayText
+      Overtake Color Properties: false
+      Overtake Position Properties: false
+      Topic: /footstep_marker/marker_mode
+      Value: true
+      font: DejaVu Sans Mono
+      height: 128
+      left: 0
+      line width: 2
+      text size: 12
+      top: 0
+      width: 128
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: odom
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -238,10 +264,10 @@ Visualization Manager:
         Z: 0.0542271
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.854797
+      Pitch: 0.689797
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.1123
+      Yaw: 3.1623
     Saved: ~
 Window Geometry:
   Displays:
