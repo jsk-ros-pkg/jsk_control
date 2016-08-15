@@ -92,7 +92,7 @@
   next
   )
 
-(defun refine-steps (remaining-steps &key (offset 2) (expand-step) (exec nil))
+(defun refine-steps (remaining-steps &key (offset 2) (expand-step) (exec nil) (collision-avoid nil))
   (let ((steps (butlast (car remaining-steps)))
         (idx (cadr remaining-steps))
         istep newsteps trans)
@@ -122,16 +122,22 @@
         (send last-cds :transform trans :world)
         (pprint (list 'trans-steps steps))
         ))
-    (let (fslist modifiedfs) ;; instant collision check
-      (push istep fslist)
-      (dotimes (cnt (length steps))
-        (if (eq cnt 0)
-            (setq modifiedfs (check-footstep-collision istep (elt steps cnt)))
-          (setq modifiedfs (check-footstep-collision (elt steps (- cnt 1)) (elt steps cnt))))
-        (push modifiedfs fslist)
-        )
-      (setq newsteps (reverse fslist)))
-    ;;(setq newsteps (append (list istep) steps))
+    (when collision-avoid
+      (let ((start-time (ros::time-now))
+            fslist modifiedfs) ;; instant collision check
+        (push istep fslist)
+        (dotimes (cnt (length steps))
+          (if (eq cnt 0)
+              (setq modifiedfs (check-footstep-collision istep (elt steps cnt)))
+            (setq modifiedfs (check-footstep-collision (elt steps (- cnt 1)) (elt steps cnt))))
+          (push modifiedfs fslist)
+          )
+        (setq newsteps (reverse fslist))
+        (let ((now (ros::time-now)))
+          (ros::ros-info "took ~A sec for collision avoid"
+                  (send (ros::time- now start-time) :to-sec)))))
+    (unless collision-avoid
+      (setq newsteps (append (list istep) steps)))
     (pprint (list 'new newsteps))
     (when exec
       (send *ri* :set-foot-steps-no-wait newsteps
@@ -278,7 +284,7 @@
                      (>= (cadr ret) *wait-until*)))
         (setq ret (send *ri* :get-remaining-foot-step-sequence-current-index))
         (pprint (list 'ret ret))
-        (refine-steps ret :offset 2 :expand-step cds-diff :exec t)
+        (refine-steps ret :offset 2 :expand-step cds-diff :exec t :collision-avoid t)
         (setq *wait-until* (+ (cadr ret) 2 1))
         (ros::ros-info "execute-cb: step refine at ~D" *wait-until*)
         )
