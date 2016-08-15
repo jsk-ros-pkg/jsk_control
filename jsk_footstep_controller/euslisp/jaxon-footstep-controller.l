@@ -66,6 +66,32 @@
       ))
   )
 
+(defun check-footstep-collision
+  (current next)
+  ;; fix next footstep to avoid collision
+  ;; return original next footstep if current and next would not cause collision
+  (let (current-foot next-foot)
+    (setq current-foot (make-cube 235 135 20))
+    (setq next-foot (make-cube 235 135 20))
+    (send current-foot :move-to (send current :coords) :world)
+    (send next-foot :move-to (send next :coords) :world)
+    (let ((dy 0))
+      (while (pqp-collision-check-objects (list current-foot) (list next-foot))
+        (cond
+         ((equal (send next :name) :lleg)
+          (setq dy (+ 1 dy))
+          (send next-foot :translate #f( 0 1 0) :local))
+         ((equal (send next :name) :rleg)
+          (setq dy (- dy 1))
+          (send next-foot :translate #f( 0 -1 0) :local))
+         )
+        )
+      (send next :translate (float-vector 0 dy 0 ) :local)
+      )
+    )
+  next
+  )
+
 (defun refine-steps (remaining-steps &key (offset 2) (expand-step) (exec nil))
   (let ((steps (butlast (car remaining-steps)))
         (idx (cadr remaining-steps))
@@ -96,7 +122,16 @@
         (send last-cds :transform trans :world)
         (pprint (list 'trans-steps steps))
         ))
-    (setq newsteps (append (list istep) steps))
+    (let (fslist modifiedfs) ;; instant collision check
+      (push istep fslist)
+      (dotimes (cnt (length steps))
+        (if (eq cnt 0)
+            (setq modifiedfs (check-footstep-collision istep (elt steps cnt)))
+          (setq modifiedfs (check-footstep-collision (elt steps (- cnt 1)) (elt steps cnt))))
+        (push modifiedfs fslist)
+        )
+      (setq newsteps (reverse fslist)))
+    ;;(setq newsteps (append (list istep) steps))
     (pprint (list 'new newsteps))
     (when exec
       (send *ri* :set-foot-steps-no-wait newsteps
