@@ -41,9 +41,21 @@
 #include <jsk_recognition_utils/geo_util.h>
 #include "jsk_footstep_planner/line2d.h"
 
+#define DEBUG 0
+#if DEBUG
+// debug
+#include <ros/ros.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
+#endif
+
+#define DEBUG_PRINT(proc) if (debug_print_) { std::cerr << proc << std::endl; }
+
 namespace jsk_footstep_planner
 {
-
+#if DEBUG
+  ros::Publisher pub_debug_marker;
+#endif
   std::string projectStateToString(unsigned int state)
   {
     if (state == projection_state::success) {
@@ -190,21 +202,29 @@ namespace jsk_footstep_planner
                                 int foot_x_sampling_num,
                                 int foot_y_sampling_num,
                                 double vertex_threshold,
-                                const bool skip_cropping)
+                                const bool skip_cropping,
+                                const bool use_normal,
+                                double normal_distance_weight,
+                                double normal_opening_angle,
+                                double min_ratio_of_inliers)
   {
     // TODO: z is ignored
     // extract candidate points
     //pcl::PointIndices::Ptr indices = cropPointCloud(cloud_2d, tree_2d);
     // Before computing, check is it supported or not to omit recognition
+    DEBUG_PRINT(std::endl << "[FS state] projectToCloud");
     pcl::PointIndices::Ptr indices;
     FootstepSupportState presupport_state;
     if (skip_cropping) {
       presupport_state = isSupportedByPointCloudWithoutCropping(
         pose_, cloud, tree,
         indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+      DEBUG_PRINT("[FS state] pre /(skip_cropping) projection state " << presupport_state);
     }
     indices = cropPointCloud(cloud, grid_search);
+    DEBUG_PRINT("[FS state] pre / indices " << indices->indices.size());
     if (indices->indices.size() < min_inliers) {
+      DEBUG_PRINT("[FS state] no enough inliners");
       error_state = projection_state::no_enough_inliers;
       return FootstepState::Ptr();
     }
@@ -212,6 +232,7 @@ namespace jsk_footstep_planner
       presupport_state = isSupportedByPointCloud(
         pose_, cloud, tree,
         indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+      DEBUG_PRINT("[FS state] pre / (!skip_cropping) projection state " << presupport_state);
     }
     if (presupport_state == projection_state::success) {
       return FootstepState::Ptr(new FootstepState(leg_, pose_, dimensions_,
@@ -223,21 +244,44 @@ namespace jsk_footstep_planner
     // estimate plane with ransac
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::SACSegmentation<pcl::PointNormal> seg;
-    seg.setOptimizeCoefficients (true);
-    seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
-    seg.setMethodType(pcl::SAC_RANSAC);
-    seg.setDistanceThreshold(outlier_threshold);
-    seg.setModelType(pcl::SACMODEL_PLANE);
-    seg.setInputCloud(cloud);
-    seg.setIndices(indices);
-    seg.setMaxIterations(max_iterations);
-    seg.segment(*inliers, *coefficients);
+    if (!use_normal) {
+      pcl::SACSegmentation<pcl::PointNormal> seg;
+      seg.setOptimizeCoefficients (true);
+      seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
+      seg.setMethodType(pcl::SAC_RANSAC);
+      seg.setDistanceThreshold(outlier_threshold);
+      seg.setModelType(pcl::SACMODEL_PLANE);
+      seg.setInputCloud(cloud);
+      //
+      seg.setIndices(indices);
+      seg.setMaxIterations(max_iterations);
+      seg.segment(*inliers, *coefficients);
+    } else {
+      pcl::SACSegmentationFromNormals<pcl::PointNormal, pcl::PointNormal> seg;
+      seg.setOptimizeCoefficients (true);
+      seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
+      seg.setMethodType(pcl::SAC_RANSAC);
+      seg.setDistanceThreshold(outlier_threshold);
+      seg.setModelType(pcl::SACMODEL_NORMAL_PLANE);
+      seg.setInputCloud(cloud);
+      //
+      seg.setInputNormals(cloud);
+      seg.setNormalDistanceWeight(normal_distance_weight);
+      seg.setMinMaxOpeningAngle(-normal_opening_angle, normal_opening_angle);
+      //
+      seg.setIndices(indices);
+      seg.setMaxIterations(max_iterations);
+      seg.segment(*inliers, *coefficients);
+    }
+
+    DEBUG_PRINT( "[FS state] inliers " << inliers->indices.size() );
     if (inliers->indices.size() == 0) {
+      DEBUG_PRINT( "[FS state] no plane" );
       error_state = projection_state::no_plane;
       return FootstepState::Ptr();
     }
     else if (inliers->indices.size() < min_inliers) {
+      DEBUG_PRINT( "[FS state] no enough inliners " << inliers->indices.size() );
       error_state = projection_state::no_enough_inliers;
       return FootstepState::Ptr();
     }
@@ -246,6 +290,8 @@ namespace jsk_footstep_planner
       if (!plane.isSameDirection(z)) {
         plane = plane.flip();
       }
+      // plane
+      // DEBUG_PRINT( "[FS state] no enough inliners" );
       Eigen::Vector3f n = plane.getNormal();
       Eigen::Vector3f x = pose_.matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX();
       if (acos(n.dot(x)) == 0) {
@@ -271,26 +317,107 @@ namespace jsk_footstep_planner
       // std::cout << "new_rot_mat: " << std::endl << new_rot_mat << std::endl;
       //Eigen::Affine3f new_pose = new_rot * Eigen::Translation3f(q);
       // check is it enough points to support the footstep
+#if DEBUG
+      visualization_msgs::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = ros::Time();
+      //marker.ns = "my_namespace";
+      marker.id = 0;
+      marker.type = visualization_msgs::Marker::POINTS;
+      marker.action = visualization_msgs::Marker::ADD;
+      marker.pose.position.x = 0;
+      marker.pose.position.y = 0;
+      marker.pose.position.z = 0;
+      marker.pose.orientation.x = 0.0;
+      marker.pose.orientation.y = 0.0;
+      marker.pose.orientation.z = 0.0;
+      marker.pose.orientation.w = 1.0;
+      marker.scale.x = 0.01;
+      marker.scale.y = 0.01;
+      marker.scale.z = 0.1;
+      marker.color.a = 1.0; // Don't forget to set the alpha!
+      marker.color.r = 1.0;
+      marker.color.g = 0.0;
+      marker.color.b = 0.0;
+      //marker.points.resize(inliers->indices.size());
+      for(int i; i < inliers->indices.size(); i++) {
+        geometry_msgs::Point pp;
+        pcl::PointNormal pt = cloud->points[inliers->indices[i]];
+        pp.x = pt.x;
+        pp.y = pt.y;
+        pp.z = pt.z;
+        marker.points.push_back(pp);
+      }
+      visualization_msgs::Marker marker_p;
+      marker_p.header.frame_id = "map";
+      marker_p.header.stamp = ros::Time();
+      //marker_p.ns = "my_namespace";
+      marker_p.id = 1;
+      marker_p.type = visualization_msgs::Marker::POINTS;
+      marker_p.action = visualization_msgs::Marker::ADD;
+      marker_p.pose.position.x = 0;
+      marker_p.pose.position.y = 0;
+      marker_p.pose.position.z = 0;
+      marker_p.pose.orientation.x = 0.0;
+      marker_p.pose.orientation.y = 0.0;
+      marker_p.pose.orientation.z = 0.0;
+      marker_p.pose.orientation.w = 1.0;
+      marker_p.scale.x = 0.01;
+      marker_p.scale.y = 0.01;
+      marker_p.scale.z = 0.1;
+      marker_p.color.a = 1.0; // Don't forget to set the alpha!
+      marker_p.color.r = 0.0;
+      marker_p.color.g = 0.0;
+      marker_p.color.b = 1.0;
+      //marker.points.resize(inliers->indices.size());
+      for(int i; i < inliers->indices.size(); i++) {
+        geometry_msgs::Point pp;
+        pcl::PointNormal pt = cloud->points[inliers->indices[i]];
+        Eigen::Vector3f ep(pt.x, pt.y, pt.z);
+        Eigen::Vector3f rt;
+        plane.project(ep, rt);
+        pp.x = rt(0);
+        pp.y = rt(1);
+        pp.z = rt(2);
+        marker_p.points.push_back(pp);
+      }
+
+      //only if using a MESH_RESOURCE marker type:
+      visualization_msgs::MarkerArray arry;
+      arry.markers.push_back(marker);
+      arry.markers.push_back(marker_p);
+      pub_debug_marker.publish( arry );
+#endif
+      if ((inliers->indices.size() / (double)indices->indices.size()) <min_ratio_of_inliers ) {
+        DEBUG_PRINT( "[FS state] ratio of inliers " << (inliers->indices.size() / (double)indices->indices.size()) );
+        error_state = projection_state::no_enough_inliers_ratio;
+        return FootstepState::Ptr();
+      }
       FootstepSupportState support_state;
       if (skip_cropping) {
         support_state = isSupportedByPointCloudWithoutCropping(
           new_pose, cloud, tree,
           inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+        DEBUG_PRINT( "[FS state] (skip_cropping) projection state " << support_state );
       }
       else {
         support_state = isSupportedByPointCloud(
           new_pose, cloud, tree,
           inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+        DEBUG_PRINT( "[FS state] (!skip_cropping) projection state " << support_state );
       }
       if (support_state == NOT_SUPPORTED) {
+        DEBUG_PRINT( "[FS state] NOT SUPPORTED" );
         error_state = projection_state::no_enough_support;
         return FootstepState::Ptr();
       }
       else if (support_state == CLOSE_TO_SUPPORTED) {
+        DEBUG_PRINT( "[FS state] CLOSE TO SUPPORTED" );
         error_state = projection_state::close_to_success;
         return FootstepState::Ptr();
       }
       else {
+        DEBUG_PRINT( "[FS state] success" );
         error_state = projection_state::success;
         return FootstepState::Ptr(new FootstepState(leg_, new_pose, dimensions_,
                                                     resolution_,

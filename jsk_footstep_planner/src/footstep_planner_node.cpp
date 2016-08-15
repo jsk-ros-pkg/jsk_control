@@ -35,11 +35,22 @@
 
 #include "jsk_footstep_planner/footstep_planner.h"
 
+#define DEBUG 0
+#if DEBUG
+#include <visualization_msgs/MarkerArray.h>
+namespace jsk_footstep_planner
+{
+  extern ros::Publisher pub_debug_marker;
+}
+#endif
 int main(int argc, char** argv)
 {
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
   ros::init(argc, argv, "footstep_planner");
   ros::NodeHandle pnh("~");
+#if DEBUG
+  jsk_footstep_planner::pub_debug_marker = pnh.advertise<visualization_msgs::MarkerArray>("debug_marker_array", 1);
+#endif
   jsk_footstep_planner::FootstepPlanner planner(pnh);
   ros::spin();
 }
