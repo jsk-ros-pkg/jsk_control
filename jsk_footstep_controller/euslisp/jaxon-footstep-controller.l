@@ -77,6 +77,8 @@
     (send next-foot :move-to (send next :coords) :world)
     (let ((dy 0))
       (while (pqp-collision-check-objects (list current-foot) (list next-foot))
+        (ros::ros-info "Collision detected between footsteps. Modify next step.")
+        ;;(pprint next-foot)
         (cond
          ((equal (send next :name) :lleg)
           (setq dy (+ 1 dy))
@@ -87,6 +89,7 @@
          )
         )
       (send next :translate (float-vector 0 dy 0 ) :local)
+      (pprint next)
       )
     )
   next
