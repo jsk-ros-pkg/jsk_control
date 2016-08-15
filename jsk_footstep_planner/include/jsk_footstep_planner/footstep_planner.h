@@ -164,6 +164,10 @@ namespace jsk_footstep_planner
     double obstacle_resolution_;
     double goal_pos_thr_;
     double goal_rot_thr_;
+    bool plane_estimation_use_normal_;
+    double plane_estimation_normal_distance_weight_;
+    double plane_estimation_normal_opening_angle_;
+    double plane_estimation_min_ratio_of_inliers_;
     int plane_estimation_max_iterations_;
     int plane_estimation_min_inliers_;
     double plane_estimation_outlier_threshold_;

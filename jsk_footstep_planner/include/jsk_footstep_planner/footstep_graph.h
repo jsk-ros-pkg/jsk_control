@@ -201,6 +201,10 @@ namespace jsk_footstep_planner
     virtual void setPlaneEstimationMaxIterations(int n) { plane_estimation_max_iterations_ = n; }
     virtual void setPlaneEstimationMinInliers(int n) { plane_estimation_min_inliers_ = n; }
     virtual void setPlaneEstimationOutlierThreshold(double d) { plane_estimation_outlier_threshold_ = d; }
+    virtual void setPlaneEstimationUseNormal(bool b) { plane_estimation_use_normal_ = b; }
+    virtual void setPlaneEstimationNormalDistanceWeight(double d) { plane_estimation_normal_distance_weight_ = d; }
+    virtual void setPlaneEstimationNormalOpeningAngle(double d) { plane_estimation_normal_opening_angle_ = d; }
+    virtual void setPlaneEstimationMinRatioOfInliers(double d) { plane_estimation_min_ratio_of_inliers_ = d; }
     virtual void setSupportCheckXSampling(int n) { support_check_x_sampling_ = n; }
     virtual void setSupportCheckYSampling(int n) { support_check_y_sampling_ = n; }
     virtual void setSupportCheckVertexNeighborThreshold(double d) { support_check_vertex_neighbor_threshold_ = d; }
@@ -259,6 +263,10 @@ namespace jsk_footstep_planner
     ros::Publisher pub_progress_;
     const Eigen::Vector3f resolution_;
 
+    bool plane_estimation_use_normal_;
+    double plane_estimation_normal_distance_weight_;
+    double plane_estimation_normal_opening_angle_;
+    double plane_estimation_min_ratio_of_inliers_;
     int plane_estimation_max_iterations_;
     int plane_estimation_min_inliers_;
     double plane_estimation_outlier_threshold_;

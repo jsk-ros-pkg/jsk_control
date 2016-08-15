@@ -165,9 +165,14 @@ namespace jsk_footstep_planner
        << resolution_[1] << ", "
        << resolution_[2] << "]"
        << std::endl;
+    ss << "  plane_estimation_use_normal: "             << plane_estimation_use_normal_             << std::endl;
+    ss << "  plane_estimation_normal_distance_weight: " << plane_estimation_normal_distance_weight_ << std::endl;
+    ss << "  plane_estimation_normal_opening_angle: "   << plane_estimation_normal_opening_angle_   << std::endl;
+    ss << "  plane_estimation_min_ratio_of_inliers: "   << plane_estimation_min_ratio_of_inliers_   << std::endl;
     ss << "  plane_estimation_max_iterations: " << plane_estimation_max_iterations_ << std::endl;
     ss << "  plane_estimation_min_inliers: " << plane_estimation_min_inliers_ << std::endl;
     ss << "  plane_estimation_outlier_threshold: " << plane_estimation_outlier_threshold_ << std::endl;
+
     ss << "  support_check_x_sampling: " << support_check_x_sampling_ << std::endl;
     ss << "  support_check_y_sampling: " << support_check_y_sampling_ << std::endl;
     ss << "  support_check_vertex_neighbor_threshold: " << support_check_vertex_neighbor_threshold_ << std::endl;
@@ -292,7 +297,11 @@ namespace jsk_footstep_planner
       support_check_x_sampling_,
       support_check_y_sampling_,
       support_check_vertex_neighbor_threshold_,
-      skip_cropping_);
+      skip_cropping_,
+      plane_estimation_use_normal_,
+      plane_estimation_normal_distance_weight_,
+      plane_estimation_normal_opening_angle_,
+      plane_estimation_min_ratio_of_inliers_);
     ros::WallTime end_time = ros::WallTime::now();
     perception_duration_ = perception_duration_ + (end_time  - start_time);
     return projected_footstep;

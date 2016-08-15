@@ -63,6 +63,7 @@ namespace jsk_footstep_planner
     const unsigned int close_to_success = 32;
     const unsigned int transition_limit = 64;
     const unsigned int vertical_footstep = 128;
+    const unsigned int no_enough_inliers_ratio = 256;
   }
 
   std::string projectStateToString(unsigned int state);
@@ -84,6 +85,7 @@ namespace jsk_footstep_planner
                   const Eigen::Vector3f& resolution):
       leg_(leg), pose_(pose), dimensions_(dimensions), resolution_(resolution)
     {
+      debug_print_ = false;
       float x = pose_.translation()[0];
       float y = pose_.translation()[1];
       float roll, pitch, yaw;
@@ -103,6 +105,7 @@ namespace jsk_footstep_planner
       leg_(leg), pose_(pose), dimensions_(dimensions), resolution_(resolution),
       index_x_(index_x), index_y_(index_y), index_yaw_(index_yaw)
     {
+      debug_print_ = false;
     }
 
     static
@@ -129,7 +132,11 @@ namespace jsk_footstep_planner
                    int foot_x_sampling_num = 3,
                    int foot_y_sampling_num = 3,
                    double vertex_threshold = 0.02,
-                   const bool skip_cropping = true);
+                   const bool skip_cropping = true,
+                   const bool use_normal = false,
+                   double normal_distance_weight = 0.2,
+                   double normal_opening_angle = 0.2,
+                   double min_ratio_of_inliers = 0.8);
     
     pcl::PointIndices::Ptr
     cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
@@ -221,6 +228,7 @@ namespace jsk_footstep_planner
     int index_x_;
     int index_y_;
     int index_yaw_;
+    bool debug_print_;
   private:
     
   };
