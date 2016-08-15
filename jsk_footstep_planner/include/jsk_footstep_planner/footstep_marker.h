@@ -186,6 +186,7 @@ namespace jsk_footstep_planner
     std::string lleg_end_coords_, rleg_end_coords_;
     PosePair::Ptr original_foot_poses_;
     Eigen::Affine3f lleg_goal_pose_, rleg_goal_pose_;
+    Eigen::Affine3f current_lleg_offset_, current_rleg_offset_;
     Eigen::Vector3f lleg_footstep_offset_, rleg_footstep_offset_;
     double default_footstep_margin_;
     

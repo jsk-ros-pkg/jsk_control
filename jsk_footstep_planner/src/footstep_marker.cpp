@@ -250,11 +250,11 @@ namespace jsk_footstep_planner
     int_goal_marker.name = "movable_footstep_marker";
     int_goal_marker.description = "Goal Footsteps";
     tf::poseEigenToMsg(pose, int_goal_marker.pose);
-    Eigen::Affine3f lleg_offset = pose.inverse() * lleg_goal_pose_;
-    Eigen::Affine3f rleg_offset = pose.inverse() * rleg_goal_pose_;
-    visualization_msgs::Marker left_box_marker = makeFootstepMarker(lleg_offset);
+    current_lleg_offset_ = pose.inverse() * lleg_goal_pose_;
+    current_rleg_offset_ = pose.inverse() * rleg_goal_pose_;
+    visualization_msgs::Marker left_box_marker = makeFootstepMarker(current_lleg_offset_);
     left_box_marker.color.g = 1.0;
-    visualization_msgs::Marker right_box_marker = makeFootstepMarker(rleg_offset);
+    visualization_msgs::Marker right_box_marker = makeFootstepMarker(current_rleg_offset_);
     right_box_marker.color.r = 1.0;
     visualization_msgs::InteractiveMarkerControl left_box_control;
     left_box_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::BUTTON;
@@ -298,8 +298,8 @@ namespace jsk_footstep_planner
     
     visualization_msgs::InteractiveMarker int_goal_marker;
     int_goal_marker.header.frame_id = odom_frame_id_;
-    lleg_goal_pose_ = leg_poses->midcoords() * getDefaultLeftLegOffset();
-    rleg_goal_pose_ = leg_poses->midcoords() * getDefaultRightLegOffset();
+    lleg_goal_pose_ = leg_poses->getByName(lleg_end_coords_);
+    rleg_goal_pose_ = leg_poses->getByName(rleg_end_coords_);
     setupGoalMarker(leg_poses->midcoords(), int_goal_marker);
     if (is_2d_mode_) {
       add3Dof2DControl(int_goal_marker, false);
@@ -402,12 +402,20 @@ namespace jsk_footstep_planner
         }
 
         int size = plan_result_.footsteps.size();
-        if(plan_result_.footsteps[size-1].leg == jsk_footstep_msgs::Footstep::LEFT) {
-          last_steps_[0] = plan_result_.footsteps[size-1]; // left
-          last_steps_[1] = plan_result_.footsteps[size-2]; // right
-        } else {
-          last_steps_[0] = plan_result_.footsteps[size-2]; // left
-          last_steps_[1] = plan_result_.footsteps[size-1]; // right
+        {
+          if(plan_result_.footsteps[size-1].leg == jsk_footstep_msgs::Footstep::LEFT) {
+            last_steps_[0] = plan_result_.footsteps[size-1]; // left
+            last_steps_[1] = plan_result_.footsteps[size-2]; // right
+          } else {
+            last_steps_[0] = plan_result_.footsteps[size-2]; // left
+            last_steps_[1] = plan_result_.footsteps[size-1]; // right
+          }
+          last_steps_[0].pose.position.x += lleg_footstep_offset_[0];
+          last_steps_[0].pose.position.y += lleg_footstep_offset_[1];
+          last_steps_[0].pose.position.z += lleg_footstep_offset_[2];
+          last_steps_[1].pose.position.x += rleg_footstep_offset_[0];
+          last_steps_[1].pose.position.y += rleg_footstep_offset_[1];
+          last_steps_[1].pose.position.z += rleg_footstep_offset_[2];
         }
         have_last_step_ = true;
         if (goal.strategy == jsk_footstep_msgs::ExecFootstepsGoal::NEW_TARGET) {
@@ -578,8 +586,8 @@ namespace jsk_footstep_planner
       if (srv_arg.response.success) {
         Eigen::Affine3f new_center_pose;
         tf::poseMsgToEigen(srv_arg.response.snapped_pose.pose, new_center_pose);
-        goal_pose_pair.reset(new PosePair(new_center_pose * getDefaultLeftLegOffset(), lleg_end_coords_,
-                                          new_center_pose * getDefaultRightLegOffset(), rleg_end_coords_));
+        goal_pose_pair.reset(new PosePair(new_center_pose * lleg_trans, lleg_end_coords_,
+                                          new_center_pose * rleg_trans, rleg_end_coords_));
       }
       else {
         ROS_ERROR("Failed to project goal");
@@ -603,6 +611,19 @@ namespace jsk_footstep_planner
     pub_plan_result_.publish(result->result);
     planning_state_ = FINISHED;
     plan_result_ = result->result;
+    // subtracting offset
+    for (jsk_footstep_msgs::FootstepArray::_footsteps_type::iterator it = plan_result_.footsteps.begin();
+         it != plan_result_.footsteps.end(); it++) {
+      if( (*it).leg == jsk_footstep_msgs::Footstep::LEFT) {
+        (*it).pose.position.x -= lleg_footstep_offset_[0];
+        (*it).pose.position.y -= lleg_footstep_offset_[1];
+        (*it).pose.position.z -= lleg_footstep_offset_[2];
+      } else { // Right
+        (*it).pose.position.x -= rleg_footstep_offset_[0];
+        (*it).pose.position.y -= rleg_footstep_offset_[1];
+        (*it).pose.position.z -= rleg_footstep_offset_[2];
+      }
+    }
   }
   
   void FootstepMarker::planIfPossible(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
@@ -614,11 +635,15 @@ namespace jsk_footstep_planner
   }
 
   Eigen::Affine3f FootstepMarker::getDefaultLeftLegOffset() {
-    return Eigen::Affine3f(Eigen::Translation3f(0, default_footstep_margin_ / 2.0, 0.0));
+    return Eigen::Affine3f(Eigen::Translation3f(lleg_footstep_offset_[0],
+                                                default_footstep_margin_ / 2.0 + lleg_footstep_offset_[1],
+                                                lleg_footstep_offset_[2]));
   }
 
   Eigen::Affine3f FootstepMarker::getDefaultRightLegOffset() {
-    return Eigen::Affine3f(Eigen::Translation3f(0, - default_footstep_margin_ / 2.0, 0.0));
+    return Eigen::Affine3f(Eigen::Translation3f(rleg_footstep_offset_[0],
+                                                - default_footstep_margin_ / 2.0 + rleg_footstep_offset_[1],
+                                                rleg_footstep_offset_[2]));
   }
   
   void FootstepMarker::processFeedbackCB(
@@ -635,8 +660,8 @@ namespace jsk_footstep_planner
       // update position of goal footstep
       Eigen::Affine3f current_marker_pose;
       tf::poseMsgToEigen(feedback->pose, current_marker_pose);
-      lleg_goal_pose_ = current_marker_pose * getDefaultLeftLegOffset();
-      rleg_goal_pose_ = current_marker_pose * getDefaultRightLegOffset();
+      lleg_goal_pose_ = current_marker_pose * current_lleg_offset_;
+      rleg_goal_pose_ = current_marker_pose * current_rleg_offset_;
       planIfPossible(feedback);
     }
     updateMarkerArray(feedback->header, feedback->pose);
