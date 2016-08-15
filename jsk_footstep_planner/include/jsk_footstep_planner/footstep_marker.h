@@ -53,6 +53,7 @@
 #include "jsk_footstep_planner/marker_array_publisher.h"
 #include "jsk_footstep_planner/FootstepMarkerConfig.h"
 #include <dynamic_reconfigure/server.h>
+#include <jsk_rviz_plugins/OverlayText.h>
 
 namespace jsk_footstep_planner
 {
@@ -163,12 +164,17 @@ namespace jsk_footstep_planner
     virtual bool resetMarkerService(
       std_srvs::Empty::Request& req,
       std_srvs::Empty::Response& res);
+    virtual bool toggleFootstepMarkerModeService(
+      std_srvs::Empty::Request& req,
+      std_srvs::Empty::Response& res);
     virtual bool executeFootstepService(
       std_srvs::Empty::Request& req,
       std_srvs::Empty::Response& res);
     virtual bool getFootstepMarkerPoseService(
       jsk_interactive_marker::GetTransformableMarkerPose::Request& req,
       jsk_interactive_marker::GetTransformableMarkerPose::Response& res);
+
+    virtual void publishCurrentMarkerMode();
     
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
@@ -177,8 +183,10 @@ namespace jsk_footstep_planner
     PlanningActionClient ac_planner_;
     ExecuteActionClient ac_exec_;
     ros::Publisher pub_plan_result_;
+    ros::Publisher pub_current_marker_mode_;
     ros::Subscriber sub_pose_stamped_command_;
     ros::ServiceServer srv_reset_marker_;
+    ros::ServiceServer srv_toggle_footstep_marker_mode_;
     ros::ServiceServer srv_execute_footstep_;
     ros::ServiceServer srv_get_footstep_marker_pose_;    
     
