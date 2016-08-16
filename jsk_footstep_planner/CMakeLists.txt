@@ -9,7 +9,7 @@ if(CCACHE_FOUND)
 endif(CCACHE_FOUND)
 
 find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_recognition_utils
-  message_generation jsk_topic_tools roscpp pcl_ros geometry_msgs
+  message_generation jsk_topic_tools roscpp pcl_ros geometry_msgs eigen_conversions
   jsk_interactive_marker visualization_msgs dynamic_reconfigure)
 find_package(PCL REQUIRED)
 add_service_files(FILES

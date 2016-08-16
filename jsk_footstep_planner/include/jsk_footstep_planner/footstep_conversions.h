@@ -46,6 +46,7 @@
 namespace jsk_footstep_planner
 {
   jsk_footstep_msgs::Footstep footstepFromEigenPose(Eigen::Affine3f pose);
+  jsk_footstep_msgs::Footstep footstepFromEigenPose(Eigen::Affine3d pose);
   visualization_msgs::Marker footstepToMarker(const jsk_footstep_msgs::Footstep& footstep, const std_msgs::Header& header);
   visualization_msgs::MarkerArray footstepArrayToMarkerArray(const jsk_footstep_msgs::FootstepArray& footstep_array);
 }
