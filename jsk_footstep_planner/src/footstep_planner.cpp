@@ -618,7 +618,20 @@ namespace jsk_footstep_planner
       JSK_ROS_FATAL("no successors are specified");
       return false;
     }
-
+    // read default translation from right foot to left foot
+    double default_x   = 0.0;
+    double default_y   = 0.0;
+    double default_theta = 0.0;
+    if (nh.hasParam("default_rfoot_to_lfoot_offset")) {
+      std::vector<double> default_offset;
+      if (jsk_topic_tools::readVectorParameter(nh, "default_rfoot_to_lfoot_offset", default_offset)) {
+        default_x = default_offset[0];
+        default_y = default_offset[1];
+        default_theta = default_offset[2];
+        JSK_ROS_INFO("use default_rfoot_to_lfoot_offset [%f, %f, %f]", default_x, default_y, default_theta);
+      }
+    }
+    // read successors
     XmlRpc::XmlRpcValue successors_xml;
     nh.param("successors", successors_xml, successors_xml);
     if (successors_xml.getType() != XmlRpc::XmlRpcValue::TypeArray)
@@ -638,12 +651,15 @@ namespace jsk_footstep_planner
       double theta = 0;
       if (successor_xml.hasMember("x")) {
         x = jsk_topic_tools::getXMLDoubleValue(successor_xml["x"]);
+        x += default_x;
       }
       if (successor_xml.hasMember("y")) {
         y = jsk_topic_tools::getXMLDoubleValue(successor_xml["y"]);
+        y += default_y;
       }
       if (successor_xml.hasMember("theta")) {
         theta = jsk_topic_tools::getXMLDoubleValue(successor_xml["theta"]);
+        theta += default_theta;
       }
       Eigen::Affine3f successor = affineFromXYYaw(x, y, theta);
       successors_.push_back(successor);
