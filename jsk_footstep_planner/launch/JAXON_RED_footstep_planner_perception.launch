@@ -1,11 +1,34 @@
 <launch>
   <arg name="use_joy" default="true"/>
   <arg name="joy_dev" default="/dev/input/js0"/>
+  <arg name="USE_NORMAL" default="false" />
+
+  <arg if="$(arg USE_NORMAL)"     name="input_point_cloud"
+       value="/footstep_normal_estimation/output_with_xyz" />
+  <arg unless="$(arg USE_NORMAL)" name="input_point_cloud"
+       value="/accumulated_heightmap_pointcloud_static/output" />
+
+  <node if="$(arg USE_NORMAL)" pkg="jsk_pcl_ros" type="normal_estimation_omp" name="footstep_normal_estimation">
+    <remap from="~input" to="/accumulated_heightmap_pointcloud_static/output" />
+    <rosparam subst_value="true">
+      k_search: 36
+      use_multithread_callback: false
+      number_of_threads: 1
+    </rosparam>
+  </node>
 
   <include file="$(find jsk_robot_startup)/launch/slam_octomap.launch"/>
   <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
-    <remap from="~pointcloud_model" to="/accumulated_heightmap_pointcloud_static/output" />
+    <remap from="~pointcloud_model" to="$(arg input_point_cloud)" />
     <remap from="~obstacle_model" to="octomap_point_cloud_centers" />
+    <rosparam subst_value="true">
+      skip_cropping: false
+      plane_estimation_use_normal: $(arg USE_NORMAL)
+      plane_estimation_normal_distance_weight: 0.2
+      plane_estimation_normal_opening_angle: 0.2
+      plane_estimation_min_ratio_of_inliers: 0.8
+      plane_estimation_outlier_threshold: 0.02
+    </rosparam>
     <rosparam>
       use_pointcloud_model: true
       use_lazy_perception: true
@@ -17,68 +40,76 @@
       obstacle_resolution: 0.1
     </rosparam>
     <rosparam>
-      footstep_size_x: 0.24
-      footstep_size_y: 0.14
+      ## add padding
+      footstep_size_x: 0.26
+      footstep_size_y: 0.145
       collision_bbox_size: [0.4, 1.2, 1.0]
       collision_bbox_offset: [0, 0, 0.8]
     </rosparam>
-    <!-- successors -->
+    <!-- successors ( rfoot to lfoot ) -->
     <rosparam>
+      ## default_rfoot_to_lfoot_offset: [x, y, theta]
+      default_rfoot_to_lfoot_offset: [0, -0.220156, 0]
       successors:
+# stepping
       - x: 0
-        y: -0.2
+        y: 0
         theta: 0
+# + side step
       - x: 0
-        y: -0.3
+        y: -0.1
         theta: 0
+# - side step
       - x: 0
-        y: -0.15
+        y: 0.05
+        theta: 0
+# froward
+      - x: 0.1
+        y: 0
         theta: 0
       - x: 0.15
-        y: -0.2
+        y: 0
         theta: 0
-#      - x: 0.25
-#        y: -0.2
-#        theta: 0
-#      - x: 0.3
-#        y: -0.2
-#        theta: 0
-      - x: 0.1
-        y: -0.2
-        theta: 0
+# backward
       - x: -0.1
-        y: -0.2
+        y: 0
         theta: 0
+# + twist
       - x: 0
-        y: -0.2
+        y: 0
         theta: 0.17
       - x: 0
-        y: -0.3
+        y: -0.1
         theta: 0.17
-      - x: 0.2
-        y: -0.2
-        theta: 0.17
-#      - x: 0.25
-#        y: -0.2
-#        theta: 0.17
-      - x: 0.1
-        y: -0.2
-        theta: 0.17
-      - x: 0
-        y: -0.2
-        theta: -0.17
-      - x: 0
-        y: -0.3
-        theta: -0.17
+# forward + twist
       - x: 0.15
-        y: -0.2
-        theta: -0.17
-#      - x: 0.25
-#        y: -0.2
-#        theta: -0.17
+        y: 0
+        theta: 0.12
       - x: 0.1
-        y: -0.2
+        y: 0
+        theta: 0.17
+# - twist
+      - x: 0
+        y: 0
         theta: -0.17
+      - x: 0
+        y: -0.1
+        theta: -0.17
+# forward - twist
+      - x: 0.15
+        y: 0
+        theta: -0.12
+      - x: 0.1
+        y: 0
+        theta: -0.17
+# backward + twist
+      - x: -0.08
+        y: 0
+        theta: 0.12
+# backward - twist
+      - x: -0.08
+        y: 0
+        theta: -0.12
     </rosparam>
   </node>
   <node pkg="jsk_footstep_planner" type="footstep_marker" name="footstep_marker" output="screen">
@@ -88,7 +119,7 @@
       frame_id: map
       footstep_size_x: 0.237418
       footstep_size_y: 0.134017
-      lleg_footstep_offset: [0.015502, 0.010078, 0.0]
+      lleg_footstep_offset: [0.015502,  0.010078, 0.0]
       rleg_footstep_offset: [0.015502, -0.010078, 0.0]
     </rosparam>
   </node>
