@@ -62,18 +62,30 @@ namespace jsk_footstep_planner
   {
 
   };
-  
+#if 1
+  typedef Eigen::Affine3d FootstepTrans;
+  typedef Eigen::Vector3d FootstepVec;
+  typedef Eigen::Translation3d FootstepTranslation;
+  typedef Eigen::Quaterniond FootstepQuaternion;
+  typedef Eigen::AngleAxisd FootstepAngleAxis;
+#else
+  typedef Eigen::Affine3f FootstepTrans;
+  typedef Eigen::Vector3f FootstepVec;
+  typedef Eigen::Translation3f FootstepTranslation;
+  typedef Eigen::Quaternionf FootstepQuaternion;
+  typedef Eigen::AngleAxisf FootstepAngleAxis;
+#endif
   class PosePair
   {
   public:
     typedef boost::shared_ptr<PosePair> Ptr;
-    PosePair(const Eigen::Affine3f& first, const std::string& first_name,
-             const Eigen::Affine3f& second, const std::string& second_name);
-    virtual Eigen::Affine3f getByName(const std::string& name);
-    virtual Eigen::Affine3f midcoords();
+    PosePair(const FootstepTrans& first, const std::string& first_name,
+             const FootstepTrans& second, const std::string& second_name);
+    virtual FootstepTrans getByName(const std::string& name);
+    virtual FootstepTrans midcoords();
   protected:
-    Eigen::Affine3f first_;
-    Eigen::Affine3f second_;
+    FootstepTrans first_;
+    FootstepTrans second_;
     std::string first_name_;
     std::string second_name_;
   private:
@@ -102,7 +114,7 @@ namespace jsk_footstep_planner
     virtual PosePair::Ptr getLatestCurrentFootstepPoses();
     virtual PosePair::Ptr getCurrentFootstepPoses(const ros::Time& stamp);
     virtual PosePair::Ptr getDefaultFootstepPair();
-    virtual visualization_msgs::Marker makeFootstepMarker(Eigen::Affine3f pose);
+    virtual visualization_msgs::Marker makeFootstepMarker(FootstepTrans pose);
     virtual void processFeedbackCB(
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void processMenuFeedbackCB(
@@ -127,8 +139,8 @@ namespace jsk_footstep_planner
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void executeDoneCB(const actionlib::SimpleClientGoalState &state,
                                const ExecResult::ConstPtr &result);
-    virtual Eigen::Affine3f getDefaultLeftLegOffset();
-    virtual Eigen::Affine3f getDefaultRightLegOffset();
+    virtual FootstepTrans getDefaultLeftLegOffset();
+    virtual FootstepTrans getDefaultRightLegOffset();
     // planner interface
     virtual void cancelPlanning();
     virtual void plan(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
@@ -141,7 +153,7 @@ namespace jsk_footstep_planner
     // marker methods
     virtual void setupInitialMarker(PosePair::Ptr leg_poses,
                                     visualization_msgs::InteractiveMarker& int_marker);
-    virtual void setupGoalMarker(Eigen::Affine3f pose,
+    virtual void setupGoalMarker(FootstepTrans pose,
                                  visualization_msgs::InteractiveMarker& int_marker);
     virtual void updateMarkerArray(const std_msgs::Header& header, const geometry_msgs::Pose& pose);
     virtual visualization_msgs::Marker originMarker(
@@ -193,9 +205,9 @@ namespace jsk_footstep_planner
     std::string odom_frame_id_;
     std::string lleg_end_coords_, rleg_end_coords_;
     PosePair::Ptr original_foot_poses_;
-    Eigen::Affine3f lleg_goal_pose_, rleg_goal_pose_;
-    Eigen::Affine3f current_lleg_offset_, current_rleg_offset_;
-    Eigen::Vector3f lleg_footstep_offset_, rleg_footstep_offset_;
+    FootstepTrans lleg_goal_pose_, rleg_goal_pose_;
+    FootstepTrans current_lleg_offset_, current_rleg_offset_;
+    FootstepVec lleg_footstep_offset_, rleg_footstep_offset_;
     double default_footstep_margin_;
     
     jsk_footstep_msgs::FootstepArray plan_result_;
@@ -218,8 +230,8 @@ namespace jsk_footstep_planner
     
     boost::mutex planner_mutex_;
     PlanningState planning_state_;
-    Eigen::Vector3f collision_bbox_size_;
-    Eigen::Affine3f collision_bbox_offset_;
+    FootstepVec collision_bbox_size_;
+    FootstepTrans collision_bbox_offset_;
 
     bool have_last_step_;
     jsk_footstep_msgs::Footstep last_steps_[2];

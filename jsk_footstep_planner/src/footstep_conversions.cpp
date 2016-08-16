@@ -44,6 +44,12 @@ namespace jsk_footstep_planner
     tf::poseEigenToMsg(pose, footstep.pose);
     return footstep;
   }
+  jsk_footstep_msgs::Footstep footstepFromEigenPose(Eigen::Affine3d pose)
+  {
+    jsk_footstep_msgs::Footstep footstep;
+    tf::poseEigenToMsg(pose, footstep.pose);
+    return footstep;
+  }
   
   visualization_msgs::Marker footstepToMarker(const jsk_footstep_msgs::Footstep& footstep,
                                               const std_msgs::Header& header)
