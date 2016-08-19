@@ -62,6 +62,14 @@
       (pprint (list 'map->laststep map->laststep end-coords))
       (pprint (list 'map->dest map->destination))
       (setq coords-difference (send map->laststep :transformation map->destination))
+      (when *assume-horizontal-plane*
+        ;; (pprint (list 'original-diff coords-difference))
+        (setq coords-difference
+              (make-coords :pos (float-vector (elt (send coords-difference :pos) 0) (elt (send coords-difference :pos) 1) 0.0)
+                           :rpy (float-vector (elt (car (send coords-difference :rpy-angle)) 0) 0.0 0.0))
+              )
+        ;; (pprint (list 'converted-diff coords-difference))
+        )
       (pprint (list 'diff coords-difference))
       coords-difference
       ))
