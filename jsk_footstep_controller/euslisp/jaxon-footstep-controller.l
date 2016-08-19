@@ -151,7 +151,7 @@
 (defun convert-footstep-array-to-coords (footstep-array)
   (let (retval)
     (if *assume-horizontal-plane*
-        ;; ignore z transformation and roll/pitch rotation
+        ;; ignore z translation and roll/pitch rotation
         (setq retval
               (mapcar #'(lambda (f)
                           (let ((ypr (car (rpy-angle (ros::tf-quaternion->rot (send f :pose :orientation))))))

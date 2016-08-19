@@ -1,8 +1,9 @@
 <launch>
   <arg name="use_joy" default="true"/>
   <arg name="joy_dev" default="/dev/input/js0"/>
+  <arg name="use_step_refine" default="true"/>
+  <arg name="assume_horizontal_plane" default="false"/>    
   <arg name="USE_NORMAL" default="false" />
-
   <arg if="$(arg USE_NORMAL)"     name="input_point_cloud"
        value="/footstep_normal_estimation/output_with_xyz" />
   <arg unless="$(arg USE_NORMAL)" name="input_point_cloud"
@@ -179,7 +180,8 @@
         args="-d $(find jsk_footstep_planner)/config/jaxon_footstep_planner_perception.rviz" />
   <node pkg="jsk_footstep_controller" type="jaxon-footstep-controller.l" name="jaxon_footstep_controller"
         output="screen">
-    <param name="use_step_refine" value="true" />
+    <param name="use_step_refine" value="$(arg use_step_refine)" />
+    <param name="assume_horizontal_plane" value="$(arg assume_horizontal_plane)" />
   </node>
   <group if="$(arg use_joy)">
     <include file="$(find jsk_teleop_joy)/launch/joy_footstep_marker.launch">
