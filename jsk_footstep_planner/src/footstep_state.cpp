@@ -388,11 +388,6 @@ namespace jsk_footstep_planner
       arry.markers.push_back(marker_p);
       pub_debug_marker.publish( arry );
 #endif
-      if ((inliers->indices.size() / (double)indices->indices.size()) <min_ratio_of_inliers ) {
-        DEBUG_PRINT( "[FS state] ratio of inliers " << (inliers->indices.size() / (double)indices->indices.size()) );
-        error_state = projection_state::no_enough_inliers_ratio;
-        return FootstepState::Ptr();
-      }
       FootstepSupportState support_state;
       if (skip_cropping) {
         support_state = isSupportedByPointCloudWithoutCropping(
@@ -414,6 +409,11 @@ namespace jsk_footstep_planner
       else if (support_state == CLOSE_TO_SUPPORTED) {
         DEBUG_PRINT( "[FS state] CLOSE TO SUPPORTED" );
         error_state = projection_state::close_to_success;
+        return FootstepState::Ptr();
+      }
+      else if ((inliers->indices.size() / (double)indices->indices.size()) <min_ratio_of_inliers ) {
+        DEBUG_PRINT( "[FS state] ratio of inliers " << (inliers->indices.size() / (double)indices->indices.size()) );
+        error_state = projection_state::no_enough_inliers_ratio;
         return FootstepState::Ptr();
       }
       else {

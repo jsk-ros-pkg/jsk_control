@@ -195,9 +195,9 @@ namespace jsk_footstep_planner
     virtual void setLocalXMovement(double x) { local_move_x_ = x; }
     virtual void setLocalYMovement(double x) { local_move_y_ = x; }
     virtual void setLocalThetaMovement(double x) { local_move_theta_ = x; }
-    virtual void setLocalXMovementNum(size_t n) { local_move_x_num_ = n; }
-    virtual void setLocalYMovementNum(size_t n) { local_move_y_num_ = n; }
-    virtual void setLocalThetaMovementNum(size_t n) { local_move_theta_num_ = n; }
+    virtual void setLocalXMovementNum(int n) { local_move_x_num_ = n; }
+    virtual void setLocalYMovementNum(int n) { local_move_y_num_ = n; }
+    virtual void setLocalThetaMovementNum(int n) { local_move_theta_num_ = n; }
     virtual void setPlaneEstimationMaxIterations(int n) { plane_estimation_max_iterations_ = n; }
     virtual void setPlaneEstimationMinInliers(int n) { plane_estimation_min_inliers_ = n; }
     virtual void setPlaneEstimationOutlierThreshold(double d) { plane_estimation_outlier_threshold_ = d; }
@@ -255,9 +255,9 @@ namespace jsk_footstep_planner
     double local_move_x_;
     double local_move_y_;
     double local_move_theta_;
-    size_t local_move_x_num_;
-    size_t local_move_y_num_;
-    size_t local_move_theta_num_;
+    int local_move_x_num_;
+    int local_move_y_num_;
+    int local_move_theta_num_;
     double obstacle_resolution_;
     
     ros::Publisher pub_progress_;

@@ -99,13 +99,28 @@ namespace jsk_footstep_planner
           if (!projected_state) { // failed to project footstep
             if (graph_->localMovement() && error_state == projection_state::close_to_success) {
               // try local movement
-              std::vector<SolverNodePtr> locally_moved_nodes
-                = target_node->wrapWithSolverNodes(target_node->getParent(),
-                                                   graph_->localMoveFootstepState(projected_state));
-              for (size_t i = 0; i < locally_moved_nodes.size(); i++) {
-                if (graph_->isSuccessable(locally_moved_nodes[i]->getState(),
-                                          target_node->getParent()->getState())) {
-                  addToOpenList(locally_moved_nodes[i]);
+              std::vector<FootstepState::Ptr> locally_moved_states;
+              {
+                std::vector<FootstepState::Ptr> states_candidates
+                  = graph_->localMoveFootstepState(target_node->getState());
+                for (int i = 0; i < states_candidates.size(); i ++) {
+                  FootstepGraph::StatePtr tmp_state = graph_->projectFootstep(states_candidates[i],
+                                                                              error_state);
+                  if (!!tmp_state) {
+                    locally_moved_states.push_back(tmp_state);
+                  }
+                }
+              }
+              if (locally_moved_states.size() > 0) {
+                std::vector<SolverNodePtr> locally_moved_nodes
+                  = target_node->wrapWithSolverNodes(target_node->getParent(),
+                                                     locally_moved_states);
+                for (size_t i = 0; i < locally_moved_nodes.size(); i++) {
+
+                  if (graph_->isSuccessable(locally_moved_nodes[i]->getState(),
+                                            target_node->getParent()->getState())) {
+                    addToOpenList(locally_moved_nodes[i]);
+                  }
                 }
               }
             }

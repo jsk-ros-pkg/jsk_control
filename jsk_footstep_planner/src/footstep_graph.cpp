@@ -204,20 +204,29 @@ namespace jsk_footstep_planner
   FootstepGraph::localMoveFootstepState(FootstepState::Ptr in)
   {
     std::vector<FootstepState::Ptr> moved_states;
-    moved_states.reserve(local_move_x_num_ * local_move_y_num_ * local_move_theta_num_ * 8);
-    for (size_t xi = - local_move_x_num_; xi <= local_move_x_num_; xi++) {
-      for (size_t yi = - local_move_y_num_; yi <= local_move_y_num_; yi++) {
-        for (size_t thetai = - local_move_theta_num_; thetai <= local_move_theta_num_; thetai++) {
-          Eigen::Affine3f trans(Eigen::Translation3f(local_move_x_ / local_move_x_num_ * xi,
-                                                     local_move_y_ / local_move_y_num_ * yi,
-                                                     0)
-                                * Eigen::AngleAxisf(local_move_theta_ / local_move_theta_num_ * thetai,
-                                                    Eigen::Vector3f::UnitZ()));
-          moved_states.push_back(
-            FootstepState::Ptr(new FootstepState(in->getLeg(),
-                                                 in->getPose() * trans,
-                                                 in->getDimensions(),
-                                                 in->getResolution())));
+    moved_states.reserve((2*local_move_x_num_ + 1)*(2*local_move_y_num_ + 1)*(2*local_move_theta_num_ +1) - 1);
+    int local_move_x_div = local_move_x_num_;
+    int local_move_y_div = local_move_y_num_;
+    int local_move_theta_div = local_move_theta_num_;
+    if(local_move_x_div == 0) local_move_x_div = 1;
+    if(local_move_y_div == 0) local_move_y_div = 1;
+    if(local_move_theta_div == 0) local_move_theta_div = 1;
+
+    for (int xi = - local_move_x_num_; xi <= local_move_x_num_; xi++) {
+      for (int yi = - local_move_y_num_; yi <= local_move_y_num_; yi++) {
+        for (int thetai = - local_move_theta_num_; thetai <= local_move_theta_num_; thetai++) {
+          if ( (xi != 0) || (yi != 0) || (thetai != 0) ) {
+            Eigen::Affine3f trans(Eigen::Translation3f(local_move_x_ / local_move_x_div * xi,
+                                                       local_move_y_ / local_move_y_div * yi,
+                                                       0)
+                                  * Eigen::AngleAxisf(local_move_theta_ / local_move_theta_div * thetai,
+                                                      Eigen::Vector3f::UnitZ()));
+            moved_states.push_back(
+                                   FootstepState::Ptr(new FootstepState(in->getLeg(),
+                                                                        in->getPose() * trans,
+                                                                        in->getDimensions(),
+                                                                        in->getResolution())));
+          }
         }
       }
     }
@@ -252,18 +261,21 @@ namespace jsk_footstep_planner
       if (use_pointcloud_model_ && !lazy_projection_) {
         // Update footstep position by projection
         unsigned int error_state;
-        next = projectFootstep(next, error_state);
-        if (!next && localMovement() && error_state == projection_state::close_to_success) {
-          std::vector<StatePtr> locally_moved_nodes
-            = localMoveFootstepState(next);
+        FootstepGraph::StatePtr tmpnext = projectFootstep(next, error_state);
+        if (!tmpnext && localMovement() && error_state == projection_state::close_to_success) {
+          std::vector<StatePtr> locally_moved_nodes = localMoveFootstepState(next);
           for (size_t j = 0; j < locally_moved_nodes.size(); j++) {
             if (isSuccessable(locally_moved_nodes[j], target_state)) {
-              ret.push_back(locally_moved_nodes[j]);
+              FootstepGraph::StatePtr tmp = projectFootstep(locally_moved_nodes[j], error_state);
+              if(!!tmp) {
+                ret.push_back(tmp);
+              }
             }
           }
         }
+        next = tmpnext;
       }
-      if (next) {
+      if (!!next) {
         if (isSuccessable(next, target_state)) {
           ret.push_back(next);
         }
