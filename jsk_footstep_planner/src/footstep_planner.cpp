@@ -362,9 +362,14 @@ namespace jsk_footstep_planner
       as_.setPreempted();
       return;
     }
-    //ros::WallDuration timeout(goal->timeout.expectedCycleTime().toSec());
-    ros::WallDuration timeout(10.0);
-                                                              
+    ros::WallDuration timeout;
+    if(goal->timeout.toSec() == 0.0) {
+      timeout = ros::WallDuration(planning_timeout_);
+    } else {
+      timeout = ros::WallDuration(goal->timeout.toSec());
+    }
+
+
     ////////////////////////////////////////////////////////////////////
     // set start state
     // 0 is always start
@@ -696,6 +701,7 @@ namespace jsk_footstep_planner
       resolution_theta_ = config.resolution_theta;
       need_to_rebuild_graph = true;
     }
+    planning_timeout_ = config.planning_timeout;
     rich_profiling_ = config.rich_profiling;
     use_transition_limit_ = config.use_transition_limit;
     use_global_transition_limit_ = config.use_global_transition_limit;
