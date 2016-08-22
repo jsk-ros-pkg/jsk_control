@@ -190,6 +190,8 @@ namespace jsk_footstep_planner
     double cost_weight_;
     double heuristic_weight_;
     std::string pointcloud_model_frame_id_, obstacle_model_frame_id_;
+    double planning_timeout_;
+
   private:
     
   };
