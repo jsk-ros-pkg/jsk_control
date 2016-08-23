@@ -47,7 +47,8 @@ You can create `*ri*' like
 
 (defun print-readable-coords (coords)
   (dolist (c coords)
-    (format t "(make-coords :pos ~A :rpy ~A)~%"
+    (format t "(make-coords :name ~A :pos ~A :rpy '~A)~%"
+            (send c :name)
             (send c :worldpos)
             (car (send c :rpy-angle)))))
 
