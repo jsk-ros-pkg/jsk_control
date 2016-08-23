@@ -21,32 +21,56 @@
   <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
     <remap from="~pointcloud_model" to="$(arg input_point_cloud)" />
     <remap from="~obstacle_model" to="octomap_point_cloud_centers" />
-    <rosparam subst_value="true">
-      skip_cropping: false
-      plane_estimation_use_normal: $(arg USE_NORMAL)
-      plane_estimation_normal_distance_weight: 0.2
-      plane_estimation_normal_opening_angle: 0.2
-      plane_estimation_min_ratio_of_inliers: 0.8
-      plane_estimation_outlier_threshold: 0.02
-    </rosparam>
+    <!-- use point cloud (plane estimation) for making footstep -->
     <rosparam>
       use_pointcloud_model: true
-      use_lazy_perception: true
-      use_local_movement: true
       project_start_state: true
       project_goal_state: true
-      #use_obstacle_model: false
+    </rosparam>
+    <!-- obstacles -->
+    <rosparam>
       use_obstacle_model: true
       obstacle_resolution: 0.1
+      collision_bbox_size: [0.4, 1.2, 1.0]
+      collision_bbox_offset: [0, 0, 0.8]
     </rosparam>
+    <!-- size of foot -->
     <rosparam>
       ## add padding
       footstep_size_x: 0.26
       footstep_size_y: 0.145
-      collision_bbox_size: [0.4, 1.2, 1.0]
-      collision_bbox_offset: [0, 0, 0.8]
     </rosparam>
-    <!-- successors ( rfoot to lfoot ) -->
+    <!-- parameters for plane estimation -->
+    <rosparam subst_value="true">
+      skip_cropping: false
+      plane_estimation_use_normal: $(arg USE_NORMAL)
+      plane_estimation_normal_distance_weight: 0.2
+      plane_estimation_normal_opening_angle:   0.2
+      plane_estimation_min_ratio_of_inliers:   0.8
+      plane_estimation_outlier_threshold:      0.02
+    </rosparam>
+    <!-- parameters for moving footstep locally -->
+    <rosparam>
+      use_lazy_perception: false
+      use_local_movement:  false
+      local_move_x: 0.24
+      local_move_y: 0.03
+      local_move_theta: 0.04
+      local_move_x_num: 3
+      local_move_y_num: 1
+      local_move_theta_num: 1
+    </rosparam>
+    <!-- limitation of steps -->
+    <rosparam>
+      use_transision_limit: false
+      transition_limit_x: 0.5
+      transition_limit_y: 0.35
+      transition_limit_z: 0.4
+      transition_limit_roll:  0.6
+      transition_limit_pitch: 0.6
+      transition_limit_yaw:   0.4
+    </rosparam>
+    <!-- successors -->
     <rosparam>
       ## default_rfoot_to_lfoot_offset: [x, y, theta]
       default_rfoot_to_lfoot_offset: [0, -0.220156, 0]
@@ -57,59 +81,77 @@
         theta: 0
 # + side step
       - x: 0
-        y: -0.1
+        y: -0.10
+        theta: 0
+      - x: 0
+        y: -0.04
         theta: 0
 # - side step
       - x: 0
-        y: 0.05
+        y: 0.06
+        theta: 0
+      - x: 0
+        y: 0.02
         theta: 0
 # froward
-      - x: 0.1
+      - x: 0.16
         y: 0
         theta: 0
-      - x: 0.15
+      - x: 0.10
+        y: 0
+        theta: 0
+      - x: 0.02
         y: 0
         theta: 0
 # backward
-      - x: -0.1
+      - x: -0.10
+        y: 0
+        theta: 0
+      - x: -0.04
         y: 0
         theta: 0
 # + twist
       - x: 0
         y: 0
-        theta: 0.17
+        theta: 0.14
       - x: 0
-        y: -0.1
-        theta: 0.17
+        y: 0
+        theta: 0.05
+      - x: 0
+        y: -0.06
+        theta: 0.19
 # forward + twist
-      - x: 0.15
+      - x: 0.10
         y: 0
-        theta: 0.12
-      - x: 0.1
+        theta: 0.14
+      - x: 0.04
         y: 0
-        theta: 0.17
+        theta: 0.09
 # - twist
       - x: 0
         y: 0
-        theta: -0.17
+        theta: -0.14
       - x: 0
-        y: -0.1
-        theta: -0.17
+        y: 0
+        theta: -0.05
+      - x: 0
+        y: -0.06
+        theta: -0.19
 # forward - twist
-      - x: 0.15
+      - x: 0.10
         y: 0
-        theta: -0.12
-      - x: 0.1
+        theta: -0.14
+      - x: 0.04
         y: 0
-        theta: -0.17
+        theta: -0.09
 # backward + twist
-      - x: -0.08
+      - x: -0.04
         y: 0
-        theta: 0.12
+        theta: 0.09
 # backward - twist
-      - x: -0.08
+      - x: -0.04
         y: 0
-        theta: -0.12
+        theta: -0.09
     </rosparam>
   </node>
   <node pkg="jsk_footstep_planner" type="footstep_marker" name="footstep_marker" output="screen">
