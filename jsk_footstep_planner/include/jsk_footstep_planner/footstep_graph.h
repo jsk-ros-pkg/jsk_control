@@ -57,7 +57,7 @@ namespace jsk_footstep_planner
                   const bool local_movement = false,
                   const bool use_obstacle_model = false):
       max_successor_distance_(0.0), max_successor_rotation_(0.0),
-      pos_goal_thr_(0.1), rot_goal_thr_(0.17), publish_progress_(false),
+      goal_pos_thr_(0.1), goal_rot_thr_(0.17), publish_progress_(false),
       resolution_(resolution),
       use_pointcloud_model_(use_pointcloud_model),
       lazy_projection_(lazy_projection),
@@ -68,7 +68,7 @@ namespace jsk_footstep_planner
       obstacle_tree_model_(new pcl::KdTreeFLANN<pcl::PointXYZ>),
       tree_model_2d_(new pcl::search::Octree<pcl::PointNormal>(0.2)),
       grid_search_(new ANNGrid(0.05)),
-      local_move_x_(0.1), local_move_y_(0.05), local_move_theta_(0.2),
+      local_move_x_(0.1), local_move_y_(0.05), local_move_theta_(0.1),
       local_move_x_num_(3), local_move_y_num_(3), local_move_theta_num_(3),
       plane_estimation_max_iterations_(100),
       plane_estimation_min_inliers_(100),
@@ -243,37 +243,38 @@ namespace jsk_footstep_planner
     Eigen::Vector3f collision_bbox_size_;
     double max_successor_distance_;
     double max_successor_rotation_;
-    double pos_goal_thr_;
-    double rot_goal_thr_;
     bool publish_progress_;
+    ros::Publisher pub_progress_;
+    // const params
     const bool use_pointcloud_model_;
     const bool lazy_projection_;
     const bool local_movement_;
     const bool use_obstacle_model_;
+    const Eigen::Vector3f resolution_;
+    // params
+    bool plane_estimation_use_normal_;
+    bool skip_cropping_;
     TransitionLimit::Ptr transition_limit_;
     TransitionLimit::Ptr global_transition_limit_;
+    double goal_pos_thr_;
+    double goal_rot_thr_;
     double local_move_x_;
     double local_move_y_;
     double local_move_theta_;
-    int local_move_x_num_;
-    int local_move_y_num_;
-    int local_move_theta_num_;
     double obstacle_resolution_;
-    
-    ros::Publisher pub_progress_;
-    const Eigen::Vector3f resolution_;
-
-    bool plane_estimation_use_normal_;
     double plane_estimation_normal_distance_weight_;
     double plane_estimation_normal_opening_angle_;
     double plane_estimation_min_ratio_of_inliers_;
+    double plane_estimation_outlier_threshold_;
+    int local_move_x_num_;
+    int local_move_y_num_;
+    int local_move_theta_num_;
     int plane_estimation_max_iterations_;
     int plane_estimation_min_inliers_;
-    double plane_estimation_outlier_threshold_;
     int support_check_x_sampling_;
     int support_check_y_sampling_;
     double support_check_vertex_neighbor_threshold_;
-    bool skip_cropping_;
+
     ros::WallDuration perception_duration_;
   private:
 

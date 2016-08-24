@@ -95,14 +95,15 @@ namespace jsk_footstep_planner
 
   pcl::PointIndices::Ptr
   FootstepState::cropPointCloudExact(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
-                                     pcl::PointIndices::Ptr near_indices)
+                                     pcl::PointIndices::Ptr near_indices,
+                                     double padding_x, double padding_y)
   {
     // Project vertices into 2d
     Eigen::Vector3f z(0, 0, 1);
-    Eigen::Vector3f a = pose_ * Eigen::Vector3f(dimensions_[0]/2, dimensions_[1]/2, 0);
-    Eigen::Vector3f b = pose_ * Eigen::Vector3f(-dimensions_[0]/2, dimensions_[1]/2, 0);
-    Eigen::Vector3f c = pose_ * Eigen::Vector3f(-dimensions_[0]/2, -dimensions_[1]/2, 0);
-    Eigen::Vector3f d = pose_ * Eigen::Vector3f(dimensions_[0]/2, -dimensions_[1]/2, 0);
+    Eigen::Vector3f a = pose_ * Eigen::Vector3f( dimensions_[0]/2 + padding_x,  dimensions_[1]/2 + padding_y, 0);
+    Eigen::Vector3f b = pose_ * Eigen::Vector3f(-dimensions_[0]/2 - padding_x,  dimensions_[1]/2 + padding_y, 0);
+    Eigen::Vector3f c = pose_ * Eigen::Vector3f(-dimensions_[0]/2 - padding_x, -dimensions_[1]/2 - padding_y, 0);
+    Eigen::Vector3f d = pose_ * Eigen::Vector3f( dimensions_[0]/2 + padding_x, -dimensions_[1]/2 - padding_y, 0);
     Eigen::Vector3f a_2d = a + (- z.dot(a)) * z;
     Eigen::Vector3f b_2d = b + (- z.dot(b)) * z;
     Eigen::Vector3f c_2d = c + (- z.dot(c)) * z;
@@ -137,17 +138,19 @@ namespace jsk_footstep_planner
   
   pcl::PointIndices::Ptr
   FootstepState::cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
-                                ANNGrid::Ptr grid_search)
+                                ANNGrid::Ptr grid_search,
+                                double padding_x, double padding_y)
   {
     pcl::PointIndices::Ptr near_indices(new pcl::PointIndices);
-    Eigen::Vector3f a = pose_ * Eigen::Vector3f(dimensions_[0]/2, dimensions_[1]/2, 0);
-    Eigen::Vector3f b = pose_ * Eigen::Vector3f(-dimensions_[0]/2, dimensions_[1]/2, 0);
-    Eigen::Vector3f c = pose_ * Eigen::Vector3f(-dimensions_[0]/2, -dimensions_[1]/2, 0);
-    Eigen::Vector3f d = pose_ * Eigen::Vector3f(dimensions_[0]/2, -dimensions_[1]/2, 0);
+    Eigen::Vector3f a = pose_ * Eigen::Vector3f( dimensions_[0]/2 + padding_x,  dimensions_[1]/2 + padding_y, 0);
+    Eigen::Vector3f b = pose_ * Eigen::Vector3f(-dimensions_[0]/2 - padding_x,  dimensions_[1]/2 + padding_y, 0);
+    Eigen::Vector3f c = pose_ * Eigen::Vector3f(-dimensions_[0]/2 - padding_x, -dimensions_[1]/2 - padding_y, 0);
+    Eigen::Vector3f d = pose_ * Eigen::Vector3f( dimensions_[0]/2 + padding_x, -dimensions_[1]/2 - padding_y, 0);
     grid_search->approximateSearchInBox(a, b, c, d, *near_indices);
     return cropPointCloudExact(cloud, near_indices);
   }
   
+#if 0
   pcl::PointIndices::Ptr
   FootstepState::cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
                                 pcl::search::Octree<pcl::PointNormal>& tree)
@@ -161,7 +164,7 @@ namespace jsk_footstep_planner
     tree.radiusSearch(center, r, near_indices->indices, distances);
     return cropPointCloudExact(cloud, near_indices);
   }
-
+#endif
   bool FootstepState::crossCheck(FootstepState::Ptr other)
   {
     Eigen::Vector3f a0, a1, a2, a3;

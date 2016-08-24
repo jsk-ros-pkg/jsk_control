@@ -52,6 +52,7 @@
 #include "jsk_footstep_planner/footstep_graph.h"
 #include "jsk_footstep_planner/astar_solver.h"
 #include "jsk_footstep_planner/footstep_astar_solver.h"
+#include "jsk_footstep_planner/footstep_parameters.h"
 #include <jsk_footstep_planner/CollisionBoundingBoxInfo.h>
 #include <jsk_interactive_marker/SnapFootPrint.h>
 
@@ -139,14 +140,16 @@ namespace jsk_footstep_planner
     std_msgs::Header latest_header_;
     // Parameters
     bool rich_profiling_;
+    bool project_start_state_;
+    bool project_goal_state_;
     bool use_pointcloud_model_;
     bool use_lazy_perception_;
     bool use_local_movement_;
-    bool use_transition_limit_;
     bool use_obstacle_model_;
+    bool use_transition_limit_;
     bool use_global_transition_limit_;
-    bool project_start_state_;
-    bool project_goal_state_;
+    bool plane_estimation_use_normal_;
+    bool skip_cropping_;
     double local_move_x_;
     double local_move_y_;
     double local_move_theta_;
@@ -164,17 +167,15 @@ namespace jsk_footstep_planner
     double obstacle_resolution_;
     double goal_pos_thr_;
     double goal_rot_thr_;
-    bool plane_estimation_use_normal_;
     double plane_estimation_normal_distance_weight_;
     double plane_estimation_normal_opening_angle_;
     double plane_estimation_min_ratio_of_inliers_;
+    double plane_estimation_outlier_threshold_;
     int plane_estimation_max_iterations_;
     int plane_estimation_min_inliers_;
-    double plane_estimation_outlier_threshold_;
     int support_check_x_sampling_;
     int support_check_y_sampling_;
     double support_check_vertex_neighbor_threshold_;
-    bool skip_cropping_;
     double resolution_x_;
     double resolution_y_;
     double resolution_theta_;

@@ -138,17 +138,20 @@ namespace jsk_footstep_planner
                    double normal_opening_angle = 0.2,
                    double min_ratio_of_inliers = 0.8);
     
+#if 0
     pcl::PointIndices::Ptr
     cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
                    pcl::search::Octree<pcl::PointNormal>& tree);
-
+#endif
     pcl::PointIndices::Ptr
     cropPointCloud(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
-                   ANNGrid::Ptr grid_search);
+                   ANNGrid::Ptr grid_search,
+                   double padding_x = 0.0, double padding_y = 0.0);
 
     pcl::PointIndices::Ptr
     cropPointCloudExact(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
-                        pcl::PointIndices::Ptr near_indices);
+                        pcl::PointIndices::Ptr near_indices,
+                        double padding_x = 0.0, double padding_y = 0.0);
 
     template <class PointT>
     PointT toPoint()
