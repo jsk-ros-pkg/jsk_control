@@ -199,17 +199,7 @@ namespace jsk_footstep_planner
                                 pcl::PointCloud<pcl::PointNormal>::Ptr cloud_2d,
                                 const Eigen::Vector3f& z,
                                 unsigned int& error_state,
-                                double outlier_threshold,
-                                int max_iterations,
-                                int min_inliers,
-                                int foot_x_sampling_num,
-                                int foot_y_sampling_num,
-                                double vertex_threshold,
-                                const bool skip_cropping,
-                                const bool use_normal,
-                                double normal_distance_weight,
-                                double normal_opening_angle,
-                                double min_ratio_of_inliers)
+                                FootstepParameters &parameters)
   {
     // TODO: z is ignored
     // extract candidate points
@@ -218,23 +208,43 @@ namespace jsk_footstep_planner
     DEBUG_PRINT(std::endl << "[FS state] projectToCloud");
     pcl::PointIndices::Ptr indices;
     FootstepSupportState presupport_state;
-    if (skip_cropping) {
+    if (parameters.skip_cropping) {
       presupport_state = isSupportedByPointCloudWithoutCropping(
-        pose_, cloud, tree,
-        indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+        pose_, cloud, tree, indices,
+        parameters.support_check_x_sampling,
+        parameters.support_check_y_sampling,
+        parameters.support_check_vertex_neighbor_threshold);
       DEBUG_PRINT("[FS state] pre /(skip_cropping) projection state " << presupport_state);
     }
     indices = cropPointCloud(cloud, grid_search);
     DEBUG_PRINT("[FS state] pre / indices " << indices->indices.size());
-    if (indices->indices.size() < min_inliers) {
+    if (indices->indices.size() < parameters.plane_estimation_min_inliers) {
       DEBUG_PRINT("[FS state] no enough inliners");
       error_state = projection_state::no_enough_inliers;
       return FootstepState::Ptr();
     }
-    if (!skip_cropping) {
+    if (!parameters.skip_cropping) {
+      // DEBUG
+      double ax = 0.0, ay = 0.0, az = 0.0;
+      double xx = 0.0, yy = 0.0, zz = 0.0;
+      for (size_t i = 0; i < indices->indices.size(); i++) {
+        pcl::PointNormal pp = cloud->points[indices->indices[i]];
+        ROS_INFO("%d %f %f %f", indices->indices[i], pp.x, pp.y, pp.z);
+        ax += pp.x; ay += pp.y; az += pp.z;
+        xx += pp.x*pp.x; yy += pp.y*pp.y; zz += pp.z*pp.z;
+      }
+      int ss = indices->indices.size();
+      ROS_INFO("ave: %f %f %f, %f %f %f",
+               ax/ss, ay/ss, az/ss,
+               sqrt(xx/ss - (ax/ss)*(ax/ss)),
+               sqrt(yy/ss - (ay/ss)*(ay/ss)),
+               sqrt(zz/ss - (az/ss)*(az/ss)));
+      // DEBUG(END)
       presupport_state = isSupportedByPointCloud(
-        pose_, cloud, tree,
-        indices, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+        pose_, cloud, tree, indices,
+        parameters.support_check_x_sampling,
+        parameters.support_check_y_sampling,
+        parameters.support_check_vertex_neighbor_threshold);
       DEBUG_PRINT("[FS state] pre / (!skip_cropping) projection state " << presupport_state);
     }
     if (presupport_state == projection_state::success) {
@@ -247,33 +257,34 @@ namespace jsk_footstep_planner
     // estimate plane with ransac
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    if (!use_normal) {
+    if (!parameters.plane_estimation_use_normal) {
       pcl::SACSegmentation<pcl::PointNormal> seg;
       seg.setOptimizeCoefficients (true);
       seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
       seg.setMethodType(pcl::SAC_RANSAC);
-      seg.setDistanceThreshold(outlier_threshold);
+      seg.setDistanceThreshold(parameters.plane_estimation_outlier_threshold);
       seg.setModelType(pcl::SACMODEL_PLANE);
       seg.setInputCloud(cloud);
       //
       seg.setIndices(indices);
-      seg.setMaxIterations(max_iterations);
+      seg.setMaxIterations(parameters.plane_estimation_max_iterations);
       seg.segment(*inliers, *coefficients);
     } else {
       pcl::SACSegmentationFromNormals<pcl::PointNormal, pcl::PointNormal> seg;
       seg.setOptimizeCoefficients (true);
       seg.setRadiusLimits(0.01, std::numeric_limits<double>::max ());
       seg.setMethodType(pcl::SAC_RANSAC);
-      seg.setDistanceThreshold(outlier_threshold);
+      seg.setDistanceThreshold(parameters.plane_estimation_outlier_threshold);
       seg.setModelType(pcl::SACMODEL_NORMAL_PLANE);
       seg.setInputCloud(cloud);
       //
       seg.setInputNormals(cloud);
-      seg.setNormalDistanceWeight(normal_distance_weight);
-      seg.setMinMaxOpeningAngle(-normal_opening_angle, normal_opening_angle);
+      seg.setNormalDistanceWeight(parameters.plane_estimation_normal_distance_weight);
+      seg.setMinMaxOpeningAngle(-parameters.plane_estimation_normal_opening_angle,
+                                parameters.plane_estimation_normal_opening_angle);
       //
       seg.setIndices(indices);
-      seg.setMaxIterations(max_iterations);
+      seg.setMaxIterations(parameters.plane_estimation_max_iterations);
       seg.segment(*inliers, *coefficients);
     }
 
@@ -283,7 +294,7 @@ namespace jsk_footstep_planner
       error_state = projection_state::no_plane;
       return FootstepState::Ptr();
     }
-    else if (inliers->indices.size() < min_inliers) {
+    else if (inliers->indices.size() < parameters.plane_estimation_min_inliers) {
       DEBUG_PRINT( "[FS state] no enough inliners " << inliers->indices.size() );
       error_state = projection_state::no_enough_inliers;
       return FootstepState::Ptr();
@@ -392,16 +403,20 @@ namespace jsk_footstep_planner
       pub_debug_marker.publish( arry );
 #endif
       FootstepSupportState support_state;
-      if (skip_cropping) {
+      if (parameters.skip_cropping) {
         support_state = isSupportedByPointCloudWithoutCropping(
-          new_pose, cloud, tree,
-          inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+          new_pose, cloud, tree, inliers,
+          parameters.support_check_x_sampling,
+          parameters.support_check_y_sampling,
+          parameters.support_check_vertex_neighbor_threshold);
         DEBUG_PRINT( "[FS state] (skip_cropping) projection state " << support_state );
       }
       else {
         support_state = isSupportedByPointCloud(
-          new_pose, cloud, tree,
-          inliers, foot_x_sampling_num, foot_y_sampling_num, vertex_threshold);
+          new_pose, cloud, tree, inliers,
+          parameters.support_check_x_sampling,
+          parameters.support_check_y_sampling,
+          parameters.support_check_vertex_neighbor_threshold);
         DEBUG_PRINT( "[FS state] (!skip_cropping) projection state " << support_state );
       }
       if (support_state == NOT_SUPPORTED) {
@@ -414,7 +429,7 @@ namespace jsk_footstep_planner
         error_state = projection_state::close_to_success;
         return FootstepState::Ptr();
       }
-      else if ((inliers->indices.size() / (double)indices->indices.size()) <min_ratio_of_inliers ) {
+      else if ((inliers->indices.size() / (double)indices->indices.size()) < parameters.plane_estimation_min_ratio_of_inliers ) {
         DEBUG_PRINT( "[FS state] ratio of inliers " << (inliers->indices.size() / (double)indices->indices.size()) );
         error_state = projection_state::no_enough_inliers_ratio;
         return FootstepState::Ptr();

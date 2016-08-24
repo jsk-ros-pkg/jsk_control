@@ -50,6 +50,8 @@
 
 #include "jsk_footstep_planner/ann_grid.h"
 #include "jsk_footstep_planner/util.h"
+#include "jsk_footstep_planner/footstep_parameters.h"
+
 namespace jsk_footstep_planner
 {
 
@@ -118,6 +120,7 @@ namespace jsk_footstep_planner
       return a[0] * b[1] - a[1] * b[0];
     }
     virtual jsk_footstep_msgs::Footstep::Ptr toROSMsg();
+#if 0
     virtual FootstepState::Ptr
     projectToCloud(pcl::KdTreeFLANN<pcl::PointNormal>& tree,
                    pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
@@ -137,6 +140,16 @@ namespace jsk_footstep_planner
                    double normal_distance_weight = 0.2,
                    double normal_opening_angle = 0.2,
                    double min_ratio_of_inliers = 0.8);
+#endif
+    virtual FootstepState::Ptr
+    projectToCloud(pcl::KdTreeFLANN<pcl::PointNormal>& tree,
+                   pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
+                   ANNGrid::Ptr grid_search,
+                   pcl::search::Octree<pcl::PointNormal>& tree_2d,
+                   pcl::PointCloud<pcl::PointNormal>::Ptr cloud_2d,
+                   const Eigen::Vector3f& z,
+                   unsigned int& error_state,
+                   FootstepParameters &parameters);
     
 #if 0
     pcl::PointIndices::Ptr

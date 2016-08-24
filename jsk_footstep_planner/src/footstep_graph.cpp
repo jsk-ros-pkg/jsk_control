@@ -96,7 +96,7 @@ namespace jsk_footstep_planner
   {
     pcl::PointXYZ center;
     center.getVector3fMap() = Eigen::Vector3f(c.translation());
-    const double r = collision_bbox_size_.norm() / 2 + obstacle_resolution_;
+    const double r = collision_bbox_size_.norm() / 2 + parameters_.obstacle_resolution;
     pcl::PointIndices::Ptr near_indices(new pcl::PointIndices);
     std::vector<float> distances;
     obstacle_tree_model_->radiusSearch(center, r, near_indices->indices, distances);
@@ -154,29 +154,29 @@ namespace jsk_footstep_planner
     else {
       ss << "  global_transition_limit: None" << std::endl;
     }
-    ss << "  local_move_x: " << local_move_x_ << std::endl;
-    ss << "  local_move_y: " << local_move_y_ << std::endl;
-    ss << "  local_move_theta: " << local_move_theta_ << std::endl;
-    ss << "  local_move_x_num: " << local_move_x_num_ << std::endl;
-    ss << "  local_move_y_num: " << local_move_y_num_ << std::endl;
-    ss << "  local_move_theta_num: " << local_move_theta_num_ << std::endl;
+    ss << "  local_move_x: " << parameters_.local_move_x << std::endl;
+    ss << "  local_move_y: " << parameters_.local_move_y << std::endl;
+    ss << "  local_move_theta: " << parameters_.local_move_theta << std::endl;
+    ss << "  parameters_.local_move_xnum: " << parameters_.local_move_x_num << std::endl;
+    ss << "  parameters_.local_move_ynum: " << parameters_.local_move_y_num << std::endl;
+    ss << "  parameters_.local_move_thetanum: " << parameters_.local_move_theta_num << std::endl;
     ss << "  resolution: ["
        << resolution_[0] << ", "
        << resolution_[1] << ", "
        << resolution_[2] << "]"
        << std::endl;
-    ss << "  plane_estimation_use_normal: "             << plane_estimation_use_normal_             << std::endl;
-    ss << "  plane_estimation_normal_distance_weight: " << plane_estimation_normal_distance_weight_ << std::endl;
-    ss << "  plane_estimation_normal_opening_angle: "   << plane_estimation_normal_opening_angle_   << std::endl;
-    ss << "  plane_estimation_min_ratio_of_inliers: "   << plane_estimation_min_ratio_of_inliers_   << std::endl;
-    ss << "  plane_estimation_max_iterations: " << plane_estimation_max_iterations_ << std::endl;
-    ss << "  plane_estimation_min_inliers: " << plane_estimation_min_inliers_ << std::endl;
-    ss << "  plane_estimation_outlier_threshold: " << plane_estimation_outlier_threshold_ << std::endl;
+    ss << "  plane_estimation_use_normal: "             << parameters_.plane_estimation_use_normal             << std::endl;
+    ss << "  plane_estimation_normal_distance_weight: " << parameters_.plane_estimation_normal_distance_weight << std::endl;
+    ss << "  plane_estimation_normal_opening_angle: "   << parameters_.plane_estimation_normal_opening_angle   << std::endl;
+    ss << "  plane_estimation_min_ratio_of_inliers: "   << parameters_.plane_estimation_min_ratio_of_inliers   << std::endl;
+    ss << "  plane_estimation_max_iterations: " << parameters_.plane_estimation_max_iterations << std::endl;
+    ss << "  plane_estimation_min_inliers: " << parameters_.plane_estimation_min_inliers << std::endl;
+    ss << "  plane_estimation_outlier_threshold: " << parameters_.plane_estimation_outlier_threshold << std::endl;
 
-    ss << "  support_check_x_sampling: " << support_check_x_sampling_ << std::endl;
-    ss << "  support_check_y_sampling: " << support_check_y_sampling_ << std::endl;
-    ss << "  support_check_vertex_neighbor_threshold: " << support_check_vertex_neighbor_threshold_ << std::endl;
-    ss << "  skip_cropping: " << skip_cropping_ << std::endl;
+    ss << "  support_check_x_sampling: " << parameters_.support_check_x_sampling << std::endl;
+    ss << "  support_check_y_sampling: " << parameters_.support_check_y_sampling << std::endl;
+    ss << "  support_check_vertex_neighbor_threshold: " << parameters_.support_check_vertex_neighbor_threshold << std::endl;
+    ss << "  skip_cropping: " << parameters_.skip_cropping << std::endl;
     
     return ss.str();
   }
@@ -204,22 +204,22 @@ namespace jsk_footstep_planner
   FootstepGraph::localMoveFootstepState(FootstepState::Ptr in)
   {
     std::vector<FootstepState::Ptr> moved_states;
-    moved_states.reserve((2*local_move_x_num_ + 1)*(2*local_move_y_num_ + 1)*(2*local_move_theta_num_ +1) - 1);
-    int local_move_x_div = local_move_x_num_;
-    int local_move_y_div = local_move_y_num_;
-    int local_move_theta_div = local_move_theta_num_;
-    if(local_move_x_div == 0) local_move_x_div = 1;
-    if(local_move_y_div == 0) local_move_y_div = 1;
-    if(local_move_theta_div == 0) local_move_theta_div = 1;
+    moved_states.reserve((2*parameters_.local_move_x_num + 1)*(2*parameters_.local_move_y_num + 1)*(2*parameters_.local_move_theta_num +1) - 1);
+    int x_num     = parameters_.local_move_x_num;
+    int y_num     = parameters_.local_move_y_num;
+    int theta_num = parameters_.local_move_theta_num;
+    if(x_num == 0)     x_num = 1;
+    if(y_num == 0)     y_num = 1;
+    if(theta_num == 0) theta_num = 1;
 
-    for (int xi = - local_move_x_num_; xi <= local_move_x_num_; xi++) {
-      for (int yi = - local_move_y_num_; yi <= local_move_y_num_; yi++) {
-        for (int thetai = - local_move_theta_num_; thetai <= local_move_theta_num_; thetai++) {
+    for (int xi = - parameters_.local_move_x_num; xi <= parameters_.local_move_x_num; xi++) {
+      for (int yi = - parameters_.local_move_y_num; yi <= parameters_.local_move_y_num; yi++) {
+        for (int thetai = - parameters_.local_move_theta_num; thetai <= parameters_.local_move_theta_num; thetai++) {
           if ( (xi != 0) || (yi != 0) || (thetai != 0) ) {
-            Eigen::Affine3f trans(Eigen::Translation3f(local_move_x_ / local_move_x_div * xi,
-                                                       local_move_y_ / local_move_y_div * yi,
+            Eigen::Affine3f trans(Eigen::Translation3f(parameters_.local_move_x / x_num * xi,
+                                                       parameters_.local_move_y / y_num * yi,
                                                        0)
-                                  * Eigen::AngleAxisf(local_move_theta_ / local_move_theta_div * thetai,
+                                  * Eigen::AngleAxisf(parameters_.local_move_theta / theta_num * thetai,
                                                       Eigen::Vector3f::UnitZ()));
             moved_states.push_back(
                                    FootstepState::Ptr(new FootstepState(in->getLeg(),
@@ -295,6 +295,7 @@ namespace jsk_footstep_planner
                                                     unsigned int& error_state)
   {
     ros::WallTime start_time = ros::WallTime::now();
+#if 0
     FootstepState::Ptr projected_footstep = in->projectToCloud(
       *tree_model_,
       pointcloud_model_,
@@ -303,17 +304,26 @@ namespace jsk_footstep_planner
       pointcloud_model_2d_,
       Eigen::Vector3f(0, 0, 1),
       error_state,
-      plane_estimation_outlier_threshold_,
-      plane_estimation_max_iterations_,
-      plane_estimation_min_inliers_,
-      support_check_x_sampling_,
-      support_check_y_sampling_,
-      support_check_vertex_neighbor_threshold_,
-      skip_cropping_,
-      plane_estimation_use_normal_,
-      plane_estimation_normal_distance_weight_,
-      plane_estimation_normal_opening_angle_,
-      plane_estimation_min_ratio_of_inliers_);
+      parameters_.plane_estimation_outlier_threshold,
+      parameters_.plane_estimation_max_iterations,
+      parameters_.plane_estimation_min_inliers,
+      parameters_.support_check_x_sampling,
+      parameters_.support_check_y_sampling,
+      parameters_.support_check_vertex_neighbor_threshold,
+      parameters_.skip_cropping,
+      parameters_.plane_estimation_use_normal,
+      parameters_.plane_estimation_normal_distance_weight,
+      parameters_.plane_estimation_normal_opening_angle,
+      parameters_.plane_estimation_min_ratio_of_inliers);
+#endif
+    FootstepState::Ptr projected_footstep = in->projectToCloud(
+      *tree_model_,
+      pointcloud_model_,
+      grid_search_,
+      *tree_model_2d_,
+      pointcloud_model_2d_,
+      Eigen::Vector3f(0, 0, 1),
+      error_state, parameters_);
     ros::WallTime end_time = ros::WallTime::now();
     perception_duration_ = perception_duration_ + (end_time  - start_time);
     return projected_footstep;

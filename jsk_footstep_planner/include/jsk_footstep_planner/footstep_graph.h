@@ -44,6 +44,7 @@
 #include "jsk_footstep_planner/astar_solver.h"
 #include "jsk_footstep_planner/ann_grid.h"
 #include "jsk_footstep_planner/transition_limit.h"
+#include "jsk_footstep_planner/footstep_parameters.h"
 
 namespace jsk_footstep_planner
 {
@@ -57,7 +58,7 @@ namespace jsk_footstep_planner
                   const bool local_movement = false,
                   const bool use_obstacle_model = false):
       max_successor_distance_(0.0), max_successor_rotation_(0.0),
-      goal_pos_thr_(0.1), goal_rot_thr_(0.17), publish_progress_(false),
+      publish_progress_(false),
       resolution_(resolution),
       use_pointcloud_model_(use_pointcloud_model),
       lazy_projection_(lazy_projection),
@@ -68,15 +69,7 @@ namespace jsk_footstep_planner
       obstacle_tree_model_(new pcl::KdTreeFLANN<pcl::PointXYZ>),
       tree_model_2d_(new pcl::search::Octree<pcl::PointNormal>(0.2)),
       grid_search_(new ANNGrid(0.05)),
-      local_move_x_(0.1), local_move_y_(0.05), local_move_theta_(0.1),
-      local_move_x_num_(3), local_move_y_num_(3), local_move_theta_num_(3),
-      plane_estimation_max_iterations_(100),
-      plane_estimation_min_inliers_(100),
-      plane_estimation_outlier_threshold_(0.02),
-      support_check_x_sampling_(3),
-      support_check_y_sampling_(3),
-      support_check_vertex_neighbor_threshold_(0.02),
-      skip_cropping_(false),
+      parameters_(),
       zero_state_(new FootstepState(0,
                                     Eigen::Affine3f::Identity(),
                                     Eigen::Vector3f::UnitX(),
@@ -148,11 +141,6 @@ namespace jsk_footstep_planner
       return max_successor_rotation_;
     }
 
-    virtual void setObstacleResolution(double res)
-    {
-      obstacle_resolution_ = res;
-    }
-    
     virtual void setProgressPublisher(ros::NodeHandle& nh, std::string topic)
     {
       publish_progress_ = true;
@@ -190,25 +178,32 @@ namespace jsk_footstep_planner
     virtual bool usePointCloudModel() const { return use_pointcloud_model_; }
     virtual bool lazyProjection()  const { return lazy_projection_; }
     virtual bool localMovement() const { return local_movement_; }
-    virtual void setPositionGoalThreshold(double x) { pos_goal_thr_ = x; }
-    virtual void setRotationGoalThreshold(double x) { rot_goal_thr_ = x; }
-    virtual void setLocalXMovement(double x) { local_move_x_ = x; }
-    virtual void setLocalYMovement(double x) { local_move_y_ = x; }
-    virtual void setLocalThetaMovement(double x) { local_move_theta_ = x; }
-    virtual void setLocalXMovementNum(int n) { local_move_x_num_ = n; }
-    virtual void setLocalYMovementNum(int n) { local_move_y_num_ = n; }
-    virtual void setLocalThetaMovementNum(int n) { local_move_theta_num_ = n; }
-    virtual void setPlaneEstimationMaxIterations(int n) { plane_estimation_max_iterations_ = n; }
-    virtual void setPlaneEstimationMinInliers(int n) { plane_estimation_min_inliers_ = n; }
-    virtual void setPlaneEstimationOutlierThreshold(double d) { plane_estimation_outlier_threshold_ = d; }
-    virtual void setPlaneEstimationUseNormal(bool b) { plane_estimation_use_normal_ = b; }
-    virtual void setPlaneEstimationNormalDistanceWeight(double d) { plane_estimation_normal_distance_weight_ = d; }
-    virtual void setPlaneEstimationNormalOpeningAngle(double d) { plane_estimation_normal_opening_angle_ = d; }
-    virtual void setPlaneEstimationMinRatioOfInliers(double d) { plane_estimation_min_ratio_of_inliers_ = d; }
-    virtual void setSupportCheckXSampling(int n) { support_check_x_sampling_ = n; }
-    virtual void setSupportCheckYSampling(int n) { support_check_y_sampling_ = n; }
-    virtual void setSupportCheckVertexNeighborThreshold(double d) { support_check_vertex_neighbor_threshold_ = d; }
-    virtual void setSkipCropping(bool v) { skip_cropping_ = v; }
+#if 0
+    virtual void setObstacleResolution(double res)
+    {
+      parameters_.obstacle_resolution = res;
+    }
+    virtual void setPositionGoalThreshold(double x) { parameters_.goal_pos_thr_ = x; }
+    virtual void setRotationGoalThreshold(double x) { parameters_.goal_rot_thr_ = x; }
+    virtual void setLocalXMovement(double x) { parameters_.local_move_x = x; }
+    virtual void setLocalYMovement(double x) { parameters_.local_move_y = x; }
+    virtual void setLocalThetaMovement(double x) { parameters_.local_move_theta = x; }
+    virtual void setLocalXMovementNum(int n) { parameters_.local_move_x_num = n; }
+    virtual void setLocalYMovementNum(int n) { parameters_.local_move_y_num = n; }
+    virtual void setLocalThetaMovementNum(int n) { parameters_.local_move_theta_num = n; }
+    virtual void setPlaneEstimationMaxIterations(int n) { parameters_.plane_estimation_max_iterations = n; }
+    virtual void setPlaneEstimationMinInliers(int n) { parameters_.plane_estimation_min_inliers = n; }
+    virtual void setPlaneEstimationOutlierThreshold(double d) { parameters_.plane_estimation_outlier_threshold = d; }
+    virtual void setPlaneEstimationUseNormal(bool b) { parameters_.plane_estimation_use_normal = b; }
+    virtual void setPlaneEstimationNormalDistanceWeight(double d) { parameters_.plane_estimation_normal_distance_weight = d; }
+    virtual void setPlaneEstimationNormalOpeningAngle(double d) { parameters_.plane_estimation_normal_opening_angle = d; }
+    virtual void setPlaneEstimationMinRatioOfInliers(double d) { parameters_.plane_estimation_min_ratio_of_inliers = d; }
+    virtual void setSupportCheckXSampling(int n) { parameters_.support_check_x_sampling = n; }
+    virtual void setSupportCheckYSampling(int n) { parameters_.support_check_y_sampling = n; }
+    virtual void setSupportCheckVertexNeighborThreshold(double d) { parameters_.support_check_vertex_neighbor_threshold = d; }
+    virtual void setSkipCropping(bool v) { parameters_.skip_cropping = v; }
+#endif
+    virtual void setParameters (FootstepParameters &p) { parameters_ = p; }
     virtual void setTransitionLimit(TransitionLimit::Ptr limit) { transition_limit_ = limit; }
     virtual TransitionLimit::Ptr getTransitionLimit() { return transition_limit_; }
     virtual void setGlobalTransitionLimit(TransitionLimit::Ptr limit) { global_transition_limit_ = limit; }
@@ -252,28 +247,9 @@ namespace jsk_footstep_planner
     const bool use_obstacle_model_;
     const Eigen::Vector3f resolution_;
     // params
-    bool plane_estimation_use_normal_;
-    bool skip_cropping_;
     TransitionLimit::Ptr transition_limit_;
     TransitionLimit::Ptr global_transition_limit_;
-    double goal_pos_thr_;
-    double goal_rot_thr_;
-    double local_move_x_;
-    double local_move_y_;
-    double local_move_theta_;
-    double obstacle_resolution_;
-    double plane_estimation_normal_distance_weight_;
-    double plane_estimation_normal_opening_angle_;
-    double plane_estimation_min_ratio_of_inliers_;
-    double plane_estimation_outlier_threshold_;
-    int local_move_x_num_;
-    int local_move_y_num_;
-    int local_move_theta_num_;
-    int plane_estimation_max_iterations_;
-    int plane_estimation_min_inliers_;
-    int support_check_x_sampling_;
-    int support_check_y_sampling_;
-    double support_check_vertex_neighbor_threshold_;
+    FootstepParameters parameters_;
 
     ros::WallDuration perception_duration_;
   private:

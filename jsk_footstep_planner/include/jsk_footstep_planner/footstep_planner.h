@@ -138,6 +138,9 @@ namespace jsk_footstep_planner
     Eigen::Vector3f collision_bbox_size_;
     Eigen::Affine3f collision_bbox_offset_;
     std_msgs::Header latest_header_;
+    // Common Parameters
+    FootstepParameters parameters_;
+
     // Parameters
     bool rich_profiling_;
     bool project_start_state_;
@@ -146,36 +149,6 @@ namespace jsk_footstep_planner
     bool use_lazy_perception_;
     bool use_local_movement_;
     bool use_obstacle_model_;
-    bool use_transition_limit_;
-    bool use_global_transition_limit_;
-    bool plane_estimation_use_normal_;
-    bool skip_cropping_;
-    double local_move_x_;
-    double local_move_y_;
-    double local_move_theta_;
-    int local_move_x_num_;
-    int local_move_y_num_;
-    int local_move_theta_num_;
-    double transition_limit_x_;
-    double transition_limit_y_;
-    double transition_limit_z_;
-    double transition_limit_roll_;
-    double transition_limit_pitch_;
-    double transition_limit_yaw_;
-    double global_transition_limit_roll_;
-    double global_transition_limit_pitch_;
-    double obstacle_resolution_;
-    double goal_pos_thr_;
-    double goal_rot_thr_;
-    double plane_estimation_normal_distance_weight_;
-    double plane_estimation_normal_opening_angle_;
-    double plane_estimation_min_ratio_of_inliers_;
-    double plane_estimation_outlier_threshold_;
-    int plane_estimation_max_iterations_;
-    int plane_estimation_min_inliers_;
-    int support_check_x_sampling_;
-    int support_check_y_sampling_;
-    double support_check_vertex_neighbor_threshold_;
     double resolution_x_;
     double resolution_y_;
     double resolution_theta_;
