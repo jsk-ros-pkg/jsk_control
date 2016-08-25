@@ -594,6 +594,14 @@
    (list (send *cbox* :worldcoords))
    ))
 
+(defun demo-cbox-wrench-calc-19
+  ()
+  "Demo for cbox wrench calculation by symmetric-friction-polycone-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance symmetric-friction-polycone-contact-constraint :init 0.5 :div 16))
+   (list (send *cbox* :worldcoords))
+   ))
 
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
@@ -611,6 +619,113 @@
   (warn ";;   (demo-cbox-wrench-calc-~d) ;; ~A~%" (1+ i)
         (documentation (read-from-string (format nil "demo-cbox-wrench-calc-~d" (1+ i))))))
 (warn ";;   (demo-cbox-wrench-calc-all) ;; for all tests~%")
+
+;; test for calc-constraint-param-list-for-polygon-cop and calc-constraint-param-list-for-symmetric-friction-polycone
+(defun test-cop-polygon-constraint
+  (&key (max-itr 1000) (debug-view))
+  (let* ((vertices-size (+ 1 (random 10)))
+         (aface-vertices
+          (quickhull
+           (remove-duplicates
+            (append
+             (mapcar #'(lambda (x) (float-vector (random 20.0) (random 20.0) 0.0)) (make-list vertices-size))
+             (mapcar #'(lambda (x) (float-vector (- (random 20.0)) (random 20.0) 0.0)) (make-list vertices-size))
+             (mapcar #'(lambda (x) (float-vector (- (random 20.0)) (- (random 20.0)) 0.0)) (make-list vertices-size))
+             (mapcar #'(lambda (x) (float-vector (random 20.0) (- (random 20.0)) 0.0)) (make-list vertices-size)))
+            :test #'eps-v=)))
+         ret fc cc)
+    ;; Initialize
+    (setq vertices-size (length aface-vertices))
+    (setq fc (instance face :init :vertices aface-vertices))
+    (setq cc (calc-constraint-param-list-for-polygon-cop fc (make-coords)))
+    (format t ";; div = ~A, vertices = ~A~%" vertices-size aface-vertices)
+    (when debug-view
+      (objects (list (make-cube 50 50 10)))
+      (send *irtviewer* :draw-objects :flush nil))
+    (dotimes (i max-itr)
+      (let* ((pp (float-vector (- (random 50.0) 25.0) (- (random 50.0) 25.0) 0.0))
+             (fz (+ 1e-5 (random 300.0)))
+             ;; Check whether pp is included in fc face using :insidep method.
+             (fp (send (instance polygon2d :init (mapcar #'(lambda (x) (subseq x 0 2)) (cdr (send fc :vertices))))
+                       :insidep (float-vector (elt pp 0) (elt pp 1))))
+             ;; Check whether pp is included in contact-constraint
+             (constraint-matrix (make-matrix (length (cadr (memq :matrix cc))) 6 (cadr (memq :matrix cc))))
+             (mp (mapcar #'(lambda (x y) (not (< x y)))
+                         (concatenate cons (transform constraint-matrix (float-vector 0 0 fz (* 1e-3 fz (elt pp 1)) (* fz -1e-3 (elt pp 0)) 0)))
+                         (cadr (memq :vector cc)))))
+        ;; Debug
+        (when debug-view
+          (if (every #'identity mp)
+              (send pp :draw-on :flush nil :color #f(0 1 0) :size 2)
+            (send pp :draw-on :flush nil :color #f(0 0 1) :size 2)))
+        (unless (eq :border fp) ;; neglect border
+          (when debug-view
+            (format t ";; (insidep = constraint?) = ~A, pos = ~A[mm], fz = ~A[N], insidep = ~A, constraint = ~A~%"
+                    (eq fp (every #'identity mp)) pp fz fp (every #'identity mp)))
+          (push (eq fp (every #'identity mp)) ret)
+          (unless (eq fp (every #'identity mp))
+            (when debug-view
+              (send pp :draw-on :flush t :color #f(1 0 0) :size 2))
+            (error ";; err~%")
+            ))
+        ))
+    (when debug-view
+      (send fc :draw-on :flush nil :color #(0 0 0) :width 5)
+      (send *viewer* :viewsurface :flush))
+    (every #'identity (reverse ret))
+    ))
+
+(defun test-friction-polycone-constraint
+  (&key (max-itr 1000) (debug-view))
+  (let* ((vertices-size (+ 3 (random 10)))
+         (mu (random 5.0))
+         vertices directions ret
+         fc cc)
+    ;; Initialize
+    (multiple-value-setq
+     (vertices directions)
+     (calc-vertices-directions-for-regular-polygon mu vertices-size :offset-angle (/ pi vertices-size)))
+    (setq fc (instance face :init :vertices vertices))
+    (setq cc (calc-constraint-param-list-for-symmetric-friction-polycone mu :div vertices-size))
+    (format t ";; mu ~A, div = ~A~%" mu vertices-size)
+    (when debug-view
+      (objects (list (make-cube 10 10 10)))
+      (send *irtviewer* :draw-objects :flush nil))
+    ;; Check
+    (dotimes (i max-itr)
+      (let* ((pp (float-vector (- (random 10.0) 5.0) (- (random 10.0) 5.0) 0.0))
+             (fz (+ 1e-5 (random 300.0)))
+             ;; Check whether pp is included in fc face using :insidep method.
+             (fp (send (instance polygon2d :init (mapcar #'(lambda (x) (subseq x 0 2)) (cdr (send fc :vertices))))
+                       :insidep (float-vector (elt pp 0) (elt pp 1))))
+             ;; Check whether pp is included in contact-constraint
+             (constraint-matrix (make-matrix (length (cadr (memq :matrix cc))) 6 (cadr (memq :matrix cc))))
+             (mp (mapcar #'(lambda (x y) (not (< x y)))
+                         (concatenate cons (transform constraint-matrix (float-vector (* fz (elt pp 0)) (* (elt pp 1) fz) fz 0 0 0)))
+                         (cadr (memq :vector cc)))))
+        ;; Debug
+        (when debug-view
+          (if (every #'identity mp)
+              (send pp :draw-on :flush nil :color #f(0 1 0) :size 2)
+            (send pp :draw-on :flush nil :color #f(0 0 1) :size 2)))
+        (unless (eq :border fp) ;; neglect border
+          (when debug-view
+            (format t ";; (insidep = constraint?) = ~A, pos = ~A[mm], fz = ~A[N], insidep = ~A, constraint = ~A~%"
+                    (eq fp (every #'identity mp)) pp fz fp (every #'identity mp)))
+          (push (eq fp (every #'identity mp)) ret)
+          (unless (eq fp (every #'identity mp))
+            (when debug-view
+              (send pp :draw-on :flush t :color #f(1 0 0) :size 2))
+            (error ";; err~%")
+            ))
+        ))
+    (when debug-view
+      (send fc :draw-on :flush nil :color #(0 0 0) :width 5)
+      (send *viewer* :viewsurface :flush))
+    (every #'identity (reverse ret))
+    ))
+(warn ";; (test-cop-polygon-constraint)~%")
+(warn ";; (test-friction-polycone-constraint)~%")
 
 #|
 (defun test-wrench-comp ()
