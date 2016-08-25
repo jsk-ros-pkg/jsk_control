@@ -542,6 +542,37 @@
    )
   )
 
+(defclass symmetric-friction-polycone-contact-constraint
+  :super contact-constraint
+  :slots (mu div offset-angle)
+  )
+
+(defmethod symmetric-friction-polycone-contact-constraint
+  (:init
+   (tmp-mu &key ((:div dv) 4) ((:offset-angle oa) (/ pi dv)))
+  "Calc constraint param for friction constraint with symmetric polycone.
+   mu is friction coefficient.
+   div is friction polycone division number.
+   This function assumes that top point of polygon is origin and direction of polycone is z-axis"
+  (setq mu tmp-mu div dv offset-angle oa)
+  (setq constraint-param-list
+        (calc-constraint-param-list-for-symmetric-friction-polycone
+         mu :div div))
+  (send-super :init)
+  )
+  (:gen-drawing-object
+   (&key (z-length 200))
+   (setq drawing-object
+         (make-cone
+          (float-vector 0 0 0)
+          (mapcar #'(lambda (x) (float-vector (* z-length (elt x 0)) (* z-length (elt x 1)) z-length))
+                  (car (calc-vertices-directions-for-regular-polygon mu div :offset-angle offset-angle)))
+          ))
+   (send drawing-object :worldcoords)
+   (send drawing-object :put :draw-on-args (list :color #f(1 1 1) :width 3))
+   )
+  )
+
 (defclass norm-contact-constraint
   :super contact-constraint
   :slots (norm-axis)
@@ -974,6 +1005,68 @@
            (setf (elt (car ret) slide-idx) -1)
            (setf (elt (cadr ret) slide-idx) 1)))
     (list :matrix ret :vector (list 0 0))
+    ))
+
+(defun calc-vertices-directions-for-regular-polygon
+  (radius div &key (debug-view nil) (offset-angle 0))
+  "Calculate vertices and edge directions for a regular polygon
+   inscribed within a circle with given radius. 
+   radius is given radius [mm].
+   div is division number.
+   offset-angle is angle of offset for initial point."
+  (let ((pret) (dret) (dtheta (/ 2pi div)))
+    ;; Vertices
+    (dotimes (i div)
+      (let ((angle (+ offset-angle (* i dtheta))))
+        (push (float-vector (* radius (cos angle)) (* radius (sin angle)) 0) pret)))
+    (setq pret (reverse pret))
+    ;; Directions
+    ;; (setq dret
+    ;;       (mapcar #'(lambda (p0 p1) (normalize-vector (v- p1 p0)))
+    ;;               pret
+    ;;               (append (cdr pret) (list (car pret)))))
+    (dotimes (i div)
+      (let ((angle (+ offset-angle (* (+ i 0.5) dtheta)))
+            (tmp (* 2 radius (sin (* 0.5 dtheta)))))
+        (push (normalize-vector (float-vector (* -1 tmp (sin angle)) (* tmp (cos angle)) 0)) dret)))
+    (setq dret (reverse dret))
+    ;; debug
+    (when debug-view
+      (let ((nret
+             (mapcar #'(lambda (p0 p1) (distance p1 p0))
+                     pret
+                     (append (cdr pret) (list (car pret))))))
+        (mapcar #'(lambda (p d n)
+                    (send *viewer* :draw-arrow p (v+ p (scale n d))))
+                pret dret nret)
+        (send-all pret :draw-on :flush nil :color #f(1 0 0) :size 5)
+        (send *viewer* :viewsurface :flush)
+        ))
+    ;;(list :vertices pret :directions dret)
+    (list pret dret)
+    ))
+
+(defun calc-constraint-param-list-for-symmetric-friction-polycone
+  (mu &key (div 4) (offset-angle (/ pi div)))
+  "Calc constraint param for friction constraint with symmetric polycone.
+   mu is friction coefficient.
+   div is friction polycone division number.
+   This function assumes that top point of polygon is origin and direction of polycone is z-axis"
+  (let* ((ret (mapcar #'(lambda (x) (make-list 6 :initial-element 0))
+                      (make-list div))))
+    (let* (vertices directions)
+      (multiple-value-setq
+       (vertices directions)
+       (calc-vertices-directions-for-regular-polygon mu div :offset-angle offset-angle))
+      (dotimes (i div)
+        (let ((d (elt directions i)) (p (elt vertices i)))
+          (setf (elt (elt ret i) 0) (- (elt d 1)))
+          (setf (elt (elt ret i) 1) (elt d 0))
+          (setf (elt (elt ret i) 2) (- (* (elt d 1) (elt p 0)) (* (elt d 0) (elt p 1))))
+          (when (< (elt (elt ret i) 2) 0) ;; inequality is flipped depending on edge direction relative to centroid
+            (setf (elt ret i) (mapcar #'(lambda (x) (- x)) (elt ret i))))
+          )))
+    (list :matrix ret :vector (make-list div :initial-element 0))
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
