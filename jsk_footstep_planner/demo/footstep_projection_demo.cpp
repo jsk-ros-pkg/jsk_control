@@ -51,6 +51,7 @@ pcl::KdTreeFLANN<pcl::PointNormal> tree;
 pcl::PointCloud<pcl::PointNormal>::Ptr cloud2d;
 pcl::search::Octree<pcl::PointNormal> tree2d(0.1);
 ANNGrid::Ptr grid_search;
+FootstepParameters parameters;
 
 jsk_footstep_msgs::FootstepArray footstepToFootstepArray(
   jsk_footstep_msgs::Footstep msg)
@@ -70,6 +71,9 @@ void processFeedback(
   original_footstep->setPose(new_pose);
   jsk_footstep_msgs::FootstepArray msg = footstepToFootstepArray(*(original_footstep->toROSMsg()));
   pub_footstep.publish(msg);
+  parameters.plane_estimation_outlier_threshold = 0.05;
+  parameters.plane_estimation_max_iterations    = 100;
+  parameters.plane_estimation_min_inliers       = 10;
   unsigned int error_state;
   FootstepState::Ptr projected_footstep = original_footstep->projectToCloud(
     tree,
@@ -79,9 +83,7 @@ void processFeedback(
     cloud2d,
     Eigen::Vector3f(0, 0, 1),
     error_state,
-    0.05,
-    100,
-    10);
+    parameters);
   if (projected_footstep) {
     jsk_footstep_msgs::FootstepArray msg2 = footstepToFootstepArray(*(projected_footstep->toROSMsg()));
     pub_projected_footstep.publish(msg2);

@@ -427,15 +427,15 @@ namespace jsk_footstep_planner
       }
     }
     // set parameters
-    if (use_transition_limit_) {
+    if (parameters_.use_transition_limit) {
       graph_->setTransitionLimit(
         TransitionLimitXYZRPY::Ptr(new TransitionLimitXYZRPY(
-                                     transition_limit_x_,
-                                     transition_limit_y_,
-                                     transition_limit_z_,
-                                     transition_limit_roll_,
-                                     transition_limit_pitch_,
-                                     transition_limit_yaw_)));
+                                     parameters_.transition_limit_x,
+                                     parameters_.transition_limit_y,
+                                     parameters_.transition_limit_z,
+                                     parameters_.transition_limit_roll,
+                                     parameters_.transition_limit_pitch,
+                                     parameters_.transition_limit_yaw)));
     }
     else {
       graph_->setTransitionLimit(TransitionLimitXYZRPY::Ptr());
@@ -444,34 +444,38 @@ namespace jsk_footstep_planner
       graph_->setCollisionBBoxSize(collision_bbox_size_);
       graph_->setCollisionBBoxOffset(collision_bbox_offset_);
     }
-    graph_->setObstacleResolution(obstacle_resolution_);
-    if (use_global_transition_limit_) {
+    if (parameters_.use_global_transition_limit) {
       graph_->setGlobalTransitionLimit(
         TransitionLimitRP::Ptr(new TransitionLimitRP(
-                                     global_transition_limit_roll_,
-                                     global_transition_limit_pitch_)));
+                                     parameters_.global_transition_limit_roll,
+                                     parameters_.global_transition_limit_pitch)));
 
     }
     else {
       graph_->setGlobalTransitionLimit(TransitionLimitRP::Ptr());
     }
-    graph_->setLocalXMovement(local_move_x_);
-    graph_->setLocalYMovement(local_move_y_);
-    graph_->setLocalThetaMovement(local_move_theta_);
-    graph_->setLocalXMovementNum(local_move_x_num_);
-    graph_->setLocalYMovementNum(local_move_y_num_);
-    graph_->setLocalThetaMovementNum(local_move_theta_num_);
-    graph_->setPlaneEstimationMaxIterations(plane_estimation_max_iterations_);
-    graph_->setPlaneEstimationMinInliers(plane_estimation_min_inliers_);
-    graph_->setPlaneEstimationOutlierThreshold(plane_estimation_outlier_threshold_);
-    graph_->setPlaneEstimationUseNormal(plane_estimation_use_normal_);
-    graph_->setPlaneEstimationNormalDistanceWeight(plane_estimation_normal_distance_weight_);
-    graph_->setPlaneEstimationNormalOpeningAngle(plane_estimation_normal_opening_angle_);
-    graph_->setPlaneEstimationMinRatioOfInliers(plane_estimation_min_ratio_of_inliers_);
-    graph_->setSupportCheckXSampling(support_check_x_sampling_);
-    graph_->setSupportCheckYSampling(support_check_y_sampling_);
-    graph_->setSkipCropping(skip_cropping_);
-    graph_->setSupportCheckVertexNeighborThreshold(support_check_vertex_neighbor_threshold_);
+    graph_->setParameters(parameters_);
+#if 0
+    graph_->setObstacleResolution(parameters_.obstacle_resolution);
+    graph_->setLocalXMovement(parameters_.local_move_x);
+    graph_->setLocalYMovement(parameters_.local_move_y);
+    graph_->setLocalThetaMovement(parameters_.local_move_theta);
+    graph_->setLocalXMovementNum(parameters_.local_move_x_num);
+    graph_->setLocalYMovementNum(parameters_.local_move_y_num);
+    graph_->setLocalThetaMovementNum(parameters_.local_move_theta_num);
+    graph_->setPlaneEstimationMaxIterations(parameters_.plane_estimation_max_iterations);
+    graph_->setPlaneEstimationMinInliers(parameters_.plane_estimation_min_inliers);
+    graph_->setPlaneEstimationOutlierThreshold(parameters_.plane_estimation_outlier_threshold);
+    graph_->setPlaneEstimationUseNormal(parameters_.plane_estimation_use_normal);
+    graph_->setPlaneEstimationNormalDistanceWeight(parameters_.plane_estimation_normal_distance_weight);
+    graph_->setPlaneEstimationNormalOpeningAngle(parameters_.plane_estimation_normal_opening_angle);
+    graph_->setPlaneEstimationMinRatioOfInliers(parameters_.plane_estimation_min_ratio_of_inliers);
+    graph_->setSupportCheckXSampling(parameters_.support_check_x_sampling);
+    graph_->setSupportCheckYSampling(parameters_.support_check_y_sampling);
+    graph_->setSkipCropping(parameters_.skip_cropping);
+    graph_->setSupportCheckVertexNeighborThreshold(parameters_.support_check_vertex_neighbor_threshold);
+#endif
+    //ROS_INFO_STREAM(graph_->infoString());
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
                                               close_list_x_num_,
@@ -703,35 +707,37 @@ namespace jsk_footstep_planner
     }
     planning_timeout_ = config.planning_timeout;
     rich_profiling_ = config.rich_profiling;
-    use_transition_limit_ = config.use_transition_limit;
-    use_global_transition_limit_ = config.use_global_transition_limit;
-    local_move_x_ = config.local_move_x;
-    local_move_y_ = config.local_move_y;
-    local_move_theta_ = config.local_move_theta;
-    local_move_x_num_ = config.local_move_x_num;
-    local_move_y_num_ = config.local_move_y_num;
-    local_move_theta_num_ = config.local_move_theta_num;
-    transition_limit_x_ = config.transition_limit_x;
-    transition_limit_y_ = config.transition_limit_y;
-    transition_limit_z_ = config.transition_limit_z;
-    transition_limit_roll_ = config.transition_limit_roll;
-    transition_limit_pitch_ = config.transition_limit_pitch;
-    transition_limit_yaw_ = config.transition_limit_yaw;
-    global_transition_limit_roll_ = config.global_transition_limit_roll;
-    global_transition_limit_pitch_ = config.global_transition_limit_pitch;
-    goal_pos_thr_ = config.goal_pos_thr;
-    goal_rot_thr_ = config.goal_rot_thr;
-    plane_estimation_use_normal_              = config.plane_estimation_use_normal;
-    plane_estimation_normal_distance_weight_  = config.plane_estimation_normal_distance_weight;
-    plane_estimation_normal_opening_angle_    = config.plane_estimation_normal_opening_angle;
-    plane_estimation_min_ratio_of_inliers_    = config.plane_estimation_min_ratio_of_inliers;
-    plane_estimation_max_iterations_ = config.plane_estimation_max_iterations;
-    plane_estimation_min_inliers_ = config.plane_estimation_min_inliers;
-    plane_estimation_outlier_threshold_ = config.plane_estimation_outlier_threshold;
-    support_check_x_sampling_ = config.support_check_x_sampling;
-    support_check_y_sampling_ = config.support_check_y_sampling;
-    support_check_vertex_neighbor_threshold_ = config.support_check_vertex_neighbor_threshold;
-    skip_cropping_ = config.skip_cropping;
+    parameters_.use_transition_limit = config.use_transition_limit;
+    parameters_.use_global_transition_limit = config.use_global_transition_limit;
+    parameters_.local_move_x = config.local_move_x;
+    parameters_.local_move_y = config.local_move_y;
+    parameters_.local_move_theta = config.local_move_theta;
+    parameters_.local_move_x_num = config.local_move_x_num;
+    parameters_.local_move_y_num = config.local_move_y_num;
+    parameters_.local_move_theta_num = config.local_move_theta_num;
+    parameters_.transition_limit_x = config.transition_limit_x;
+    parameters_.transition_limit_y = config.transition_limit_y;
+    parameters_.transition_limit_z = config.transition_limit_z;
+    parameters_.transition_limit_roll = config.transition_limit_roll;
+    parameters_.transition_limit_pitch = config.transition_limit_pitch;
+    parameters_.transition_limit_yaw = config.transition_limit_yaw;
+    parameters_.global_transition_limit_roll = config.global_transition_limit_roll;
+    parameters_.global_transition_limit_pitch = config.global_transition_limit_pitch;
+    parameters_.goal_pos_thr = config.goal_pos_thr;
+    parameters_.goal_rot_thr = config.goal_rot_thr;
+    parameters_.plane_estimation_use_normal              = config.plane_estimation_use_normal;
+    parameters_.plane_estimation_normal_distance_weight  = config.plane_estimation_normal_distance_weight;
+    parameters_.plane_estimation_normal_opening_angle    = config.plane_estimation_normal_opening_angle;
+    parameters_.plane_estimation_min_ratio_of_inliers    = config.plane_estimation_min_ratio_of_inliers;
+    parameters_.plane_estimation_max_iterations = config.plane_estimation_max_iterations;
+    parameters_.plane_estimation_min_inliers = config.plane_estimation_min_inliers;
+    parameters_.plane_estimation_outlier_threshold = config.plane_estimation_outlier_threshold;
+    parameters_.support_check_x_sampling = config.support_check_x_sampling;
+    parameters_.support_check_y_sampling = config.support_check_y_sampling;
+    parameters_.support_check_vertex_neighbor_threshold = config.support_check_vertex_neighbor_threshold;
+    parameters_.support_padding_x = config.support_padding_x;
+    parameters_.support_padding_y = config.support_padding_y;
+    parameters_.skip_cropping = config.skip_cropping;
     footstep_size_x_ = config.footstep_size_x;
     footstep_size_y_ = config.footstep_size_y;
     project_start_state_ = config.project_start_state;
@@ -749,7 +755,7 @@ namespace jsk_footstep_planner
       use_obstacle_model_ = config.use_obstacle_model;
       need_to_rebuild_graph = true;
     }
-    obstacle_resolution_ = config.obstacle_resolution;
+    parameters_.obstacle_resolution = config.obstacle_resolution;
     if (need_to_rebuild_graph) {
       if (graph_) {             // In order to skip first initialization
         buildGraph();
@@ -772,7 +778,8 @@ namespace jsk_footstep_planner
     if (use_obstacle_model_ && obstacle_model_) {
       graph_->setObstacleModel(obstacle_model_);
     }
-    graph_->setObstacleResolution(obstacle_resolution_);
+    //graph_->setObstacleResolution(parameters_.obstacle_resolution);
+    graph_->setParameters(parameters_);
     graph_->setBasicSuccessors(successors_);
   }
 }
