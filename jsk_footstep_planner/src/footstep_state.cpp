@@ -147,7 +147,7 @@ namespace jsk_footstep_planner
     Eigen::Vector3f c = pose_ * Eigen::Vector3f(-dimensions_[0]/2 - padding_x, -dimensions_[1]/2 - padding_y, 0);
     Eigen::Vector3f d = pose_ * Eigen::Vector3f( dimensions_[0]/2 + padding_x, -dimensions_[1]/2 - padding_y, 0);
     grid_search->approximateSearchInBox(a, b, c, d, *near_indices);
-    return cropPointCloudExact(cloud, near_indices);
+    return cropPointCloudExact(cloud, near_indices, padding_x, padding_y);
   }
   
 #if 0
@@ -216,7 +216,9 @@ namespace jsk_footstep_planner
         parameters.support_check_vertex_neighbor_threshold);
       DEBUG_PRINT("[FS state] pre /(skip_cropping) projection state " << presupport_state);
     }
-    indices = cropPointCloud(cloud, grid_search);
+    indices = cropPointCloud(cloud, grid_search,
+                             parameters.support_padding_x,
+                             parameters.support_padding_y);
     DEBUG_PRINT("[FS state] pre / indices " << indices->indices.size());
     if (indices->indices.size() < parameters.plane_estimation_min_inliers) {
       DEBUG_PRINT("[FS state] no enough inliners");
@@ -224,7 +226,7 @@ namespace jsk_footstep_planner
       return FootstepState::Ptr();
     }
     if (!parameters.skip_cropping) {
-      // DEBUG
+#if DEBUG
       double ax = 0.0, ay = 0.0, az = 0.0;
       double xx = 0.0, yy = 0.0, zz = 0.0;
       for (size_t i = 0; i < indices->indices.size(); i++) {
@@ -234,12 +236,12 @@ namespace jsk_footstep_planner
         xx += pp.x*pp.x; yy += pp.y*pp.y; zz += pp.z*pp.z;
       }
       int ss = indices->indices.size();
-      ROS_INFO("ave: %f %f %f, %f %f %f",
-               ax/ss, ay/ss, az/ss,
+      ROS_INFO("ave( %d ): %f %f %f, %f %f %f",
+               ss, ax/ss, ay/ss, az/ss,
                sqrt(xx/ss - (ax/ss)*(ax/ss)),
                sqrt(yy/ss - (ay/ss)*(ay/ss)),
                sqrt(zz/ss - (az/ss)*(az/ss)));
-      // DEBUG(END)
+#endif
       presupport_state = isSupportedByPointCloud(
         pose_, cloud, tree, indices,
         parameters.support_check_x_sampling,

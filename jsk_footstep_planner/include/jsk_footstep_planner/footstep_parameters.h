@@ -54,7 +54,8 @@ namespace jsk_footstep_planner
       obstacle_resolution(0.1), goal_pos_thr(0.1), goal_rot_thr(0.17),
       plane_estimation_normal_distance_weight(0.2), plane_estimation_normal_opening_angle(0.2),
       plane_estimation_min_ratio_of_inliers(0.8), plane_estimation_outlier_threshold(0.02),
-      support_check_vertex_neighbor_threshold(0.02)
+      support_check_vertex_neighbor_threshold(0.02),
+      support_padding_x(0.0), support_padding_y(0.0)
     {
     };
     bool use_transition_limit;
@@ -87,6 +88,8 @@ namespace jsk_footstep_planner
     double plane_estimation_min_ratio_of_inliers;
     double plane_estimation_outlier_threshold;
     double support_check_vertex_neighbor_threshold;
+    double support_padding_x;
+    double support_padding_y;
   };
 }
 #endif

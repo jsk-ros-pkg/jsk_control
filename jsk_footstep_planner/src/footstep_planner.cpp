@@ -475,6 +475,7 @@ namespace jsk_footstep_planner
     graph_->setSkipCropping(parameters_.skip_cropping);
     graph_->setSupportCheckVertexNeighborThreshold(parameters_.support_check_vertex_neighbor_threshold);
 #endif
+    //ROS_INFO_STREAM(graph_->infoString());
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
                                               close_list_x_num_,
@@ -734,6 +735,8 @@ namespace jsk_footstep_planner
     parameters_.support_check_x_sampling = config.support_check_x_sampling;
     parameters_.support_check_y_sampling = config.support_check_y_sampling;
     parameters_.support_check_vertex_neighbor_threshold = config.support_check_vertex_neighbor_threshold;
+    parameters_.support_padding_x = config.support_padding_x;
+    parameters_.support_padding_y = config.support_padding_y;
     parameters_.skip_cropping = config.skip_cropping;
     footstep_size_x_ = config.footstep_size_x;
     footstep_size_y_ = config.footstep_size_y;

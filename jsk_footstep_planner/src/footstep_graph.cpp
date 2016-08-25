@@ -81,8 +81,8 @@ namespace jsk_footstep_planner
     Eigen::Affine3f pose = state->getPose();
     Eigen::Affine3f goal_pose = goal->getPose();
     Eigen::Affine3f transformation = pose.inverse() * goal_pose;
-    return (pos_goal_thr_ > transformation.translation().norm()) &&
-      (rot_goal_thr_ > std::abs(Eigen::AngleAxisf(transformation.rotation()).angle()));
+    return (parameters_.goal_pos_thr > transformation.translation().norm()) &&
+      (parameters_.goal_rot_thr > std::abs(Eigen::AngleAxisf(transformation.rotation()).angle()));
   }
 
   
@@ -142,8 +142,8 @@ namespace jsk_footstep_planner
   {
     std::stringstream ss;
     ss << "footstep_graph" << std::endl;
-    ss << "  pos_goal_thr: " << pos_goal_thr_ << std::endl;
-    ss << "  rot_goal_thr: " << rot_goal_thr_ << std::endl;
+    ss << "  goal_pos_thr: " << parameters_.goal_pos_thr << std::endl;
+    ss << "  goal_rot_thr: " << parameters_.goal_rot_thr << std::endl;
     ss << "  use_pointcloud_model: " << use_pointcloud_model_ << std::endl;
     ss << "  lazy_projection: " << lazy_projection_ << std::endl;
     ss << "  local_movement: " << local_movement_ << std::endl;
@@ -157,9 +157,9 @@ namespace jsk_footstep_planner
     ss << "  local_move_x: " << parameters_.local_move_x << std::endl;
     ss << "  local_move_y: " << parameters_.local_move_y << std::endl;
     ss << "  local_move_theta: " << parameters_.local_move_theta << std::endl;
-    ss << "  parameters_.local_move_xnum: " << parameters_.local_move_x_num << std::endl;
-    ss << "  parameters_.local_move_ynum: " << parameters_.local_move_y_num << std::endl;
-    ss << "  parameters_.local_move_thetanum: " << parameters_.local_move_theta_num << std::endl;
+    ss << "  local_move_x_num: " << parameters_.local_move_x_num << std::endl;
+    ss << "  local_move_y_num: " << parameters_.local_move_y_num << std::endl;
+    ss << "  local_move_theta_num: " << parameters_.local_move_theta_num << std::endl;
     ss << "  resolution: ["
        << resolution_[0] << ", "
        << resolution_[1] << ", "
@@ -176,6 +176,8 @@ namespace jsk_footstep_planner
     ss << "  support_check_x_sampling: " << parameters_.support_check_x_sampling << std::endl;
     ss << "  support_check_y_sampling: " << parameters_.support_check_y_sampling << std::endl;
     ss << "  support_check_vertex_neighbor_threshold: " << parameters_.support_check_vertex_neighbor_threshold << std::endl;
+    ss << "  support_padding_x: " << parameters_.support_padding_x << std::endl;
+    ss << "  support_padding_y: " << parameters_.support_padding_y << std::endl;
     ss << "  skip_cropping: " << parameters_.skip_cropping << std::endl;
     
     return ss.str();

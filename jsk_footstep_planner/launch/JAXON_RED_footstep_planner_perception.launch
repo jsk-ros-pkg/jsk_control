@@ -47,7 +47,9 @@
       plane_estimation_normal_distance_weight: 0.2
       plane_estimation_normal_opening_angle:   0.2
       plane_estimation_min_ratio_of_inliers:   0.8
-      plane_estimation_outlier_threshold:      0.02
+      plane_estimation_max_iterations:         200
+      plane_estimation_min_inliers:            100
+      plane_estimation_outlier_threshold:    0.024
     </rosparam>
     <!-- parameters for moving footstep locally -->
     <rosparam>
@@ -69,6 +71,13 @@
       transition_limit_roll:  0.6
       transition_limit_pitch: 0.6
       transition_limit_yaw:   0.4
+    </rosparam>
+    <rosparam>
+      support_check_x_sampling: 3
+      support_check_y_sampling: 3
+      support_check_vertex_neighbor_threshold: 0.02
+      support_padding_x: 0.0
+      support_padding_y: 0.0
     </rosparam>
     <!-- successors -->
     <rosparam>

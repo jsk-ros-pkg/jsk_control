@@ -70,8 +70,8 @@ namespace jsk_footstep_planner
     StatePtr start_state_;
     StatePtr goal_state_;
     std::vector<StatePtr> nodes_;
-    double pos_goal_thr_;
-    double rot_goal_thr_;
+    //double pos_goal_thr_;
+    //double rot_goal_thr_;
   private:
     
   };
