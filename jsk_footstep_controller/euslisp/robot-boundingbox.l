@@ -21,6 +21,7 @@
 (setq *padding-x* (ros::get-param "~padding_x" 0.0))
 (setq *padding-y* (ros::get-param "~padding_y" 0.0))
 (setq *padding-z* (ros::get-param "~padding_z" 0.0))
+(setq *height-offset* (ros::get-param "~height_offset" 0.0))
 
 (when *use-x*
   (objects (list *robot*)))
@@ -41,10 +42,10 @@
           (send bbox-msg :pose :orientation :w 1.0)
           (send bbox-msg :pose :position :x (elt center 0))
           (send bbox-msg :pose :position :y (elt center 1))
-          (send bbox-msg :pose :position :z (elt center 2))
+          (send bbox-msg :pose :position :z (+ (elt center 2) (/ *height-offset* 2)))
           (send bbox-msg :dimensions :x (+ (* 2 *padding-x*) (elt dimensions 0)))
           (send bbox-msg :dimensions :y (+ (* 2 *padding-y*) (elt dimensions 1)))
-          (send bbox-msg :dimensions :z (+ (* 2 *padding-z*) (elt dimensions 2)))
+          (send bbox-msg :dimensions :z (+ *height-offset*  (* 2 *padding-z*) (elt dimensions 2)))
           (list bbox-msg))))))
 
 (defun each-link-bbox (bodies)
