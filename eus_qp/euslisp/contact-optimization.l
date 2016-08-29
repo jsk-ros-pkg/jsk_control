@@ -24,6 +24,7 @@
         (solve-qp-mode :qp)
         (min-inequality-violation-weight) (min-inequality-violation-weight-vector)
         (equality-error-weight) (equality-error-weight-vector) ;; equality-error-weight is for example 1e8
+        (additional-inequality-matrix) (additional-inequality-min-vector)
         )
   "Wrench distribution function."
   (let* (;; inequality
@@ -79,8 +80,8 @@
                   :initial-state initial-state
                   :eval-weight-matrix eval-weight-matrix
                   :eval-coeff-vector eval-coeff-vector
-                  :inequality-matrix inequality-matrix
-                  :inequality-min-vector inequality-min-vector
+                  :inequality-matrix (if additional-inequality-matrix (concatenate-matrix-column inequality-matrix additional-inequality-matrix) inequality-matrix)
+                  :inequality-min-vector (if additional-inequality-min-vector (concatenate float-vector inequality-min-vector additional-inequality-min-vector) inequality-min-vector)
                   :check-status check-status
                   :solve-qp-mode solve-qp-mode
                   :debug debug
@@ -215,6 +216,7 @@
         (qp-solver #'solve-qpoases-qp)
         (solve-qp-mode :qp)
         (equality-error-weight) (equality-error-weight-vector) ;; equality-error-weight is for example 1e8
+        (additional-inequality-matrix) (additional-inequality-min-vector)
         (check-status t))
   "Wrench + torque distribution function."
   (let* ((contact-matrix (apply #'concatenate-matrix-diagonal contact-constraint-matrix-list))
@@ -303,8 +305,8 @@
                  :initial-state initial-state
                  :eval-weight-matrix eval-weight-matrix
                  :eval-coeff-vector eval-coeff-vector
-                 :inequality-matrix inequality-matrix
-                 :inequality-min-vector inequality-min-vector
+                 :inequality-matrix (if additional-inequality-matrix (concatenate-matrix-column inequality-matrix additional-inequality-matrix) inequality-matrix)
+                 :inequality-min-vector (if additional-inequality-min-vector (concatenate float-vector inequality-min-vector additional-inequality-min-vector) inequality-min-vector)
                  :check-status check-status
                  :solve-qp-mode solve-qp-mode
                  :debug debug
