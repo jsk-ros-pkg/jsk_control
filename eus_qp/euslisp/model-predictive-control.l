@@ -418,6 +418,7 @@
           contact-coords-list ;; Contact coords list for support limb
           contact-constraint-list ;; Contact constraint list for support limb
           total-mass ;; Total robot mass [kg]
+          additional-inequality-matrix additional-inequality-min-vector ;; Additional inequality constraints for wrench input
           )
   )
 
@@ -432,13 +433,16 @@
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) j)) input-force-weight))
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) (+ 3 j))) input-moment-weight)))
                                 ww))
-         ((:reference-output tmp-reference-output)))
+         ((:reference-output tmp-reference-output))
+         ((:additional-inequality-matrix aim)) ((:additional-inequality-min-vector aimv))
+         )
    (setq dt tmp-dt total-mass t-mass
          all-end-coords-list all-ec-list
          all-limbs a-limbs
          contact-limbs c-limbs
          contact-constraint-list c-const-l
-         contact-coords-list (mapcar #'(lambda (l) (elt all-end-coords-list (position l all-limbs))) contact-limbs))
+         contact-coords-list (mapcar #'(lambda (l) (elt all-end-coords-list (position l all-limbs))) contact-limbs)
+         additional-inequality-matrix aim additional-inequality-min-vector aimv)
    (send-super :init
                tmp-dt
                tmp-reference-state
@@ -456,16 +460,25 @@
    self)
   (:calc-contact-constraint-matrix
    ()
-   (apply #'concatenate-matrix-diagonal
-          (mapcar #'(lambda (c-constraint)
-                      (send c-constraint :get-constraint-matrix))
-                  contact-constraint-list)))
+   (let ((org-contact-constraint-matrix
+          (apply #'concatenate-matrix-diagonal
+                 (mapcar #'(lambda (c-constraint)
+                             (send c-constraint :get-constraint-matrix))
+                         contact-constraint-list))))
+     (if additional-inequality-matrix
+         (concatenate-matrix-column
+          org-contact-constraint-matrix
+          additional-inequality-matrix)
+       org-contact-constraint-matrix)
+     ))
   (:calc-contact-constraint-vector
    ()
    (apply #'concatenate float-vector
-          (mapcar #'(lambda (c-constraint)
-                      (send c-constraint :get-constraint-vector))
-                  contact-constraint-list))
+          (append
+           (mapcar #'(lambda (c-constraint)
+                       (send c-constraint :get-constraint-vector))
+                   contact-constraint-list)
+           (if additional-inequality-min-vector (list additional-inequality-min-vector))))
    )
   (:calc-input-matrix
    ()
@@ -524,7 +537,8 @@
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) j)) input-force-weight))
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) (+ 3 j))) input-moment-weight)))
                                 ww))
-         ((:reference-output tmp-reference-output)))
+         ((:reference-output tmp-reference-output))
+         ((:additional-inequality-matrix aim)) ((:additional-inequality-min-vector aimv)))
    (setq total-fz t-force
          cog-z tmp-cog-z)
    (send-super :init
@@ -535,6 +549,8 @@
                c-limbs
                a-limbs
                t-mass
+               :additional-inequality-matrix aim
+               :additional-inequality-min-vector aimv
                :input-weight-vector input-weight-vector
                :reference-output tmp-reference-output)
    self)
@@ -605,7 +621,8 @@
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) j)) input-force-weight))
                                   (dotimes (j 3) (setf (elt ww (+ (* i wrench-dim) (+ 3 j))) input-moment-weight)))
                                 ww))
-         ((:reference-output tmp-reference-output)))
+         ((:reference-output tmp-reference-output))
+         ((:additional-inequality-matrix aim)) ((:additional-inequality-min-vector aimv)))
    (send-super :init
                tmp-dt
                tmp-reference-state
@@ -614,6 +631,8 @@
                c-limbs
                a-limbs
                t-mass
+               :additional-inequality-matrix aim
+               :additional-inequality-min-vector aimv
                :reference-output tmp-reference-output
                :input-weight-vector input-weight-vector)
    self)
