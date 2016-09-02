@@ -936,20 +936,27 @@ namespace jsk_footstep_planner
     const geometry_msgs::PoseStamped::ConstPtr& msg)
   {
     JSK_ROS_DEBUG("posestamped command is received");
-    std_msgs::Header tmp_header = msg->header;
-    tmp_header.frame_id = odom_frame_id_;
+    geometry_msgs::PoseStamped tmp_pose_stamped;
     {
       // apply target pose to goal marker
       // mutex should be limited in this range because planIfPossible also lock planner_mutex_
       boost::mutex::scoped_lock lock(planner_mutex_);
       FootstepTrans eigen_command_pose;
-      server_->setPose("movable_footstep_marker", msg->pose, tmp_header);
+
+      try {
+        listener_.waitForTransform(odom_frame_id_, msg->header.frame_id, msg->header.stamp, ros::Duration(2.0));
+        listener_.transformPose(odom_frame_id_, *msg, tmp_pose_stamped);
+      } catch(tf::TransformException ex) {
+        ROS_ERROR("posestamped command transformation failed %s",ex.what());
+        return;
+      }
+      server_->setPose("movable_footstep_marker", tmp_pose_stamped.pose, tmp_pose_stamped.header);
       server_->applyChanges();
     }
     // forcely call processFeedbackCB to execute planning
     visualization_msgs::InteractiveMarkerFeedback dummy_feedback;
-    dummy_feedback.header = tmp_header;
-    dummy_feedback.pose = msg->pose;
+    dummy_feedback.header = tmp_pose_stamped.header;
+    dummy_feedback.pose = tmp_pose_stamped.pose;
     dummy_feedback.event_type = visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE;
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr dummy_feedback_ptr
       = boost::make_shared<const visualization_msgs::InteractiveMarkerFeedback>(dummy_feedback);
