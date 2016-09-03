@@ -183,6 +183,12 @@ namespace jsk_footstep_planner
     virtual bool executeFootstepService(
       std_srvs::Empty::Request& req,
       std_srvs::Empty::Response& res);
+    virtual bool waitForExecuteFootstepService(
+      std_srvs::Empty::Request& req,
+      std_srvs::Empty::Response& res);
+    virtual bool waitForFootstepPlanService(
+      std_srvs::Empty::Request& req,
+      std_srvs::Empty::Response& res);
     virtual bool getFootstepMarkerPoseService(
       jsk_interactive_marker::GetTransformableMarkerPose::Request& req,
       jsk_interactive_marker::GetTransformableMarkerPose::Response& res);
@@ -201,6 +207,8 @@ namespace jsk_footstep_planner
     ros::ServiceServer srv_reset_marker_;
     ros::ServiceServer srv_toggle_footstep_marker_mode_;
     ros::ServiceServer srv_execute_footstep_;
+    ros::ServiceServer srv_wait_for_execute_footstep_;
+    ros::ServiceServer srv_wait_for_footstep_plan_;
     ros::ServiceServer srv_get_footstep_marker_pose_;    
     
     std::string odom_frame_id_;
