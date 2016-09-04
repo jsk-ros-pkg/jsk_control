@@ -184,6 +184,8 @@ namespace jsk_footstep_planner
     srv_reset_marker_ = pnh_.advertiseService("reset_marker", &FootstepMarker::resetMarkerService, this);
     srv_toggle_footstep_marker_mode_ = pnh_.advertiseService("toggle_footstep_marker_mode", &FootstepMarker::toggleFootstepMarkerModeService, this);    
     srv_execute_footstep_ = pnh_.advertiseService("execute_footstep", &FootstepMarker::executeFootstepService, this);
+    srv_wait_for_execute_footstep_ = pnh_.advertiseService("wait_for_execute", &FootstepMarker::waitForExecuteFootstepService, this);
+    srv_wait_for_footstep_plan_ = pnh_.advertiseService("wait_for_plan", &FootstepMarker::waitForFootstepPlanService, this);
     srv_get_footstep_marker_pose_ = pnh_.advertiseService("get_footstep_marker_pose", &FootstepMarker::getFootstepMarkerPoseService, this);
 
     pub_plan_result_ = pnh_.advertise<jsk_footstep_msgs::FootstepArray>("output/plan_result", 1);
@@ -1012,6 +1014,30 @@ namespace jsk_footstep_planner
     } else {
       return false;
     }
+  }
+
+  bool FootstepMarker::waitForExecuteFootstepService(
+    std_srvs::Empty::Request& req,
+    std_srvs::Empty::Response& res)
+  {
+    bool result = true;
+    actionlib::SimpleClientGoalState state = ac_exec_.getState();
+    if(!state.isDone()) {
+      result = ac_exec_.waitForResult(ros::Duration(120.0));
+    }
+    return result;
+  }
+
+  bool FootstepMarker::waitForFootstepPlanService(
+    std_srvs::Empty::Request& req,
+    std_srvs::Empty::Response& res)
+  {
+    bool result = true;
+    actionlib::SimpleClientGoalState state = ac_planner_.getState();
+    if(!state.isDone()) {
+      result = ac_planner_.waitForResult(ros::Duration(120.0));
+    }
+    return result;
   }
 
   bool FootstepMarker::getFootstepMarkerPoseService(
