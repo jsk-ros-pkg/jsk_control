@@ -7,6 +7,7 @@
 (ros::roseus-add-msgs "nav_msgs")
 
 (setq *step-refine* (ros::get-param "~/use_step_refine"))
+(setq *assume-horizontal-plane* (ros::get-param "~/assume_horizontal_plane"))
 
 (load "package://jsk_footstep_controller/euslisp/util.l")
 ;; (load "package://jsk_robot_utils/euslisp/robot-interface-utils.l")
@@ -61,6 +62,14 @@
       (pprint (list 'map->laststep map->laststep end-coords))
       (pprint (list 'map->dest map->destination))
       (setq coords-difference (send map->laststep :transformation map->destination))
+      (when *assume-horizontal-plane*
+        ;; (pprint (list 'original-diff coords-difference))
+        (setq coords-difference
+              (make-coords :pos (float-vector (elt (send coords-difference :pos) 0) (elt (send coords-difference :pos) 1) 0.0)
+                           :rpy (float-vector (elt (car (send coords-difference :rpy-angle)) 0) 0.0 0.0))
+              )
+        ;; (pprint (list 'converted-diff coords-difference))
+        )
       (pprint (list 'diff coords-difference))
       coords-difference
       ))
@@ -147,12 +156,32 @@
             :overwrite-footstep-index (+ idx offset 1)))
     ))
 
+(defun convert-footstep-array-to-coords (footstep-array)
+  (let (retval)
+    (if *assume-horizontal-plane*
+        ;; ignore z translation and roll/pitch rotation
+        (setq retval
+              (mapcar #'(lambda (f)
+                          (let ((ypr (car (rpy-angle (ros::tf-quaternion->rot (send f :pose :orientation))))))
+                            (send f :pose :position :z 0.0)
+                            (send f :pose :orientation (ros::rot->tf-quaternion (rpy-matrix (elt ypr 0) 0 0)))
+                            (footstep->coords f)
+                            )
+                          )
+                      (send footstep-array :footsteps))
+              )
+      (setq retval (footstep-array->coords footstep-array))
+      )
+    retval
+    )
+  )
+
 (setq *footsteps* nil)
 (defun execute-cb (server goal) ;; old version
   (ros::ros-info "execute-cb")
   (let ((footstep (send goal :goal :footstep)))
     ;; footstep := jsk_recognition_msgs/FootstepArray
-    (let ((footstep-coords (footstep-array->coords footstep))
+    (let ((footstep-coords (convert-footstep-array-to-coords footstep))
           ;; (original-orbit-type (send (send *ri* :get-gait-generator-param) :default_orbit_type))
           )
       (print-readable-coords footstep-coords)
@@ -197,8 +226,9 @@
 (setq *appending-offset* 2)
 ;;(setq *cntr* 0)
 (defun execute-cb2 (server goal)
+  ;; receive new footsteps and there is no executing steps
   (when (null *current-steps*)
-    (let ((footstep-coords (footstep-array->coords (send goal :goal :footstep))))
+    (let ((footstep-coords (convert-footstep-array-to-coords (send goal :goal :footstep))))
       (when *debug*
         (pprint (list 'write *cntr*))
         (dump-structure (format nil "/tmp/footstepmsg~2,2D.l" *cntr*) goal)
@@ -214,12 +244,13 @@
     (print-ros-msg (send goal :goal_id))
     (terpri))
 
+  ;; connect new footsteps to current executing steps
   (when (and (server . ros::pending-goal)
              (= (server . ros::status) actionlib_msgs::GoalStatus::*preempting*))
     ;; TODO: check resume
     ;; get new goal
     (let* ((new-goal (server . ros::pending-goal))
-           (footstep-coords (footstep-array->coords (send new-goal :goal :footstep))))
+           (footstep-coords (convert-footstep-array-to-coords (send new-goal :goal :footstep))))
       (when *debug*
         (pprint (list 'write *cntr*))
         (dump-structure (format nil "/tmp/footstepmsg~2,2D.l" *cntr*) new-goal)
@@ -260,6 +291,7 @@
                      (length *current-steps*))
       (return-from execute-cb2))
     )
+  
   ;; check done
   (let ((ret (send *ri* :get-remaining-foot-step-sequence-current-index)))
     (unless (car ret)
@@ -271,6 +303,8 @@
     (ros::ros-info "execute-cb: steps current ~D/~D (remaining ~D)"
                    (cadr ret) (length *current-steps*) (length (car ret)))
     )
+
+  ;; refine when executing footsteps
   (when *step-refine*
     ;; step may be refined based on map
     (let (ret map-dest cds-diff wait-until)
