@@ -61,3 +61,225 @@ You can create `*ri*' like
     ;;(append now-steps2 next-steps2)
     (append (butlast now-steps) (cdr next-steps))
     )))
+
+(defun coords->ros-footstep (coords &key (leg))
+  (let ((footstep (instance jsk_footstep_msgs::Footstep :init)))
+    (send footstep :pose (ros::coords->tf-pose coords))
+    (unless leg
+      (setq leg (send coords :name))
+      (unless leg
+        (warn ";; :name or keyword leg should be set for footstep~%");
+        (return-from coords->ros-footstep)))
+    (cond
+     ((or (eq leg :lleg)
+          (eq leg :left)
+          (string= leg "lleg")
+          (string= leg "left"))
+      (setq leg jsk_footstep_msgs::Footstep::*LEFT*)
+      )
+     ((or (eq leg :rleg)
+          (eq leg :right)
+          (string= leg "rleg")
+          (string= leg "right"))
+      (setq leg jsk_footstep_msgs::Footstep::*RIGHT*)
+      )
+     (t
+      (warn "expected leg is :lleg, :rleg, :left and :right~%")
+      ))
+    (send footstep :leg leg)
+    footstep))
+
+(defun make-footsteps (steps &key (frame-id "map") (stamp (ros::time 0)))
+  (let ((footstep-list (instance jsk_footstep_msgs::FootstepArray :init)))
+    (send footstep-list :header :stamp stamp)
+    (send footstep-list :header :frame_id frame-id)
+    (send footstep-list :footsteps
+          (mapcar #'coords->ros-footstep steps))
+    footstep-list
+    ))
+
+(defun make-footstep-planning-msgs (start-coords target-coords
+                                    &key (frame-id "map") (stamp (ros::time 0))
+                                    (start-leg :lleg) (end-leg :lleg)
+                                    (lleg-offset (make-coords :pos (float-vector 0  100 0)))
+                                    (rleg-offset (make-coords :pos (float-vector 0 -100 0)))
+                                    (relative-target nil)
+                                    &allow-other-keys)
+  (let (lstart rstart
+        lgoal rgoal)
+    (cond
+     ((listp start-coords)
+      (setq lstart (car  start-coords)
+            rstart (cadr start-coords)))
+     (t
+      (setq lstart (send (send start-coords :copy-worldcoords)
+                         :transform lleg-offset))
+      (setq rstart (send (send start-coords :copy-worldcoords)
+                         :transform rleg-offset))
+      ))
+    (send lstart :name :lleg)
+    (send rstart :name :rleg)
+
+    (when (and relative-target (derivedp target-coords coordinates))
+      (let* ((midc (midcoords 0.5 rstart lstart)))
+        (send midc :transform target-coords)
+        (setq target-coords midc)
+        ))
+
+    (cond
+     ((listp target-coords)
+      (setq lgoal (car  target-coords)
+            rgoal (cadr target-coords)))
+     (t
+      (setq lgoal (send (send target-coords :copy-worldcoords)
+                        :transform lleg-offset))
+      (setq rgoal (send (send target-coords :copy-worldcoords)
+                        :transform rleg-offset))
+      ))
+    (send lgoal :name :lleg)
+    (send rgoal :name :rleg)
+
+    (let ((initial-steps (if (eq start-leg :lleg) (list lstart rstart) (list rstart lstart)))
+          (goal-steps    (if (eq end-leg :lleg)   (list lgoal rgoal) (list rgoal lgoal)))
+          (goal (instance jsk_footstep_msgs::PlanFootstepsActionGoal :init)))
+      (send goal :goal :initial_footstep
+            (make-footsteps initial-steps :frame-id frame-id :stamp stamp))
+      (send goal :goal :goal_footstep
+            (make-footsteps goal-steps :frame-id frame-id :stamp stamp))
+      goal)
+    ))
+
+(defun make-coords-footstep-planning-msgs (target-coords
+                                           &rest args
+                                           &key (frame-id "map") (stamp (ros::time 0))
+                                           (lleg-tf-name "lleg_end_coords")
+                                           (rleg-tf-name "rleg_end_coords")
+                                           &allow-other-keys)
+  (let ((lstart (send *tfl* :lookup-transform frame-id lleg-tf-name stamp))
+        (rstart (send *tfl* :lookup-transform frame-id rleg-tf-name stamp)))
+    (apply #'make-footstep-planning-msgs
+           (list lstart rstart) target-coords :frame-id frame-id :stamp stamp args)
+    ))
+(defun make-go-pos-planning-msgs (x y th &rest args)
+  (let* ((trans (make-coords :pos (float-vector (* x 1000) (* y 1000) 0))))
+    (send trans :rotate (deg2rad th) :z)
+    (apply #'make-coords-footstep-planning-msgs trans :relative-target t args)
+    ))
+
+(defun calc-step-error-on-map (steps map->destination
+                               &key (min-remaining-steps 2) (debug t))
+  (when (< (length steps) (max 2 min-remaining-steps))
+    #|
+    (let (support-leg map->ft end-coords)
+      (if (eq (send map->destination :name) :lleg)
+          (setq support-leg :lleg end-coords "lleg_end_coords")
+        (setq support-leg :rleg end-coords "rleg_end_coords"))
+      (setq map->ft (send *tfl* :lookup-transform "map" end-coords (ros::time 0)))
+      (setq coords-difference
+            (send map->ft :transformation map->destination))
+      )
+    |#
+    (return-from calc-step-error-on-map)
+    )
+  (let (foot->laststep
+        map->odom)
+    (setq map->odom (send *tfl* :lookup-transform "map" "odom" (ros::time 0)))
+    (setq map->laststep (send (send map->odom :copy-worldcoords) :transform
+                              (elt steps (- (length steps) 2))))
+    (setq coords-difference (send map->laststep :transformation map->destination))
+    (when debug
+      (pprint (list 'map->laststep map->laststep))
+      (pprint (list 'map->destination map->destination))
+      (pprint (list 'diff coords-difference)))
+    coords-difference
+    )
+  )
+
+(defun check-footstep-collision (current next &key (debug nil))
+  ;; fix next footstep to avoid collision
+  ;; return original next footstep if current and next would not cause collision
+  (let ((current-foot (make-cube 235 135 20))
+        (next-foot (make-cube 235 135 20)))
+
+    (send current-foot :move-to (send current :coords) :world)
+    (send next-foot :move-to (send next :coords) :world)
+    (let ((dy 0))
+      (while (pqp-collision-check-objects (list current-foot) (list next-foot))
+        (if debug (ros::ros-info "Collision detected between footsteps. Modify next step."))
+        ;;(pprint next-foot)
+        (cond
+         ((equal (send next :name) :lleg)
+          (setq dy (+ 1 dy))
+          (send next-foot :translate #f( 0 1 0) :local))
+         ((equal (send next :name) :rleg)
+          (setq dy (- dy 1))
+          (send next-foot :translate #f( 0 -1 0) :local))
+         )
+        )
+      (send next :translate (float-vector 0 dy 0 ) :local)
+      (if debug (pprint next))
+      )
+    )
+  next
+  )
+
+(defun refine-steps (remaining-steps
+                     &key (offset 2) (expand-step) (exec nil)
+                     (collision-avoid nil) (debug t))
+  (let ((steps (butlast (car remaining-steps)))
+        (idx (cadr remaining-steps))
+        istep newsteps trans)
+    (setq istep (elt steps offset))
+    (setq steps (subseq steps (+ offset 1)))
+    ;;
+    (when expand-step
+      (let* ((last-cds (car (last steps))) ;; coordinates of last step
+             (trans (send last-cds :transformation
+                          (send (send last-cds :copy-worldcoords) :transform expand-step)
+                          :world))
+             (len (float (- (length steps) 2)))
+             (cntr 0))
+        (when debug
+          (pprint (list 'trans trans expand-step))
+          (pprint (list 'org-steps steps)))
+        (mapcar #'(lambda (s)
+                    (let ((tr (midcoords (/ cntr len) (make-coords) trans))
+                          nm)
+                      ;; limit trans
+                      #|
+                      (setq nm (norm (send tr :worldpos)))
+                      (when (> nm 15)
+                        (setq tr (midcoords (/ 15 nm) (make-coords) tr)))
+                      |#
+                      (send s :transform tr :world)
+                      (incf cntr)
+                      s)) (butlast steps))
+        (send last-cds :transform trans :world)
+        (if debug (pprint (list 'trans-steps steps)))
+        ))
+    ;;
+    (cond
+     (collision-avoid
+      (let ((start-time (ros::time-now))
+            fslist modifiedfs) ;; instant collision check
+        (push istep fslist)
+        (dotimes (cnt (length steps))
+          (if (eq cnt 0)
+              (setq modifiedfs (check-footstep-collision istep (elt steps cnt)))
+            (setq modifiedfs (check-footstep-collision (elt steps (- cnt 1)) (elt steps cnt))))
+          (push modifiedfs fslist)
+          )
+        (setq newsteps (reverse fslist))
+        (when debug
+          (let ((now (ros::time-now)))
+            (ros::ros-info "took ~A sec for collision avoid"
+                           (send (ros::time- now start-time) :to-sec))))
+        ))
+     (t
+      (setq newsteps (append (list istep) steps))))
+
+    (if debug (pprint (list 'new newsteps)))
+    (when exec
+      (send *ri* :set-foot-steps-no-wait newsteps
+            :overwrite-footstep-index (+ idx offset 1)))
+    ))

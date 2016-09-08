@@ -1,0 +1,21 @@
+# goal
+uint8 NEW_TARGET=0
+uint8 OVER_WRITE=1
+uint8 ABSOLUTE_NEW_TARGET=2
+uint8 ABSOLUTE_OVER_WRITE=3
+float32 x # [ m ]
+float32 y # [ m ]
+float32 theta # [ degree ]
+# geometry_msgs/PoseStamped pose ## used for absolute
+uint8 action # 0 (NEW_TARGET), 1 (OVER_WRITE) over write old destination while walking
+---
+# result
+---
+# feedback
+uint8 PRE_PLANNING=0
+uint8 PLANNING=1
+uint8 WALKING=2
+uint8 WAITING=3
+uint8 FINISH=4
+uint8 status
+int32 remaining_steps
