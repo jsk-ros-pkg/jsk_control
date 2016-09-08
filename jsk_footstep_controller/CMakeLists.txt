@@ -27,7 +27,7 @@ add_service_files(FILES
 
 add_action_files(
   DIRECTORY action
-  FILES LookAroundGround.action
+  FILES LookAroundGround.action GoPos.action
 )
 generate_messages(
   DEPENDENCIES actionlib_msgs std_msgs geometry_msgs sensor_msgs)
