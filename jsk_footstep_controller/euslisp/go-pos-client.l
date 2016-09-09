@@ -4,9 +4,37 @@
 
 (ros::roseus "go_pos_client" :anonymous nil)
 
+(defclass footstep-simple-action-client
+  :super ros::simple-action-client
+  :slots (footstep-feedback)
+  )
+(defmethod footstep-simple-action-client
+  (:action-feedback-cb
+   (msg)
+   (ros::ros-info "get footstep server feedback")
+   (setq footstep-feedback (send msg :feedback))
+   )
+  (:plan-status
+   ()
+   (let ((retval nil))
+     (when footstep-feedback
+       (setq retval (send footstep-feedback :status))
+       )
+     retval)
+   )
+  (:remaining-steps
+   ()
+   (let ((retval nil))
+     (when footstep-feedback
+       (setq retval (send footstep-feedback :remaining_steps))
+       )
+     retval)
+   )
+  )
+
 (defclass go-pos-client
   :super propertied-object
-  :slots (client feedback ri
+  :slots (client ri
           ;; initial-coords
           ;; finished-goal-id
           ;; target-x target-y target-th
@@ -17,14 +45,11 @@
   (:init
    (&key (wait t))
    (setq client
-         (instance ros::simple-action-client :init
+         (instance footstep-simple-action-client :init
                    "go_pos_server" jsk_footstep_controller::GoPosAction))
-   ;; not using feedback
-   ;;(setq (client . ros::action-feedback-cb) '(lambda (msg) (send self :feedback-cb msg)))
    (setq ri (instance rtm-ros-robot-interface :define-all-ROSBridge-srv-methods))
    (when wait (send client :wait-for-server))
    self)
-  (:feedback-cb (msg) (setq feedback msg))
   (:wait-client
    (&optional (timeout 0))
    (let ((ret (send client :wait-for-result :timeout timeout)))
@@ -62,10 +87,19 @@
   (:go-pos-no-wait
    (x y th &key (overwrite nil))
    (send self :go-pos x y th :overwrite overwrite :wait nil))
-  (:is-walking ()
-   (let ((remaining-steps (send ri :get-remaining-foot-step-sequence-current-index)))
-     (if (car remaining-steps)
-         remaining-steps nil)))
+  (:is-walking
+   ()
+   ;; (let ((remaining-steps (send ri :get-remaining-foot-step-sequence-current-index)))
+   ;;   (if (car remaining-steps)
+   ;;       remaining-steps nil))
+   (send client :spin-once)
+   (eq (send client :plan-status) jsk_footstep_controller::GoPosFeedback::*WALKING*)
+   )
+  (:is-planning
+   ()
+   (send client :spin-once)
+   (eq (send client :plan-status) jsk_footstep_controller::GoPosFeedback::*PLANNING*)
+   )
   ;;(:can-overwrite () )
   )
 
