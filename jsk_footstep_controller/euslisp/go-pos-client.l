@@ -59,7 +59,7 @@
      ret))
   (:go-pos
    (x y th &key (overwrite nil) (wait t))
-   (let ((walking? (send self :is-walking)))
+   (let ((walking? (send self :get-remaining-steps-and-index)))
      (cond
       ((and walking? (not overwrite))
        (warn "robot is walking now!~%")
@@ -87,11 +87,14 @@
   (:go-pos-no-wait
    (x y th &key (overwrite nil))
    (send self :go-pos x y th :overwrite overwrite :wait nil))
+  (:get-remaining-steps-and-index
+   ()
+   (let ((remaining-steps (send ri :get-remaining-foot-step-sequence-current-index)))
+     (if (car remaining-steps)
+         remaining-steps nil))
+   )
   (:is-walking
    ()
-   ;; (let ((remaining-steps (send ri :get-remaining-foot-step-sequence-current-index)))
-   ;;   (if (car remaining-steps)
-   ;;       remaining-steps nil))
    (send client :spin-once)
    (eq (send client :plan-status) jsk_footstep_controller::GoPosFeedback::*WALKING*)
    )
