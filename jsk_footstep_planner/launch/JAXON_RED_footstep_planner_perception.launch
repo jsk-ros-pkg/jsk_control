@@ -5,6 +5,7 @@
   <arg name="USE_NORMAL" default="false" />
   <arg name="use_footstep_marker" default="true"/>
   <arg name="use_go_pos_server" default="true"/>
+  <arg name="use_floor_detection" default="false"/>
 
   <arg if="$(arg USE_NORMAL)"     name="input_point_cloud"
        value="/footstep_normal_estimation/output_with_xyz" />
@@ -192,6 +193,10 @@
           args="$(find jsk_footstep_controller)/euslisp/go-pos-server.l"
           output="screen"/>
   </group>
+
+  <include file="$(find jsk_footstep_controller)/launch/floor_detection.launch" if="$(arg use_floor_detection)">
+    <arg name="use_snapshot" value="false"/>
+  </include>
 
   <node pkg="rviz" type="rviz" name="rviz" 
         args="-d $(find jsk_footstep_planner)/config/jaxon_footstep_planner_perception.rviz"
