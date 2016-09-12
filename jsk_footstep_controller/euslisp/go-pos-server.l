@@ -101,6 +101,7 @@
           ;; planning done but not successfully
           (clear-variables)
           (send server :set-preempted)
+          (publish-feedback server (length remaining-steps))
           ))
         )
       (return-from execute-cb)
