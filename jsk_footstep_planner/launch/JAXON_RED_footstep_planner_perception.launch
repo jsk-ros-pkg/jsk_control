@@ -4,7 +4,7 @@
   <arg name="joy_dev" default="/dev/input/js0"/>
   <arg name="USE_NORMAL" default="false" />
   <arg name="use_footstep_marker" default="true"/>
-  <arg name="use_go_pos_server" default="false"/>  
+  <arg name="use_go_pos_server" default="true"/>
 
   <arg if="$(arg USE_NORMAL)"     name="input_point_cloud"
        value="/footstep_normal_estimation/output_with_xyz" />
