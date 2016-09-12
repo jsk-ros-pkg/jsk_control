@@ -10,6 +10,10 @@
 
 ;;(setq *step-refine* (ros::get-param "~/use_step_refine"))
 (setq *step-refine* t)
+(setq *force-replanning* (ros::get-param "~/force_replanning"))
+(setq *replanning-translation-threshould* (ros::get-param "~/replanning_translation_threshold"))
+(unless (numberp *replanning-translation-threshould*)
+  (setq *replanning-translation-threshould* 7.0))
 
 ;;(setq *robot-name* (ros::get-param "/robot/type" (unix::getenv "ROBOT")))
 ;;(load (robot-interface-file *robot-name*))
@@ -133,7 +137,7 @@
         (let* ((new-goal (server . ros::pending-goal))
                (new-action (send new-goal :goal :action)))
           (cond
-           ((< (cadr remaining-steps) (+ *overwrite-offset* 1 2))
+           ((< (length (car remaining-steps)) (+ *overwrite-offset* 1 2))
             ;; do nothing, because of few remaining steps
             )
            ((= new-action jsk_footstep_controller::GoPosGoal::*OVER_WRITE*) ;; go-pos over write
@@ -149,9 +153,10 @@
               (pprint (list 'error-cds error-cds))
               ;;
               (cond
-               ;;;
-               (;;(< (norm (send error-cds :pos)) 1000000000.0)
-                nil
+               ;;; just moving target pose (relying on step-refine)
+               ((and (not *force-replanning*)
+                     (< (/ (norm (send error-cds :pos)) (length (car remaining-steps))) ;; refined translation per step
+                        *replanning-translation-threshould*))
                 (let ((new-target-step (send new-target :copy-worldcoords)))
                   (cond
                    ((eq (send (car (last *current-steps*)) :name) :lleg)
@@ -164,7 +169,7 @@
                   (setq *current-steps* (append *current-steps* (list new-target-step)))
                   )
                 )
-               ;;; replan
+               ;;; replanning
                (t ;;
                 (let ((map->odom (send *tfl* :lookup-transform "map" "odom" (ros::time 0)))
                       (offset *overwrite-offset*)) ;; replan offset ?
