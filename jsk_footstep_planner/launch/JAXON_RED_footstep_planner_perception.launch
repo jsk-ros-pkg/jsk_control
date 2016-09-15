@@ -190,7 +190,9 @@
   <group if="$(arg use_go_pos_server)">
     <node pkg="roseus" type="roseus" name="go_pos_server"
           args="$(find jsk_footstep_controller)/euslisp/go-pos-server.l"
-          output="screen"/>
+          output="screen">
+      <param name="force_replanning" value="false" />
+    </node>
   </group>
 
   <node pkg="rviz" type="rviz" name="rviz" 
