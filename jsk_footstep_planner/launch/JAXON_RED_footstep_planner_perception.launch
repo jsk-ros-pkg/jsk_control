@@ -6,6 +6,7 @@
   <arg name="use_footstep_marker" default="true"/>
   <arg name="use_go_pos_server" default="true"/>
   <arg name="use_floor_detection" default="false"/>
+  <arg name="use_footstep_plane_detection" default="false"/>
 
   <arg if="$(arg USE_NORMAL)"     name="input_point_cloud"
        value="/footstep_normal_estimation/output_with_xyz" />
@@ -194,9 +195,14 @@
           output="screen">
       <param name="force_replanning" value="false" />
       <param name="plane_projection" value="true"/>
-      <remap from="~planes" to="/plane_detection/plane_rejector/output_polygons"/>
+      <remap from="~planes" to="/footstep_plane_plane_rejector/output_polygons"/>
     </node>
   </group>
+
+  <include file="$(find jsk_footstep_planner)/launch/footstep_plane_detection.launch" if="$(arg use_footstep_plane_detection)">
+    <arg name="input_cloud" value="/accumulated_heightmap_pointcloud_static/output" />
+    <arg name="fixed_frame_id" value="map" />
+  </include>
 
   <include file="$(find jsk_footstep_controller)/launch/floor_detection.launch" if="$(arg use_floor_detection)">
     <arg name="use_snapshot" value="false"/>
