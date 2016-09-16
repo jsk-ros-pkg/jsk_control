@@ -194,7 +194,7 @@
           args="$(find jsk_footstep_controller)/euslisp/go-pos-server.l"
           output="screen">
       <param name="force_replanning" value="false" />
-      <param name="plane_projection" value="true"/>
+      <param name="plane_projection" value="$(arg use_footstep_plane_detection)"/>
       <remap from="~planes" to="/footstep_plane_plane_rejector/output_polygons"/>
     </node>
   </group>
