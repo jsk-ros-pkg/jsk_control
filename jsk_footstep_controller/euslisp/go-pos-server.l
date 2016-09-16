@@ -15,6 +15,7 @@
 (unless (numberp *replanning-translation-threshould*)
   (setq *replanning-translation-threshould* 7.0))
 (setq *plane-projection* (ros::get-param "~/plane_projection" nil))
+(setq *wait-for-plane* t)
 
 ;;(setq *robot-name* (ros::get-param "/robot/type" (unix::getenv "ROBOT")))
 ;;(load (robot-interface-file *robot-name*))
@@ -81,6 +82,13 @@
 
 (defun project-footsteps (footstep-coords)
   (let (ret-coords projected-coords)
+    (when *wait-for-plane*
+      (ros::ros-warn "plane is not subscribed, wait for planes")
+      (while (not *planes*)
+        (ros::spin-once)
+        (ros::sleep)
+        )
+      )
     (if *planes*
         (progn 
           (setq projected-coords (mapcar #'(lambda (coords)
