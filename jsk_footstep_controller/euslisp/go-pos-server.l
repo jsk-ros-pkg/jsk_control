@@ -304,6 +304,10 @@
                                  (step-ary (footstep-array->coords result))
                                  send-steps)
                             (ros::publish *footstep-visualize-topic* result)
+                            ;; plane projection
+                            (when *plane-projection*
+                              (setq step-ary (project-footsteps step-ary))
+                              )
                             (setq send-steps (mapcar #'(lambda (x)
                                                          (let ((cds (send x :copy-worldcoords)))
                                                            (send cds :transform odom->map :world)
