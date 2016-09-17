@@ -7,9 +7,11 @@ import rospy
 from std_msgs.msg import Empty
 from sound_play.msg import SoundRequest
 from hrpsys_ros_bridge.msg import ContactStatesStamped, ContactStateStamped, ContactState
+from hrpsys_ros_bridge.msg import MotorStates
 
 # global variable
 g_previous_st_controller_mode = None
+is_servo_on = False
 
 def controllerModeToString(msg):
     is_lleg_contact = None
@@ -38,7 +40,10 @@ def isChangedControllerMode(actual_from, actual_to, expected_from, expected_to):
         return False
 
 def trig():
+    global is_servo_on
     g_odom_init_trigger_pub.publish(Empty())
+    if is_servo_on is False:
+        return
     # Say something
     sound = SoundRequest()
     sound.sound = SoundRequest.SAY
@@ -65,9 +70,14 @@ def contactStatesCallback(msg):
                 trig()
             g_previous_st_controller_mode = controller_mode
 
+def motorStatesCallback(msg):
+    global is_servo_on
+    is_servo_on = any(msg.servo_state)
+
 if __name__ == "__main__":
     rospy.init_node("stabilizer_watcher")
     contact_states_sub = rospy.Subscriber("/act_contact_states", ContactStatesStamped, contactStatesCallback, queue_size=1)
+    motor_states_sub = rospy.Subscriber("/motor_states", MotorStates, motorStatesCallback, queue_size=1)
     g_odom_init_trigger_pub = rospy.Publisher("/odom_init_trigger", Empty)
     g_robotsound_pub = rospy.Publisher("/robotsound", SoundRequest)
     rospy.spin()
