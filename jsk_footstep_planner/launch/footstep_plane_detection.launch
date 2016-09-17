@@ -56,7 +56,7 @@
     </group>
     <group ns="footstep_plane_odom_laser">
       <rosparam subst_value="true">
-        target_frame_id: ground
+        target_frame_id: $(arg fixed_frame_id)
         use_multithread_callback: $(arg USE_MULTITHREAD_CALLBACK)
       </rosparam>
     </group>
