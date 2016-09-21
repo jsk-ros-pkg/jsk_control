@@ -325,3 +325,52 @@ You can create `*ri*' like
         (ros::ros-info "  ~A failed to project" (- (length candidates) (length non-null-candidates)))
         (if non-null-candidates non-null-candidates ;car is not good
           nil)))))
+
+(defun project-footsteps (planes footstep-coords)
+  (let (ret-coords projected-coords)    
+    (if planes
+        (progn 
+          (setq projected-coords (mapcar #'(lambda (coords)
+                                             (let* ((candidates (project-coords-on-to-plane2 coords planes (float-vector 0 0 1)))
+                                                    (non-null-candidates (remove-if #'null candidates)) (ret nil))
+                                               ;; now only check distance for validity but rotation should be considered
+                                               (when (> (length non-null-candidates) 0)
+                                                 (dolist (c non-null-candidates)
+                                                   (if (> (norm (send (send coords :transformation c) :pos)) 100)
+                                                       (ros::ros-warn "projected footstep is too distant (~A [mm])" (norm (send (send coords :transformation c) :pos)))
+                                                     (if ret
+                                                         (when (> (norm (send (send coords :transformation ret) :pos))
+                                                                  (norm (send (send coords :transformation c) :pos))) ;; use nearest footcoords from original
+                                                           (setq ret c)
+                                                           (send ret :name (send coords :name))
+                                                           )
+                                                       (progn
+                                                         (setq ret c)
+                                                         (send ret :name (send coords :name)))
+                                                       )
+                                                     )
+                                                   )
+                                                 )
+                                               ret
+                                               )
+                                             )
+                                         footstep-coords))
+          (if (member nil projected-coords)
+              (progn 
+                (ros::ros-warn "footstep projection is failed")
+                (setq ret-coords footstep-coords))
+            (progn
+              (pprint "before projection:")
+              (print-readable-coords footstep-coords)
+              (pprint "after projection:")
+              (print-readable-coords projected-coords)
+              (setq ret-coords projected-coords))
+            )
+          )
+      (progn
+        (ros::ros-warn "plane is not subscribed")
+        (setq ret-coords footstep-coords))
+      )
+    ret-coords
+    )
+  )

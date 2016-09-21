@@ -80,62 +80,6 @@
             (setq *planes* faces)
             )))))
 
-(defun project-footsteps (footstep-coords)
-  (let (ret-coords projected-coords)
-    (when *wait-for-plane*
-      (ros::ros-warn "plane is not subscribed, wait for planes")
-      (while (not *planes*)
-        (ros::spin-once)
-        (ros::sleep)
-        )
-      )
-    (if *planes*
-        (progn 
-          (setq projected-coords (mapcar #'(lambda (coords)
-                                             (let* ((candidates (project-coords-on-to-plane2 coords *planes* (float-vector 0 0 1)))
-                                                    (non-null-candidates (remove-if #'null candidates)) (ret nil))
-                                               ;; now only check distance for validity but rotation should be considered
-                                               (when (> (length non-null-candidates) 0)
-                                                 (dolist (c non-null-candidates)
-                                                   (if (> (norm (send (send coords :transformation c) :pos)) 100)
-                                                       (ros::ros-warn "projected footstep is too distant (~A [mm])" (norm (send (send coords :transformation c) :pos)))
-                                                     (if ret
-                                                         (when (> (norm (send (send coords :transformation ret) :pos))
-                                                                  (norm (send (send coords :transformation c) :pos))) ;; use nearest footcoords from original
-                                                           (setq ret c)
-                                                           (send ret :name (send coords :name))
-                                                           )
-                                                       (progn
-                                                         (setq ret c)
-                                                         (send ret :name (send coords :name)))
-                                                       )
-                                                     )
-                                                   )
-                                                 )
-                                               ret
-                                               )
-                                             )
-                                         footstep-coords))
-          (if (member nil projected-coords)
-              (progn 
-                (ros::ros-warn "footstep projection is failed")
-                (setq ret-coords footstep-coords))
-            (progn
-              (pprint "before projection:")
-              (print-readable-coords footstep-coords)
-              (pprint "after projection:")
-              (print-readable-coords projected-coords)
-              (setq ret-coords projected-coords))
-            )
-          )
-      (progn
-        (ros::ros-warn "plane is not subscribed")
-        (setq ret-coords footstep-coords))
-      )
-    ret-coords
-    )
-  )
-
 (defun execute-cb (server goal)
   (let (remaining-steps)
 
@@ -181,7 +125,14 @@
             (let ((footstep-coords (footstep-array->coords result)))
               ;; plane projection
               (when *plane-projection*
-                (setq footstep-coords (project-footsteps footstep-coords))
+                (when *wait-for-plane*
+                  (ros::ros-warn "plane is not subscribed, wait for planes")
+                  (while (not *planes*)
+                    (ros::spin-once)
+                    (ros::sleep)
+                    )
+                  )
+                (setq footstep-coords (project-footsteps *planes* footstep-coords))
                 )
               ;; debug
               (pprint "new steps:")
@@ -306,7 +257,14 @@
                             (ros::publish *footstep-visualize-topic* result)
                             ;; plane projection
                             (when *plane-projection*
-                              (setq step-ary (project-footsteps step-ary))
+                              (when *wait-for-plane*
+                                (ros::ros-warn "plane is not subscribed, wait for planes")
+                                (while (not *planes*)
+                                  (ros::spin-once)
+                                  (ros::sleep)
+                                  )
+                                )
+                              (setq step-ary (project-footsteps *planes* step-ary))
                               )
                             (setq send-steps (mapcar #'(lambda (x)
                                                          (let ((cds (send x :copy-worldcoords)))

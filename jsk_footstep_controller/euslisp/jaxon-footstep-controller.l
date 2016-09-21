@@ -3,6 +3,7 @@
 ;; The most simplest version to execute footsteps by :set-foot-steps
 ;; method and have actionlib server interface
 (ros::roseus "jaxon_footstep_controller" :anonymous nil)
+(ros::roseus-add-msgs "jsk_recognition_msgs")
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-msgs "nav_msgs")
 
@@ -13,6 +14,38 @@
 (setq *robot-name* (ros::get-param "/robot/type" (unix::getenv "ROBOT")))
 (load (robot-interface-file *robot-name*))
 (init-robot-from-name *robot-name*)
+
+(setq *plane-projection* (ros::get-param "~/plane_projection" nil))
+(setq *planes* nil)
+(setq *wait-for-plane* t)
+
+(defun planes-cb (msg)
+  (let ((polygons (send msg :polygons)))
+    (let ((faces (mapcar #'(lambda (polygon)
+                             (let (trans)
+                               (send *tfl* :wait-for-transform (send polygon :header :frame_id) "map" (send polygon :header :stamp) 1)
+                               (setq trans (send *tfl* :lookup-transform
+                                                 (send polygon :header :frame_id)
+                                                 "map"
+                                                 (send polygon :header :stamp)))
+                               (if trans
+                                   (let ((points (mapcar #'(lambda (point)
+                                                             (send (send (send trans :copy-worldcoords)
+                                                                         :transform
+                                                                         (make-coords :pos (ros::tf-point->pos point)))
+                                                                   :worldpos))
+                                                         (send polygon :polygon :points))))
+                                     (instance face :init :vertices points))
+                                 nil
+                                 )
+                               )
+                             )
+                         polygons)))
+      (setq faces (remove-if #'null faces))
+      (if faces
+          (let ((fc (instance faceset :init :faces faces)))
+            (setq *planes* faces)
+            )))))
 
 (defun walking-pose (&key (real t) (height 40))
   (send *robot* :reset-manip-pose)
@@ -78,6 +111,17 @@
         (pprint (list 'write *cntr*))
         (dump-structure (format nil "/tmp/footstepmsg~2,2D.l" *cntr*) goal)
         (incf *cntr*))
+      (when *plane-projection*
+        (when *wait-for-plane*
+          (ros::ros-warn "plane is not subscribed, wait for planes")
+          (while (not *planes*)
+            (ros::spin-once)
+            (ros::sleep)
+            )
+          )
+        (setq footstep-coords (project-footsteps *planes* footstep-coords))
+        )
+      (pprint "new steps:")
       (print-readable-coords footstep-coords)
       (send *ri* :set-foot-steps-no-wait footstep-coords)
       (setq *current-steps* footstep-coords))
@@ -114,6 +158,10 @@
           (unless (eq (send abc-last-foot :name)
                       (send (car footstep-coords) :name))
             (setq abc-last-foot (car (last (butlast abc-steps)))))
+          (unless abc-last-foot
+            (ros::ros-info "execute-cb: abc-last-foot is nil")
+            (return-from execute-cb2)
+            )
           (setq abc-b-list
                 (mapcar #'(lambda (x)
                             (let ((cds (send (send abc-last-foot :copy-worldcoords)
@@ -124,6 +172,16 @@
                         footstep-coords))
           (setq abc-steps (append-steps abc-steps abc-b-list))
           (let ((sending-steps (subseq abc-steps *appending-offset*)))
+            (when *plane-projection*
+              (when *wait-for-plane*
+                (ros::ros-warn "plane is not subscribed, wait for planes")
+                (while (not *planes*)
+                  (ros::spin-once)
+                  (ros::sleep)
+                  )
+                )
+              (setq sending-steps (project-footsteps *planes* sending-steps))
+              )
             (send *ri* :set-foot-steps-no-wait sending-steps
                   :overwrite-footstep-index (+ idx *appending-offset* 1)))
           (setq *wait-until* (+ idx *appending-offset* 1))
@@ -176,6 +234,7 @@
       ))
   )
 
+(ros::subscribe (format nil "~A/planes" (ros::get-name)) jsk_recognition_msgs::PolygonArray #'planes-cb)
 (setq *server* (instance ros::simple-action-server :init
                          (ros::get-name)
                          jsk_footstep_msgs::ExecFootstepsAction
