@@ -183,6 +183,8 @@
     <node pkg="jsk_footstep_controller" type="jaxon-footstep-controller.l" name="jaxon_footstep_controller"
           output="screen">
       <param name="use_step_refine" value="true" />
+      <param name="plane_projection" value="$(arg use_footstep_plane_detection)"/>
+      <remap from="~planes" to="/footstep_plane_plane_rejector/output_polygons"/>
     </node>
     <include file="$(find jsk_teleop_joy)/launch/joy_footstep_marker.launch" if="$(arg use_joy)">
       <arg name="CONTROLLER_DEV" value="$(arg joy_dev)"/>
