@@ -116,9 +116,15 @@ namespace jsk_footstep_planner
     inline int keyDivide(int x, int y)
     {
       if (x < 0) {
-        return x / y - 1;
+        // return -1, while -1 <= x <= -local_num
+        // return -2, while -local_num -1 <= x <= - 2*local_num
+        // ...
+        return (x + 1)/ y - 1;
       }
       else {
+        // return 0, while 0 <= x <= local_num -1
+        // return 1, while local_num <= x <= 2*local_num -1
+        // ...
         return x / y;
       }
     }
