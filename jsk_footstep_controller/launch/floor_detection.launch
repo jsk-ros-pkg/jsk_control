@@ -1,5 +1,6 @@
 <launch>
   <arg name="fixed_frame_id" default="odom" />
+  <arg name="use_snapshot" default="true"/>
   <!-- <arg name="input_cloud" default="/accumulated_heightmap_pointcloud_static/output"/> -->
   <arg name="input_cloud" default="robot_center_pointcloud/output"/>
   <node pkg="jsk_topic_tools"
@@ -74,6 +75,8 @@
           - from: ~output
             to: /floor_coeffs
     </rosparam>
+    <remap from="floor_planar_segmentation/model" to="/floor_coeffs" unless="$(arg use_snapshot)"/>
+    <remap from="floor_plane_coefficients_snapshot/output" to="/floor_coeffs" if="$(arg use_snapshot)"/>
   </node>
   <rosparam param="floor_fixed_frame_pointcloud" subst_value="true">
     target_frame_id: $(arg fixed_frame_id)
