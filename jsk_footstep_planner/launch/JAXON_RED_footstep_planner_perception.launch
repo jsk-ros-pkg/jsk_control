@@ -5,6 +5,8 @@
   <arg name="USE_NORMAL" default="false" />
   <arg name="use_footstep_marker" default="true"/>
   <arg name="use_go_pos_server" default="true"/>
+  <arg name="use_floor_detection" default="false"/>
+  <arg name="use_footstep_plane_detection" default="false"/>
 
   <arg if="$(arg USE_NORMAL)"     name="input_point_cloud"
        value="/footstep_normal_estimation/output_with_xyz" />
@@ -181,6 +183,8 @@
     <node pkg="jsk_footstep_controller" type="jaxon-footstep-controller.l" name="jaxon_footstep_controller"
           output="screen">
       <param name="use_step_refine" value="true" />
+      <param name="plane_projection" value="$(arg use_footstep_plane_detection)"/>
+      <remap from="~planes" to="/footstep_plane_plane_rejector/output_polygons"/>
     </node>
     <include file="$(find jsk_teleop_joy)/launch/joy_footstep_marker.launch" if="$(arg use_joy)">
       <arg name="CONTROLLER_DEV" value="$(arg joy_dev)"/>
@@ -192,8 +196,19 @@
           args="$(find jsk_footstep_controller)/euslisp/go-pos-server.l"
           output="screen">
       <param name="force_replanning" value="false" />
+      <param name="plane_projection" value="$(arg use_footstep_plane_detection)"/>
+      <remap from="~planes" to="/footstep_plane_plane_rejector/output_polygons"/>
     </node>
   </group>
+
+  <include file="$(find jsk_footstep_planner)/launch/footstep_plane_detection.launch" if="$(arg use_footstep_plane_detection)">
+    <arg name="input_cloud" value="/accumulated_heightmap_pointcloud_static/output" />
+    <arg name="fixed_frame_id" value="map" />
+  </include>
+
+  <include file="$(find jsk_footstep_controller)/launch/floor_detection.launch" if="$(arg use_floor_detection)">
+    <arg name="use_snapshot" value="false"/>
+  </include>
 
   <node pkg="rviz" type="rviz" name="rviz" 
         args="-d $(find jsk_footstep_planner)/config/jaxon_footstep_planner_perception.rviz"

@@ -1,5 +1,5 @@
 #!/usr/bin/env roseus
-
+(ros::roseus-add-msgs "jsk_recognition_msgs")
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-msgs "jsk_footstep_controller")
 (load "package://jsk_footstep_controller/euslisp/util.l")
@@ -14,6 +14,8 @@
 (setq *replanning-translation-threshould* (ros::get-param "~/replanning_translation_threshold"))
 (unless (numberp *replanning-translation-threshould*)
   (setq *replanning-translation-threshould* 7.0))
+(setq *plane-projection* (ros::get-param "~/plane_projection" nil))
+(setq *wait-for-plane* t)
 
 ;;(setq *robot-name* (ros::get-param "/robot/type" (unix::getenv "ROBOT")))
 ;;(load (robot-interface-file *robot-name*))
@@ -40,6 +42,7 @@
   (setq *wait-until* nil)
   (setq *status* jsk_footstep_controller::GoPosFeedback::*WAITING*)
   (setq *previous-time* (ros::time-now))
+  (setq *planes* nil)
   )
 
 (defun publish-feedback (server &optional (steps -0))
@@ -48,6 +51,34 @@
     (send msg :feedback :remaining_steps steps)
     (send server :publish-feedback msg)
     ))
+
+(defun planes-cb (msg)
+  (let ((polygons (send msg :polygons)))
+    (let ((faces (mapcar #'(lambda (polygon)
+                             (let (trans)
+                               (send *tfl* :wait-for-transform (send polygon :header :frame_id) "map" (send polygon :header :stamp) 1)
+                               (setq trans (send *tfl* :lookup-transform
+                                                 (send polygon :header :frame_id)
+                                                 "map"
+                                                 (send polygon :header :stamp)))
+                               (if trans
+                                   (let ((points (mapcar #'(lambda (point)
+                                                             (send (send (send trans :copy-worldcoords)
+                                                                         :transform
+                                                                         (make-coords :pos (ros::tf-point->pos point)))
+                                                                   :worldpos))
+                                                         (send polygon :polygon :points))))
+                                     (instance face :init :vertices points))
+                                 nil
+                                 )
+                               )
+                             )
+                         polygons)))
+      (setq faces (remove-if #'null faces))
+      (if faces
+          (let ((fc (instance faceset :init :faces faces)))
+            (setq *planes* faces)
+            )))))
 
 (defun execute-cb (server goal)
   (let (remaining-steps)
@@ -92,7 +123,19 @@
             (ros::publish *footstep-visualize-topic* result)
             ;; execute
             (let ((footstep-coords (footstep-array->coords result)))
+              ;; plane projection
+              (when *plane-projection*
+                (when *wait-for-plane*
+                  (ros::ros-warn "plane is not subscribed, wait for planes")
+                  (while (not *planes*)
+                    (ros::spin-once)
+                    (ros::sleep)
+                    )
+                  )
+                (setq footstep-coords (project-footsteps *planes* footstep-coords))
+                )
               ;; debug
+              (pprint "new steps:")
               (print-readable-coords footstep-coords)
               (send *ri* :set-foot-steps-no-wait footstep-coords);; execute ...
               (setq *current-steps* footstep-coords)
@@ -212,6 +255,17 @@
                                  (step-ary (footstep-array->coords result))
                                  send-steps)
                             (ros::publish *footstep-visualize-topic* result)
+                            ;; plane projection
+                            (when *plane-projection*
+                              (when *wait-for-plane*
+                                (ros::ros-warn "plane is not subscribed, wait for planes")
+                                (while (not *planes*)
+                                  (ros::spin-once)
+                                  (ros::sleep)
+                                  )
+                                )
+                              (setq step-ary (project-footsteps *planes* step-ary))
+                              )
                             (setq send-steps (mapcar #'(lambda (x)
                                                          (let ((cds (send x :copy-worldcoords)))
                                                            (send cds :transform odom->map :world)
@@ -280,6 +334,8 @@
     ))
 
 (defvar *tfl* (instance ros::transform-listener :init))
+(ros::subscribe (format nil "~A/planes" (ros::get-name)) jsk_recognition_msgs::PolygonArray #'planes-cb)
+
 (setq *planning-client*
       (instance ros::simple-action-client :init
                 "footstep_planner" jsk_footstep_msgs::PlanFootstepsAction))

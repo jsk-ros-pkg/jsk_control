@@ -1,0 +1,88 @@
+<launch>
+  <arg name="input_cloud" default="/accumulated_heightmap_pointcloud_static/output" />
+  <arg name="fixed_frame_id" default="map" />
+  <arg name="resolution" default="0.01" />
+  <arg name="SIMULATION" default="false" />
+  <arg unless="$(arg SIMULATION)" name="USE_MULTITHREAD_CALLBACK" value="true" />
+  <arg unless="$(arg SIMULATION)" name="NUM_OF_THREAD_OMP"    value="0" />
+  <arg if="$(arg SIMULATION)" name="USE_MULTITHREAD_CALLBACK" value="false" />
+  <arg if="$(arg SIMULATION)" name="NUM_OF_THREAD_OMP" value="1" />
+  
+  <node pkg="jsk_topic_tools"
+        type="standalone_complexed_nodelet"
+        name="footstep_plane_detection_manager"
+        output="screen">
+    <rosparam subst_value="true">
+    nodelets:
+      - name: footstep_plane_octree_voxel_grid
+        type: jsk_pcl/OctreeVoxelGrid
+        remappings:
+          - from: ~input
+            to: $(arg input_cloud)
+      - name: footstep_plane_odom_laser
+        type: jsk_pcl/TfTransformCloud
+        remappings:
+          - from: ~input
+            to: footstep_plane_octree_voxel_grid/output
+      - name: footstep_plane_normal_estimation
+        type: jsk_pcl/NormalEstimationOMP
+        remappings:
+          - from: ~input
+            to: footstep_plane_odom_laser/output
+      - name: footstep_plane_region_growing_multiple_plane_segmentation
+        type: jsk_pcl/RegionGrowingMultiplePlaneSegmentation
+        remappings:
+          - from: ~input
+            to: footstep_plane_normal_estimation/output_with_xyz
+          - from: ~input_normal
+            to: footstep_plane_normal_estimation/output_with_xyz
+      - name: footstep_plane_plane_rejector
+        type: jsk_pcl/PlaneRejector
+        remappings:
+          - from: ~input_polygons
+            to: footstep_plane_region_growing_multiple_plane_segmentation/output/polygons
+          - from: ~input_coefficients
+            to: footstep_plane_region_growing_multiple_plane_segmentation/output/coefficients
+          - from: ~input_inliers
+            to: footstep_plane_region_growing_multiple_plane_segmentation/output/inliers
+    </rosparam>
+  </node>
+
+    <group ns="footstep_plane_octree_voxel_grid">
+      <rosparam subst_value="true">
+        resolution: $(arg resolution)
+        use_multithread_callback: $(arg USE_MULTITHREAD_CALLBACK)
+      </rosparam>
+    </group>
+    <group ns="footstep_plane_odom_laser">
+      <rosparam subst_value="true">
+        target_frame_id: $(arg fixed_frame_id)
+        use_multithread_callback: $(arg USE_MULTITHREAD_CALLBACK)
+      </rosparam>
+    </group>
+    <group ns="footstep_plane_normal_estimation">
+      <rosparam subst_value="true">
+        k_search: 50
+        use_multithread_callback: $(arg USE_MULTITHREAD_CALLBACK)
+        number_of_threads: $(arg NUM_OF_THREAD_OMP)
+      </rosparam>
+    </group>
+    <group ns="footstep_plane_region_growing_multiple_plane_segmentation">
+      <rosparam subst_value="true">
+        distance_threshold: 0.05
+        min_area: 0.01
+        max_area: 100.0
+        use_multithread_callback: $(arg USE_MULTITHREAD_CALLBACK)
+      </rosparam>
+    </group>
+    <group ns="footstep_plane_plane_rejector">
+      <rosparam subst_value="true">
+        processing_frame_id: $(arg fixed_frame_id)
+        reference_axis: [0, 0, 1]
+        angle: 0.0
+        use_inliers: true
+        allow_flip: true
+      </rosparam>
+    </group>
+
+</launch>

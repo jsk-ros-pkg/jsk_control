@@ -1,5 +1,6 @@
 <launch>
   <arg name="fixed_frame_id" default="odom" />
+  <arg name="use_snapshot" default="true"/>
   <!-- <arg name="input_cloud" default="/accumulated_heightmap_pointcloud_static/output"/> -->
   <arg name="input_cloud" default="robot_center_pointcloud/output"/>
   <node pkg="jsk_topic_tools"
@@ -13,25 +14,11 @@
         remappings:
           - from: ~input
             to: $(arg input_cloud)
-      - name: floor_laser_x_filter
-        type: pcl/PassThrough
-        remappings:
-          - from: ~input
-            to: floor_fixed_frame_pointcloud/output
-          - from: /tf
-            to: /tf_null
-      - name: floor_laser_y_filter
-        type: pcl/PassThrough
-        remappings:
-          - from: ~input
-            to: floor_laser_x_filter/output
-          - from: /tf
-            to: /tf_null
       - name: floor_laser_z_filter
         type: pcl/PassThrough
         remappings:
           - from: ~input
-            to: floor_laser_y_filter/output
+            to: floor_fixed_frame_pointcloud/output
           - from: /tf
             to: /tf_null
       - name: floor_voxel_grid
@@ -74,24 +61,12 @@
           - from: ~output
             to: /floor_coeffs
     </rosparam>
+    <remap from="floor_planar_segmentation/model" to="/floor_coeffs" unless="$(arg use_snapshot)"/>
+    <remap from="floor_plane_coefficients_snapshot/output" to="/floor_coeffs" if="$(arg use_snapshot)"/>
   </node>
   <rosparam param="floor_fixed_frame_pointcloud" subst_value="true">
     target_frame_id: $(arg fixed_frame_id)
   </rosparam>
-  <group ns="floor_laser_x_filter">
-    <rosparam>
-      filter_field_name: x
-      filter_limit_min: -5.0
-      filter_limit_max: 1000.0
-    </rosparam>
-  </group>
-  <group ns="floor_laser_y_filter">
-    <rosparam>
-      filter_field_name: y
-      filter_limit_min: -5.0
-      filter_limit_max: 5.0
-    </rosparam>
-  </group>
   <group ns="floor_laser_z_filter">
     <rosparam>
       filter_field_name: z

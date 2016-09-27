@@ -283,3 +283,94 @@ You can create `*ri*' like
       (send *ri* :set-foot-steps-no-wait newsteps
             :overwrite-footstep-index (+ idx offset 1)))
     ))
+
+;; copied from obsoluted euslisp footstep planner: footstep_planner_util.l
+(defun project-coords-on-to-plane2 (coords planes z-axis)
+  (let ((point (send coords :worldpos)))
+    ;; first, creating line from the point and z-axis
+    ;; and, compute the points projected on the planes
+    ;; x = P + aZ: line
+    ;; nx + D = 0: plane
+    ;; n(P + aZ) + D = 0
+    ;; nP + anZ + D = 0
+    ;; anZ = -(D + nP)
+    ;; a = -(D + nP) / nZ
+    (let ((candidates (mapcar #'(lambda (pln)
+                                  (let ((projected-point
+                                         (let ((plane-normal (send pln :normal))
+                                               (plane-D (- (send pln :plane-distance (float-vector 0 0 0)))))
+                                           (let ((alpha (/ (- plane-D (v. plane-normal point))
+                                                           (v. plane-normal z-axis))))
+                                             (v+ point (scale alpha z-axis))))))
+                                    (if (not (eq (send pln :insidep projected-point) :outside))
+                                        (let* ((n (send pln :normal))
+                                               (nf (matrix-column
+                                                    (send (send coords :copy-worldcoords) :worldrot) 2)))
+                                          (if (< (v. nf n) 0)
+                                              (setq n (scale -1.0 n)))
+                                          (let ((ret (send coords :copy-worldcoords)))
+                                            (send ret :locate projected-point :world)
+                                            (if (eps= (norm (v* n nf)) 0)
+                                                ret
+                                              (let* ((b (v* nf n))
+                                                     (b* (normalize-vector b))
+                                                     (theta (asin (norm b))))
+                                                (send ret :rotate theta b* :world)
+                                                ret))
+                                            ret)))))
+                              planes)))
+      (let ((non-null-candidates (remove-if #'null candidates)))
+        (ros::ros-info "project coordinates to ~A planes" (length non-null-candidates))
+        (ros::ros-info "  ~A planes" (length planes))
+        (ros::ros-info "  ~A failed to project" (- (length candidates) (length non-null-candidates)))
+        (if non-null-candidates non-null-candidates ;car is not good
+          nil)))))
+
+(defun project-footsteps (planes footstep-coords)
+  (let (ret-coords projected-coords)    
+    (if planes
+        (progn 
+          (setq projected-coords (mapcar #'(lambda (coords)
+                                             (let* ((candidates (project-coords-on-to-plane2 coords planes (float-vector 0 0 1)))
+                                                    (non-null-candidates (remove-if #'null candidates)) (ret nil))
+                                               ;; now only check distance for validity but rotation should be considered
+                                               (when (> (length non-null-candidates) 0)
+                                                 (dolist (c non-null-candidates)
+                                                   (if (> (norm (send (send coords :transformation c) :pos)) 100)
+                                                       (ros::ros-warn "projected footstep is too distant (~A [mm])" (norm (send (send coords :transformation c) :pos)))
+                                                     (if ret
+                                                         (when (> (norm (send (send coords :transformation ret) :pos))
+                                                                  (norm (send (send coords :transformation c) :pos))) ;; use nearest footcoords from original
+                                                           (setq ret c)
+                                                           (send ret :name (send coords :name))
+                                                           )
+                                                       (progn
+                                                         (setq ret c)
+                                                         (send ret :name (send coords :name)))
+                                                       )
+                                                     )
+                                                   )
+                                                 )
+                                               ret
+                                               )
+                                             )
+                                         footstep-coords))
+          (if (member nil projected-coords)
+              (progn 
+                (ros::ros-warn "footstep projection is failed")
+                (setq ret-coords footstep-coords))
+            (progn
+              (pprint "before projection:")
+              (print-readable-coords footstep-coords)
+              (pprint "after projection:")
+              (print-readable-coords projected-coords)
+              (setq ret-coords projected-coords))
+            )
+          )
+      (progn
+        (ros::ros-warn "plane is not subscribed")
+        (setq ret-coords footstep-coords))
+      )
+    ret-coords
+    )
+  )
