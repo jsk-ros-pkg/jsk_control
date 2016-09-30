@@ -54,7 +54,6 @@
 #include "jsk_footstep_planner/FootstepMarkerConfig.h"
 #include <dynamic_reconfigure/server.h>
 #include <jsk_rviz_plugins/OverlayText.h>
-#include <tf/transform_listener.h>
 
 namespace jsk_footstep_planner
 {
@@ -115,7 +114,8 @@ namespace jsk_footstep_planner
     virtual PosePair::Ptr getLatestCurrentFootstepPoses();
     virtual PosePair::Ptr getCurrentFootstepPoses(const ros::Time& stamp);
     virtual PosePair::Ptr getDefaultFootstepPair();
-    virtual visualization_msgs::Marker makeFootstepMarker(FootstepTrans pose);
+    virtual visualization_msgs::Marker makeFootstepMarker(FootstepTrans pose,
+                                                          unsigned char leg);
     virtual void processFeedbackCB(
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void processMenuFeedbackCB(
@@ -244,9 +244,6 @@ namespace jsk_footstep_planner
 
     bool have_last_step_;
     jsk_footstep_msgs::Footstep last_steps_[2];
-
-    tf::TransformListener listener_;
-
   private:
     
   };

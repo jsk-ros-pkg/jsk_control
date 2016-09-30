@@ -120,6 +120,7 @@ namespace jsk_footstep_planner
       return a[0] * b[1] - a[1] * b[0];
     }
     virtual jsk_footstep_msgs::Footstep::Ptr toROSMsg();
+    virtual jsk_footstep_msgs::Footstep::Ptr toROSMsg(const Eigen::Vector3f& ioffset);
 #if 0
     virtual FootstepState::Ptr
     projectToCloud(pcl::KdTreeFLANN<pcl::PointNormal>& tree,

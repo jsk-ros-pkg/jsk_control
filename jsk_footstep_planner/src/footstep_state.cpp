@@ -92,6 +92,21 @@ namespace jsk_footstep_planner
     ret->leg = leg_;
     return ret;
   }
+  jsk_footstep_msgs::Footstep::Ptr
+  FootstepState::toROSMsg(const Eigen::Vector3f& ioffset)
+  {
+    jsk_footstep_msgs::Footstep::Ptr ret(new jsk_footstep_msgs::Footstep);
+    Eigen::Affine3f newpose = pose_ * Eigen::Translation3f(ioffset);
+    tf::poseEigenToMsg(newpose, ret->pose);
+    ret->dimensions.x = dimensions_[0];
+    ret->dimensions.y = dimensions_[1];
+    ret->dimensions.z = dimensions_[2];
+    ret->offset.x = - ioffset[0];
+    ret->offset.y = - ioffset[1];
+    ret->offset.z = - ioffset[2];
+    ret->leg = leg_;
+    return ret;
+  }
 
   pcl::PointIndices::Ptr
   FootstepState::cropPointCloudExact(pcl::PointCloud<pcl::PointNormal>::Ptr cloud,
@@ -579,7 +594,9 @@ namespace jsk_footstep_planner
                                                const Eigen::Vector3f& resolution)
   {
     Eigen::Affine3f pose;
+    Eigen::Vector3f offset (f.offset.x, f.offset.y, f.offset.z);
     tf::poseMsgToEigen(f.pose, pose);
+    pose *= Eigen::Translation3f(offset);
     return FootstepState::Ptr(new FootstepState(
                                 f.leg, pose,
                                 size, resolution));
