@@ -7,12 +7,14 @@
   <arg name="use_go_pos_server" default="true"/>
   <arg name="use_floor_detection" default="false"/>
   <arg name="use_footstep_plane_detection" default="false"/>
+  <arg name="LAUNCH_TF_BUFFER_SERVER" default="false" />
 
   <arg if="$(arg USE_NORMAL)"     name="input_point_cloud"
        value="/footstep_normal_estimation/output_with_xyz" />
   <arg unless="$(arg USE_NORMAL)" name="input_point_cloud"
        value="/accumulated_heightmap_pointcloud_static/output" />
 
+  <!-- nodes for perception -->
   <node if="$(arg USE_NORMAL)" pkg="jsk_pcl_ros" type="normal_estimation_omp" name="footstep_normal_estimation">
     <remap from="~input" to="/accumulated_heightmap_pointcloud_static/output" />
     <rosparam subst_value="true">
@@ -21,8 +23,9 @@
       number_of_threads: 1
     </rosparam>
   </node>
-
   <include file="$(find jsk_robot_startup)/launch/slam_octomap.launch"/>
+
+  <!-- footstep planner -->
   <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
     <remap from="~pointcloud_model" to="$(arg input_point_cloud)" />
     <remap from="~obstacle_model" to="octomap_point_cloud_centers" />
@@ -41,9 +44,12 @@
     </rosparam>
     <!-- size of foot -->
     <rosparam>
-      ## add padding
-      footstep_size_x: 0.26
-      footstep_size_y: 0.145
+      ## offset from end-coords -> center of cube
+      lleg_footstep_offset: [0.015502,  0.010078, 0.0]
+      rleg_footstep_offset: [0.015502, -0.010078, 0.0]
+      ## without padding
+      footstep_size_x: 0.237418
+      footstep_size_y: 0.134017
     </rosparam>
     <!-- parameters for plane estimation -->
     <rosparam subst_value="true">
@@ -81,13 +87,16 @@
       support_check_x_sampling: 3
       support_check_y_sampling: 3
       support_check_vertex_neighbor_threshold: 0.02
-      support_padding_x: 0.0
-      support_padding_y: 0.0
+      support_padding_x: 0.0 ##
+      support_padding_y: 0.0 ##
     </rosparam>
     <!-- successors -->
     <rosparam>
-      ## default_rfoot_to_lfoot_offset: [x, y, theta]
-      default_rfoot_to_lfoot_offset: [0, -0.220156, 0]
+      ## default_lfoot_to_rfoot_offset: [x, y, theta]
+      ## default_lfoot_to_rfoot_offset: [0, -0.220156, 0] ## within offset end-coords to center of cube
+      default_lfoot_to_rfoot_offset: [0, -0.200, 0] ## just offset between end-coords of legs
+      ## successors is a list of transformations from left foot to right foot
+      ## if the parameter named 'default_lfoot_to_rfoot_offset' is set, it would be added to successors.
       successors:
 # stepping
       - x: 0
@@ -168,6 +177,8 @@
         theta: -0.09
     </rosparam>
   </node>
+
+  <!-- footstep marker -->
   <group if="$(arg use_footstep_marker)">
     <node pkg="jsk_footstep_planner" type="footstep_marker" name="footstep_marker" output="screen">
       <remap from="/footstep_controller" to="jaxon_footstep_controller"/>
@@ -213,5 +224,7 @@
   <node pkg="rviz" type="rviz" name="rviz" 
         args="-d $(find jsk_footstep_planner)/config/jaxon_footstep_planner_perception.rviz"
         if="$(arg rviz)"/>
-  
+
+  <node pkg="tf2_ros" type="buffer_server" name="tf2_buffer_server"
+        if="$(arg LAUNCH_TF_BUFFER_SERVER)" />
 </launch>

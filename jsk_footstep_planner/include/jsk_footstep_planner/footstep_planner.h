@@ -137,6 +137,8 @@ namespace jsk_footstep_planner
     std::vector<Eigen::Affine3f> successors_;
     Eigen::Vector3f collision_bbox_size_;
     Eigen::Affine3f collision_bbox_offset_;
+    Eigen::Vector3f inv_lleg_footstep_offset_;
+    Eigen::Vector3f inv_rleg_footstep_offset_;
     std_msgs::Header latest_header_;
     // Common Parameters
     FootstepParameters parameters_;

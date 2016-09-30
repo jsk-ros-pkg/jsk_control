@@ -210,15 +210,25 @@ namespace jsk_footstep_planner
     ros::Duration(1.0).sleep();
   }
   
-  visualization_msgs::Marker FootstepMarker::makeFootstepMarker(FootstepTrans pose)
+  visualization_msgs::Marker FootstepMarker::makeFootstepMarker(FootstepTrans pose, unsigned char leg)
   {
+    FootstepTrans footpose = pose;
+    if (leg == jsk_footstep_msgs::Footstep::LLEG) {
+      FootstepTranslation ltrans(lleg_footstep_offset_[0], lleg_footstep_offset_[1], lleg_footstep_offset_[2]);
+      footpose = pose * ltrans;
+    } else if (leg == jsk_footstep_msgs::Footstep::RLEG) {
+      FootstepTranslation rtrans(rleg_footstep_offset_[0], rleg_footstep_offset_[1], rleg_footstep_offset_[2]);
+      footpose = pose * rtrans;
+    } else {
+      ROS_ERROR ("makeFootstepMarker not implemented leg (%d)", leg);
+    }
     visualization_msgs::Marker marker;
     if (is_cube_mode_) {
       marker.type = visualization_msgs::Marker::CUBE;
       marker.scale.x = foot_size_x_;
       marker.scale.y = foot_size_y_;
       marker.scale.z = foot_size_z_;
-      tf::poseEigenToMsg(pose, marker.pose);
+      tf::poseEigenToMsg(footpose, marker.pose);
     }
     else {
       marker.type = visualization_msgs::Marker::LINE_STRIP;
@@ -227,10 +237,10 @@ namespace jsk_footstep_planner
       FootstepVec local_b(-foot_size_x_ / 2.0,  foot_size_y_ / 2.0, 0.0);
       FootstepVec local_c(-foot_size_x_ / 2.0, -foot_size_y_ / 2.0, 0.0);
       FootstepVec local_d( foot_size_x_ / 2.0, -foot_size_y_ / 2.0, 0.0);
-      FootstepVec a = pose * local_a;
-      FootstepVec b = pose * local_b;
-      FootstepVec c = pose * local_c;
-      FootstepVec d = pose * local_d;
+      FootstepVec a = footpose * local_a;
+      FootstepVec b = footpose * local_b;
+      FootstepVec c = footpose * local_c;
+      FootstepVec d = footpose * local_d;
       geometry_msgs::Point ros_a, ros_b, ros_c, ros_d;
       ros_a.x = a[0]; ros_a.y = a[1]; ros_a.z = a[2];
       ros_b.x = b[0]; ros_b.y = b[1]; ros_b.z = b[2];
@@ -252,9 +262,11 @@ namespace jsk_footstep_planner
   {
     FootstepTrans midcoords = leg_poses->midcoords();
     tf::poseEigenToMsg(midcoords, int_marker.pose);
-    visualization_msgs::Marker left_box_marker = makeFootstepMarker(midcoords.inverse() * leg_poses->getByName(lleg_end_coords_));
+    visualization_msgs::Marker left_box_marker = makeFootstepMarker(midcoords.inverse() * leg_poses->getByName(lleg_end_coords_),
+                                                                    jsk_footstep_msgs::Footstep::LLEG);
     left_box_marker.color.g = 1.0;
-    visualization_msgs::Marker right_box_marker = makeFootstepMarker(midcoords.inverse() * leg_poses->getByName(rleg_end_coords_));
+    visualization_msgs::Marker right_box_marker = makeFootstepMarker(midcoords.inverse() * leg_poses->getByName(rleg_end_coords_),
+                                                                     jsk_footstep_msgs::Footstep::RLEG);
     right_box_marker.color.r = 1.0;
     visualization_msgs::InteractiveMarkerControl left_box_control;
     left_box_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::BUTTON;
@@ -278,9 +290,9 @@ namespace jsk_footstep_planner
     tf::poseEigenToMsg(pose, int_goal_marker.pose);
     current_lleg_offset_ = pose.inverse() * lleg_goal_pose_;
     current_rleg_offset_ = pose.inverse() * rleg_goal_pose_;
-    visualization_msgs::Marker left_box_marker = makeFootstepMarker(current_lleg_offset_);
+    visualization_msgs::Marker left_box_marker = makeFootstepMarker(current_lleg_offset_, jsk_footstep_msgs::Footstep::LLEG);
     left_box_marker.color.g = 1.0;
-    visualization_msgs::Marker right_box_marker = makeFootstepMarker(current_rleg_offset_);
+    visualization_msgs::Marker right_box_marker = makeFootstepMarker(current_rleg_offset_, jsk_footstep_msgs::Footstep::RLEG);
     right_box_marker.color.r = 1.0;
     visualization_msgs::InteractiveMarkerControl left_box_control;
     left_box_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::BUTTON;
@@ -439,16 +451,6 @@ namespace jsk_footstep_planner
             last_steps_[0] = plan_result_.footsteps[size-2]; // left
             last_steps_[1] = plan_result_.footsteps[size-1]; // right
           }
-          Eigen::Affine3d lfoot;
-          Eigen::Translation3d ltrans(lleg_footstep_offset_[0], lleg_footstep_offset_[1], lleg_footstep_offset_[2]);
-          Eigen::Affine3d rfoot;
-          Eigen::Translation3d rtrans(rleg_footstep_offset_[0], rleg_footstep_offset_[1], rleg_footstep_offset_[2]);
-          tf::poseMsgToEigen(last_steps_[0].pose, lfoot);
-          tf::poseMsgToEigen(last_steps_[1].pose, rfoot);
-          lfoot *= ltrans;
-          rfoot *= rtrans;
-          tf::poseEigenToMsg(lfoot, last_steps_[0].pose);
-          tf::poseEigenToMsg(rfoot, last_steps_[1].pose);
         }
         have_last_step_ = true;
         if (goal.strategy == jsk_footstep_msgs::ExecFootstepsGoal::NEW_TARGET) {
@@ -650,23 +652,6 @@ namespace jsk_footstep_planner
     pub_plan_result_.publish(result->result);
     planning_state_ = FINISHED;
     plan_result_ = result->result;
-    // subtracting offset
-    for (jsk_footstep_msgs::FootstepArray::_footsteps_type::iterator it = plan_result_.footsteps.begin();
-         it != plan_result_.footsteps.end(); it++) {
-      if( (*it).leg == jsk_footstep_msgs::Footstep::LEFT) {
-        Eigen::Translation3d trans(-lleg_footstep_offset_[0], -lleg_footstep_offset_[1], -lleg_footstep_offset_[2]);
-        Eigen::Affine3d new_pose;
-        tf::poseMsgToEigen((*it).pose, new_pose);
-        new_pose *= trans;
-        tf::poseEigenToMsg(new_pose, (*it).pose);
-      } else { // Right
-        Eigen::Translation3d trans(-rleg_footstep_offset_[0], -rleg_footstep_offset_[1], -rleg_footstep_offset_[2]);
-        Eigen::Affine3d new_pose;
-        tf::poseMsgToEigen((*it).pose, new_pose);
-        new_pose *= trans;
-        tf::poseEigenToMsg(new_pose, (*it).pose);
-      }
-    }
   }
   
   void FootstepMarker::planIfPossible(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
@@ -678,15 +663,11 @@ namespace jsk_footstep_planner
   }
 
   FootstepTrans FootstepMarker::getDefaultLeftLegOffset() {
-    return FootstepTrans(FootstepTranslation(lleg_footstep_offset_[0],
-                                             default_footstep_margin_ / 2.0 + lleg_footstep_offset_[1],
-                                             lleg_footstep_offset_[2]));
+    return FootstepTrans(FootstepTranslation(0, default_footstep_margin_ / 2.0, 0));
   }
 
   FootstepTrans FootstepMarker::getDefaultRightLegOffset() {
-    return FootstepTrans(FootstepTranslation(rleg_footstep_offset_[0],
-                                             - default_footstep_margin_ / 2.0 + rleg_footstep_offset_[1],
-                                             rleg_footstep_offset_[2]));
+    return FootstepTrans(FootstepTranslation(0, - default_footstep_margin_ / 2.0, 0));
   }
   
   void FootstepMarker::processFeedbackCB(
@@ -890,8 +871,8 @@ namespace jsk_footstep_planner
 
   PosePair::Ptr FootstepMarker::getDefaultFootstepPair()
   {
-    FootstepTrans lleg_default_pose(FootstepTranslation(0, 0.1, 0) * FootstepTranslation(lleg_footstep_offset_));
-    FootstepTrans rleg_default_pose(FootstepTranslation(0, -0.1, 0) * FootstepTranslation(rleg_footstep_offset_));
+    FootstepTrans lleg_default_pose(FootstepTranslation(0, 0.1, 0));
+    FootstepTrans rleg_default_pose(FootstepTranslation(0, -0.1, 0));
     return PosePair::Ptr(new PosePair(lleg_default_pose, lleg_end_coords_,
                                       rleg_default_pose, rleg_end_coords_));
   }
@@ -922,8 +903,8 @@ namespace jsk_footstep_planner
     FootstepTrans lleg_transform_eigen, rleg_transform_eigen;
     tf::transformMsgToEigen(lleg_transform.transform, lleg_transform_eigen);
     tf::transformMsgToEigen(rleg_transform.transform, rleg_transform_eigen);
-    return PosePair::Ptr(new PosePair(lleg_transform_eigen * FootstepTranslation(lleg_footstep_offset_), lleg_end_coords_,
-                                      rleg_transform_eigen * FootstepTranslation(rleg_footstep_offset_), rleg_end_coords_));
+    return PosePair::Ptr(new PosePair(lleg_transform_eigen, lleg_end_coords_,
+                                      rleg_transform_eigen, rleg_end_coords_));
   }
 
   void FootstepMarker::configCallback(Config &config, uint32_t level)
@@ -943,12 +924,19 @@ namespace jsk_footstep_planner
       // apply target pose to goal marker
       // mutex should be limited in this range because planIfPossible also lock planner_mutex_
       boost::mutex::scoped_lock lock(planner_mutex_);
-      FootstepTrans eigen_command_pose;
-
       try {
-        listener_.waitForTransform(odom_frame_id_, msg->header.frame_id, msg->header.stamp, ros::Duration(2.0));
-        listener_.transformPose(odom_frame_id_, *msg, tmp_pose_stamped);
-      } catch(tf::TransformException ex) {
+        geometry_msgs::TransformStamped offset = tf_client_->lookupTransform(odom_frame_id_, msg->header.frame_id,
+                                                                             msg->header.stamp, ros::Duration(2.0));
+        FootstepTrans msg_eigen;
+        FootstepTrans offset_eigen;
+        tf::poseMsgToEigen(msg->pose, msg_eigen);
+        tf::transformMsgToEigen(offset.transform, offset_eigen);
+        FootstepTrans pose = msg_eigen * offset_eigen;
+
+        tf::poseEigenToMsg(pose, tmp_pose_stamped.pose);
+        tmp_pose_stamped.header.stamp = msg->header.stamp;
+        tmp_pose_stamped.header.frame_id = odom_frame_id_;
+      } catch(tf2::TransformException ex) {
         ROS_ERROR("posestamped command transformation failed %s",ex.what());
         return;
       }
