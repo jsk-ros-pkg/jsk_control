@@ -100,6 +100,18 @@
               ))))))
   (:cells () cells)
   (:valid-cells () (remove-if #'(lambda (x) (= (send x :get-value) 0)) cells))
+  (:centroid
+   ()
+   (vector-mean
+    (mapcar #'(lambda (c) (send origin :transform-vector (send c :center-pos)))
+            (send self :cells)))
+   )
+  (:valid-centroid
+   ()
+   (vector-mean
+    (mapcar #'(lambda (c) (send origin :transform-vector (send c :center-pos)))
+            (send self :valid-cells)))
+   )
   (:dump-to-csv (fname)
     (with-open-file (f fname :direction :output)
       (format f "x,y,z,i,j,k,value~%")
@@ -425,56 +437,56 @@
                       (fullbody nil)
                       (initial-pose nil))
   (let ((counter 0))
-  (dolist (cell (send grid :cells))
-    (if initial-pose (send robot :angle-vector initial-pose) (send robot :reset-pose))
-    (if fullbody (send robot :fix-leg-to-coords (make-coords)))
-    (if (< (distance2d (send robot :worldpos) (send cell :center-pos)) min-distance)
+    (dolist (cell (send grid :cells))
+      (if initial-pose (send robot :angle-vector initial-pose) (send robot :reset-pose))
+      (if fullbody (send robot :fix-leg-to-coords (make-coords)))
+      (if (< (distance2d (send robot :worldpos) (send cell :center-pos)) min-distance)
+          (progn
+            (warn "skip because it violtates min-distance~%")
+            (send cell :set-value 0))
         (progn
-          (warn "skip because it violtates min-distance~%")
-          (send cell :set-value 0))
-      (progn
-        (when orient-centerp
-          (send grid :put :center-pos center-pos)
-          (setq rotation
-                (send (orient-coords-to-axis (make-coords :pos (send cell :center-pos)) (v- center-pos (send cell :center-pos))
-                                             (if (cadr (member :rotation-axis ik-args)) (cadr (member :rotation-axis ik-args)) :z)) :rot)))
-        (if (if fullbody
-                (send* robot :fullbody-inverse-kinematics
-                       (append (list (make-coords :pos (send cell :center-pos)
-                                                  :rot rotation))
-                               (send-all (send robot :legs :end-coords) :copy-worldcoords))
-                       :move-target (append (list move-target) (send robot :legs :end-coords))
-                       :link-list (mapcar #'(lambda (mt) (send robot :link-list (send mt :parent))) (append (list move-target) (send robot :legs :end-coords)))
+          (when orient-centerp
+            (send grid :put :center-pos center-pos)
+            (setq rotation
+                  (send (orient-coords-to-axis (make-coords :pos (send cell :center-pos)) (v- center-pos (send cell :center-pos))
+                                               (if (cadr (member :rotation-axis ik-args)) (cadr (member :rotation-axis ik-args)) :z)) :rot)))
+          (if (if fullbody
+                  (send* robot :fullbody-inverse-kinematics
+                         (append (list (make-coords :pos (send cell :center-pos)
+                                                    :rot rotation))
+                                 (send-all (send robot :legs :end-coords) :copy-worldcoords))
+                         :move-target (append (list move-target) (send robot :legs :end-coords))
+                         :link-list (mapcar #'(lambda (mt) (send robot :link-list (send mt :parent))) (append (list move-target) (send robot :legs :end-coords)))
+                         :dump-command nil
+                         :warnp nil
+                         ik-args)
+                (send* robot :inverse-kinematics
+                       (make-coords :pos (send cell :center-pos)
+                                    :rot rotation)
+                       :move-target move-target
+                       :link-list (send robot :link-list (send move-target :parent))
                        :dump-command nil
                        :warnp nil
-                       ik-args)
-              (send* robot :inverse-kinematics
-                     (make-coords :pos (send cell :center-pos)
-                                  :rot rotation)
-                     :move-target move-target
-                     :link-list (send robot :link-list (send move-target :parent))
-                     :dump-command nil
-                     :warnp nil
-                     ik-args))
-            (send cell :set-value 1)
-          (send cell :set-value 0))
-        (when update-view
-          (if (= (send cell :get-value) 1)
-              (objects (send cell :cube)))
-          (send *irtviewer* :draw-objects)
-          (x::window-main-one))
-        (incf counter)
-        (when (= (mod counter 10) 0)
-          (format t "~c~0,4d/~A" #x0d counter (length (send grid :cells)))
-          (let* ((percentage (/ (* 100 counter) (length (send grid :cells))))
-                 (max-bar-length 60)
-                 (bar-num (/ (* max-bar-length percentage) 100)))
-            (dotimes (i bar-num)
-              (format t "=")))
-          (finish-output))
-        )))
-  (send grid :normalize-cells)
-  ))
+                       ik-args))
+              (send cell :set-value 1)
+            (send cell :set-value 0))
+          (when update-view
+            (if (= (send cell :get-value) 1)
+                (objects (send cell :cube)))
+            (send *irtviewer* :draw-objects)
+            (x::window-main-one))
+          (incf counter)
+          (when (= (mod counter 10) 0)
+            (format t "~c~0,4d/~A" #x0d counter (length (send grid :cells)))
+            (let* ((percentage (/ (* 100 counter) (length (send grid :cells))))
+                   (max-bar-length 60)
+                   (bar-num (/ (* max-bar-length percentage) 100)))
+              (dotimes (i bar-num)
+                (format t "=")))
+            (finish-output))
+          )))
+    (send grid :normalize-cells)
+    ))
 
 (defun save-4-views (file-prefix)
     ;; slant
