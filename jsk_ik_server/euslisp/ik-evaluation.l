@@ -100,6 +100,18 @@
               ))))))
   (:cells () cells)
   (:valid-cells () (remove-if #'(lambda (x) (= (send x :get-value) 0)) cells))
+  (:centroid
+   ()
+   (vector-mean
+    (mapcar #'(lambda (c) (send origin :transform-vector (send c :center-pos)))
+            (send self :cells)))
+   )
+  (:valid-centroid
+   ()
+   (vector-mean
+    (mapcar #'(lambda (c) (send origin :transform-vector (send c :center-pos)))
+            (send self :valid-cells)))
+   )
   (:dump-to-csv (fname)
     (with-open-file (f fname :direction :output)
       (format f "x,y,z,i,j,k,value~%")
