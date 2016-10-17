@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 DIR_3rdparty="";
-DIR_ROOT="";
+## DIR_ROOT="";
 DIR_CAFFE="";
 LOG_HEAD="_/_/_/_/_/_/_/_/_/";
 
@@ -17,12 +17,13 @@ then
     mkdir 3rdparty;
 fi
 cd 3rdparty;
-DIR_ROOT=`pwd`;
+DIR_3rdparty=`pwd`;
 
 if [ ! -e "caffe" ];
 then
     ##
     ##
+    cd $DIR_3rdparty;
     _mlog "download caffe";
     wget https://github.com/BVLC/caffe/archive/d362894887af9dca8581906b2284f5be81dbd403.zip
     unzip d362894887af9dca8581906b2284f5be81dbd403.zip;
@@ -34,9 +35,9 @@ then
     ##
     ## sudo apt-get install libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libboost-all-dev libhdf5-serial-dev libatlas-base-dev; ## move to rosdep
     ##
-    mkdir 3rdparty;
-    cd 3rdparty;
-    DIR_3rdparty=`pwd`;
+    ## mkdir 3rdparty;
+    ## cd 3rdparty;
+    ## DIR_3rdparty=`pwd`;
     ##
     ## gflags
     cd $DIR_3rdparty;
@@ -79,7 +80,7 @@ then
     ## make && make install
     _mlog "done lmdb";
     ##
-    cd $DIR_ROOT;
+    cd $DIR_3rdparty;
     _mlog "gen include/lib dir";
     mkdir lib;
     for d in "${DIR_3rdparty}/gflags/build/lib" "${DIR_3rdparty}/mdb/libraries/liblmdb" "${DIR_3rdparty}/glog-0.3.3/.libs";
@@ -97,7 +98,7 @@ then
     if [ ! -e "Makefile.config" ];
     then
 	_mlog "gen caffe build config";
-	cat Makefile.config.example | sed -e "s#/usr/local/lib#/usr/local/lib ${DIR_ROOT}/lib#g" | sed -e "s#/usr/local/include#/usr/local/include ${DIR_ROOT}/include#g" | sed -e "s/# CUSTOM_CXX := g++/CUSTOM_CXX := g++/g" > Makefile.config;
+	cat Makefile.config.example | sed -e "s#/usr/local/lib#/usr/local/lib ${DIR_3rdparty}/lib#g" | sed -e "s#/usr/local/include#/usr/local/include ${DIR_3rdparty}/include#g" | sed -e "s/# CUSTOM_CXX := g++/CUSTOM_CXX := g++/g" > Makefile.config;
 	## cat Makefile.config.example | sed -e "s#/usr/local/lib#/usr/local/lib ${DIR_ROOT}/3rdparty/gflags/build/lib ${DIR_ROOT}/3rdparty/mdb/libraries/liblmdb ${DIR_ROOT}/3rdparty/glog-0\.3\.3/\.libs#g" | sed -e "s#/usr/local/include#/usr/local/include ${DIR_ROOT}/3rdparty/gflags/build/include ${DIR_ROOT}/3rdparty/mdb/libraries/liblmdb ${DIR_ROOT}/3rdparty/glog-0\.3\.3/src#g" | sed -e "s/# CUSTOM_CXX := g++/CUSTOM_CXX := g++/g" > Makefile.config;
 	cat Makefile.config;
     fi
