@@ -53,6 +53,7 @@ then
     _mlog "done gflag";
     ##
     ## glog
+    cd $DIR_3rdparty;
     _mlog "download glog";
     ## wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
     wget https://github.com/google/glog/archive/0b0b022be1c9c9139955af578fe477529d4b7b3c.zip;
