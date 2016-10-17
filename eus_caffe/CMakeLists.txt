@@ -17,6 +17,7 @@ set(CAFFE_ROOT_DIR ${PROJECT_SOURCE_DIR}/3rdparty/caffe)
 MESSAGE(" --  find caffe: {CAFFE_ROOT_DIR}")
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/3rdparty/include)
 include_directories(${CAFFE_ROOT_DIR}/include)
 include_directories(${CAFFE_ROOT_DIR}/.build_release/src)
 
