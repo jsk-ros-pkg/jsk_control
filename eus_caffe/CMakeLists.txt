@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 2.4.6)
 find_package(catkin COMPONENTS cmake_modules)
 ## find_package(OMPL REQUIRED)
 
+MESSAGE(" --  install caffe")
 execute_process(COMMAND cmake -E chdir ${PROJECT_SOURCE_DIR} bash make.sh)
 set(CAFFE_ROOT_DIR ${PROJECT_SOURCE_DIR}/3rdparty/caffe)
 # execute_process(COMMAND locate caffe
@@ -13,7 +14,7 @@ set(CAFFE_ROOT_DIR ${PROJECT_SOURCE_DIR}/3rdparty/caffe)
 #   OUTPUT_VARIABLE CAFFE_ROOT_DIR
 #   OUTPUT_STRIP_TRAILING_WHITESPACE
 #   )
-MESSAGE(-- find_caffe -- ${CAFFE_ROOT_DIR})
+MESSAGE(" --  find caffe: {CAFFE_ROOT_DIR}")
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${CAFFE_ROOT_DIR}/include)
@@ -28,6 +29,8 @@ catkin_package()
 
 ## add_executable(eus_caffe_test src/test.cpp)
 ## TARGET_LINK_LIBRARIES(eus_caffe_test /home/noda/prog/euslib/demo/s-noda/tmp-ros-package/caffe/.build_release/lib/libcaffe.so /usr/local/lib/libglog.so.0)
+
+MESSAGE(" --  build caffe")
 
 add_library(eus_caffe SHARED src/eus_caffe_lib.cpp)
 target_link_libraries(eus_caffe ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so)
