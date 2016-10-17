@@ -18,6 +18,8 @@
   <build_depend>atlas</build_depend>
   <build_depend>leveldb</build_depend>
   <!--
+      <build_depend>libgoogle-glog-dev</build_depend>
+      <build_depend>libgflags-dev</build_depend>
       <build_depend>opencv</build_depend>
   -->
 
