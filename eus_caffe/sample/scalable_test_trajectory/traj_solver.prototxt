@@ -1,0 +1,12 @@
+net: "traj_net.prototxt"
+solver_type: NESTEROV
+base_lr: 0.001
+lr_policy: "step"
+gamma: 0.977237
+stepsize: 1000
+max_iter: 100000
+momentum: 0.9
+display: 1000
+snapshot: 100000
+snapshot_prefix: "traj_net_0.001blr_0id"
+solver_mode: CPU

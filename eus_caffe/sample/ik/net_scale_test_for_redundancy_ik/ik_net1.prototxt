@@ -1,0 +1,33 @@
+name: "redundancy_ik_net"
+layer {
+  name: "input"
+  type: "Data"
+  top: "sigmoid@DEPTH@"
+  include {
+    phase: TRAIN
+  }
+  transform_param {
+    scale: 1.0 ##0.003922
+  }
+  data_param {
+    source: "input_lmdb_potentio"
+    batch_size: 100 ## must be same as target one
+    backend: LMDB
+  }
+}
+layer {
+  name: "target"
+  type: "Data"
+  top: "target"
+  transform_param {
+    scale: 1.0
+  }
+  include {
+    phase: TRAIN
+  }
+  data_param {
+    source: "target_lmdb_limb_coords"
+    batch_size: 100
+    backend: LMDB
+  }
+}
