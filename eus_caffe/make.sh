@@ -28,51 +28,44 @@ then
     DIR_3rdparty=`pwd`;
     ##
     ## glog
-    # wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
-    # tar zxvf glog-0.3.3.tar.gz
-    # cd glog-0.3.3
-    # ./configure
-    # make && sudo make install
-    wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
-    tar zxvf glog-0.3.3.tar.gz
-    cd glog-0.3.3
-    ./configure
-    make && make install
+    ## wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
+    wget https://github.com/google/glog/archive/0b0b022be1c9c9139955af578fe477529d4b7b3c.zip;
+    mv 0b0b022be1c9c9139955af578fe477529d4b7b3c.zip glog-0.3.3.zip;
+    unzip glog-0.3.3.zip;
+    mv glog-0b0b022be1c9c9139955af578fe477529d4b7b3c glog-0.3.3;
+    cd glog-0.3.3;
+    ./configure;
+    make;
+    ## make && make install;
     cd $DIR_3rdparty;
     echo ">>>>> install glog in `pwd`";
     ##
     ## gflags
-    ## git clone https://github.com/gflags/gflags.git;
-    ## cd gflags;
-    ## git checkout d4e971c10b1557292b5371807a23921d15e7fece .;
     wget https://github.com/gflags/gflags/archive/d4e971c10b1557292b5371807a23921d15e7fece.zip;
     unzip d4e971c10b1557292b5371807a23921d15e7fece.zip;
     mv gflags-d4e971c10b1557292b5371807a23921d15e7fece gflags;
     cd gflags;
     mkdir build && cd build
     export CXXFLAGS="-fPIC" && cmake .. && make VERBOSE=1
-    make && make install
+    ## make && make install
+    make;
     cd $DIR_3rdparty;
     echo ">>>>> install gflags in `pwd`";
     ##
     ## lmdb
-    ##git clone https://gitorious.org/mdb/mdb.git
-    ## wget https://gitorious.org/mdb/mdb/archive/master.zip;
-    ## unzip master.zip;
-    ## mv mdb-master mdb;
-    ##cd mdb/libraries/liblmdb
     wget https://github.com/LMDB/lmdb/archive/7e476e4983cfba45cefe793b8bd6e13c486b3989.zip;
     unzip 7e476e4983cfba45cefe793b8bd6e13c486b3989.zip;
     mv lmdb-7e476e4983cfba45cefe793b8bd6e13c486b3989 mdb;
-    cd mdb/libraries/liblmdb
-    make && make install
+    cd mdb/libraries/liblmdb;
+    make;
+    ## make && make install
     cd $DIR_3rdparty;
     echo ">>>>> install lmb in `pwd`";
     ##
     cd $DIR_ROOT;
     if [ ! -e "Makefile.config" ];
     then
-	cp Makefile.config.example Makefile.config;
+	cat Makefile.config.example | sed -e "s#/usr/local/lib#/usr/local/lib ${DIR_ROOT}/3rdparty/gflags/build/lib ${DIR_ROOT}/3rdparty/mdb/libraries/liblmdb ${DIR_ROOT}/3rdparty/glog-0\.3\.3/\.libs#g" | sed -e "s#/usr/local/include#/usr/local/include ${DIR_ROOT}/3rdparty/gflags/build/include#g" > Makefile.config;
     fi
     CPU_ONLY=1 make;
     # ## python
