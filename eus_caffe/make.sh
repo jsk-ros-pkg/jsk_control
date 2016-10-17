@@ -81,7 +81,7 @@ then
     if [ ! -e "Makefile.config" ];
     then
 	_mlog "gen caffe build config";
-	cat Makefile.config.example | sed -e "s#/usr/local/lib#/usr/local/lib ${DIR_ROOT}/3rdparty/gflags/build/lib ${DIR_ROOT}/3rdparty/mdb/libraries/liblmdb ${DIR_ROOT}/3rdparty/glog-0\.3\.3/\.libs#g" | sed -e "s#/usr/local/include#/usr/local/include ${DIR_ROOT}/3rdparty/gflags/build/include#g" > Makefile.config;
+	cat Makefile.config.example | sed -e "s#/usr/local/lib#/usr/local/lib ${DIR_ROOT}/3rdparty/gflags/build/lib ${DIR_ROOT}/3rdparty/mdb/libraries/liblmdb ${DIR_ROOT}/3rdparty/glog-0\.3\.3/\.libs#g" | sed -e "s#/usr/local/include#/usr/local/include ${DIR_ROOT}/3rdparty/gflags/build/include#g" | sed -e "s/# CUSTOM_CXX := g++/CUSTOM_CXX := g++/g" > Makefile.config;
 	cat Makefile.config;
     fi
     _mlog "build caffe";
