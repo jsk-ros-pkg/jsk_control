@@ -21,7 +21,7 @@ then
     cd caffe;
     DIR_ROOT=`pwd`;
     ##
-    sudo apt-get install libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libboost-all-dev libhdf5-serial-dev libatlas-base-dev;
+    ## sudo apt-get install libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libboost-all-dev libhdf5-serial-dev libatlas-base-dev; ## move to rosdep
     ##
     mkdir 3rdparty;
     cd 3rdparty;
@@ -37,7 +37,7 @@ then
     tar zxvf glog-0.3.3.tar.gz
     cd glog-0.3.3
     ./configure
-    make && sudo make install
+    make && make install
     cd $DIR_3rdparty;
     echo ">>>>> install glog in `pwd`";
     ##
@@ -51,7 +51,7 @@ then
     cd gflags;
     mkdir build && cd build
     export CXXFLAGS="-fPIC" && cmake .. && make VERBOSE=1
-    make && sudo make install
+    make && make install
     cd $DIR_3rdparty;
     echo ">>>>> install gflags in `pwd`";
     ##
@@ -65,7 +65,7 @@ then
     unzip 7e476e4983cfba45cefe793b8bd6e13c486b3989.zip;
     mv lmdb-7e476e4983cfba45cefe793b8bd6e13c486b3989 mdb;
     cd mdb/libraries/liblmdb
-    make && sudo make install
+    make && make install
     cd $DIR_3rdparty;
     echo ">>>>> install lmb in `pwd`";
     ##
