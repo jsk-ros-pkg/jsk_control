@@ -35,7 +35,8 @@ MESSAGE(" --  build caffe")
 
 add_library(eus_caffe SHARED src/eus_caffe_lib.cpp)
 target_link_libraries(eus_caffe ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so)
-##target_link_libraries(eus_caffe ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0)
+target_link_libraries(eus_caffe ${PROJECT_SOURCE_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so)
+target_link_libraries(eus_caffe ${PROJECT_SOURCE_DIR}/3rdparty/mdb/libraries/liblmdb/liblmdb.so)
 ## target_link_libraries(eus_caffe ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0 /usr/local/cuda-7.0/lib64/libcudart.so.7.0 /usr/local/cuda-7.0/lib64/libcublas.so.7.0 /usr/local/cuda-7.0/lib64/libcurand.so.7.0)
 ## target_link_libraries(eus_caffe ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so)
 # target_link_libraries(eus_caffe ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0)
@@ -45,6 +46,8 @@ target_link_libraries(eus_caffe ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so
 
 add_library(eus_caffe_db SHARED src/eus_caffe_db_lib.cpp)
 target_link_libraries(eus_caffe_db ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so)
+target_link_libraries(eus_caffe_db ${PROJECT_SOURCE_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so)
+target_link_libraries(eus_caffe_db ${PROJECT_SOURCE_DIR}/3rdparty/mdb/libraries/liblmdb/liblmdb.so)
 ##target_link_libraries(eus_caffe_db ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0)
 ## target_link_libraries(eus_caffe_db ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0  /usr/local/cuda-7.0/lib64/libcudart.so.7.0 /usr/local/cuda-7.0/lib64/libcublas.so.7.0 /usr/local/cuda-7.0/lib64/libcurand.so.7.0)
 
