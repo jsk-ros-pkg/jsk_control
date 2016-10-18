@@ -50,6 +50,6 @@ target_link_libraries(eus_caffe_db ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe
 
 add_library(eus_log SHARED src/eus_log_lib.cpp)
 
-execute_process(COMMAND ln -s ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0 ${CATKIN_DEVEL_PREFIX}/lib)
-execute_process(COMMAND ln -s ${CAFFE_ROOT_DIR}/3rdparty/mdb/libraries/liblmdb/liblmdb.so ${CATKIN_DEVEL_PREFIX}/lib)
-execute_process(COMMAND ln -s ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so ${CATKIN_DEVEL_PREFIX}/lib)
+# execute_process(COMMAND ln -s ${CAFFE_ROOT_DIR}/3rdparty/glog-0.3.3/.libs/libglog.so.0 ${CATKIN_DEVEL_PREFIX}/lib)
+# execute_process(COMMAND ln -s ${CAFFE_ROOT_DIR}/3rdparty/mdb/libraries/liblmdb/liblmdb.so ${CATKIN_DEVEL_PREFIX}/lib)
+# execute_process(COMMAND ln -s ${CAFFE_ROOT_DIR}/.build_release/lib/libcaffe.so ${CATKIN_DEVEL_PREFIX}/lib)
