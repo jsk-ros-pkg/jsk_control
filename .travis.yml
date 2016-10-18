@@ -19,4 +19,11 @@ env:
     - ROS_DISTRO=indigo  ROSWS=wstool BUILDER=catkin   USE_DEB=true
 script: source .travis/travis.sh
 before_script:
+  - echo "@@@ before_script start"
   - export ROS_PARALLEL_JOBS="-j2 -l2"
+after_script:
+  - echo "@@@ after_script start"
+  - cat /home/travis/ros/ws_jsk_control/build/build_logs/eus_caffe.log
+after_failure:
+  - echo "@@@ after_failure start"
+  - cat /home/travis/ros/ws_jsk_control/build/build_logs/eus_caffe.log
