@@ -100,7 +100,7 @@ namespace jsk_footstep_planner
       }
       else {
         // TODO: should raise exception
-        //JSK_ROS_FATAL("no graph is set");
+        //ROS_FATAL("no graph is set");
         throw std::runtime_error("no graph is set in SolverNode");
       }
       return solver_nodes;
