@@ -65,10 +65,10 @@ namespace jsk_footstep_planner
       }
       Index index = pointToIndex(p);
       if (index.x >= x_num) {
-        JSK_ROS_FATAL("index.x exceeds x_num: %d > %lu", index.x, x_num);
+        ROS_FATAL("index.x exceeds x_num: %d > %lu", index.x, x_num);
       }
       if (index.y >= y_num) {
-        JSK_ROS_FATAL("indey.y eyceeds y_num: %d > %lu", index.y, y_num);
+        ROS_FATAL("indey.y eyceeds y_num: %d > %lu", index.y, y_num);
       }
       cells_[index.x][index.y]->add(i);
     }
