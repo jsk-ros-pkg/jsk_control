@@ -1,12 +1,17 @@
 <launch>
-  <arg name="USE_NODELET_MANAGER" default="true"/>
+  <arg name="USE_NODELET_MANAGER"  default="true"/>
   <arg name="NODELET_MANAGER_NAME" default="heightmap_nodelet"/>
-  <arg name="NODELET_INDEX" default="0"/>
-  <arg name="STATIC_FRAME" default="map" />
-  <arg name="STAND_FRAME" default="odom_init" />
-  <arg name="ROBOT_FRAME" default="body_on_odom" /> <!--it's not good-->
+  <arg name="NODELET_INDEX"        default="0"/>
+
   <arg name="INPUT" default="/distance_filtered_laser_snapshots/output_cloud" />
   <arg name="DEBUG_VIEW" default="true" />
+
+  <!-- frames -->
+  <arg name="STATIC_FRAME" default="map" />
+  <arg name="STAND_FRAME"  default="odom_init" />
+  <arg name="ROBOT_FRAME"  default="body_on_odom" />  <!--it's not good-->
+  <arg name="PROJECTED_FRAME" default="BODY_on_map" />
+  <arg name="USE_PROJECTED_FRAME" default="true" />
 
   <node pkg="jsk_footstep_controller" type="robot-boundingbox.l" name="robot_bounding_box">
     <rosparam>
@@ -17,8 +22,13 @@
       height_offset: 1.5
     </rosparam>
   </node>
-  <node pkg="jsk_topic_tools" type="standalone_complexed_nodelet" name="$(arg NODELET_MANAGER_NAME)"
-        output="screen" if="$(arg USE_NODELET_MANAGER)"/>
+
+  <!-- manager -->
+  <node if="$(arg USE_NODELET_MANAGER)"
+        pkg="jsk_topic_tools" type="standalone_complexed_nodelet"
+        name="$(arg NODELET_MANAGER_NAME)" output="screen" />
+
+  <!-- nodelets -->
   <group ns="$(arg NODELET_MANAGER_NAME)">
     <rosparam subst_value="true">
       nodelets_$(arg NODELET_INDEX):
@@ -44,35 +54,6 @@
           remappings:
             - from: ~input
               to: $(arg INPUT)
-        - name: robot_center_pointcloud_with_map_origin_points
-          type: pcl/PointCloudConcatenateDataSynchronizer
-        - name: latest_heightmap
-          type: jsk_pcl/HeightmapConverter
-          remappings:
-            - from: ~input
-              to: robot_center_pointcloud_with_map_origin_points/output
-        - name: latest_complete_heightmap
-          type: jsk_pcl/HeightmapMorphologicalFiltering
-          remappings:
-            - from: ~input
-              to: latest_heightmap/output
-        - name: accumulated_heightmap
-          type: jsk_pcl/HeightmapTimeAccumulation
-          remappings:
-            - from: ~input
-              to: latest_complete_heightmap/output
-            - from: ~input/prev_pointcloud
-              to: accumulated_heightmap_pointcloud/output
-        - name: accumulated_heightmap_pointcloud
-          type: jsk_pcl/HeightmapToPointCloud
-          remappings:
-            - from: ~input
-              to: accumulated_heightmap/output
-        - name: accumulated_heightmap_pointcloud_static
-          type: jsk_pcl/TfTransformCloud
-          remappings:
-            - from: ~input
-              to: accumulated_heightmap_pointcloud/output
         - name: robot_bbox_clipper
           type: jsk_pcl/AttentionClipper
           remappings:
@@ -87,8 +68,12 @@
               to: /robot_center_pointcloud/output
             - from: ~indices
               to: /robot_bbox_clipper/output/point_indices
+        - name: robot_center_pointcloud_with_map_origin_points
+          type: pcl/PointCloudConcatenateDataSynchronizer
     </rosparam>
   </group>
+
+  <!-- parameters -->
   <rosparam param="map_origin_polygon" subst_value="true">
     use_message: true
     frame_ids: [$(arg STAND_FRAME)]
@@ -105,26 +90,6 @@
     output_frame: $(arg ROBOT_FRAME)
     max_queue_size: 50
   </rosparam>
-  <rosparam param="latest_heightmap" subst_value="true">
-    min_x: -3.0
-    max_x:  5.0
-    min_y: -4.0
-    max_y:  4.0
-    resolution_x: 800 ## 0.01 m/pixel
-    resolution_y: 800 ## 0.01 m/pixel
-  </rosparam>
-  <rosparam param="latest_complete_heightmap" subst_value="true">
-    mask_size: 4 ## cover 0.08m
-    max_variance: 0.14
-    smooth_meshod: average
-  </rosparam>
-  <rosparam param="accumulated_heightmap" subst_value="true">
-    center_frame_id: $(arg ROBOT_FRAME)
-    fixed_frame_id: $(arg STATIC_FRAME)
-  </rosparam>
-  <rosparam param="accumulated_heightmap_pointcloud_static" subst_value="true">
-    target_frame_id: $(arg STATIC_FRAME)
-  </rosparam>
   <rosparam param="robot_bbox_clipper" subst_value="true">
     use_multiple_attention: false
     frame_id: $(arg ROBOT_FRAME)
@@ -132,63 +97,21 @@
   <rosparam param="robot_center_pointcloud_bbox_clipped" subst_value="true">
     negative: true
   </rosparam>
-  <group ns="heightmap_visualization" if="$(arg DEBUG_VIEW)" >
-    <group ns="latest_map">
-      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
-        <remap from="~input" to="/latest_heightmap/output" />
-      </node>
-      <node pkg="image_view" type="image_view" name="heightmap_view">
-        <remap from="image" to="colorize_heightmap/output" />
-        <param name="autosize" value="true" />
-      </node>
-    </group>
-    <group ns="filtered_map">
-      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
-        <remap from="~input" to="/latest_complete_heightmap/output" />
-      </node>
-      <node pkg="image_view" type="image_view" name="heightmap_view" >
-        <remap from="image" to="colorize_heightmap/output" />
-        <param name="autosize" value="true" />
-      </node>
-    </group>
-    <group ns="accumulated_map">
-      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
-        <remap from="~input" to="/accumulated_heightmap/output" />
-      </node>
-      <node pkg="image_view" type="image_view" name="heightmap_view" >
-        <remap from="image" to="colorize_heightmap/output" />
-        <param name="autosize" value="true" />
-      </node>
-    </group>
-    <group ns="latest_quality">
-      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
-        <remap from="~input" to="/latest_heightmap/output" />
-        <param name="channel" value="1" />
-      </node>
-      <node pkg="image_view" type="image_view" name="heightmap_view" >
-        <remap from="image" to="colorize_heightmap/output" />
-        <param name="autosize" value="true" />
-      </node>
-    </group>
-    <group ns="filtered_quality">
-      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
-        <remap from="~input" to="/latest_complete_heightmap/output" />
-        <param name="channel" value="1" />
-      </node>
-      <node pkg="image_view" type="image_view" name="heightmap_view" >
-        <remap from="image" to="colorize_heightmap/output" />
-        <param name="autosize" value="true" />
-      </node>
-    </group>
-    <group ns="accumulated_quality">
-      <node pkg="jsk_perception" type="colorize_float_image" name="colorize_heightmap">
-        <remap from="~input" to="/accumulated_heightmap/output" />
-        <param name="channel" value="1" />
-      </node>
-      <node pkg="image_view" type="image_view" name="heightmap_view" >
-        <remap from="image" to="colorize_heightmap/output" />
-        <param name="autosize" value="true" />
-      </node>
-    </group>
-  </group>
+
+  <!-- height map -->
+  <include file="$(find jsk_pcl_ros)/launch/heightmap_converter.launch">
+    <arg name="USE_NODELET_MANAGER"  value="$(arg USE_NODELET_MANAGER)"/>
+    <arg name="NODELET_MANAGER_NAME" value="$(arg NODELET_MANAGER_NAME)"/>
+    <arg name="NODELET_INDEX"        value="1$(arg NODELET_INDEX)"/>
+    <arg name="DEBUG_VIEW"           value="$(arg DEBUG_VIEW)" />
+
+    <arg name="INPUT"
+         value="robot_center_pointcloud_with_map_origin_points/output" />
+
+    <arg name="STATIC_FRAME" default="$(arg STATIC_FRAME)" />
+    <arg name="ROBOT_FRAME"  default="$(arg ROBOT_FRAME)" />
+    <arg name="PROJECTED_FRAME" default="$(arg PROJECTED_FRAME)" />
+    <arg name="USE_PROJECTED_FRAME" default="$(arg USE_PROJECTED_FRAME)" />
+  </include>
+
 </launch>
