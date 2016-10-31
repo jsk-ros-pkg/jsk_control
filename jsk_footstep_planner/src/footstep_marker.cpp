@@ -191,16 +191,16 @@ namespace jsk_footstep_planner
     pub_plan_result_ = pnh_.advertise<jsk_footstep_msgs::FootstepArray>("output/plan_result", 1);
     pub_current_marker_mode_ = pnh_.advertise<jsk_rviz_plugins::OverlayText>("marker_mode", 1, true);
 
-    //JSK_ROS_INFO("waiting for footstep_planner");
+    //ROS_INFO("waiting for footstep_planner");
     //ac_planner_.waitForServer();
-    //JSK_ROS_INFO("waiting for footstep_controller");
+    //ROS_INFO("waiting for footstep_controller");
     //ac_exec_.waitForServer();
     // initialize interactive marker
     // build menu handler
     setupMenuHandler();
     resetInteractiveMarker();
     publishCurrentMarkerMode();
-    JSK_ROS_INFO("initialization done");
+    ROS_INFO("initialization done");
   }
 
   FootstepMarker::~FootstepMarker()
@@ -887,7 +887,7 @@ namespace jsk_footstep_planner
       }
       catch (tf2::TransformException& e)
       {
-        JSK_ROS_WARN("tf error, retry: %s", e.what());
+        ROS_WARN("tf error, retry: %s", e.what());
       }
     }
   }
@@ -918,7 +918,7 @@ namespace jsk_footstep_planner
   void FootstepMarker::poseStampedCommandCallback(
     const geometry_msgs::PoseStamped::ConstPtr& msg)
   {
-    JSK_ROS_DEBUG("posestamped command is received");
+    ROS_DEBUG("posestamped command is received");
     geometry_msgs::PoseStamped tmp_pose_stamped;
     {
       // apply target pose to goal marker
