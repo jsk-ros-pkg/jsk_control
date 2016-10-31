@@ -1,79 +1,108 @@
 #!/usr/bin/env bash
 
 DIR_3rdparty="";
-DIR_ROOT="";
+## DIR_ROOT="";
+DIR_CAFFE="";
+LOG_HEAD="_/_/_/_/_/_/_/_/_/";
+
+function _mlog () {
+    echo $LOG_HEAD;
+    echo $1;
+    echo $LOG_HEAD;
+}
 
 if [ ! -e "3rdparty" ];
 then
+    _mlog "gen 3rdparty dir";
     mkdir 3rdparty;
 fi
 cd 3rdparty;
+DIR_3rdparty=`pwd`;
 
 if [ ! -e "caffe" ];
 then
     ##
     ##
+    cd $DIR_3rdparty;
+    _mlog "download caffe";
     wget https://github.com/BVLC/caffe/archive/d362894887af9dca8581906b2284f5be81dbd403.zip
     unzip d362894887af9dca8581906b2284f5be81dbd403.zip;
     mv caffe-d362894887af9dca8581906b2284f5be81dbd403 caffe;
     ## mv caffe-master caffe;
     ## git clone https://github.com/BVLC/caffe.git;
     cd caffe;
-    DIR_ROOT=`pwd`;
+    DIR_CAFFE=`pwd`;
     ##
-    sudo apt-get install libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libboost-all-dev libhdf5-serial-dev libatlas-base-dev;
+    ## sudo apt-get install libprotobuf-dev libleveldb-dev libsnappy-dev libopencv-dev libboost-all-dev libhdf5-serial-dev libatlas-base-dev; ## move to rosdep
     ##
-    mkdir 3rdparty;
-    cd 3rdparty;
-    DIR_3rdparty=`pwd`;
-    ##
-    ## glog
-    # wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
-    # tar zxvf glog-0.3.3.tar.gz
-    # cd glog-0.3.3
-    # ./configure
-    # make && sudo make install
-    wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
-    tar zxvf glog-0.3.3.tar.gz
-    cd glog-0.3.3
-    ./configure
-    make && sudo make install
-    cd $DIR_3rdparty;
-    echo ">>>>> install glog in `pwd`";
+    ## mkdir 3rdparty;
+    ## cd 3rdparty;
+    ## DIR_3rdparty=`pwd`;
     ##
     ## gflags
-    ## git clone https://github.com/gflags/gflags.git;
-    ## cd gflags;
-    ## git checkout d4e971c10b1557292b5371807a23921d15e7fece .;
+    cd $DIR_3rdparty;
+    _mlog "download gflag";
     wget https://github.com/gflags/gflags/archive/d4e971c10b1557292b5371807a23921d15e7fece.zip;
     unzip d4e971c10b1557292b5371807a23921d15e7fece.zip;
     mv gflags-d4e971c10b1557292b5371807a23921d15e7fece gflags;
     cd gflags;
+    _mlog "build gflag";
     mkdir build && cd build
     export CXXFLAGS="-fPIC" && cmake .. && make VERBOSE=1
-    make && sudo make install
+    ## make && make install
+    make;
+    _mlog "done gflag";
+    ##
+    ## glog
     cd $DIR_3rdparty;
-    echo ">>>>> install gflags in `pwd`";
+    _mlog "download glog";
+    ## wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz
+    wget https://github.com/google/glog/archive/0b0b022be1c9c9139955af578fe477529d4b7b3c.zip;
+    mv 0b0b022be1c9c9139955af578fe477529d4b7b3c.zip glog-0.3.3.zip;
+    unzip glog-0.3.3.zip;
+    mv glog-0b0b022be1c9c9139955af578fe477529d4b7b3c glog-0.3.3;
+    cd glog-0.3.3;
+    _mlog "build glog";
+    ./configure --with-gflags=${DIR_3rdparty}/gflags/build;
+    make;
+    ## make && make install;
+    _mlog "done glog";
     ##
     ## lmdb
-    ##git clone https://gitorious.org/mdb/mdb.git
-    ## wget https://gitorious.org/mdb/mdb/archive/master.zip;
-    ## unzip master.zip;
-    ## mv mdb-master mdb;
-    ##cd mdb/libraries/liblmdb
+    cd $DIR_3rdparty;
+    _mlog "download lmdb";
     wget https://github.com/LMDB/lmdb/archive/7e476e4983cfba45cefe793b8bd6e13c486b3989.zip;
     unzip 7e476e4983cfba45cefe793b8bd6e13c486b3989.zip;
     mv lmdb-7e476e4983cfba45cefe793b8bd6e13c486b3989 mdb;
-    cd mdb/libraries/liblmdb
-    make && sudo make install
-    cd $DIR_3rdparty;
-    echo ">>>>> install lmb in `pwd`";
+    cd mdb/libraries/liblmdb;
+    _mlog "build lmdb";
+    make;
+    ## make && make install
+    _mlog "done lmdb";
     ##
-    cd $DIR_ROOT;
+    cd $DIR_3rdparty;
+    _mlog "gen include/lib dir";
+    mkdir lib;
+    for d in "${DIR_3rdparty}/gflags/build/lib" "${DIR_3rdparty}/mdb/libraries/liblmdb" "${DIR_3rdparty}/glog-0.3.3/.libs";
+    do
+	ln -s $d/* lib;
+    done
+    ##
+    mkdir include;
+    for d in "${DIR_3rdparty}/gflags/build/include" "${DIR_3rdparty}/mdb/libraries/liblmdb" "${DIR_3rdparty}/glog-0.3.3/src";
+    do
+	ln -s $d/* include;
+    done
+    ##
+    cd $DIR_CAFFE;
     if [ ! -e "Makefile.config" ];
     then
-	cp Makefile.config.example Makefile.config;
+	_mlog "gen caffe build config";
+	cat Makefile.config.example | sed -e "s#/usr/local/lib#/opt/ros/${ROS_DISTRO}/lib /usr/local/lib ${DIR_3rdparty}/lib#g" | sed -e "s#/usr/local/include#/opt/ros/${ROS_DISTRO}/include /usr/local/include ${DIR_3rdparty}/include#g" | sed -e "s/# CUSTOM_CXX := g++/CUSTOM_CXX := g++/g" > Makefile.config;
+	## cat Makefile.config.example | sed -e "s#/usr/local/lib#/usr/local/lib ${DIR_ROOT}/3rdparty/gflags/build/lib ${DIR_ROOT}/3rdparty/mdb/libraries/liblmdb ${DIR_ROOT}/3rdparty/glog-0\.3\.3/\.libs#g" | sed -e "s#/usr/local/include#/usr/local/include ${DIR_ROOT}/3rdparty/gflags/build/include ${DIR_ROOT}/3rdparty/mdb/libraries/liblmdb ${DIR_ROOT}/3rdparty/glog-0\.3\.3/src#g" | sed -e "s/# CUSTOM_CXX := g++/CUSTOM_CXX := g++/g" > Makefile.config;
+	cat Makefile.config;
     fi
+    _mlog "build caffe";
     CPU_ONLY=1 make;
     # ## python
     if [ "$PYCAFFE_INSTALL" ];
@@ -86,5 +115,5 @@ then
 	CPU_ONLY=1 make pycaffe;
     fi
     ##
-    echo ">>>>> install caffe in `pwd`";
+    _mlog "done caffe";
 fi
