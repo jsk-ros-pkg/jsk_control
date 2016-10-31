@@ -6,7 +6,7 @@
   </description>
   <version>0.0.1</version>
   <maintainer email="s-noda@jsk.t.u-tokyo.ac.jp">Noda Shintaro</maintainer>
-  <license>NYLS</license>
+  <license>BSD</license>
   <export> </export>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>euslisp</build_depend>
