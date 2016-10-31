@@ -1,0 +1,252 @@
+name: "redundancy_ik_net_28s_150m1_4d1_3i_18k_8d2_150m2"
+input: "input"
+input_dim: 1 ## num
+input_dim: 21 ## channel
+input_dim: 1 ## w
+input_dim: 1 ## h
+layer {
+ name: "ip5"
+ type: "InnerProduct"
+ bottom: "input"
+ top: "ip5"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig5"
+ type: "TanH"
+ bottom: "ip5"
+ top: "sig6"
+}
+layer {
+ name: "ip6"
+ type: "InnerProduct"
+ bottom: "sig6"
+ top: "ip6"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig6"
+ type: "TanH"
+ bottom: "ip6"
+ top: "sig7"
+}
+layer {
+ name: "ip7"
+ type: "InnerProduct"
+ bottom: "sig7"
+ top: "ip7"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig7"
+ type: "TanH"
+ bottom: "ip7"
+ top: "sig8"
+}
+layer {
+ name: "ip8"
+ type: "InnerProduct"
+ bottom: "sig8"
+ top: "ip8"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig8"
+ type: "TanH"
+ bottom: "ip8"
+ top: "sig9"
+}
+layer {
+ name: "ip9"
+ type: "InnerProduct"
+ bottom: "sig9"
+ top: "ip9"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig9"
+ type: "TanH"
+ bottom: "ip9"
+ top: "sig10"
+}
+layer {
+ name: "ip10"
+ type: "InnerProduct"
+ bottom: "sig10"
+ top: "ip10"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig10"
+ type: "TanH"
+ bottom: "ip10"
+ top: "sig11"
+}
+layer {
+ name: "ip11"
+ type: "InnerProduct"
+ bottom: "sig11"
+ top: "ip11"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig11"
+ type: "TanH"
+ bottom: "ip11"
+ top: "sig12"
+}
+layer {
+ name: "ip12"
+ type: "InnerProduct"
+ bottom: "sig12"
+ top: "ip12"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 150
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}
+layer {
+ name: "sig12"
+ type: "TanH"
+ bottom: "ip12"
+ top: "sig13"
+}
+layer {
+ name: "output"
+ type: "InnerProduct"
+ bottom: "sig13"
+ top: "output"
+ param {
+  lr_mult: 1
+  decay_mult: 1
+ }
+ inner_product_param {
+  num_output: 28
+  weight_filler {
+   type: "gaussian"
+   std: 1
+   sparse: 1
+  }
+  bias_filler {
+   type: "constant"
+   value: 0
+  }
+ }
+}

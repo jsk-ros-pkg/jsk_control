@@ -1,0 +1,11 @@
+net: "ik_net.prototxt"
+solver_type: NESTEROV
+base_lr: 0.3
+lr_policy: "step"
+gamma: 0.99999
+stepsize: 1000 ## learning rate update: base_lr *= gamma,  in every stepsize calcuration
+max_iter: 5000000
+momentum: 0.9
+display: 1000
+snapshot_prefix: "ik_net_NESTEROV_d4_n100_r3"
+solver_mode: CPU

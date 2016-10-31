@@ -1,0 +1,128 @@
+name: "redundancy_ik_net"
+input: "input"
+input_dim: 1 ## num
+input_dim: 7 ## channel
+input_dim: 1 ## w
+input_dim: 1 ## h
+layer {
+  name: "_redundancy_coords"
+  type: "InnerProduct"
+  top: "_encode3neuron"
+  bottom: "input"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 50
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_encode3neuron"
+  type: "Sigmoid"
+  top: "_middle2"
+  bottom: "_encode3neuron"
+}
+layer {
+  name: "_middle2"
+  type: "InnerProduct"
+  top: "_encode2neuron"
+  bottom: "_middle2"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 30
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_encode2neuron"
+  type: "Sigmoid"
+  top: "_middle1"
+  bottom: "_encode2neuron"
+}
+layer {
+  name: "_middle1"
+  type: "InnerProduct"
+  top: "_encode1neuron"
+  bottom: "_middle1"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 10
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "_encode1neuron"
+  type: "Sigmoid"
+  top: "_ip"
+  bottom: "_encode1neuron"
+}
+layer {
+  name: "_ip"
+  type: "InnerProduct"
+  top: "output"
+  bottom: "_ip"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 7
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
