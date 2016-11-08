@@ -415,3 +415,30 @@ You can create `*ri*' like
    A eus-style pointcloud is required as an argument."
   (ros::publish "/footstep_planner/obstacle_model" (make-ros-msg-from-eus-pointcloud a-pointcloud :frame frame-id))
   )
+
+(defun get-pointcloud-within-bodies-2D
+  (blist &key (return-point-cloud t) ((:resolution dif) 50.0))
+  "Get pointcloud within bodies.
+   blist is list of bodies.
+   All bodies are assumed to be vertical prisms, so inclusion check is 2D."
+  (labels
+      ((get-points-within-object-2D-tmp
+        (bb)
+        (let* ((ret1) (vv (send bb :vertices))
+               (xmin (elt (find-extream vv #'(lambda (x) (elt x 0)) #'<) 0))
+               (xmax (elt (find-extream vv #'(lambda (x) (elt x 0)) #'>) 0))
+               (ymin (elt (find-extream vv #'(lambda (x) (elt x 1)) #'<) 1))
+               (ymax (elt (find-extream vv #'(lambda (x) (elt x 1)) #'>) 1))
+               (zmin (elt (find-extream vv #'(lambda (x) (elt x 0)) #'<) 2))
+               (zmax (elt (find-extream vv #'(lambda (x) (elt x 0)) #'>) 2)))
+          (do ((x (- xmin dif) (+ dif x))) ((< (+ dif xmax) x))
+              (do ((y (- ymin dif) (+ dif y))) ((< (+ ymax dif) y))
+                  (let ((z (* 0.5 (+ zmin zmax))))
+                    (when (not (eq :outside (send bb :insidep (float-vector x y z))))
+                      (push (float-vector x y z) ret1))
+                    )))
+          ret1)))
+    (let ((ret1 (apply #'append (mapcar #'get-points-within-object-2D-tmp blist))))
+      (if return-point-cloud
+          (instance pointcloud :init :points ret1)
+        ret1))))
