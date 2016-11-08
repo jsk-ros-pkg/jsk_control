@@ -18,7 +18,7 @@
     <!-- <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" /> -->
     <rosparam subst_value="true">
       use_pointcloud_model: $(arg USE_PERCEPTION)
-      use_lazy_perception: true
+      use_lazy_perception: $(arg USE_PERCEPTION)
       use_local_movement: false
       use_transition_limit: true
       project_start_state: $(arg USE_PERCEPTION)
