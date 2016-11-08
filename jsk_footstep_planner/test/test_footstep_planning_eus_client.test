@@ -1,0 +1,13 @@
+<launch>
+  <env name="ROBOT" value="JAXON_RED"/>
+  <arg name="USE_RVIZ" default="false"/>
+  <include file="$(find jsk_footstep_planner)/launch/cppplanner/optimistic_footstep_planner.launch">
+    <arg name="USE_SIMPLE_FOOTSTEP_CONTROLLER" value="true"/>
+    <arg name="USE_PERCEPTION" value="false"/>
+    <arg name="USE_CONTROLLER" value="false"/>
+    <arg name="USE_MARKER" value="false"/>
+    <arg name="USE_OBSTACLE_MODEL" value="true"/>
+    <arg name="USE_RVIZ" value="$(arg USE_RVIZ)"/>
+  </include>
+  <test test-name="test_footstep_planning_eus_client" pkg="jsk_footstep_planner" type="test_footstep_planning_eus_client.l" time-limit="60.0"/>
+</launch>
