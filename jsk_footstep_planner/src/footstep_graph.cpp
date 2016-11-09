@@ -125,8 +125,9 @@ namespace jsk_footstep_planner
   bool FootstepGraph::isColliding(StatePtr current_state, StatePtr previous_state)
   {
     // if not use obstacle model, always return false
-    // to be collision-free always.
-    if (!use_obstacle_model_) {
+    // if use obstacle model and obstacle_model_ point cloud size is zero, always return false
+    // => to be collision-free always.
+    if (!use_obstacle_model_ || (obstacle_model_->size() == 0) ) {
       return false;
     }
     // compute robot coorde

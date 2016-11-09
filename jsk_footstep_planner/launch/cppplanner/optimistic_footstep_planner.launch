@@ -6,6 +6,7 @@
   <arg name="USE_PERCEPTION" default="true"/>
   <arg name="USE_SIMPLE_FOOTSTEP_CONTROLLER" default="true" />
   <arg name="GLOBAL_FRAME"   default="map" />
+  <arg name="USE_OBSTACLE_MODEL"   default="false" />
   <node pkg="dynamic_tf_publisher" type="tf_publish.py" name="dynamic_tf_publisher"
         output="log">
     <param name="use_cache" value="false"/>
@@ -17,11 +18,12 @@
     <!-- <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" /> -->
     <rosparam subst_value="true">
       use_pointcloud_model: $(arg USE_PERCEPTION)
-      use_lazy_perception: true
+      use_lazy_perception: $(arg USE_PERCEPTION)
       use_local_movement: false
       use_transition_limit: true
       project_start_state: $(arg USE_PERCEPTION)
       project_goal_state: $(arg USE_PERCEPTION)
+      use_obstacle_model: $(arg USE_OBSTACLE_MODEL)
     </rosparam>
     <rosparam>
       resolution_x: 0.1
@@ -29,6 +31,8 @@
       resolution_theta: 0.1
       footstep_size_x: 0.24
       footstep_size_y: 0.14
+      collision_bbox_size: [0.4, 1.2, 1.0]
+      collision_bbox_offset: [0, 0, 0]
     </rosparam>
     <!-- successors -->
     <rosparam>
