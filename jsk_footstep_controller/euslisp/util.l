@@ -101,8 +101,10 @@ You can create `*ri*' like
 (defun make-footstep-planning-msgs (start-coords target-coords
                                     &key (frame-id "map") (stamp (ros::time 0))
                                     (start-leg :lleg) (end-leg :lleg)
-                                    (lleg-offset (make-coords :pos (float-vector 0  100 0)))
-                                    (rleg-offset (make-coords :pos (float-vector 0 -100 0)))
+                                    (robot)
+                                    (default-half-offset-length (if robot (elt (cadr (memq :default-half-offset (send robot :footstep-parameter))) 1) 100))
+                                    (lleg-offset (make-coords :pos (float-vector 0 default-half-offset-length 0)))
+                                    (rleg-offset (make-coords :pos (float-vector 0 (- default-half-offset-length) 0)))
                                     (relative-target nil)
                                     &allow-other-keys)
   (let (lstart rstart
@@ -154,11 +156,12 @@ You can create `*ri*' like
                                            &key (frame-id "map") (stamp (ros::time 0))
                                            (lleg-tf-name "lleg_end_coords")
                                            (rleg-tf-name "rleg_end_coords")
+                                           (robot)
                                            &allow-other-keys)
   (let ((lstart (send *tfl* :lookup-transform frame-id lleg-tf-name stamp))
         (rstart (send *tfl* :lookup-transform frame-id rleg-tf-name stamp)))
     (apply #'make-footstep-planning-msgs
-           (list lstart rstart) target-coords :frame-id frame-id :stamp stamp args)
+           (list lstart rstart) target-coords :frame-id frame-id :stamp stamp :robot robot args)
     ))
 (defun make-go-pos-planning-msgs (x y th &rest args)
   (let* ((trans (make-coords :pos (float-vector (* x 1000) (* y 1000) 0))))
@@ -395,10 +398,10 @@ You can create `*ri*' like
   )
 
 (defun plan-footstep-from-goal-coords
-  (goal-coords &key (publish-result t) (start-coords (make-coords)) (frame-id "odom"))
+  (goal-coords &key (publish-result t) (start-coords (make-coords)) (frame-id "odom") (robot))
   "Plan footstep from goal-coords."
   (let ((goal (make-footstep-planning-msgs
-               start-coords goal-coords :frame-id frame-id)))
+               start-coords goal-coords :frame-id frame-id :robot robot)))
     (ros::ros-info "sending goal")
     (send *footstep-planning-client* :send-goal goal)
     (ros::ros-info "waiting for result")
