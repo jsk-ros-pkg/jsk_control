@@ -8,6 +8,7 @@
   <arg name="GLOBAL_FRAME"   default="map" />
   <arg name="USE_OBSTACLE_MODEL"   default="false" />
   <arg name="ROBOT"   default="" />
+  <arg name="FOOTSTEP_PLANNER_PARAM_FILE"   default="$(find jsk_footstep_planner)/config/$(arg ROBOT)_footstep_planner_params.yaml" />
   <node pkg="dynamic_tf_publisher" type="tf_publish.py" name="dynamic_tf_publisher"
         output="log">
     <param name="use_cache" value="false"/>
@@ -30,110 +31,8 @@
       resolution_x: 0.1
       resolution_y: 0.1
       resolution_theta: 0.1
-      footstep_size_x: 0.24
-      footstep_size_y: 0.14
-      collision_bbox_size: [0.4, 1.2, 1.0]
-      collision_bbox_offset: [0, 0, 0]
     </rosparam>
-    <!-- successors -->
-    <rosparam>
-      successors:
-      - x: 0
-        y: -0.2
-        theta: 0
-      - x: 0
-        y: -0.3
-        theta: 0
-      - x: 0
-        y: -0.15
-        theta: 0
-      - x: 0.2
-        y: -0.2
-        theta: 0
-      - x: 0.25
-        y: -0.2
-        theta: 0
-      - x: 0.1
-        y: -0.2
-        theta: 0
-      - x: -0.1
-        y: -0.2
-        theta: 0
-      - x: 0
-        y: -0.2
-        theta: 0.17
-      - x: 0
-        y: -0.3
-        theta: 0.17
-      - x: 0.2
-        y: -0.2
-        theta: 0.17
-      - x: 0.25
-        y: -0.2
-        theta: 0.17
-      - x: 0.1
-        y: -0.2
-        theta: 0.17
-      - x: 0
-        y: -0.2
-        theta: -0.17
-      - x: 0
-        y: -0.3
-        theta: -0.17
-      - x: 0.2
-        y: -0.2
-        theta: -0.17
-      - x: 0.25
-        y: -0.2
-        theta: -0.17
-      - x: 0.3
-        y: -0.2
-        theta: -0.17
-      - x: 0.3
-        y: -0.2
-        theta: -0
-      - x: 0.3
-        y: -0.2
-        theta: 0.17
-      - x: 0.35
-        y: -0.2
-        theta: -0.17
-      - x: 0.35
-        y: -0.2
-        theta: -0
-      - x: 0.35
-        y: -0.2
-        theta: 0.17
-      - x: 0.1
-        y: -0.2
-        theta: -0.17
-
-      - x: 0.2
-        y: -0.3
-        theta: -0.17
-      - x: 0.25
-        y: -0.3
-        theta: -0.17
-      - x: 0.3
-        y: -0.3
-        theta: -0.17
-      - x: 0.3
-        y: -0.3
-        theta: -0
-      - x: 0.3
-        y: -0.3
-        theta: 0.17
-      - x: 0.35
-        y: -0.3
-        theta: -0.17
-      - x: 0.35
-        y: -0.3
-        theta: -0
-      - x: 0.35
-        y: -0.3
-        theta: 0.17
-
-    </rosparam>
+    <rosparam command="load" file="$(arg FOOTSTEP_PLANNER_PARAM_FILE)" />
   </node>
 
   <group if="$(arg USE_CONTROLLER)" >
