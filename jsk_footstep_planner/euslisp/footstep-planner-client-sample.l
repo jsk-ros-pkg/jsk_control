@@ -5,7 +5,7 @@
 
 (warn "
 ## launch simple node (not using pointcloud)
-roslaunch jsk_footstep_planner optimistic_footstep_planner.launch USE_CONTROLLER:=false USE_MARKER:=false USE_PERCEPTION:=false
+roslaunch jsk_footstep_planner optimistic_footstep_planner.launch USE_CONTROLLER:=false USE_MARKER:=false USE_PERCEPTION:=false ROBOT:=JAXON_RED
 
 ")
 (initialize-eus-footstep-planning-client)

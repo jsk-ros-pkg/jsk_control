@@ -7,6 +7,7 @@
   <arg name="USE_SIMPLE_FOOTSTEP_CONTROLLER" default="true" />
   <arg name="GLOBAL_FRAME"   default="map" />
   <arg name="USE_OBSTACLE_MODEL"   default="false" />
+  <arg name="ROBOT"   default="" />
   <node pkg="dynamic_tf_publisher" type="tf_publish.py" name="dynamic_tf_publisher"
         output="log">
     <param name="use_cache" value="false"/>
@@ -164,7 +165,7 @@
           >
       <!-- <remap from="move_marker" to="$(arg POSE_REMAP)" /> -->
       <!-- <param name="wait_snapit_server" value="false" /> -->
-      <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
+      <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(arg ROBOT).yaml" />
       <remap from="project_footprint" to="/footstep_planner/project_footprint_with_local_search" />
       <remap from="/footstep_controller" to="simple_footstep_controller" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)"/>
       <rosparam subst_value="true">
@@ -271,7 +272,7 @@
                frame_id: odom
                lock_furutaractive: true
       </rosparam>
-      <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
+      <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(arg ROBOT).yaml" />
       <remap from="/footstep_controller/status" to="/simple_footstep_controller/status" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)"/>
   </node>
   </group>
