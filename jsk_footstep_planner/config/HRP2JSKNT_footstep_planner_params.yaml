@@ -1,0 +1,76 @@
+## offset from end-coords -> center of cube
+lleg_footstep_offset: [0.016411, 0, 0]
+rleg_footstep_offset: [0.016411, 0, 0]
+## without padding
+footstep_size_x: 0.254
+footstep_size_y: 0.150
+# Collision box without arms
+collision_bbox_size: [0.499967, 0.39561, 1.33184]
+#collision_bbox_offset: [0, 0, 0]
+collision_bbox_offset: [-0.055675, 0, 0]
+#default_lfoot_to_rfoot_offset: [0, -0.210, 0] ## just offset between end-coords of legs
+default_lfoot_to_rfoot_offset: [0, 0, 0] ## just offset between end-coords of legs
+successors:
+  - x: 0
+    y: -0.21
+    theta: 0
+  - x: 0
+    y: -0.31
+    theta: 0
+  - x: 0
+    y: -0.16
+    theta: 0
+  - x: 0
+    y: -0.21
+    theta: 0.17
+  - x: 0
+    y: -0.31
+    theta: 0.17
+  - x: 0
+    y: -0.21
+    theta: -0.17
+  - x: 0
+    y: -0.31
+    theta: -0.17
+  - x: 0
+    y: -0.21
+    theta: 0.34
+
+  - x: 0.1
+    y: -0.21
+    theta: 0
+  - x: 0.1
+    y: -0.21
+    theta: 0.17
+  - x: -0.1
+    y: -0.21
+    theta: 0
+  - x: 0.1
+    y: -0.21
+    theta: -0.17
+
+  - x: 0.2
+    y: -0.31
+    theta: -0.17
+  - x: 0.2
+    y: -0.21
+    theta: 0
+  - x: 0.2
+    y: -0.21
+    theta: 0.17
+  - x: 0.2
+    y: -0.21
+    theta: -0.17
+
+  - x: 0.25
+    y: -0.2
+    theta: 0
+  - x: 0.25
+    y: -0.2
+    theta: 0.17
+  - x: 0.25
+    y: -0.2
+    theta: -0.17
+  - x: 0.25
+    y: -0.3
+    theta: -0.17
