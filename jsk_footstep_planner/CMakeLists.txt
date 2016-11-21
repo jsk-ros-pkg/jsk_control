@@ -10,7 +10,7 @@ endif(CCACHE_FOUND)
 
 find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_recognition_utils
   message_generation jsk_topic_tools roscpp pcl_ros geometry_msgs eigen_conversions
-  jsk_interactive_marker visualization_msgs dynamic_reconfigure)
+  jsk_interactive_marker visualization_msgs dynamic_reconfigure roseus rostest)
 find_package(PCL REQUIRED)
 add_service_files(FILES
   ChangeSuccessor.srv CollisionBoundingBoxInfo.srv)
@@ -92,3 +92,5 @@ install(TARGETS jsk_footstep_planner sample_astar sample_simple_graph
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+
+add_rostest(test/test_footstep_planning_eus_client.test)
