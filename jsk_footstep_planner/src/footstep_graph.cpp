@@ -73,7 +73,7 @@ namespace jsk_footstep_planner
     FootstepState::Ptr goal = getGoal(state->getLeg());
     if (publish_progress_) {
       jsk_footstep_msgs::FootstepArray msg;
-      msg.header.frame_id = "odom";
+      msg.header.frame_id = "odom"; // TODO fixed frame_id
       msg.header.stamp = ros::Time::now();
       msg.footsteps.push_back(*state->toROSMsg());
       pub_progress_.publish(msg);
@@ -83,6 +83,9 @@ namespace jsk_footstep_planner
     Eigen::Affine3f transformation = pose.inverse() * goal_pose;
     return (parameters_.goal_pos_thr > transformation.translation().norm()) &&
       (parameters_.goal_rot_thr > std::abs(Eigen::AngleAxisf(transformation.rotation()).angle()));
+    //TODO:
+    // if true
+    // can simple finalize
   }
 
   
@@ -137,6 +140,18 @@ namespace jsk_footstep_planner
       return false;
     }
     return isCollidingBox(robot_coords, sphere_candidate);
+  }
+
+  bool FootstepGraph::finalizeSteps(const FootstepState &last_1_Step, const FootstepState &lastStep,
+                                    std::vector<FootstepState::Ptr> &finalizeSteps) {
+    // current_state->crossCheck(previous_state);
+    // FinalizeSteps
+    FootstepState::Ptr ret (new FootstepState(lastStep.getLeg(),
+                                              lastStep.getPose(),
+                                              lastStep.getDimensions(),
+                                              lastStep.getResolution()));
+    finalizeSteps.push_back(ret);
+    return false;
   }
 
   std::string FootstepGraph::infoString() const

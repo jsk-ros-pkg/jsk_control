@@ -119,6 +119,9 @@ namespace jsk_footstep_planner
      */
     virtual std::string infoString() const;
     
+    bool finalizeSteps(const FootstepState &last_1_Step, const FootstepState &lastStep,
+                       std::vector<FootstepState::Ptr> &finalizeSteps);
+
     virtual FootstepState::Ptr getGoal(int leg)
     {
       if (leg == jsk_footstep_msgs::Footstep::LEFT) {

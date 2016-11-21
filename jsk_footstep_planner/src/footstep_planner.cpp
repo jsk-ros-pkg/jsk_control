@@ -570,6 +570,15 @@ namespace jsk_footstep_planner
       as_.setPreempted();
       return;
     }
+    bool finalize_in_graph = false;
+    // finalize in graph
+    std::vector <FootstepState::Ptr> finalizeSteps;
+    {
+      if (graph_->finalizeSteps(*(path[path.size()-1]->getState()), *(path[path.size()]->getState()),
+                                finalizeSteps)) {
+        finalize_in_graph = true;
+      }
+    }
     // Convert path to FootstepArray
     jsk_footstep_msgs::FootstepArray ros_path;
     ros_path.header = goal->goal_footstep.header;
@@ -581,14 +590,25 @@ namespace jsk_footstep_planner
         ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
       }
     }
-    // finalize path
-    if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
-      ros_path.footsteps.push_back(right_goal);
-      ros_path.footsteps.push_back(left_goal);
-    }
-    else if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::RIGHT) {
-      ros_path.footsteps.push_back(left_goal);
-      ros_path.footsteps.push_back(right_goal);
+    if (!finalize_in_graph) {
+      // finalize path
+      if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
+        ros_path.footsteps.push_back(right_goal);
+        ros_path.footsteps.push_back(left_goal);
+      }
+      else if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::RIGHT) {
+        ros_path.footsteps.push_back(left_goal);
+        ros_path.footsteps.push_back(right_goal);
+      }
+    } else {
+      for (size_t i = 0; i < finalizeSteps.size(); i++) {
+        const FootstepState::Ptr st = finalizeSteps[i];
+        if (st->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
+          ros_path.footsteps.push_back(*(st->toROSMsg(inv_lleg_footstep_offset_)));
+        } else {
+          ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
+        }
+      }
     }
     result_.result = ros_path;
     as_.setSucceeded(result_);
