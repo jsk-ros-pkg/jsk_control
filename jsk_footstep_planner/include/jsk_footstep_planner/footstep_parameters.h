@@ -90,6 +90,7 @@ namespace jsk_footstep_planner
     double support_check_vertex_neighbor_threshold;
     double support_padding_x;
     double support_padding_y;
+    double collision_padding;
   };
 }
 #endif

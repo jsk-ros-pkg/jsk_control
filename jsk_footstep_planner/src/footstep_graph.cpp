@@ -73,7 +73,7 @@ namespace jsk_footstep_planner
     FootstepState::Ptr goal = getGoal(state->getLeg());
     if (publish_progress_) {
       jsk_footstep_msgs::FootstepArray msg;
-      msg.header.frame_id = "odom";
+      msg.header.frame_id = "odom"; // TODO fixed frame_id
       msg.header.stamp = ros::Time::now();
       msg.footsteps.push_back(*state->toROSMsg());
       pub_progress_.publish(msg);
@@ -81,10 +81,22 @@ namespace jsk_footstep_planner
     Eigen::Affine3f pose = state->getPose();
     Eigen::Affine3f goal_pose = goal->getPose();
     Eigen::Affine3f transformation = pose.inverse() * goal_pose;
-    return (parameters_.goal_pos_thr > transformation.translation().norm()) &&
-      (parameters_.goal_rot_thr > std::abs(Eigen::AngleAxisf(transformation.rotation()).angle()));
-  }
 
+    if ((parameters_.goal_pos_thr > transformation.translation().norm()) &&
+        (parameters_.goal_rot_thr > std::abs(Eigen::AngleAxisf(transformation.rotation()).angle()))) {
+      // check collision
+      if (state->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
+        if (right_goal_state_->crossCheck(state)) {
+          return true;
+        }
+      } else if (state->getLeg() == jsk_footstep_msgs::Footstep::RIGHT) {
+        if (left_goal_state_->crossCheck(state)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
   
   Eigen::Affine3f FootstepGraph::getRobotCoords(StatePtr current_state, StatePtr previous_state) const
   {
@@ -137,6 +149,20 @@ namespace jsk_footstep_planner
       return false;
     }
     return isCollidingBox(robot_coords, sphere_candidate);
+  }
+
+  bool FootstepGraph::finalizeSteps(const StatePtr &last_1_Step, const StatePtr &lastStep,
+                                    std::vector<StatePtr> &finalizeSteps) {
+    // simple finalize (no check)
+    if (lastStep->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
+      finalizeSteps.push_back(right_goal_state_);
+      finalizeSteps.push_back(left_goal_state_);
+    } else if (lastStep->getLeg() == jsk_footstep_msgs::Footstep::RIGHT) {
+      finalizeSteps.push_back(left_goal_state_);
+      finalizeSteps.push_back(right_goal_state_);
+    }
+
+    return true;
   }
 
   std::string FootstepGraph::infoString() const
@@ -298,27 +324,6 @@ namespace jsk_footstep_planner
                                                     unsigned int& error_state)
   {
     ros::WallTime start_time = ros::WallTime::now();
-#if 0
-    FootstepState::Ptr projected_footstep = in->projectToCloud(
-      *tree_model_,
-      pointcloud_model_,
-      grid_search_,
-      *tree_model_2d_,
-      pointcloud_model_2d_,
-      Eigen::Vector3f(0, 0, 1),
-      error_state,
-      parameters_.plane_estimation_outlier_threshold,
-      parameters_.plane_estimation_max_iterations,
-      parameters_.plane_estimation_min_inliers,
-      parameters_.support_check_x_sampling,
-      parameters_.support_check_y_sampling,
-      parameters_.support_check_vertex_neighbor_threshold,
-      parameters_.skip_cropping,
-      parameters_.plane_estimation_use_normal,
-      parameters_.plane_estimation_normal_distance_weight,
-      parameters_.plane_estimation_normal_opening_angle,
-      parameters_.plane_estimation_min_ratio_of_inliers);
-#endif
     FootstepState::Ptr projected_footstep = in->projectToCloud(
       *tree_model_,
       pointcloud_model_,

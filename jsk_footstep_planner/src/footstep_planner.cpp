@@ -508,26 +508,7 @@ namespace jsk_footstep_planner
       graph_->setGlobalTransitionLimit(TransitionLimitRP::Ptr());
     }
     graph_->setParameters(parameters_);
-#if 0
-    graph_->setObstacleResolution(parameters_.obstacle_resolution);
-    graph_->setLocalXMovement(parameters_.local_move_x);
-    graph_->setLocalYMovement(parameters_.local_move_y);
-    graph_->setLocalThetaMovement(parameters_.local_move_theta);
-    graph_->setLocalXMovementNum(parameters_.local_move_x_num);
-    graph_->setLocalYMovementNum(parameters_.local_move_y_num);
-    graph_->setLocalThetaMovementNum(parameters_.local_move_theta_num);
-    graph_->setPlaneEstimationMaxIterations(parameters_.plane_estimation_max_iterations);
-    graph_->setPlaneEstimationMinInliers(parameters_.plane_estimation_min_inliers);
-    graph_->setPlaneEstimationOutlierThreshold(parameters_.plane_estimation_outlier_threshold);
-    graph_->setPlaneEstimationUseNormal(parameters_.plane_estimation_use_normal);
-    graph_->setPlaneEstimationNormalDistanceWeight(parameters_.plane_estimation_normal_distance_weight);
-    graph_->setPlaneEstimationNormalOpeningAngle(parameters_.plane_estimation_normal_opening_angle);
-    graph_->setPlaneEstimationMinRatioOfInliers(parameters_.plane_estimation_min_ratio_of_inliers);
-    graph_->setSupportCheckXSampling(parameters_.support_check_x_sampling);
-    graph_->setSupportCheckYSampling(parameters_.support_check_y_sampling);
-    graph_->setSkipCropping(parameters_.skip_cropping);
-    graph_->setSupportCheckVertexNeighborThreshold(parameters_.support_check_vertex_neighbor_threshold);
-#endif
+
     //ROS_INFO_STREAM(graph_->infoString());
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
@@ -570,6 +551,17 @@ namespace jsk_footstep_planner
       as_.setPreempted();
       return;
     }
+    // finalize in graph
+    std::vector <FootstepState::Ptr> finalizeSteps;
+    if (! (graph_->finalizeSteps(path[path.size()-2]->getState(), path[path.size()-1]->getState(),
+                                 finalizeSteps))) {
+      ROS_ERROR("Failed to finalize path");
+      publishText(pub_text_,
+                  "Failed to finalize path",
+                  ERROR);
+      as_.setPreempted();
+      return;
+    }
     // Convert path to FootstepArray
     jsk_footstep_msgs::FootstepArray ros_path;
     ros_path.header = goal->goal_footstep.header;
@@ -581,14 +573,13 @@ namespace jsk_footstep_planner
         ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
       }
     }
-    // finalize path
-    if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
-      ros_path.footsteps.push_back(right_goal);
-      ros_path.footsteps.push_back(left_goal);
-    }
-    else if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::RIGHT) {
-      ros_path.footsteps.push_back(left_goal);
-      ros_path.footsteps.push_back(right_goal);
+    for (size_t i = 0; i < finalizeSteps.size(); i++) {
+      const FootstepState::Ptr st = finalizeSteps[i];
+      if (st->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
+        ros_path.footsteps.push_back(*(st->toROSMsg(inv_lleg_footstep_offset_)));
+      } else {
+        ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
+      }
     }
     result_.result = ros_path;
     as_.setSucceeded(result_);
