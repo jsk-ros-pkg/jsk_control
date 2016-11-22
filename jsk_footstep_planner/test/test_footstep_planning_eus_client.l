@@ -10,6 +10,7 @@
      (ros::load-ros-manifest "jsk_footstep_planner")
      (load "package://jsk_footstep_controller/euslisp/util.l")
      (initialize-eus-footstep-planning-client)
+     (ros::set-dynamic-reconfigure-param "footstep_planner" "planning_timeout" :double 30.0)
      *footstep-planning-client*)))
 
 (deftest test-sample-without-obstacle
@@ -92,6 +93,94 @@
            (warn ";; ret = ~A (~A)~%" (every #'identity ret) ret)
            (every #'identity ret)
            ))))))
+
+(defun set-parameters-for-planning-on-poincloud-model
+  ()
+  (ros::set-dynamic-reconfigure-param "footstep_planner" "project_start_state" :bool t)
+  (ros::set-dynamic-reconfigure-param "footstep_planner" "project_goal_state" :bool t)
+  (ros::set-dynamic-reconfigure-param "footstep_planner" "use_pointcloud_model" :bool t)
+  (ros::set-dynamic-reconfigure-param "footstep_planner" "use_obstacle_model" :bool nil)
+  (ros::set-dynamic-reconfigure-param "footstep_planner" "transition_limit_x" :double
+                                      (cdr (assoc "x" (find-extream (ros::get-param "/footstep_planner/successors") #'(lambda (x) (cdr (assoc "x" x :test #'string=))) #'>) :test #'string=)))
+  )
+
+(deftest test-sample-stair-walking-0
+  (assert
+   (progn
+     ;; Use pointcloud model
+     (set-parameters-for-planning-on-poincloud-model)
+     ;; Setup models
+     (setq *b1* (make-cube 600 1000 10))
+     (setq *b2* (make-cube 600 1000 10))
+     (setq *b3* (make-cube 600 1000 10))
+     (send *b2* :translate (float-vector 620 0 100))
+     (send *b3* :translate (float-vector 1240 0 0))
+     (send-all (list *b1* *b2* *b3*) :worldcoords)
+     (objects (list *b1* *b2* *b3*))
+     ;; Publis pointcloud model
+     (publish-footstep-planning-pointcloud-model-from-eus-pointcloud
+      (get-pointcloud-within-faces (mapcar #'(lambda (b) (find-if #'(lambda (x) (memq :top (send x :id))) (send b :faces))) (list *b1* *b2* *b3*)) ;; top faces
+                                   :resolution 20))
+     ;; Plan
+     (let* ((result (plan-footstep-from-goal-coords
+                     (car (project-coords-on-to-plane2 (make-coords :pos #f(1300 0 0)) (list (cadr (send *b3* :faces))) #f(0 0 1)))
+                     :start-coords (car (project-coords-on-to-plane2 (make-coords :pos #f(0 0 0)) (list (cadr (send *b1* :faces))) #f(0 0 1)))
+                     )))
+       (and result (footstep-array->coords result))))))
+
+(deftest test-sample-stair-walking-1
+  (assert
+   (progn
+     ;; Use pointcloud model
+     (set-parameters-for-planning-on-poincloud-model)
+     ;; Setup models
+     (setq *blist* (mapcar #'(lambda (x) (make-cube 400 600 10)) (make-list 6)))
+     (let ((tmp (float-vector 0 0 0)))
+       (dolist (b (cdr *blist*))
+         (send b :translate tmp)
+         (send b :worldcoords)
+         (setq tmp (v+ tmp (float-vector 400 0 100))))
+       (objects *blist*))
+     ;; Publis pointcloud model
+     (publish-footstep-planning-pointcloud-model-from-eus-pointcloud
+      (get-pointcloud-within-faces (mapcar #'(lambda (b) (find-if #'(lambda (x) (memq :top (send x :id))) (send b :faces))) *blist*) ;; top faces
+                                   :resolution 20))
+     ;; Plan
+     (let* ((result (plan-footstep-from-goal-coords
+                     (car (project-coords-on-to-plane2 (make-coords :pos (send (car (last *blist*)):worldpos)) (list (cadr (send (car (last *blist*)) :faces))) #f(0 0 1)))
+                     :start-coords (car (project-coords-on-to-plane2 (make-coords :pos #f(0 0 0)) (list (cadr (send (car *blist*) :faces))) #f(0 0 1)))
+                     )))
+       (and result (footstep-array->coords result))))))
+
+(deftest test-sample-slope-walking
+  (assert
+   (progn
+     ;; Use pointcloud model
+     (set-parameters-for-planning-on-poincloud-model)
+     ;; Setup models
+     (let ((slope-ang1 (deg2rad 7.5))
+           (slope-ang2 (deg2rad -20))
+           (slope-ang3 (deg2rad -5)))
+       (setq *b1* (make-cube 1000 1000 10))
+       (setq *b2* (make-cube 1000 1000 10))
+       (setq *b3* (make-cube 1000 1000 10))
+       (send *b1* :rotate slope-ang1 :y)
+       (send *b2* :rotate slope-ang2 :y)
+       (send *b3* :rotate slope-ang3 :y)
+       (send *b2* :translate (float-vector 1000 0 (+ (* -500 (sin slope-ang1)) (* -500 (sin slope-ang2)))) :world)
+       (send *b3* :translate (float-vector 2000 0 (+ (* -500 (sin slope-ang1)) (* -1000 (sin slope-ang2)) (* -500 (sin slope-ang3)))) :world)
+       (send-all (list *b1* *b2* *b3*) :worldcoords)
+       (objects (list *b1* *b2* *b3*))
+       ;; Publis pointcloud model
+       (publish-footstep-planning-pointcloud-model-from-eus-pointcloud
+        (get-pointcloud-within-faces (mapcar #'(lambda (b) (find-if #'(lambda (x) (memq :top (send x :id))) (send b :faces))) (list *b1* *b2* *b3*)) ;; top faces
+                                     :resolution 20))
+       ;; Plan
+       (let* ((result (plan-footstep-from-goal-coords
+                       (car (project-coords-on-to-plane2 (make-coords :pos #f(2000 0 0)) (list (cadr (send *b3* :faces))) #f(0 0 1)))
+                       :start-coords (car (project-coords-on-to-plane2 (make-coords :pos #f(0 0 0)) (list (cadr (send *b1* :faces))) #f(0 0 1)))
+                       )))
+         (and result (footstep-array->coords result)))))))
 
 (run-all-tests)
 (exit 0)
