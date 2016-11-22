@@ -2,9 +2,8 @@
 default_lfoot_to_rfoot_offset: [0.0, -0.15, 0.0]
 footstep_size_x: 0.2032
 footstep_size_y: 0.1016
-# please comment in after https://github.com/jsk-ros-pkg/jsk_control/issues/650 is solved.
-#rleg_footstep_offset: [0.05, 0.0, 0.0]
-#lleg_footstep_offset: [0.05, 0.0, 0.0]
+rleg_footstep_offset: [0.05,  0.01, 0.0]
+lleg_footstep_offset: [0.05, -0.01, 0.0]
 collision_bbox_size: [0.2032, 0.254, 0.90979]
 collision_bbox_offset: [0.05, 0.0, 0.0]
 successors:
