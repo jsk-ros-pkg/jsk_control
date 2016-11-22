@@ -151,4 +151,9 @@
 (setq *robot* *hrp2jsknt*)
 (objects (list *robot*))
 ;(gen-all-footstep-planner-parameter-string *robot*)
+
+(load "irteus/demo/sample-robot-model.l")
+(setq *robot* (instance sample-robot :init))
+(objects (list *robot*))
+(gen-all-footstep-planner-parameter-string *robot*)
 |#
