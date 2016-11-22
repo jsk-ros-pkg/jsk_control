@@ -117,7 +117,8 @@
                     (send *irtviewer* :draw-objects))
                   )
                 )))
-    ret))
+    (list :successors ret :div-xy div-xy :div-th div-th :max-th (elt (find-extream ret #'(lambda (x) (abs (elt x 2))) #'>) 2))
+    ))
 
 (defun gen-successors-string
   (robot &key (return-value) (ik-results))
@@ -125,11 +126,14 @@
   (unless ik-results
     (setq ik-results (solve-ik-for-foostep-planning-successors robot)))
   (let ((str (format nil "successors:~%")))
-    (dolist (ikr ik-results)
+    (dolist (ikr (cadr (memq :successors ik-results)))
       (setq str (format nil "~A  - x: ~A~%" str (* 1e-3 (elt ikr 0))))
       (setq str (format nil "~A    y: ~A~%" str (* 1e-3 (elt ikr 1))))
       (setq str (format nil "~A    theta: ~A~%" str (deg2rad (elt ikr 2))))
       )
+    (setq str (format nil "~Agoal_pos_thr: ~A~%" str (* 1e-3 (cadr (memq :div-xy ik-results)))))
+    (setq str (format nil "~Agoal_rot_thr: ~A~%" str (deg2rad (cadr (memq :div-th ik-results)))))
+    (setq str (format nil "~Atransition_limit_yaw: ~A~%" str (deg2rad (+ 0.1 (cadr (memq :max-th ik-results))))))
     str))
 
 (defun gen-all-footstep-planner-parameter-string
