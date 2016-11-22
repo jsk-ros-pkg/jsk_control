@@ -89,21 +89,25 @@
   "Solve IK for foostep-planning successors.
    div-xy, xmin, xmax, ymin, ymax are [mm].
    div-th, thmin, thmax are [deg]."
-  (let* ((ret))
+  (let* ((ret) (org-analysis-level (send-all (send *robot* :links) :analysis-level)))
     (do ((x xmin (+ x div-xy))) ((< (+ xmax *epsilon*) x))
         (do ((y ymin (+ y div-xy))) ((< (+ ymax *epsilon*) y))
             (do ((th thmin (+ th div-th))) ((< (+ thmax *epsilon*) th))
                 ;; Reset robot
                 (send *robot* :reset-pose)
                 (send *robot* :fix-leg-to-coords (make-coords))
+                (mapcar #'(lambda (l) (Send l :analysis-level :coords)) (send *robot* :links))
                 (let ((ik-solved-p
                        ;; Move rleg xyth, check move-centroid-on-foot for all COM cases.
-                       (and (send *robot* :rleg :move-end-pos (float-vector x y 0) :world :warnp nil)
-                            (send *robot* :rleg :move-end-rot th :z :world :warnp nil)
-                            (send *robot* :move-centroid-on-foot :lleg '(:rleg :lleg) :warnp nil)
-                            (send *robot* :move-centroid-on-foot :both '(:rleg :lleg) :warnp nil)
-                            (send *robot* :move-centroid-on-foot :rleg '(:rleg :lleg) :warnp nil)
-                            ))
+                       (prog1
+                           (and (send *robot* :rleg :move-end-pos (float-vector x y 0) :world :warnp nil)
+                                (send *robot* :rleg :move-end-rot th :z :world :warnp nil)
+                                (send *robot* :move-centroid-on-foot :lleg '(:rleg :lleg) :warnp nil)
+                                (send *robot* :move-centroid-on-foot :both '(:rleg :lleg) :warnp nil)
+                                (send *robot* :move-centroid-on-foot :rleg '(:rleg :lleg) :warnp nil)
+                                )
+                         (mapcar #'(lambda (l al) (Send l :analysis-level al)) (send *robot* :links) org-analysis-level)
+                         ))
                       (foot-collision-free-p
                        (progn
                          (send *robot* :update-descendants)
