@@ -1,24 +1,59 @@
-# This is generated from (gen-all-footstep-planner-parameter-string *robot*).
+# This is manually added.
+transition_limit_x: 0.151 # do not use stair by default
+plane_estimation_min_inliers: 10
+# This is generated from (gen-all-footstep-planner-parameter-string *robot* :ik-results (solve-ik-for-foostep-planning-successors *robot* :div-th 5)).
 default_lfoot_to_rfoot_offset: [0.0, -0.15, 0.0]
 footstep_size_x: 0.2032
 footstep_size_y: 0.1016
-rleg_footstep_offset: [0.05,  0.01, 0.0]
-lleg_footstep_offset: [0.05, -0.01, 0.0]
+rleg_footstep_offset: [0.05, 0.0, 0.0]
+lleg_footstep_offset: [0.05, 0.0, 0.0]
 collision_bbox_size: [0.2032, 0.254, 0.90979]
 collision_bbox_offset: [0.05, 0.0, 0.0]
 successors:
+  # stair, manually added
+  - x: 0.2
+    y: 0.0
+    theta: 0.087266
+  - x: 0.2
+    y: 0.0
+    theta: -0.087266
+  - x: 0.2
+    y: 0.0
+    theta: 0
+  - x: 0.15
+    y: 0.0
+    theta: 0.087266
+  - x: 0.15
+    y: 0.0
+    theta: -0.087266
+  - x: 0.15
+    y: 0.0
+    theta: 0
+  # generaed
   - x: 0.1
     y: 0.05
     theta: 0.349066
   - x: 0.1
     y: 0.05
+    theta: 0.261799
+  - x: 0.1
+    y: 0.05
     theta: 0.174533
+  - x: 0.1
+    y: 0.05
+    theta: 0.087266
   - x: 0.1
     y: 0.05
     theta: 0.0
   - x: 0.1
     y: 0.05
+    theta: -0.087266
+  - x: 0.1
+    y: 0.05
     theta: -0.174533
+  - x: 0.1
+    y: 0.05
+    theta: -0.261799
   - x: 0.1
     y: 0.05
     theta: -0.349066
@@ -27,13 +62,25 @@ successors:
     theta: 0.349066
   - x: 0.05
     y: 0.1
+    theta: 0.261799
+  - x: 0.05
+    y: 0.1
     theta: 0.174533
+  - x: 0.05
+    y: 0.1
+    theta: 0.087266
   - x: 0.05
     y: 0.1
     theta: 0.0
   - x: 0.05
     y: 0.1
+    theta: -0.087266
+  - x: 0.05
+    y: 0.1
     theta: -0.174533
+  - x: 0.05
+    y: 0.1
+    theta: -0.261799
   - x: 0.05
     y: 0.1
     theta: -0.349066
@@ -42,13 +89,25 @@ successors:
     theta: 0.349066
   - x: 0.05
     y: 0.05
+    theta: 0.261799
+  - x: 0.05
+    y: 0.05
     theta: 0.174533
+  - x: 0.05
+    y: 0.05
+    theta: 0.087266
   - x: 0.05
     y: 0.05
     theta: 0.0
   - x: 0.05
     y: 0.05
+    theta: -0.087266
+  - x: 0.05
+    y: 0.05
     theta: -0.174533
+  - x: 0.05
+    y: 0.05
+    theta: -0.261799
   - x: 0.05
     y: 0.05
     theta: -0.349066
@@ -57,13 +116,25 @@ successors:
     theta: 0.349066
   - x: 0.05
     y: 0.0
+    theta: 0.261799
+  - x: 0.05
+    y: 0.0
     theta: 0.174533
+  - x: 0.05
+    y: 0.0
+    theta: 0.087266
   - x: 0.05
     y: 0.0
     theta: 0.0
   - x: 0.05
     y: 0.0
+    theta: -0.087266
+  - x: 0.05
+    y: 0.0
     theta: -0.174533
+  - x: 0.05
+    y: 0.0
+    theta: -0.261799
   - x: 0.05
     y: 0.0
     theta: -0.349066
@@ -72,13 +143,25 @@ successors:
     theta: 0.349066
   - x: 0.0
     y: 0.1
+    theta: 0.261799
+  - x: 0.0
+    y: 0.1
     theta: 0.174533
+  - x: 0.0
+    y: 0.1
+    theta: 0.087266
   - x: 0.0
     y: 0.1
     theta: 0.0
   - x: 0.0
     y: 0.1
+    theta: -0.087266
+  - x: 0.0
+    y: 0.1
     theta: -0.174533
+  - x: 0.0
+    y: 0.1
+    theta: -0.261799
   - x: 0.0
     y: 0.1
     theta: -0.349066
@@ -87,13 +170,25 @@ successors:
     theta: 0.349066
   - x: 0.0
     y: 0.05
+    theta: 0.261799
+  - x: 0.0
+    y: 0.05
     theta: 0.174533
+  - x: 0.0
+    y: 0.05
+    theta: 0.087266
   - x: 0.0
     y: 0.05
     theta: 0.0
   - x: 0.0
     y: 0.05
+    theta: -0.087266
+  - x: 0.0
+    y: 0.05
     theta: -0.174533
+  - x: 0.0
+    y: 0.05
+    theta: -0.261799
   - x: 0.0
     y: 0.05
     theta: -0.349066
@@ -102,13 +197,25 @@ successors:
     theta: 0.349066
   - x: 0.0
     y: 0.0
+    theta: 0.261799
+  - x: 0.0
+    y: 0.0
     theta: 0.174533
+  - x: 0.0
+    y: 0.0
+    theta: 0.087266
   - x: 0.0
     y: 0.0
     theta: 0.0
   - x: 0.0
     y: 0.0
+    theta: -0.087266
+  - x: 0.0
+    y: 0.0
     theta: -0.174533
+  - x: 0.0
+    y: 0.0
+    theta: -0.261799
   - x: 0.0
     y: 0.0
     theta: -0.349066
@@ -117,13 +224,25 @@ successors:
     theta: 0.349066
   - x: -0.05
     y: 0.1
+    theta: 0.261799
+  - x: -0.05
+    y: 0.1
     theta: 0.174533
+  - x: -0.05
+    y: 0.1
+    theta: 0.087266
   - x: -0.05
     y: 0.1
     theta: 0.0
   - x: -0.05
     y: 0.1
+    theta: -0.087266
+  - x: -0.05
+    y: 0.1
     theta: -0.174533
+  - x: -0.05
+    y: 0.1
+    theta: -0.261799
   - x: -0.05
     y: 0.1
     theta: -0.349066
@@ -132,13 +251,25 @@ successors:
     theta: 0.349066
   - x: -0.05
     y: 0.05
+    theta: 0.261799
+  - x: -0.05
+    y: 0.05
     theta: 0.174533
+  - x: -0.05
+    y: 0.05
+    theta: 0.087266
   - x: -0.05
     y: 0.05
     theta: 0.0
   - x: -0.05
     y: 0.05
+    theta: -0.087266
+  - x: -0.05
+    y: 0.05
     theta: -0.174533
+  - x: -0.05
+    y: 0.05
+    theta: -0.261799
   - x: -0.05
     y: 0.05
     theta: -0.349066
@@ -147,13 +278,25 @@ successors:
     theta: 0.349066
   - x: -0.05
     y: 0.0
+    theta: 0.261799
+  - x: -0.05
+    y: 0.0
     theta: 0.174533
+  - x: -0.05
+    y: 0.0
+    theta: 0.087266
   - x: -0.05
     y: 0.0
     theta: 0.0
   - x: -0.05
     y: 0.0
+    theta: -0.087266
+  - x: -0.05
+    y: 0.0
     theta: -0.174533
+  - x: -0.05
+    y: 0.0
+    theta: -0.261799
   - x: -0.05
     y: 0.0
     theta: -0.349066
@@ -162,13 +305,28 @@ successors:
     theta: 0.349066
   - x: -0.1
     y: 0.05
+    theta: 0.261799
+  - x: -0.1
+    y: 0.05
     theta: 0.174533
+  - x: -0.1
+    y: 0.05
+    theta: 0.087266
   - x: -0.1
     y: 0.05
     theta: 0.0
   - x: -0.1
     y: 0.05
+    theta: -0.087266
+  - x: -0.1
+    y: 0.05
     theta: -0.174533
   - x: -0.1
     y: 0.05
+    theta: -0.261799
+  - x: -0.1
+    y: 0.05
     theta: -0.349066
+goal_pos_thr: 0.05
+goal_rot_thr: 0.087266
+transition_limit_yaw: 0.350811
