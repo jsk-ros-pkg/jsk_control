@@ -695,12 +695,6 @@ namespace jsk_footstep_planner
         default_x =     default_offset[0];
         default_y =     default_offset[1];
         default_theta = default_offset[2];
-        Eigen::Vector3f end_coords_offset = (inv_lleg_footstep_offset_ - inv_rleg_footstep_offset_);
-        ROS_DEBUG("end_coords_offset [%f, %f, %f]",
-                      end_coords_offset[0], end_coords_offset[1], end_coords_offset[2]);
-        default_x  += end_coords_offset[0];
-        default_y  += end_coords_offset[1];
-        ROS_INFO("use default_lfoot_to_rfoot_offset [%f, %f, %f]", default_x, default_y, default_theta);
       }
     }
     // read successors
@@ -733,10 +727,42 @@ namespace jsk_footstep_planner
         theta = jsk_topic_tools::getXMLDoubleValue(successor_xml["theta"]);
         theta += default_theta;
       }
-      Eigen::Affine3f successor = affineFromXYYaw(x, y, theta);
+      Eigen::Affine3f successor =
+        Eigen::Translation3f(inv_lleg_footstep_offset_[0],
+                             inv_lleg_footstep_offset_[1],
+                             inv_lleg_footstep_offset_[2]) *
+        affineFromXYYaw(x, y, theta) *
+        Eigen::Translation3f(-inv_rleg_footstep_offset_[0],
+                             -inv_rleg_footstep_offset_[1],
+                             -inv_rleg_footstep_offset_[2]);
       successors_.push_back(successor);
     }
     ROS_INFO("%lu successors are defined", successors_.size());
+    if ((default_x != 0.0) || (default_y != 0.0) || (default_theta != 0.0)) {
+      ROS_INFO("default_offset: #f(%f %f %f)", default_x, default_y, default_theta);
+    }
+    if ((inv_lleg_footstep_offset_[0] != 0) ||
+        (inv_lleg_footstep_offset_[1] != 0) ||
+        (inv_lleg_footstep_offset_[2] != 0) ) {
+      ROS_INFO("left_leg_offset: #f(%f %f %f)",
+               - inv_lleg_footstep_offset_[0],
+               - inv_lleg_footstep_offset_[1],
+               - inv_lleg_footstep_offset_[2]);
+    }
+    if ((inv_rleg_footstep_offset_[0] != 0) ||
+        (inv_rleg_footstep_offset_[1] != 0) ||
+        (inv_rleg_footstep_offset_[2] != 0) ) {
+      ROS_INFO("right_leg_offset: #f(%f %f %f)",
+               - inv_rleg_footstep_offset_[0],
+               - inv_rleg_footstep_offset_[1],
+               - inv_rleg_footstep_offset_[2]);
+    }
+    for (size_t i = 0; i < successors_.size(); i++) {
+      Eigen::Vector3f tr = successors_[i].translation();
+      float roll, pitch, yaw;
+      pcl::getEulerAngles(successors_[i], roll, pitch, yaw);
+      ROS_INFO("successor_%2.2d: (make-coords :pos (scale 1000 #f(%f %f 0)) :rpy (list %f 0 0))", i, tr[0], tr[1], yaw);
+    }
     return true;
   }
 
