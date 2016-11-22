@@ -11,5 +11,5 @@
     <arg name="ROBOT" value="$(arg ROBOT)"/>
   </include>
   <rosparam param="robot/type" subst_value="True">$(arg ROBOT)</rosparam>
-  <test test-name="test_footstep_planning_eus_client" pkg="jsk_footstep_planner" type="test_footstep_planning_eus_client.l" time-limit="60.0"/>
+  <test test-name="test_footstep_planning_eus_client" pkg="jsk_footstep_planner" type="test_footstep_planning_eus_client.l" time-limit="300.0"/>
 </launch>
