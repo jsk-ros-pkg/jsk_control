@@ -1,7 +1,6 @@
 ;; utility function for footstep planning
 (ros::roseus-add-msgs "jsk_footstep_msgs")
 (ros::roseus-add-msgs "jsk_recognition_msgs")
-(ros::roseus-add-srvs "jsk_pcl_ros")
 
 (defun project-coords-on-to-plane (coords planes z-axis)
   "z-axis is dummy parameter.
@@ -82,7 +81,7 @@
 (defun face-on-faces (f support-faces)
   (if *use-env-server*
       (progn
-        (let ((req (instance jsk_pcl_ros::PolygonOnEnvironmentRequest :init)))
+        (let ((req (instance jsk_recognition_msgs::PolygonOnEnvironmentRequest :init)))
           ;;(send req :environment_id *env-id*)
           (send req :environment_id 0)
           ;; build polygon samped
