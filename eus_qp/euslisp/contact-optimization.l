@@ -698,10 +698,12 @@
          (append
           (list
            ;; friction
-           (if slide-axis
+           (if (or (equal slide-axis :x) (equal slide-axis :-x) (equal slide-axis :y) (equal slide-axis :-y))
                (instance 2D-translational-sliding-contact-constraint :init (* mu-margin-ratio mu-trans) :slide-axis slide-axis)
              (instance 2D-translational-friction-contact-constraint :init (* mu-margin-ratio mu-trans)))
-           (instance rotational-friction-contact-constraint :init (* mu-margin-ratio mu-rot) :fz)
+           (if (or (equal slide-axis :yaw) (equal slide-axis :-yaw))
+               (instance rotational-sliding-contact-constraint :init (* mu-margin-ratio mu-rot) :fz :slide-axis (case slide-axis (:yaw :z) (:-yaw :-z)))
+             (instance rotational-friction-contact-constraint :init (* mu-margin-ratio mu-rot) :fz))
            ;; cop
            (if contact-face
                (instance polygon-cop-contact-constraint :init contact-face)
