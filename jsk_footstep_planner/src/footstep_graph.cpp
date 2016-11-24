@@ -262,9 +262,9 @@ namespace jsk_footstep_planner
     return moved_states;
   }
   
-  std::vector<FootstepGraph::StatePtr>
-  FootstepGraph::successors(StatePtr target_state)
+  bool FootstepGraph::successors_original(StatePtr target_state, std::vector<FootstepGraph::StatePtr> &ret)
   {
+    std::cerr << "use so" << std::endl;
     std::vector<Eigen::Affine3f> transformations;
     int next_leg;
     if (target_state->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
@@ -279,7 +279,7 @@ namespace jsk_footstep_planner
       // TODO: error
     }
 
-    std::vector<FootstepGraph::StatePtr> ret;
+    //std::vector<FootstepGraph::StatePtr> ret;
     Eigen::Affine3f base_pose = target_state->getPose();
     for (size_t i = 0; i < transformations.size(); i++) {
       Eigen::Affine3f transform = transformations[i];
@@ -310,9 +310,8 @@ namespace jsk_footstep_planner
         }
       }
     }
-    return ret;
+    return true;
   }
-
 
   FootstepState::Ptr FootstepGraph::projectFootstep(FootstepState::Ptr in)
   {
