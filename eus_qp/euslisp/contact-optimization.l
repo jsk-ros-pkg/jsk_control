@@ -992,7 +992,7 @@
   "Calc conatraint param list for translational sliding.
    mu-trans is friction coefficient.
    norm-axis is axis of normal (such as fz).
-   slide-axis is axis of sliding direction (such as fx or fy)."
+   slide-axis is axis of sliding direction (such as x or y)."
   (let ((ret (mapcar #'(lambda (x) (make-list 6 :initial-element 0)) '(0 1)))
         (norm-idx (force-axis->index norm-axis))
         (slide-idx (axis->index slide-axis))
