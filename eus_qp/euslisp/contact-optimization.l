@@ -656,6 +656,25 @@
    )
   )
 
+(defclass rotational-sliding-contact-constraint
+  :super contact-constraint
+  :slots (mu-rot norm-axis slide-axis)
+  )
+
+(defmethod rotational-sliding-contact-constraint
+  (:init
+   (tmp-mu-rot tmp-norm-axis &key ((:slide-axis tmp-slide-axis) :z))
+   "Calc conatraint param list for rotational friction.
+   mu-rot is friction coefficient.
+   norm-axis is axis of normal (such as fz).
+   slide-axis is axis with sign of sliding direction (such as z or -z)."
+   (setq mu-rot tmp-mu-rot norm-axis tmp-norm-axis slide-axis tmp-slide-axis)
+   (setq constraint-param-list
+         (calc-constraint-param-list-for-rotational-sliding
+          mu-rot norm-axis slide-axis))
+   (send-super :init))
+  )
+
 (defclass default-contact-constraint
   :super contact-constraint
   :slots ()
@@ -1000,6 +1019,28 @@
         )
     (setf (elt (car ret) norm-idx) mu-trans)
     (setf (elt (cadr ret) norm-idx) (- mu-trans))
+    (cond ((> slide-sgn 0)
+           (setf (elt (car ret) slide-idx) 1)
+           (setf (elt (cadr ret) slide-idx) -1))
+          ((< slide-sgn 0)
+           (setf (elt (car ret) slide-idx) -1)
+           (setf (elt (cadr ret) slide-idx) 1)))
+    (list :matrix ret :vector (list 0 0))
+    ))
+
+(defun calc-constraint-param-list-for-rotational-sliding
+  (mu-rot norm-axis slide-axis)
+  "Calc conatraint param list for rotational sliding.
+   mu-rot is friction coefficient.
+   norm-axis is axis of normal (such as fz).
+   slide-axis is axis of sliding direction (such as z)."
+  (let* ((ret (mapcar #'(lambda (x) (make-list 6 :initial-element 0)) '(0 1)))
+         (norm-idx (force-axis->index norm-axis))
+         (slide-idx (+ (axis->index slide-axis) 3))
+         (slide-sgn (axis->sgn slide-axis))
+         )
+    (setf (elt (car ret) norm-idx) mu-rot)
+    (setf (elt (cadr ret) norm-idx) (- mu-rot))
     (cond ((> slide-sgn 0)
            (setf (elt (car ret) slide-idx) 1)
            (setf (elt (cadr ret) slide-idx) -1))
