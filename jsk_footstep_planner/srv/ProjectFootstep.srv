@@ -1,0 +1,5 @@
+uint8 project_type
+jsk_footstep_msgs/FootstepArray input
+---
+bool[] success
+jsk_footstep_msgs/FootstepArray result

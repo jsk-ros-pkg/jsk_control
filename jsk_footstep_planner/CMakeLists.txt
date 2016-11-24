@@ -13,10 +13,10 @@ find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_recognition_utils
   jsk_interactive_marker visualization_msgs dynamic_reconfigure roseus rostest)
 find_package(PCL REQUIRED)
 add_service_files(FILES
-  ChangeSuccessor.srv CollisionBoundingBoxInfo.srv)
+  ChangeSuccessor.srv CollisionBoundingBoxInfo.srv ProjectFootstep.srv)
 generate_dynamic_reconfigure_options(
   cfg/FootstepPlanner.cfg cfg/PointCloudModelGenerator.cfg cfg/FootstepMarker.cfg)
-generate_messages(DEPENDENCIES geometry_msgs)
+generate_messages(DEPENDENCIES geometry_msgs jsk_footstep_msgs)
 #catkin_python_setup()
 catkin_package(
   DEPENDS

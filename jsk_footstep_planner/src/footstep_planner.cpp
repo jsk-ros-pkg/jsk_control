@@ -62,6 +62,8 @@ namespace jsk_footstep_planner
       "project_footprint_with_local_search", &FootstepPlanner::projectFootPrintWithLocalSearchService, this);
     srv_collision_bounding_box_info_ = nh.advertiseService(
       "collision_bounding_box_info", &FootstepPlanner::collisionBoundingBoxInfoService, this);
+    srv_project_footstep_ = nh.advertiseService(
+      "project_footstep", &FootstepPlanner::projectFootstepService, this);
     std::vector<double> lleg_footstep_offset, rleg_footstep_offset;
     if (jsk_topic_tools::readVectorParameter(nh, "lleg_footstep_offset", lleg_footstep_offset)) {
       inv_lleg_footstep_offset_ = Eigen::Vector3f(- lleg_footstep_offset[0],
@@ -237,6 +239,54 @@ namespace jsk_footstep_planner
     res.box_dimensions.y = collision_bbox_size_[1];
     res.box_dimensions.z = collision_bbox_size_[2];
     tf::poseEigenToMsg(collision_bbox_offset_, res.box_offset);
+    return true;
+  }
+
+  bool FootstepPlanner::projectFootstepService(
+    jsk_footstep_planner::ProjectFootstep::Request& req,
+    jsk_footstep_planner::ProjectFootstep::Response& res)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    if (!graph_) {
+      return false;
+    }
+    if (!pointcloud_model_) {
+      ROS_ERROR("No pointcloud model is yet available");
+      //publishText(pub_text_,
+      //"No pointcloud model is yet available",
+      //ERROR);
+      return false;
+    }
+
+    const Eigen::Vector3f resolution(resolution_x_,
+                                     resolution_y_,
+                                     resolution_theta_);
+    const Eigen::Vector3f footstep_size(footstep_size_x_,
+                                        footstep_size_y_,
+                                        0.000001);
+
+    for (std::vector<jsk_footstep_msgs::Footstep>::iterator it = req.input.footsteps.begin();
+         it != req.input.footsteps.end(); it++) {
+      FootstepState::Ptr step = FootstepState::fromROSMsg(*it, footstep_size, resolution);
+      FootstepState::Ptr projected = graph_->projectFootstep(step);
+      if(!!projected) {
+        res.success.push_back(true);
+        jsk_footstep_msgs::Footstep::Ptr p;
+        if (it->leg == jsk_footstep_msgs::Footstep::LEFT) {
+          p = projected->toROSMsg(inv_lleg_footstep_offset_);
+        } else if (it->leg == jsk_footstep_msgs::Footstep::RIGHT) {
+          p = projected->toROSMsg(inv_rleg_footstep_offset_);
+        } else {
+          p = projected->toROSMsg();
+        }
+        res.result.footsteps.push_back(*p);
+      } else {
+        res.success.push_back(false);
+        res.result.footsteps.push_back(*it); // return the same step as in input
+      }
+    }
+    res.result.header = req.input.header;
+
     return true;
   }
 
