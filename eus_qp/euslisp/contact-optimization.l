@@ -698,10 +698,12 @@
          (append
           (list
            ;; friction
-           (if slide-axis
+           (if (force-axis->translationp slide-axis)
                (instance 2D-translational-sliding-contact-constraint :init (* mu-margin-ratio mu-trans) :slide-axis slide-axis)
              (instance 2D-translational-friction-contact-constraint :init (* mu-margin-ratio mu-trans)))
-           (instance rotational-friction-contact-constraint :init (* mu-margin-ratio mu-rot) :fz)
+           (if (force-axis->rotationp slide-axis)
+               (instance rotational-sliding-contact-constraint :init (* mu-margin-ratio mu-rot) :fz :slide-axis slide-axis)
+             (instance rotational-friction-contact-constraint :init (* mu-margin-ratio mu-rot) :fz))
            ;; cop
            (if contact-face
                (instance polygon-cop-contact-constraint :init contact-face)
@@ -847,6 +849,14 @@
     (:-fx -1) (:-fy -1) (:-fz -1)
     (:-nx -1) (:-ny -1) (:-nz -1)
     )
+  )
+
+(defun force-axis->translationp (ax)
+  (memq ax (list :fx :fy :fz :-fx :-fy :-fz))
+  )
+
+(defun force-axis->rotationp (ax)
+  (memq ax (list :nx :ny :nz :-nx :-ny :-nz))
   )
 
 (defun sliding-axis->no-sliding-axis (ax)

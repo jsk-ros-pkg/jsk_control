@@ -614,6 +614,23 @@
     (not ret))
   )
 
+(defun demo-cbox-wrench-calc-21
+  ()
+  "Demo for cbox wrench calculation by default-contact-constraint. cbox is neutral pos rot. cbox is sliding in the -y direction."
+  (set-cbox-pose-neutral)
+  (demo-cbox-wrench-calc-comon
+   (list (instance default-contact-constraint
+                   :init
+                   :mu-trans 0.5 :mu-rot 0.5
+                   :slide-axis :nz
+                   :l-min-x -150 :l-max-x 150
+                   :l-min-y -150 :l-max-y 150)
+         (instance 6d-min-max-contact-constraint
+                   :init
+                   (float-vector 100 100 100 100 100 100)))
+   (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   ))
+
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
   (let ((ret))
