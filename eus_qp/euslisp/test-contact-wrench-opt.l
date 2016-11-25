@@ -603,6 +603,17 @@
    (list (send *cbox* :worldcoords))
    ))
 
+(defun demo-cbox-wrench-calc-20
+  ()
+  "Demo for cbox wrench calculation by rotational-sliding-contact-constraint. cbox is neutral pos rot."
+  (set-cbox-pose-neutral)
+  (let ((ret (demo-cbox-wrench-calc-comon
+              (list (instance rotational-sliding-contact-constraint :init 0.5 :fz :slide-axis :nz))
+              (list (send *cbox* :worldcoords))
+              )))
+    (not ret))
+  )
+
 (defun demo-cbox-wrench-calc-all
   (&key (press-enter-p t))
   (let ((ret))
