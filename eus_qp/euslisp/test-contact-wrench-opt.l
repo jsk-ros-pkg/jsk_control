@@ -543,7 +543,7 @@
   (set-cbox-pose-neutral)
   (let ((ret
          (demo-cbox-wrench-calc-comon
-          (list (instance 2D-translational-sliding-contact-constraint :init 0.5 :slide-axis :x))
+          (list (instance 2D-translational-sliding-contact-constraint :init 0.5 :slide-axis :fx))
           (list (send *cbox* :worldcoords))
           :min-inequality-violation-weight min-inequality-violation-weight
           )))
@@ -565,7 +565,7 @@
    (list (instance default-contact-constraint
                    :init
                    :mu-trans 0.5 :mu-rot 0.05
-                   :slide-axis :-y
+                   :slide-axis :-fy
                    :l-min-x -150 :l-max-x 150
                    :l-min-y -150 :l-max-y 150)
          (instance default-contact-constraint

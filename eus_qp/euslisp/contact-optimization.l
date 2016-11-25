@@ -616,13 +616,13 @@
 
 (defmethod 2D-translational-sliding-contact-constraint
   (:init
-   (tmp-mu-trans &key ((:norm-axis tmp-norm-axis) :fz) ((:slide-axis tmp-slide-axis) :x))
+   (tmp-mu-trans &key ((:norm-axis tmp-norm-axis) :fz) ((:slide-axis tmp-slide-axis) :fx))
    "Calc conatraint param list for translational sliding.
    mu-trans is friction coefficient.
    norm-axis is axis of normal (such as fz).
-   slide-axis is axis with sign of sliding direction (such as x, y, -x, or -y).
+   slide-axis is axis with sign of sliding direction (such as fx, fy, -fx, or -fy).
    This constraint contains friction constraint for the other direction.
-   e.g. When slide-axis is :x, this cnstarint consists of sliding constraint of x and friction constraint of y."
+   e.g. When slide-axis is :fx, this cnstarint consists of sliding constraint of x and friction constraint of y."
    (setq mu-trans tmp-mu-trans norm-axis tmp-norm-axis slide-axis tmp-slide-axis)
    (setq constraint-param-list
          (let ((ret
@@ -639,17 +639,17 @@
    (setq drawing-object
          (make-prism
           (cond
-           ((or (equal slide-axis :x) (equal slide-axis :-x))
+           ((or (equal slide-axis :fx) (equal slide-axis :-fx))
             (list
              (float-vector 0 0 0)
-             (float-vector (* -1 (axis->sgn slide-axis) mu-trans z-length) (* 1 mu-trans z-length) z-length)
-             (float-vector (* -1 (axis->sgn slide-axis) mu-trans z-length) (* -1 mu-trans z-length) z-length))
+             (float-vector (* -1 (force-axis->sgn slide-axis) mu-trans z-length) (* 1 mu-trans z-length) z-length)
+             (float-vector (* -1 (force-axis->sgn slide-axis) mu-trans z-length) (* -1 mu-trans z-length) z-length))
             )
-           ((or (equal slide-axis :y) (equal slide-axis :-y))
+           ((or (equal slide-axis :fy) (equal slide-axis :-fy))
             (list
              (float-vector 0 0 0)
-             (float-vector (* 1 mu-trans z-length) (* -1 (axis->sgn slide-axis) mu-trans z-length) z-length)
-             (float-vector (* -1 mu-trans z-length) (* -1 (axis->sgn slide-axis) mu-trans z-length) z-length))
+             (float-vector (* 1 mu-trans z-length) (* -1 (force-axis->sgn slide-axis) mu-trans z-length) z-length)
+             (float-vector (* -1 mu-trans z-length) (* -1 (force-axis->sgn slide-axis) mu-trans z-length) z-length))
             ))
           1))
    (send drawing-object :put :draw-on-args (list :color #f(1 1 1) :width 3))
@@ -816,27 +816,24 @@
   (case ax
     (:fx 0) (:fy 1) (:fz 2)
     (:nx 3) (:ny 4) (:nz 5)
+    (:-fx 0) (:-fy 1) (:-fz 2)
+    (:-nx 3) (:-ny 4) (:-nz 5)
     )
   )
 
-(defun axis->index (ax)
+(defun force-axis->sgn (ax)
   (case ax
-    (:x 0) (:y 1) (:z 2)
-    (:-x 0) (:-y 1) (:-z 2)
-    )
-  )
-
-(defun axis->sgn (ax)
-  (case ax
-    (:x 1) (:y 1) (:z 1)
-    (:-x -1) (:-y -1) (:-z -1)
+    (:fx 1) (:fy 1) (:fz 1)
+    (:nx 1) (:ny 1) (:nz 1)
+    (:-fx -1) (:-fy -1) (:-fz -1)
+    (:-nx -1) (:-ny -1) (:-nz -1)
     )
   )
 
 (defun sliding-axis->no-sliding-axis (ax)
   (case ax
-    (:x :fy) (:y :fx)
-    (:-x :fy) (:-y :fx)
+    (:fx :fy) (:fy :fx)
+    (:-fx :fy) (:-fy :fx)
     )
   )
 
@@ -995,8 +992,8 @@
    slide-axis is axis of sliding direction (such as fx or fy)."
   (let ((ret (mapcar #'(lambda (x) (make-list 6 :initial-element 0)) '(0 1)))
         (norm-idx (force-axis->index norm-axis))
-        (slide-idx (axis->index slide-axis))
-        (slide-sgn (axis->sgn slide-axis))
+        (slide-idx (force-axis->index slide-axis))
+        (slide-sgn (force-axis->sgn slide-axis))
         )
     (setf (elt (car ret) norm-idx) mu-trans)
     (setf (elt (cadr ret) norm-idx) (- mu-trans))
