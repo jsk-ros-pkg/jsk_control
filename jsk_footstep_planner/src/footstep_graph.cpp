@@ -264,7 +264,6 @@ namespace jsk_footstep_planner
   
   bool FootstepGraph::successors_original(StatePtr target_state, std::vector<FootstepGraph::StatePtr> &ret)
   {
-    std::cerr << "use so" << std::endl;
     std::vector<Eigen::Affine3f> transformations;
     int next_leg;
     if (target_state->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {

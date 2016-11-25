@@ -605,7 +605,8 @@ namespace jsk_footstep_planner
     }
     // finalize in graph
     std::vector <FootstepState::Ptr> finalizeSteps;
-    if (! (graph_->finalizeSteps(path[path.size()-2]->getState(), path[path.size()-1]->getState(),
+    if (! (graph_->finalizeSteps((path.size() >1 ? path[path.size()-2]->getState() : FootstepState::Ptr()),
+                                 path[path.size()-1]->getState(),
                                  finalizeSteps))) {
       ROS_ERROR("Failed to finalize path");
       publishText(pub_text_,

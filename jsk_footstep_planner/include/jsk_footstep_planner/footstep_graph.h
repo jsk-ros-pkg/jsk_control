@@ -216,7 +216,6 @@ namespace jsk_footstep_planner
     }
     bool successors_original(StatePtr target_state, std::vector<FootstepGraph::StatePtr> &ret);
     double path_cost_original(StatePtr from, StatePtr to, double prev_cost) {
-      std::cerr << "use pc" << std::endl;
       return prev_cost + 1;
     }
   protected:
