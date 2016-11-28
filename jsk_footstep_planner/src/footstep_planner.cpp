@@ -267,6 +267,26 @@ namespace jsk_footstep_planner
 
     for (std::vector<jsk_footstep_msgs::Footstep>::iterator it = req.input.footsteps.begin();
          it != req.input.footsteps.end(); it++) {
+      if (it->offset.x == 0.0 &&
+          it->offset.y == 0.0 &&
+          it->offset.z == 0.0 ) {
+        if (it->leg == jsk_footstep_msgs::Footstep::LEFT) {
+          it->offset.x = - inv_lleg_footstep_offset_[0];
+          it->offset.y = - inv_lleg_footstep_offset_[1];
+          it->offset.z = - inv_lleg_footstep_offset_[2];
+        } else {
+          it->offset.x = - inv_rleg_footstep_offset_[0];
+          it->offset.y = - inv_rleg_footstep_offset_[1];
+          it->offset.z = - inv_rleg_footstep_offset_[2];
+        }
+      }
+      if(it->dimensions.x == 0 &&
+         it->dimensions.y == 0 &&
+         it->dimensions.z == 0 ) {
+        it->dimensions.x = footstep_size_x_;
+        it->dimensions.y = footstep_size_y_;
+        it->dimensions.z = 0.000001;
+      }
       FootstepState::Ptr step = FootstepState::fromROSMsg(*it, footstep_size, resolution);
       FootstepState::Ptr projected = graph_->projectFootstep(step);
       if(!!projected) {
