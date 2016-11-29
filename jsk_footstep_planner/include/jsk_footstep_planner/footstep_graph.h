@@ -52,6 +52,9 @@ namespace jsk_footstep_planner
   {
   public:
     typedef boost::shared_ptr<FootstepGraph> Ptr;
+    typedef typename boost::function< bool(StatePtr target_state, std::vector<StatePtr> &) > SuccessorFunction;
+    typedef typename boost::function< double(StatePtr, StatePtr, double) > PathCostFunction;
+
     FootstepGraph(const Eigen::Vector3f& resolution,
                   const bool use_pointcloud_model = false,
                   const bool lazy_projection = true,
@@ -77,9 +80,19 @@ namespace jsk_footstep_planner
       perception_duration_(0.0)
     {
     }
-    virtual std::vector<StatePtr> successors(StatePtr target_state);
+    virtual std::vector<StatePtr> successors(StatePtr target_state) {
+      std::vector<StatePtr> ret;
+      successor_func_(target_state, ret);
+      return ret;
+    }
+
     virtual bool isGoal(StatePtr state);
-    
+
+    virtual double pathCost(StatePtr from, StatePtr to, double prev_cost)
+    {
+      return path_cost_func_(from, to, prev_cost);
+    }
+
     /**
      * @brief
      * return True if current_state collides with obstacle.
@@ -181,31 +194,7 @@ namespace jsk_footstep_planner
     virtual bool usePointCloudModel() const { return use_pointcloud_model_; }
     virtual bool lazyProjection()  const { return lazy_projection_; }
     virtual bool localMovement() const { return local_movement_; }
-#if 0
-    virtual void setObstacleResolution(double res)
-    {
-      parameters_.obstacle_resolution = res;
-    }
-    virtual void setPositionGoalThreshold(double x) { parameters_.goal_pos_thr_ = x; }
-    virtual void setRotationGoalThreshold(double x) { parameters_.goal_rot_thr_ = x; }
-    virtual void setLocalXMovement(double x) { parameters_.local_move_x = x; }
-    virtual void setLocalYMovement(double x) { parameters_.local_move_y = x; }
-    virtual void setLocalThetaMovement(double x) { parameters_.local_move_theta = x; }
-    virtual void setLocalXMovementNum(int n) { parameters_.local_move_x_num = n; }
-    virtual void setLocalYMovementNum(int n) { parameters_.local_move_y_num = n; }
-    virtual void setLocalThetaMovementNum(int n) { parameters_.local_move_theta_num = n; }
-    virtual void setPlaneEstimationMaxIterations(int n) { parameters_.plane_estimation_max_iterations = n; }
-    virtual void setPlaneEstimationMinInliers(int n) { parameters_.plane_estimation_min_inliers = n; }
-    virtual void setPlaneEstimationOutlierThreshold(double d) { parameters_.plane_estimation_outlier_threshold = d; }
-    virtual void setPlaneEstimationUseNormal(bool b) { parameters_.plane_estimation_use_normal = b; }
-    virtual void setPlaneEstimationNormalDistanceWeight(double d) { parameters_.plane_estimation_normal_distance_weight = d; }
-    virtual void setPlaneEstimationNormalOpeningAngle(double d) { parameters_.plane_estimation_normal_opening_angle = d; }
-    virtual void setPlaneEstimationMinRatioOfInliers(double d) { parameters_.plane_estimation_min_ratio_of_inliers = d; }
-    virtual void setSupportCheckXSampling(int n) { parameters_.support_check_x_sampling = n; }
-    virtual void setSupportCheckYSampling(int n) { parameters_.support_check_y_sampling = n; }
-    virtual void setSupportCheckVertexNeighborThreshold(double d) { parameters_.support_check_vertex_neighbor_threshold = d; }
-    virtual void setSkipCropping(bool v) { parameters_.skip_cropping = v; }
-#endif
+
     virtual void setParameters (FootstepParameters &p) { parameters_ = p; }
     virtual void setTransitionLimit(TransitionLimit::Ptr limit) { transition_limit_ = limit; }
     virtual TransitionLimit::Ptr getTransitionLimit() { return transition_limit_; }
@@ -218,7 +207,17 @@ namespace jsk_footstep_planner
     virtual std::vector<FootstepState::Ptr> localMoveFootstepState(FootstepState::Ptr in);
     virtual void setCollisionBBoxOffset(const Eigen::Affine3f& offset) { collision_bbox_offset_ = offset; }
     virtual void setCollisionBBoxSize(const Eigen::Vector3f& size) { collision_bbox_size_ = size; }
-    
+
+    virtual void setSuccessorFunction(SuccessorFunction s) {
+      successor_func_ = s;
+    }
+    virtual void setPathCostFunction(PathCostFunction p) {
+      path_cost_func_ = p;
+    }
+    bool successors_original(StatePtr target_state, std::vector<FootstepGraph::StatePtr> &ret);
+    double path_cost_original(StatePtr from, StatePtr to, double prev_cost) {
+      return prev_cost + 1;
+    }
   protected:
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_model_;
@@ -256,7 +255,8 @@ namespace jsk_footstep_planner
 
     ros::WallDuration perception_duration_;
   private:
-
+    SuccessorFunction successor_func_;
+    PathCostFunction  path_cost_func_;
   };
 
   // heuristic function

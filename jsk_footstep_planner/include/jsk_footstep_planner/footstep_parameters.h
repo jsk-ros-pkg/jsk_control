@@ -48,6 +48,7 @@ namespace jsk_footstep_planner
       plane_estimation_max_iterations(100), plane_estimation_min_inliers(100),
       support_check_x_sampling(3), support_check_y_sampling(3),
       local_move_x(0.1), local_move_y(0.05), local_move_theta(0.1),
+      local_move_x_offset(0.1), local_move_y_offset(0.05), local_move_theta_offset(0.0),
       transition_limit_x(0.3), transition_limit_y(0.5), transition_limit_z(0.4),
       transition_limit_roll(0.3), transition_limit_pitch(0.3), transition_limit_yaw(0.3),
       global_transition_limit_roll(0.3), global_transition_limit_pitch(0.3),
@@ -72,6 +73,9 @@ namespace jsk_footstep_planner
     double local_move_x;
     double local_move_y;
     double local_move_theta;
+    double local_move_x_offset;
+    double local_move_y_offset;
+    double local_move_theta_offset;
     double transition_limit_x;
     double transition_limit_y;
     double transition_limit_z;

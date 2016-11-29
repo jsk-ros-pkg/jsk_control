@@ -56,6 +56,8 @@
 #include <jsk_footstep_planner/CollisionBoundingBoxInfo.h>
 #include <jsk_interactive_marker/SnapFootPrint.h>
 
+#include "jsk_footstep_planner/ProjectFootstep.h"
+
 namespace jsk_footstep_planner
 {
 
@@ -110,6 +112,9 @@ namespace jsk_footstep_planner
     virtual bool projectFootPrintService(
       jsk_interactive_marker::SnapFootPrint::Request& req,
       jsk_interactive_marker::SnapFootPrint::Response& res);
+    virtual bool projectFootstepService(
+      jsk_footstep_planner::ProjectFootstep::Request& req,
+      jsk_footstep_planner::ProjectFootstep::Response& res);
     virtual bool collisionBoundingBoxInfoService(
       jsk_footstep_planner::CollisionBoundingBoxInfo::Request& req,
       jsk_footstep_planner::CollisionBoundingBoxInfo::Response& res);
@@ -131,6 +136,7 @@ namespace jsk_footstep_planner
     ros::ServiceServer srv_project_footprint_;
     ros::ServiceServer srv_project_footprint_with_local_search_;
     ros::ServiceServer srv_collision_bounding_box_info_;
+    ros::ServiceServer srv_project_footstep_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_model_;
     FootstepGraph::Ptr graph_;
