@@ -288,7 +288,7 @@
     (jaxon-init)
     (setq *robot* *jaxon*))
    ))
-(ros::rate 5)
+(ros::rate 20)
 ;;(setup-sensor-viewer)
 (setup-grasp-states)
 (do-until-key
