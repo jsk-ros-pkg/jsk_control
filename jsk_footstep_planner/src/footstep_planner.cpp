@@ -868,6 +868,9 @@ namespace jsk_footstep_planner
     parameters_.local_move_x_num = config.local_move_x_num;
     parameters_.local_move_y_num = config.local_move_y_num;
     parameters_.local_move_theta_num = config.local_move_theta_num;
+    parameters_.local_move_x_offset = config.local_move_x_offset;
+    parameters_.local_move_y_offset = config.local_move_y_offset;
+    parameters_.local_move_theta_offset = config.local_move_theta_offset;
     parameters_.transition_limit_x = config.transition_limit_x;
     parameters_.transition_limit_y = config.transition_limit_y;
     parameters_.transition_limit_z = config.transition_limit_z;

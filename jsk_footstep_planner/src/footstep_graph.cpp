@@ -245,14 +245,15 @@ namespace jsk_footstep_planner
     double move_y = parameters_.local_move_y;
     double move_t = parameters_.local_move_theta;
     double offset_x = parameters_.local_move_x_offset;
-    double offset_y = in->getLeg() == jsk_footstep_msgs::Footstep::LEFT ?
+    double offset_y = (in->getLeg() == jsk_footstep_msgs::Footstep::LEFT) ?
       parameters_.local_move_y_offset : - parameters_.local_move_y_offset;
     double offset_t = parameters_.local_move_theta_offset;
 
+    bool have_offset = ((offset_x != 0.0) || (offset_y != 0.0) || (offset_t != 0.0));
     for (int xi = - parameters_.local_move_x_num; xi <= parameters_.local_move_x_num; xi++) {
       for (int yi = - parameters_.local_move_y_num; yi <= parameters_.local_move_y_num; yi++) {
         for (int thetai = - parameters_.local_move_theta_num; thetai <= parameters_.local_move_theta_num; thetai++) {
-          if ( (xi != 0) || (yi != 0) || (thetai != 0) ) {
+          if ( have_offset || (xi != 0) || (yi != 0) || (thetai != 0) ) {
             Eigen::Affine3f trans(Eigen::Translation3f((move_x / x_num * xi) + offset_x,
                                                        (move_y / y_num * yi) + offset_y,
                                                        0)
