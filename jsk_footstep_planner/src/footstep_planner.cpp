@@ -62,6 +62,8 @@ namespace jsk_footstep_planner
       "project_footprint_with_local_search", &FootstepPlanner::projectFootPrintWithLocalSearchService, this);
     srv_collision_bounding_box_info_ = nh.advertiseService(
       "collision_bounding_box_info", &FootstepPlanner::collisionBoundingBoxInfoService, this);
+    srv_project_footstep_ = nh.advertiseService(
+      "project_footstep", &FootstepPlanner::projectFootstepService, this);
     std::vector<double> lleg_footstep_offset, rleg_footstep_offset;
     if (jsk_topic_tools::readVectorParameter(nh, "lleg_footstep_offset", lleg_footstep_offset)) {
       inv_lleg_footstep_offset_ = Eigen::Vector3f(- lleg_footstep_offset[0],
@@ -237,6 +239,74 @@ namespace jsk_footstep_planner
     res.box_dimensions.y = collision_bbox_size_[1];
     res.box_dimensions.z = collision_bbox_size_[2];
     tf::poseEigenToMsg(collision_bbox_offset_, res.box_offset);
+    return true;
+  }
+
+  bool FootstepPlanner::projectFootstepService(
+    jsk_footstep_planner::ProjectFootstep::Request& req,
+    jsk_footstep_planner::ProjectFootstep::Response& res)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    if (!graph_) {
+      return false;
+    }
+    if (!pointcloud_model_) {
+      ROS_ERROR("No pointcloud model is yet available");
+      //publishText(pub_text_,
+      //"No pointcloud model is yet available",
+      //ERROR);
+      return false;
+    }
+
+    const Eigen::Vector3f resolution(resolution_x_,
+                                     resolution_y_,
+                                     resolution_theta_);
+    const Eigen::Vector3f footstep_size(footstep_size_x_,
+                                        footstep_size_y_,
+                                        0.000001);
+
+    for (std::vector<jsk_footstep_msgs::Footstep>::iterator it = req.input.footsteps.begin();
+         it != req.input.footsteps.end(); it++) {
+      if (it->offset.x == 0.0 &&
+          it->offset.y == 0.0 &&
+          it->offset.z == 0.0 ) {
+        if (it->leg == jsk_footstep_msgs::Footstep::LEFT) {
+          it->offset.x = - inv_lleg_footstep_offset_[0];
+          it->offset.y = - inv_lleg_footstep_offset_[1];
+          it->offset.z = - inv_lleg_footstep_offset_[2];
+        } else {
+          it->offset.x = - inv_rleg_footstep_offset_[0];
+          it->offset.y = - inv_rleg_footstep_offset_[1];
+          it->offset.z = - inv_rleg_footstep_offset_[2];
+        }
+      }
+      if(it->dimensions.x == 0 &&
+         it->dimensions.y == 0 &&
+         it->dimensions.z == 0 ) {
+        it->dimensions.x = footstep_size_x_;
+        it->dimensions.y = footstep_size_y_;
+        it->dimensions.z = 0.000001;
+      }
+      FootstepState::Ptr step = FootstepState::fromROSMsg(*it, footstep_size, resolution);
+      FootstepState::Ptr projected = graph_->projectFootstep(step);
+      if(!!projected) {
+        res.success.push_back(true);
+        jsk_footstep_msgs::Footstep::Ptr p;
+        if (it->leg == jsk_footstep_msgs::Footstep::LEFT) {
+          p = projected->toROSMsg(inv_lleg_footstep_offset_);
+        } else if (it->leg == jsk_footstep_msgs::Footstep::RIGHT) {
+          p = projected->toROSMsg(inv_rleg_footstep_offset_);
+        } else {
+          p = projected->toROSMsg();
+        }
+        res.result.footsteps.push_back(*p);
+      } else {
+        res.success.push_back(false);
+        res.result.footsteps.push_back(*it); // return the same step as in input
+      }
+    }
+    res.result.header = req.input.header;
+
     return true;
   }
 
@@ -509,6 +579,8 @@ namespace jsk_footstep_planner
     }
     graph_->setParameters(parameters_);
 
+    graph_->setSuccessorFunction(boost::bind(&FootstepGraph::successors_original, graph_, _1, _2));
+    graph_->setPathCostFunction(boost::bind(&FootstepGraph::path_cost_original, graph_, _1, _2, _3));
     //ROS_INFO_STREAM(graph_->infoString());
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
@@ -553,7 +625,8 @@ namespace jsk_footstep_planner
     }
     // finalize in graph
     std::vector <FootstepState::Ptr> finalizeSteps;
-    if (! (graph_->finalizeSteps(path[path.size()-2]->getState(), path[path.size()-1]->getState(),
+    if (! (graph_->finalizeSteps((path.size() >1 ? path[path.size()-2]->getState() : FootstepState::Ptr()),
+                                 path[path.size()-1]->getState(),
                                  finalizeSteps))) {
       ROS_ERROR("Failed to finalize path");
       publishText(pub_text_,
@@ -795,6 +868,9 @@ namespace jsk_footstep_planner
     parameters_.local_move_x_num = config.local_move_x_num;
     parameters_.local_move_y_num = config.local_move_y_num;
     parameters_.local_move_theta_num = config.local_move_theta_num;
+    parameters_.local_move_x_offset = config.local_move_x_offset;
+    parameters_.local_move_y_offset = config.local_move_y_offset;
+    parameters_.local_move_theta_offset = config.local_move_theta_offset;
     parameters_.transition_limit_x = config.transition_limit_x;
     parameters_.transition_limit_y = config.transition_limit_y;
     parameters_.transition_limit_z = config.transition_limit_z;

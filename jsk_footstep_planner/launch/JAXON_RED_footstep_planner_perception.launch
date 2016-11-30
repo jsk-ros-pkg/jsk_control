@@ -43,6 +43,7 @@
       collision_bbox_offset: [0, 0, 0.8]
     </rosparam>
     <!-- size of foot -->
+    <!--
     <rosparam>
       ## offset from end-coords -> center of cube
       lleg_footstep_offset: [0.015502,  0.010078, 0.0]
@@ -50,6 +51,19 @@
       ## without padding
       footstep_size_x: 0.237418
       footstep_size_y: 0.134017
+    </rosparam>
+    -->
+    <!-- leptrino foot -->
+    <rosparam>
+      ## offset from end-coords -> center of cube
+      #lleg_footstep_offset: [0.0, 0.0, 0.0]
+      #rleg_footstep_offset: [0.0, 0.0, 0.0]
+      lleg_footstep_offset: [0.015, 0.0, 0.0] ## offset for padding
+      rleg_footstep_offset: [0.015, 0.0, 0.0] ## offset for padding
+      ## without padding
+      ##footstep_size_x: 0.230
+      footstep_size_x: 0.260 ## add toe padding
+      footstep_size_y: 0.135
     </rosparam>
     <!-- parameters for plane estimation -->
     <rosparam subst_value="true">
@@ -65,13 +79,16 @@
     <!-- parameters for moving footstep locally -->
     <rosparam>
       use_lazy_perception: false
-      use_local_movement:  false
-      local_move_x: 0.24
-      local_move_y: 0.03
-      local_move_theta: 0.04
-      local_move_x_num: 3
-      local_move_y_num: 1
-      local_move_theta_num: 1
+      use_local_movement:  true
+      local_move_x: 0.02
+      local_move_y: 0.01
+      local_move_theta: 0.1
+      local_move_x_num: 1
+      local_move_y_num: 0
+      local_move_theta_num: 0
+      local_move_x_offset: 0.14
+      local_move_y_offset: 0.0
+      local_move_theta_offset: 0.0
     </rosparam>
     <!-- limitation of steps -->
     <rosparam>
@@ -124,6 +141,13 @@
         y: 0
         theta: 0
       - x: 0.02
+        y: 0
+        theta: 0
+## add for step adjust
+      - x: 0.13
+        y: 0
+        theta: 0
+      - x: 0.07
         y: 0
         theta: 0
 # backward
