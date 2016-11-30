@@ -139,7 +139,7 @@ namespace jsk_footstep_planner
               target_node->setState(projected_state);
             }
           }
-        }
+        } //if (graph_->usePointCloudModel() && lazy_projection) {
         if (graph_->isGoal(target_node->getState())) {
           if (is_set_profile_function_) {
             profile_function_(*this, graph_);
