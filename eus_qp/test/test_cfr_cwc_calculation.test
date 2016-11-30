@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="test_cfr_cwc_calculation" pkg="eus_qp" type="test_cfr_cwc_calculation.l" time-limit="60.0">
+  </test>
+</launch>

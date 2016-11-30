@@ -178,32 +178,33 @@ namespace jsk_footstep_planner
     inline void vertices(Eigen::Vector3f& a,
                          Eigen::Vector3f& b,
                          Eigen::Vector3f& c,
-                         Eigen::Vector3f& d)
+                         Eigen::Vector3f& d,
+                         double collision_padding = 0)
     {
       const Eigen::Vector3f ux = Eigen::Vector3f::UnitX();
       const Eigen::Vector3f uy = Eigen::Vector3f::UnitY();
-
-      a = Eigen::Vector3f((pose_ * Eigen::Translation3f(ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
-      b = Eigen::Vector3f((pose_ * Eigen::Translation3f(- ux * dimensions_[0] / 2 + uy * dimensions_[1] / 2)).translation());
-      c = Eigen::Vector3f((pose_ * Eigen::Translation3f(- ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
-      d = Eigen::Vector3f((pose_ * Eigen::Translation3f(ux * dimensions_[0] / 2 - uy * dimensions_[1] / 2)).translation());
-
+      double dim0 = dimensions_[0] + collision_padding;
+      double dim1 = dimensions_[1] + collision_padding;
+      a = Eigen::Vector3f((pose_ * Eigen::Translation3f(  ux * dim0 / 2 + uy * dim1 / 2)).translation());
+      b = Eigen::Vector3f((pose_ * Eigen::Translation3f(- ux * dim0 / 2 + uy * dim1 / 2)).translation());
+      c = Eigen::Vector3f((pose_ * Eigen::Translation3f(- ux * dim0 / 2 - uy * dim1 / 2)).translation());
+      d = Eigen::Vector3f((pose_ * Eigen::Translation3f(  ux * dim0 / 2 - uy * dim1 / 2)).translation());
     }
     
     /**
      * @brief
      * return true if this and other are collision free.
      */
-    virtual bool crossCheck(FootstepState::Ptr other);
+    virtual bool crossCheck(FootstepState::Ptr other, float collision_padding = 0);
     
-    virtual Eigen::Affine3f getPose() { return pose_; }
+    virtual Eigen::Affine3f getPose() const { return pose_; }
     virtual void setPose(const Eigen::Affine3f& pose)
     {
       pose_ = pose;
     }
     
-    virtual int getLeg() { return leg_; }
-    virtual Eigen::Vector3f getDimensions() { return dimensions_; }
+    virtual int getLeg() const { return leg_; }
+    virtual Eigen::Vector3f getDimensions() const { return dimensions_; }
     bool operator==(FootstepState& other)
     {
       return ((index_x_ == other.index_x_) &&
@@ -211,7 +212,7 @@ namespace jsk_footstep_planner
               (index_yaw_ == other.index_yaw_));
     }
 
-    virtual Eigen::Vector3f getResolution() { return resolution_; }
+    virtual Eigen::Vector3f getResolution() const { return resolution_; }
       
 
     inline virtual int indexX() { return index_x_; }

@@ -1,8 +1,14 @@
 <launch>
-  <arg name="USE_JOY" default="false" />
-  <arg name="GLOBAL_FRAME" default="map" />
+  <arg name="USE_JOY"        default="false" />
+  <arg name="USE_MARKER"     default="true" />
+  <arg name="USE_RVIZ"       default="true" />
+  <arg name="USE_CONTROLLER" default="true" />
   <arg name="USE_PERCEPTION" default="true"/>
   <arg name="USE_SIMPLE_FOOTSTEP_CONTROLLER" default="true" />
+  <arg name="GLOBAL_FRAME"   default="map" />
+  <arg name="USE_OBSTACLE_MODEL"   default="false" />
+  <arg name="ROBOT"   default="" />
+  <arg name="FOOTSTEP_PLANNER_PARAM_FILE"   default="$(find jsk_footstep_planner)/config/$(arg ROBOT)_footstep_planner_params.yaml" />
   <node pkg="dynamic_tf_publisher" type="tf_publish.py" name="dynamic_tf_publisher"
         output="log">
     <param name="use_cache" value="false"/>
@@ -14,132 +20,54 @@
     <!-- <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" /> -->
     <rosparam subst_value="true">
       use_pointcloud_model: $(arg USE_PERCEPTION)
-      use_lazy_perception: true
+      use_lazy_perception: $(arg USE_PERCEPTION)
       use_local_movement: false
       use_transition_limit: true
       project_start_state: $(arg USE_PERCEPTION)
       project_goal_state: $(arg USE_PERCEPTION)
+      use_obstacle_model: $(arg USE_OBSTACLE_MODEL)
     </rosparam>
     <rosparam>
       resolution_x: 0.1
       resolution_y: 0.1
       resolution_theta: 0.1
-      footstep_size_x: 0.24
-      footstep_size_y: 0.14
     </rosparam>
-    <!-- successors -->
-    <rosparam>
-      successors:
-      - x: 0
-        y: -0.2
-        theta: 0
-      - x: 0
-        y: -0.3
-        theta: 0
-      - x: 0
-        y: -0.15
-        theta: 0
-      - x: 0.2
-        y: -0.2
-        theta: 0
-      - x: 0.25
-        y: -0.2
-        theta: 0
-      - x: 0.1
-        y: -0.2
-        theta: 0
-      - x: -0.1
-        y: -0.2
-        theta: 0
-      - x: 0
-        y: -0.2
-        theta: 0.17
-      - x: 0
-        y: -0.3
-        theta: 0.17
-      - x: 0.2
-        y: -0.2
-        theta: 0.17
-      - x: 0.25
-        y: -0.2
-        theta: 0.17
-      - x: 0.1
-        y: -0.2
-        theta: 0.17
-      - x: 0
-        y: -0.2
-        theta: -0.17
-      - x: 0
-        y: -0.3
-        theta: -0.17
-      - x: 0.2
-        y: -0.2
-        theta: -0.17
-      - x: 0.25
-        y: -0.2
-        theta: -0.17
-      - x: 0.3
-        y: -0.2
-        theta: -0.17
-      - x: 0.3
-        y: -0.2
-        theta: -0
-      - x: 0.3
-        y: -0.2
-        theta: 0.17
-      - x: 0.35
-        y: -0.2
-        theta: -0.17
-      - x: 0.35
-        y: -0.2
-        theta: -0
-      - x: 0.35
-        y: -0.2
-        theta: 0.17
-      - x: 0.1
-        y: -0.2
-        theta: -0.17
-
-      - x: 0.2
-        y: -0.3
-        theta: -0.17
-      - x: 0.25
-        y: -0.3
-        theta: -0.17
-      - x: 0.3
-        y: -0.3
-        theta: -0.17
-      - x: 0.3
-        y: -0.3
-        theta: -0
-      - x: 0.3
-        y: -0.3
-        theta: 0.17
-      - x: 0.35
-        y: -0.3
-        theta: -0.17
-      - x: 0.35
-        y: -0.3
-        theta: -0
-      - x: 0.35
-        y: -0.3
-        theta: 0.17
-
-    </rosparam>
+    <rosparam command="load" file="$(arg FOOTSTEP_PLANNER_PARAM_FILE)" />
   </node>
 
+  <group if="$(arg USE_CONTROLLER)" >
+    <node pkg="jsk_footstep_controller" type="simple-footstep-controller.l" name="simple_footstep_controller"
+          output="screen" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)">
+    </node>
+    <node pkg="jsk_footstep_controller" type="footstep-controller.l" name="footstep_controller"
+          output="screen" unless="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)">
+      <rosparam subst_value="true">
+        interruptible_mode: ":semi-interruptible"
+        auto_lookground: false
+      </rosparam>
+    </node>
+    <node pkg="jsk_footstep_controller" type="footstep-refinement.l"
+          name="footstep_refinement" if="false">
+      <remap from="planner_result" to="footstep_planner/result_non_refined"/>
+      <remap from="refined_footstep_result" to="footstep_planner/result" />
+    </node>
+    <node pkg="jsk_footstep_controller" type="gui-client.l" name="gui_client">
+    </node>
+  </group>
+
+  <group if="$(arg USE_MARKER)" >
     <!-- marker -->
-  <node pkg="jsk_interactive_marker"
-        type="footstep_marker"
-        name="footstep_marker"
-        output="screen"
-        >
-    <!-- <remap from="move_marker" to="$(arg POSE_REMAP)" /> -->
-    <!-- <param name="wait_snapit_server" value="false" /> -->
-    <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
-    <remap from="project_footprint" to="/footstep_planner/project_footprint_with_local_search" />
-    <remap from="/footstep_controller" to="simple_footstep_controller" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)"/>
-    <rosparam subst_value="true">
+    <node pkg="jsk_interactive_marker"
+          type="footstep_marker"
+          name="footstep_marker"
+          output="screen"
+          >
+      <!-- <remap from="move_marker" to="$(arg POSE_REMAP)" /> -->
+      <!-- <param name="wait_snapit_server" value="false" /> -->
+      <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(arg ROBOT).yaml" />
+      <remap from="project_footprint" to="/footstep_planner/project_footprint_with_local_search" />
+      <remap from="/footstep_controller" to="simple_footstep_controller" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)"/>
+      <rosparam subst_value="true">
         use_plane_snap: $(arg USE_PERCEPTION)
         use_projection_service: true
         use_projection_topic: false
@@ -152,84 +80,71 @@
         foot_size_y: 0.1
         foot_size_z: 0.0001
         frame_id: $(arg GLOBAL_FRAME)
-    </rosparam>
-  </node>
-  <!-- furutaractive marker! -->
-  <node pkg="jsk_topic_tools" type="lightweight_throttle" name="joint_states_throttle">
-    <remap from="~input" to="/joint_states_appended" />
-  </node>
-  <node pkg="jsk_interactive_marker"
-        type="urdf_model_marker"
-        name="urdf_model_marker"
-        output="log">
-    <remap from="/robot_description" to="/robot_description" />
-    <remap from="/urdf_model_marker/robot/reset_joint_states" to="joint_states_throttle/output" />
-    <rosparam>
-      model_config:
+      </rosparam>
+    </node>
+
+    <!-- furutaractive marker! -->
+    <node pkg="jsk_topic_tools" type="lightweight_throttle" name="joint_states_throttle">
+      <remap from="~input" to="/joint_states_appended" />
+    </node>
+    <node pkg="jsk_interactive_marker"
+          type="urdf_model_marker"
+          name="urdf_model_marker"
+          output="log">
+      <remap from="/robot_description" to="/robot_description" />
+      <remap from="/urdf_model_marker/robot/reset_joint_states" to="joint_states_throttle/output" />
+      <rosparam>
+        model_config:
         - name: "robot"
-          frame-id: "/robot_marker_root"
-          robot: false
-          mode: "visualization"
-          # mode: "registration"
-          use_robot_description: true
-          scale: 1.0
-          pose:
-            position:
-              x: 0.0
-              y: 0.0
-              z: 0.0
-            orientation:
-              x: 0.0
-              y: 0.0
-              z: 0.0
-              w: 1.0
-          offset:
-            position:
-              x: 0.0
-              y: 0.0
-              z: 0.0
-            orientation:
-              x: 0.0
-              y: 0.0
-              z: 0.0
-              w: 1.0
-          fixed_link:
-            - "lleg_end_coords"
-            - "rleg_end_coords"
-          display: true
-    </rosparam>
-    <param name="use_dynamic_tf" value="true"/>
-  </node>
-  <node pkg="jsk_interactive_marker" type="urdf_control_marker" name="urdf_control_marker" output="screen">
-    <param name="use_dynamic_tf" value="true"/>
-    <param name="move_2d" value="true"/>
-    <param name="frame_id" value="$(arg GLOBAL_FRAME)"/>
-    <param name="marker_frame_id" value="robot_marker_root"/>
-    <remap from="~set_pose" to="/footstep_marker/current_pose" />
-  </node>
-  <node pkg="jsk_footstep_controller" type="simple-footstep-controller.l" name="simple_footstep_controller"
-        output="screen" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)">
-  </node>
-  <node pkg="jsk_footstep_controller" type="footstep-controller.l" name="footstep_controller"
-        output="screen" unless="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)">
-    <rosparam subst_value="true">
-      interruptible_mode: ":semi-interruptible"
-      auto_lookground: false
-    </rosparam>
-  </node>
-  <node pkg="jsk_footstep_controller" type="footstep-refinement.l"
-        name="footstep_refinement" if="false">
-    <remap from="planner_result" to="footstep_planner/result_non_refined"/>
-    <remap from="refined_footstep_result" to="footstep_planner/result" />
-  </node>
+        frame-id: "/robot_marker_root"
+        robot: false
+        mode: "visualization"
+        # mode: "registration"
+        use_robot_description: true
+        scale: 1.0
+        pose:
+        position:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+        offset:
+        position:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0
+        fixed_link:
+        - "lleg_end_coords"
+        - "rleg_end_coords"
+        display: true
+      </rosparam>
+      <param name="use_dynamic_tf" value="true"/>
+    </node>
+    <node pkg="jsk_interactive_marker" type="urdf_control_marker" name="urdf_control_marker" output="screen">
+      <param name="use_dynamic_tf" value="true"/>
+      <param name="move_2d" value="true"/>
+      <param name="frame_id" value="$(arg GLOBAL_FRAME)"/>
+      <param name="marker_frame_id" value="robot_marker_root"/>
+      <remap from="~set_pose" to="/footstep_marker/current_pose" />
+    </node>
+  </group>
 
   <node pkg="rviz" type="rviz" name="rviz"
-        launch-prefix="glc-capture"
-        args="-d $(find jsk_footstep_planner)/launch/cppplanner/footstep_planner.rviz">
+        args="-d $(find jsk_footstep_planner)/launch/cppplanner/footstep_planner.rviz"
+        if="$(arg USE_RVIZ)" >
     <rosparam command="load" file="$(find jsk_footstep_planner)/config/footstep_buttons.yaml" />
   </node>
-  
-    <group if="$(arg USE_JOY)">
+
+  <group if="$(arg USE_JOY)">
     <arg name="POSE_REMAP" default="/move_marker" />
     <!-- <arg name="DEV" default="/dev/input/ps3joy" /> -->
     <arg name="DEV" default="/dev/input/js1" />
@@ -256,10 +171,8 @@
                frame_id: odom
                lock_furutaractive: true
       </rosparam>
-      <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(env ROBOT).yaml" />
+      <rosparam command="load" file="$(find jsk_footstep_controller)/config/$(arg ROBOT).yaml" />
       <remap from="/footstep_controller/status" to="/simple_footstep_controller/status" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)"/>
   </node>
   </group>
-  <node pkg="jsk_footstep_controller" type="gui-client.l" name="gui_client">
-  </node>
 </launch>

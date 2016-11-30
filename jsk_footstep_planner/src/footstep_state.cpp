@@ -180,12 +180,12 @@ namespace jsk_footstep_planner
     return cropPointCloudExact(cloud, near_indices);
   }
 #endif
-  bool FootstepState::crossCheck(FootstepState::Ptr other)
+  bool FootstepState::crossCheck(FootstepState::Ptr other, float collision_padding)
   {
     Eigen::Vector3f a0, a1, a2, a3;
     Eigen::Vector3f b0, b1, b2, b3;
-    vertices(a0, a1, a2, a3);
-    other->vertices(b0, b1, b2, b3);
+    vertices(a0, a1, a2, a3, collision_padding);
+    other->vertices(b0, b1, b2, b3, collision_padding);
     Line2D a_01(a0, a1), a_12(a1, a2), a_23(a2, a3), a_30(a3, a0);
     Line2D b_01(b0, b1), b_12(b1, b2), b_23(b2, b3), b_30(b3, b0);
     return !(a_01.isCrossing(b_01) ||

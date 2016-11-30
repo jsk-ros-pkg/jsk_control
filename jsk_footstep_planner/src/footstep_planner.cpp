@@ -62,6 +62,8 @@ namespace jsk_footstep_planner
       "project_footprint_with_local_search", &FootstepPlanner::projectFootPrintWithLocalSearchService, this);
     srv_collision_bounding_box_info_ = nh.advertiseService(
       "collision_bounding_box_info", &FootstepPlanner::collisionBoundingBoxInfoService, this);
+    srv_project_footstep_ = nh.advertiseService(
+      "project_footstep", &FootstepPlanner::projectFootstepService, this);
     std::vector<double> lleg_footstep_offset, rleg_footstep_offset;
     if (jsk_topic_tools::readVectorParameter(nh, "lleg_footstep_offset", lleg_footstep_offset)) {
       inv_lleg_footstep_offset_ = Eigen::Vector3f(- lleg_footstep_offset[0],
@@ -237,6 +239,74 @@ namespace jsk_footstep_planner
     res.box_dimensions.y = collision_bbox_size_[1];
     res.box_dimensions.z = collision_bbox_size_[2];
     tf::poseEigenToMsg(collision_bbox_offset_, res.box_offset);
+    return true;
+  }
+
+  bool FootstepPlanner::projectFootstepService(
+    jsk_footstep_planner::ProjectFootstep::Request& req,
+    jsk_footstep_planner::ProjectFootstep::Response& res)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    if (!graph_) {
+      return false;
+    }
+    if (!pointcloud_model_) {
+      ROS_ERROR("No pointcloud model is yet available");
+      //publishText(pub_text_,
+      //"No pointcloud model is yet available",
+      //ERROR);
+      return false;
+    }
+
+    const Eigen::Vector3f resolution(resolution_x_,
+                                     resolution_y_,
+                                     resolution_theta_);
+    const Eigen::Vector3f footstep_size(footstep_size_x_,
+                                        footstep_size_y_,
+                                        0.000001);
+
+    for (std::vector<jsk_footstep_msgs::Footstep>::iterator it = req.input.footsteps.begin();
+         it != req.input.footsteps.end(); it++) {
+      if (it->offset.x == 0.0 &&
+          it->offset.y == 0.0 &&
+          it->offset.z == 0.0 ) {
+        if (it->leg == jsk_footstep_msgs::Footstep::LEFT) {
+          it->offset.x = - inv_lleg_footstep_offset_[0];
+          it->offset.y = - inv_lleg_footstep_offset_[1];
+          it->offset.z = - inv_lleg_footstep_offset_[2];
+        } else {
+          it->offset.x = - inv_rleg_footstep_offset_[0];
+          it->offset.y = - inv_rleg_footstep_offset_[1];
+          it->offset.z = - inv_rleg_footstep_offset_[2];
+        }
+      }
+      if(it->dimensions.x == 0 &&
+         it->dimensions.y == 0 &&
+         it->dimensions.z == 0 ) {
+        it->dimensions.x = footstep_size_x_;
+        it->dimensions.y = footstep_size_y_;
+        it->dimensions.z = 0.000001;
+      }
+      FootstepState::Ptr step = FootstepState::fromROSMsg(*it, footstep_size, resolution);
+      FootstepState::Ptr projected = graph_->projectFootstep(step);
+      if(!!projected) {
+        res.success.push_back(true);
+        jsk_footstep_msgs::Footstep::Ptr p;
+        if (it->leg == jsk_footstep_msgs::Footstep::LEFT) {
+          p = projected->toROSMsg(inv_lleg_footstep_offset_);
+        } else if (it->leg == jsk_footstep_msgs::Footstep::RIGHT) {
+          p = projected->toROSMsg(inv_rleg_footstep_offset_);
+        } else {
+          p = projected->toROSMsg();
+        }
+        res.result.footsteps.push_back(*p);
+      } else {
+        res.success.push_back(false);
+        res.result.footsteps.push_back(*it); // return the same step as in input
+      }
+    }
+    res.result.header = req.input.header;
+
     return true;
   }
 
@@ -508,26 +578,9 @@ namespace jsk_footstep_planner
       graph_->setGlobalTransitionLimit(TransitionLimitRP::Ptr());
     }
     graph_->setParameters(parameters_);
-#if 0
-    graph_->setObstacleResolution(parameters_.obstacle_resolution);
-    graph_->setLocalXMovement(parameters_.local_move_x);
-    graph_->setLocalYMovement(parameters_.local_move_y);
-    graph_->setLocalThetaMovement(parameters_.local_move_theta);
-    graph_->setLocalXMovementNum(parameters_.local_move_x_num);
-    graph_->setLocalYMovementNum(parameters_.local_move_y_num);
-    graph_->setLocalThetaMovementNum(parameters_.local_move_theta_num);
-    graph_->setPlaneEstimationMaxIterations(parameters_.plane_estimation_max_iterations);
-    graph_->setPlaneEstimationMinInliers(parameters_.plane_estimation_min_inliers);
-    graph_->setPlaneEstimationOutlierThreshold(parameters_.plane_estimation_outlier_threshold);
-    graph_->setPlaneEstimationUseNormal(parameters_.plane_estimation_use_normal);
-    graph_->setPlaneEstimationNormalDistanceWeight(parameters_.plane_estimation_normal_distance_weight);
-    graph_->setPlaneEstimationNormalOpeningAngle(parameters_.plane_estimation_normal_opening_angle);
-    graph_->setPlaneEstimationMinRatioOfInliers(parameters_.plane_estimation_min_ratio_of_inliers);
-    graph_->setSupportCheckXSampling(parameters_.support_check_x_sampling);
-    graph_->setSupportCheckYSampling(parameters_.support_check_y_sampling);
-    graph_->setSkipCropping(parameters_.skip_cropping);
-    graph_->setSupportCheckVertexNeighborThreshold(parameters_.support_check_vertex_neighbor_threshold);
-#endif
+
+    graph_->setSuccessorFunction(boost::bind(&FootstepGraph::successors_original, graph_, _1, _2));
+    graph_->setPathCostFunction(boost::bind(&FootstepGraph::path_cost_original, graph_, _1, _2, _3));
     //ROS_INFO_STREAM(graph_->infoString());
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
@@ -570,6 +623,18 @@ namespace jsk_footstep_planner
       as_.setPreempted();
       return;
     }
+    // finalize in graph
+    std::vector <FootstepState::Ptr> finalizeSteps;
+    if (! (graph_->finalizeSteps((path.size() >1 ? path[path.size()-2]->getState() : FootstepState::Ptr()),
+                                 path[path.size()-1]->getState(),
+                                 finalizeSteps))) {
+      ROS_ERROR("Failed to finalize path");
+      publishText(pub_text_,
+                  "Failed to finalize path",
+                  ERROR);
+      as_.setPreempted();
+      return;
+    }
     // Convert path to FootstepArray
     jsk_footstep_msgs::FootstepArray ros_path;
     ros_path.header = goal->goal_footstep.header;
@@ -581,14 +646,13 @@ namespace jsk_footstep_planner
         ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
       }
     }
-    // finalize path
-    if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
-      ros_path.footsteps.push_back(right_goal);
-      ros_path.footsteps.push_back(left_goal);
-    }
-    else if (path[path.size() - 1]->getState()->getLeg() == jsk_footstep_msgs::Footstep::RIGHT) {
-      ros_path.footsteps.push_back(left_goal);
-      ros_path.footsteps.push_back(right_goal);
+    for (size_t i = 0; i < finalizeSteps.size(); i++) {
+      const FootstepState::Ptr st = finalizeSteps[i];
+      if (st->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
+        ros_path.footsteps.push_back(*(st->toROSMsg(inv_lleg_footstep_offset_)));
+      } else {
+        ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
+      }
     }
     result_.result = ros_path;
     as_.setSucceeded(result_);
@@ -695,12 +759,6 @@ namespace jsk_footstep_planner
         default_x =     default_offset[0];
         default_y =     default_offset[1];
         default_theta = default_offset[2];
-        Eigen::Vector3f end_coords_offset = (inv_lleg_footstep_offset_ - inv_rleg_footstep_offset_);
-        ROS_DEBUG("end_coords_offset [%f, %f, %f]",
-                      end_coords_offset[0], end_coords_offset[1], end_coords_offset[2]);
-        default_x  += end_coords_offset[0];
-        default_y  += end_coords_offset[1];
-        ROS_INFO("use default_lfoot_to_rfoot_offset [%f, %f, %f]", default_x, default_y, default_theta);
       }
     }
     // read successors
@@ -733,10 +791,42 @@ namespace jsk_footstep_planner
         theta = jsk_topic_tools::getXMLDoubleValue(successor_xml["theta"]);
         theta += default_theta;
       }
-      Eigen::Affine3f successor = affineFromXYYaw(x, y, theta);
+      Eigen::Affine3f successor =
+        Eigen::Translation3f(inv_lleg_footstep_offset_[0],
+                             inv_lleg_footstep_offset_[1],
+                             inv_lleg_footstep_offset_[2]) *
+        affineFromXYYaw(x, y, theta) *
+        Eigen::Translation3f(-inv_rleg_footstep_offset_[0],
+                             -inv_rleg_footstep_offset_[1],
+                             -inv_rleg_footstep_offset_[2]);
       successors_.push_back(successor);
     }
     ROS_INFO("%lu successors are defined", successors_.size());
+    if ((default_x != 0.0) || (default_y != 0.0) || (default_theta != 0.0)) {
+      ROS_INFO("default_offset: #f(%f %f %f)", default_x, default_y, default_theta);
+    }
+    if ((inv_lleg_footstep_offset_[0] != 0) ||
+        (inv_lleg_footstep_offset_[1] != 0) ||
+        (inv_lleg_footstep_offset_[2] != 0) ) {
+      ROS_INFO("left_leg_offset: #f(%f %f %f)",
+               - inv_lleg_footstep_offset_[0],
+               - inv_lleg_footstep_offset_[1],
+               - inv_lleg_footstep_offset_[2]);
+    }
+    if ((inv_rleg_footstep_offset_[0] != 0) ||
+        (inv_rleg_footstep_offset_[1] != 0) ||
+        (inv_rleg_footstep_offset_[2] != 0) ) {
+      ROS_INFO("right_leg_offset: #f(%f %f %f)",
+               - inv_rleg_footstep_offset_[0],
+               - inv_rleg_footstep_offset_[1],
+               - inv_rleg_footstep_offset_[2]);
+    }
+    for (size_t i = 0; i < successors_.size(); i++) {
+      Eigen::Vector3f tr = successors_[i].translation();
+      float roll, pitch, yaw;
+      pcl::getEulerAngles(successors_[i], roll, pitch, yaw);
+      ROS_INFO("successor_%2.2d: (make-coords :pos (scale 1000 #f(%f %f 0)) :rpy (list %f 0 0))", i, tr[0], tr[1], yaw);
+    }
     return true;
   }
 
@@ -778,6 +868,9 @@ namespace jsk_footstep_planner
     parameters_.local_move_x_num = config.local_move_x_num;
     parameters_.local_move_y_num = config.local_move_y_num;
     parameters_.local_move_theta_num = config.local_move_theta_num;
+    parameters_.local_move_x_offset = config.local_move_x_offset;
+    parameters_.local_move_y_offset = config.local_move_y_offset;
+    parameters_.local_move_theta_offset = config.local_move_theta_offset;
     parameters_.transition_limit_x = config.transition_limit_x;
     parameters_.transition_limit_y = config.transition_limit_y;
     parameters_.transition_limit_z = config.transition_limit_z;

@@ -1,7 +1,7 @@
 ;; Extend robot interface 
 
 (ros::roseus-add-msgs "jsk_footstep_msgs")
-(ros::roseus-add-srvs "jsk_pcl_ros")
+(ros::roseus-add-srvs "jsk_recognition_msgs")
 
 (ros::advertise "/robot_footstep" jsk_footstep_msgs::FootstepArray)
 
@@ -42,7 +42,7 @@
       msg))
   (:snap-footsteps (foot-coords &key
                                 (service "/locomotion/snapit/align_footstep"))
-    (let ((req (instance jsk_pcl_ros::SnapFootstepRequest :init)))
+    (let ((req (instance jsk_recognition_msgs::SnapFootstepRequest :init)))
       (send req :input (send self :footstep-to-rosmsg foot-coords))
       (let ((res (ros::service-call service req t)))
         (if res
