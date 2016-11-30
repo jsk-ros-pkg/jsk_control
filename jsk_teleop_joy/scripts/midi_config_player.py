@@ -51,7 +51,7 @@ def main():
     rospy.logfatal("You need to specify config yaml file")
     sys.exit(1)
   config_file = argv[1]
-  joy_pub = rospy.Publisher("/joy", Joy)
+  joy_pub = rospy.Publisher("/joy", Joy, queue_size=10)
   autorepeat_rate = rospy.get_param("~autorepeat_rate", 0)
   if autorepeat_rate == 0:
     r = rospy.Rate(1000)
