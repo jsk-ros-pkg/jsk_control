@@ -89,21 +89,25 @@
   "Solve IK for foostep-planning successors.
    div-xy, xmin, xmax, ymin, ymax are [mm].
    div-th, thmin, thmax are [deg]."
-  (let* ((ret))
+  (let* ((ret) (org-analysis-level (send-all (send *robot* :links) :analysis-level)))
     (do ((x xmin (+ x div-xy))) ((< (+ xmax *epsilon*) x))
         (do ((y ymin (+ y div-xy))) ((< (+ ymax *epsilon*) y))
             (do ((th thmin (+ th div-th))) ((< (+ thmax *epsilon*) th))
                 ;; Reset robot
                 (send *robot* :reset-pose)
                 (send *robot* :fix-leg-to-coords (make-coords))
+                (mapcar #'(lambda (l) (Send l :analysis-level :coords)) (send *robot* :links))
                 (let ((ik-solved-p
                        ;; Move rleg xyth, check move-centroid-on-foot for all COM cases.
-                       (and (send *robot* :rleg :move-end-pos (float-vector x y 0) :world :warnp nil)
-                            (send *robot* :rleg :move-end-rot th :z :world :warnp nil)
-                            (send *robot* :move-centroid-on-foot :lleg '(:rleg :lleg) :warnp nil)
-                            (send *robot* :move-centroid-on-foot :both '(:rleg :lleg) :warnp nil)
-                            (send *robot* :move-centroid-on-foot :rleg '(:rleg :lleg) :warnp nil)
-                            ))
+                       (prog1
+                           (and (send *robot* :rleg :move-end-pos (float-vector x y 0) :world :warnp nil)
+                                (send *robot* :rleg :move-end-rot th :z :world :warnp nil)
+                                (send *robot* :move-centroid-on-foot :lleg '(:rleg :lleg) :warnp nil)
+                                (send *robot* :move-centroid-on-foot :both '(:rleg :lleg) :warnp nil)
+                                (send *robot* :move-centroid-on-foot :rleg '(:rleg :lleg) :warnp nil)
+                                )
+                         (mapcar #'(lambda (l al) (Send l :analysis-level al)) (send *robot* :links) org-analysis-level)
+                         ))
                       (foot-collision-free-p
                        (progn
                          (send *robot* :update-descendants)
@@ -113,7 +117,8 @@
                     (send *irtviewer* :draw-objects))
                   )
                 )))
-    ret))
+    (list :successors ret :div-xy div-xy :div-th div-th :max-th (elt (find-extream ret #'(lambda (x) (abs (elt x 2))) #'>) 2))
+    ))
 
 (defun gen-successors-string
   (robot &key (return-value) (ik-results))
@@ -121,11 +126,14 @@
   (unless ik-results
     (setq ik-results (solve-ik-for-foostep-planning-successors robot)))
   (let ((str (format nil "successors:~%")))
-    (dolist (ikr ik-results)
+    (dolist (ikr (cadr (memq :successors ik-results)))
       (setq str (format nil "~A  - x: ~A~%" str (* 1e-3 (elt ikr 0))))
       (setq str (format nil "~A    y: ~A~%" str (* 1e-3 (elt ikr 1))))
       (setq str (format nil "~A    theta: ~A~%" str (deg2rad (elt ikr 2))))
       )
+    (setq str (format nil "~Agoal_pos_thr: ~A~%" str (* 1e-3 (cadr (memq :div-xy ik-results)))))
+    (setq str (format nil "~Agoal_rot_thr: ~A~%" str (deg2rad (cadr (memq :div-th ik-results)))))
+    (setq str (format nil "~Atransition_limit_yaw: ~A~%" str (deg2rad (+ 0.1 (cadr (memq :max-th ik-results))))))
     str))
 
 (defun gen-all-footstep-planner-parameter-string
