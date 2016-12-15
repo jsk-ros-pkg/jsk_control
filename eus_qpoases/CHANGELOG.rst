@@ -2,8 +2,8 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.10 (2016-12-15)
+-------------------
 * eus_qpoases : add missing install directory
 * [euslisp/test-eus-qpoases.l,test/eus-qpoases.test.l] Add test for sqp/slp
 * [eus_qpoases.cpp, eus-qpoases.l] Add qp with hotstart and sqp with hotstart

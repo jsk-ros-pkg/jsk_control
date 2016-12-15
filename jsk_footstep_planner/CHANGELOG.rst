@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.10 (2016-12-15)
+-------------------
 * [footstep_planner] fix for local_move
 * [footstep_planner, JAXON] footstep setting for leptrino foot
 * [jsk_footstep_planner] fix offset for project_footstep service

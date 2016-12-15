@@ -2,8 +2,8 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.10 (2016-12-15)
+-------------------
 * [jsk_teleop_joy] package.xml : add pygame run depend (`#657 <https://github.com/jsk-ros-pkg/jsk_control/pull/657>`_)
 * Add toggle footstep marker mode joy interface (`#607 <https://github.com/jsk-ros-pkg/jsk_control/pull/607>`_)
 

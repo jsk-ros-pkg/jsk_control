@@ -2,8 +2,8 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.10 (2016-12-15)
+-------------------
 * fix checker board spacing parameters to be 0.03
 * [jsk_calibration] Modify checkerboard spacing values and modify README
 * fix hrp2w_calibration

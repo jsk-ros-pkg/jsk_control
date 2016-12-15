@@ -2,8 +2,8 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.10 (2016-12-15)
+-------------------
 * package.xml : remove unnecessary space within name tag
 * eus_qp : add missing install directory
 * [eus_qp/euslisp/contact-optimization.l,test-contact-wrench-opt.l] support rotational sliding in default-contact-constraint.

@@ -2,8 +2,8 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.10 (2016-12-15)
+-------------------
 * Add centroid method to ik-grid (`#636 <https://github.com/jsk-ros-pkg/jsk_control/pull/636>`_)
   * [wholebody_manipulation_planner] add :centroid method to ik-gird.
   * [jsk_ik_server/euslisp/ik-evaluation.l] fix indent.
