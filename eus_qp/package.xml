@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name> eus_qp </name>
+  <name>eus_qp</name>
   <description>
     eus_qp is an interface of euslisp to solve qp problems with linear constraints.
   </description>
