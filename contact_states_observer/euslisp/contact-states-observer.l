@@ -269,31 +269,15 @@
  roseus::stringstring
  #'obj-env-state-set-param-cb)
 
-(let ((robot-name (ros::get-param "/robot/type")))
-  (cond
-   ((string= robot-name "hrp2jsknt")
-    (require :hrp2jsknt-interface "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknt-interface.l")
-    (hrp2jsknt-init)
-    (setq *robot* *hrp2jsknt*))
-   ((string= robot-name "hrp2jsk")
-    (require :hrp2jsk-interface "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsk-interface.l")
-    (hrp2jsk-init)
-    (setq *robot* *hrp2jsk*))
-   ((string= robot-name "hrp2jsknts")
-    (require :hrp2jsknts-interface "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l")
-    (hrp2jsknts-init)
-    (setq *robot* *hrp2jsknts*))
-   ((string= robot-name "jaxon")
-    (require :jaxon-interface "package://hrpsys_ros_bridge_tutorials/euslisp/jaxon-interface.l")
-    (jaxon-init)
-    (setq *robot* *jaxon*))
-   ))
+(load "package://pr2eus/robot-interface.l")
+(robot-init)
+(setq *robot* (eval (read-from-string (format nil "*~A*" (ros::get-param "robot/type")))))
 (ros::rate 20)
 ;;(setup-sensor-viewer)
 (setup-grasp-states)
 (do-until-key
  (let ((hav (or (and (find-method *ri* :hand-state) (send (send *ri* :hand-state) :potentio))
-                (send *ri* :get-joint-angle))))
+                (send *ri* :state :gripper :arms :angle-vector))))
    (when hav
      (cond
       ((substringp "HRP2" (send *robot* :name))
