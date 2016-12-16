@@ -2,6 +2,20 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.10 (2016-12-15)
+-------------------
+* fix checker board spacing parameters to be 0.03
+* [jsk_calibration] Modify checkerboard spacing values and modify README
+* fix hrp2w_calibration
+* update for hrp2w_calibration
+* add readme comment
+* change multisense -> xtion (or carmine)
+* delete file before rename
+* [jsk_calibration] Rename manual_calibration_viewer launch and fix colorize_points topic name
+* add files for hrp2w
+* [jsk_control/jsk_calibration] Fix typo.
+* Contributors: Kohei Kimura, Yohei Kakiuchi
+
 0.1.9 (2016-03-23)
 ------------------
 * [jsk_calibration] Update camera config parameter for JAXON

@@ -2,6 +2,35 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.10 (2016-12-15)
+-------------------
+* package.xml : remove unnecessary space within name tag
+* eus_qp : add missing install directory
+* [eus_qp/euslisp/contact-optimization.l,test-contact-wrench-opt.l] support rotational sliding in default-contact-constraint.
+* [eus_qp/euslisp/contact-optimization.l,test-contact-wrench-opt.l] add rotational-sliding-contact constraint class and calc-constraint-param-list-for-rotational-sliding function.
+* [eus_qp/euslisp/contact-optimization.l,test-contact-wrench-opt.l] use :fx, :-fx instead of :x, :-x.
+* [test/test_cfr_cwc_calculation.l] Check version of jskeus for old deb installed environment (like hydro travis)
+* [eus_qp/*/*cfr-cwc-calculation*, eus_qp/CMakeLists.txt] Add cfr and cwc calculation.
+* [eus_qp/euslisp/model-predictive-control.l] Enable to add additional-inequality-matrix and additional-inequality-min-vector for MPC COG parameters
+* [eus_qp/euslisp/contact-optimization.l] Add additional-inequality-matrix and additional-inequality-min-vector
+* [eus_qp/euslisp/test-contact-wrench-opt.l,eus_qp/test/test_contact_wrench_opt.l] Add test for cop polygon and friction polycone constraint.
+* [eus_qp/euslisp/contact-optimization] Add linearlized polycone friction constraint
+* [eus_qp/euslisp/model-predictive-control.l] Just fix indent
+* [eus_qp/euslisp, eus_qp/test] Add skip count for receding horizon proc count and update tests.
+* [eus_qp/euslisp/contact-optimization.l] print message of too large equality error only when debug is true.
+* [eus_qp/euslisp/model-predictive-control.l] Add argument to switch solve-qp-mode for qpoases
+* [eus_qp/euslisp/contact-optimization.l] Enable to set solve-qp-mode. Default value is same as solve-qpoases-qp function
+* [eus_qp/euslisp/test-contact-wrench-opt.l] Add test for use equality-error-weight
+* [eus_qp/euslisp/contact-optimization.l] Add argument to support equality error.
+* [eus_qp/euslisp/contact-optimization.l] add :gen-drawing-object method to 6d-min-max-contact-constraint
+* Merge pull request `#574 <https://github.com/jsk-ros-pkg/jsk_control/issues/574>`_ from mmurooka/poly-cop
+  [eus_qp/euslisp] add polygon-cop-contact-constraint
+* [eus_qp/euslisp/contact-optimization.l, test-contact-wrench-opt.l, eus_qp/test/test_contact_wrench_opt.l] Add function to calculate wrench from given wrench. Currently calculation with contact constraints does not work.
+* [euslisp/contact-optimization.l] add argument contact-face to default-contact-constraint.
+* [euslisp/test-contact-wrench-opt.l] add test for polygon-cop-contact-constraint.
+* [euslisp/contact-optimization.l] add class and function for polygon-cop-contact-constraint.
+* Contributors: Kei Okada, Masaki Murooka, Shunichi Nozawa
+
 0.1.9 (2016-03-23)
 ------------------
 * Merge pull request #565 from mmurooka/6d-minmax-constraint

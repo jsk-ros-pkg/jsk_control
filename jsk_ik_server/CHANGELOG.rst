@@ -2,6 +2,18 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.10 (2016-12-15)
+-------------------
+* Add centroid method to ik-grid (`#636 <https://github.com/jsk-ros-pkg/jsk_control/pull/636>`_)
+  * [wholebody_manipulation_planner] add :centroid method to ik-gird.
+  * [jsk_ik_server/euslisp/ik-evaluation.l] fix indent.
+* [jsk_ik_server/euslisp/ik-evaluation.l] add fullbody and initial-pose arguments to ik-evaluation. (`#602 <https://github.com/jsk-ros-pkg/jsk_control/pull/602>`_)
+* [jsk_ik_server/euslisp] extend IK grid function (`#576 <https://github.com/jsk-ros-pkg/jsk_control/pull/576>`_)
+  * [jsk_ik_server/euslisp/ik-evaluation.l] add move-target and orient-centerp arguments to ik-evaluation function.
+  * [jsk_ik_server/euslisp/ik-evaluation.l] add :insidep method to ik-grid class.
+  * [jsk_ik_server/euslisp/ik-evaluation.l] save cube instance in :cube method.
+* Contributors: Masaki Murooka
+
 0.1.9 (2016-03-23)
 ------------------
 

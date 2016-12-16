@@ -385,6 +385,7 @@ You can create `*ri*' like
   (ros::roseus "footstep_planner_client")
   ;; For obstacles
   (ros::advertise "/footstep_planner/obstacle_model" sensor_msgs::PointCloud2 1)
+  (ros::advertise "/accumulated_heightmap_pointcloud_static/output" sensor_msgs::PointCloud2 1)
   (ros::load-ros-manifest "sensor_msgs")
   ;; For visualization
   (ros::advertise "/footstep_from_marker" jsk_footstep_msgs::FootstepArray 1)
@@ -419,6 +420,13 @@ You can create `*ri*' like
   (ros::publish "/footstep_planner/obstacle_model" (make-ros-msg-from-eus-pointcloud a-pointcloud :frame frame-id))
   )
 
+(defun publish-footstep-planning-pointcloud-model-from-eus-pointcloud
+  (a-pointcloud &key (frame-id "odom") (pointcloud-topic-name "/accumulated_heightmap_pointcloud_static/output"))
+  "Publish obsacle_model used in footstep planning.
+   A eus-style pointcloud is required as an argument."
+  (ros::publish pointcloud-topic-name (make-ros-msg-from-eus-pointcloud a-pointcloud :frame frame-id))
+  )
+
 (defun get-pointcloud-within-bodies-2D
   (blist &key (return-point-cloud t) ((:resolution dif) 50.0))
   "Get pointcloud within bodies.
@@ -445,3 +453,34 @@ You can create `*ri*' like
       (if return-point-cloud
           (instance pointcloud :init :points ret1)
         ret1))))
+
+(defun get-pointcloud-within-faces
+  (face-list &key (return-point-cloud t) ((:resolution dif) 50.0))
+  "Get pointcloud within faces.
+   face-list is list of face."
+  (labels ((get-points-within-face
+            (ff)
+            (let* ((ret1) (global-vv (send ff :vertices))
+                   (origin-coords
+                    (make-coords :rot (make-matrix 3 3 (list (send (elt (send ff :edges) 0) :direction)
+                                                             (v* (send ff :normal) (send (elt (send ff :edges) 0) :direction))
+                                                             (send ff :normal)))
+                                 :pos (cadr (send ff :centroid))))
+                   (vv (mapcar #'(lambda (x) (send origin-coords :inverse-transform-vector x)) global-vv))
+                   (xmin (elt (find-extream vv #'(lambda (x) (elt x 0)) #'<) 0))
+                   (xmax (elt (find-extream vv #'(lambda (x) (elt x 0)) #'>) 0))
+                   (ymin (elt (find-extream vv #'(lambda (x) (elt x 1)) #'<) 1))
+                   (ymax (elt (find-extream vv #'(lambda (x) (elt x 1)) #'>) 1))
+                   (tmp))
+              (do ((x (- xmin dif) (+ dif x))) ((< (+ dif xmax) x))
+                  (do ((y (- ymin dif) (+ dif y))) ((< (+ ymax dif) y))
+                      (let ((tmp (send origin-coords :transform-vector (float-vector x y 0))))
+                        (when (not (eq :outside (send ff :insidep tmp)))
+                          (push tmp ret1))
+                        )))
+              ret1)))
+    (let ((ret1 (apply #'append (mapcar #'get-points-within-face face-list))))
+      (if return-point-cloud
+          (instance pointcloud :init :points ret1)
+        ret1)
+      )))

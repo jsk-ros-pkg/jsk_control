@@ -2,6 +2,13 @@
 Changelog for package contact_states_observer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.10 (2016-12-15)
+-------------------
+* [contact_states_observer/README.md] Add README for contact state observer.
+* [contact_states_observer/euslisp/contact-states-observer.l] Update contact state observer rate.
+* [contact_states_observer/euslisp/contact-states-observer.l, launch/contact_grasp_states_publisher.launch] Use robot/type instead of robot_name.
+* Contributors: HRP2, Shunichi Nozawa
+
 0.1.9 (2016-03-23)
 ------------------
 

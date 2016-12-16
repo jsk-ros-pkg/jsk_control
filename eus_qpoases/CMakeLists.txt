@@ -36,6 +36,11 @@ target_link_libraries(eus_qpoases qpOASES)
 add_rostest(test/eus_qpoases.test)
 
 install(DIRECTORY ${source_dir}/libs/
+  USE_SOURCE_PERMISSIONS
   DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+install(DIRECTORY euslisp examples lib # lib/ is added here to install euslisp library
+  USE_SOURCE_PERMISSIONS
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(DIRECTORY ${source_dir}/include/
+  USE_SOURCE_PERMISSIONS
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})

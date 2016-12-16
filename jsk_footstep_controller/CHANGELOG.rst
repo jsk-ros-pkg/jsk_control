@@ -2,6 +2,39 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.10 (2016-12-15)
+-------------------
+* [jsk_footstep_controlelr/euslisp/util.l] Add function to gen pointcloud from face list
+* [jsk_footstep_controller/euslisp/util.l] Set lfoot rfoot offset based on robot model.
+* [jsk_footstep_controller/euslisp/util.l] Add function to get pointcloud included in bodies
+* [jsk_footstep_controller/euslisp/util.l,jsk_footstep_planner/euslisp/footstep-planner-client-sample.l] Move footstep action client utility to util.l and rename functions.
+* [jsk_footstep_controller] Use plane_projection in footstep_makrer
+* [jsk_Footstep_controller] floor detection does not need x/y filter
+* [jsk_footstep_controller] Use plane_projection when overwriting go-pos goal
+* [jsk_footstep_planner] Add option to wait to subscribe plane topic
+* [jsk_footstep_controller] Add plane_projection option, which projects footsteps onto subscribed planes
+* [jsk_footstep_controller] Add use_snapshot option for detected floor coefficients topic
+* [jsk_footstep_controller] Modified stabilizer_watcher's
+* [jsk_footstep_controller] fix go-pos-server.l
+* [jsk_footstep_controller] Rename old :is-walking method, which is used for overwrite decision
+* [jsk_footstep_controller] Use feedback from go-pos-server to get go-pos-server status from client
+* [jsk_footstep_controller] Publish feedback just after planning is failed
+* [jsk_footstep_controller] add go-pos-server/client
+* [jaxon-footstep-controller.l] move util functions to util.l and refactor functions
+* [jsk_footstep_controller] remove temporary file
+* [jsk_footstep_controller] Add height_offset param to consider crane and so on
+* [jsk_footstep_controller] print name of foot
+* [jsk_footstep_controller] print messages when collide footsteps
+* [jsk_footstep_controller] Modify footstep collision avoidance in jaxon-footstep-controller.l
+* [jsk_footstep_controller] Add instant collision avoidance for refined footsteps
+* [jsk_footstep_planner] update footstep_marker for appending footsteps continuously
+* [jsk_footstep_controller, footcoords] fix for using waitForSensorFrameTransformation
+* [jsk_footstep_planner] Add simple launch file to extract floor and estimate its parameters
+* [jsk_footstep_controller] new jsk_recognition_utils::Plane() causes eigen alignment issues in 32bit environment
+* [jsk_footstep_planner] project odom_init to detected floor plane (default is z = 0)
+* [jsk_footstep_controller] Add footstep-controller euslisp script for jaxon
+* Contributors: Iori Kumagai, Shunichi Nozawa, Yohei Kakiuchi, Juntaro Tamura
+
 0.1.9 (2016-03-23)
 ------------------
 * remove dynamic_reconfigure.parameter_generator, which only used for rosbuild

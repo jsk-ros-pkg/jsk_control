@@ -2,6 +2,34 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.10 (2016-12-15)
+-------------------
+* [jsk_teleop_joy] package.xml : add pygame run depend (`#657 <https://github.com/jsk-ros-pkg/jsk_control/pull/657>`_)
+* Add toggle footstep marker mode joy interface (`#607 <https://github.com/jsk-ros-pkg/jsk_control/pull/607>`_)
+
+  * src/jsk_teleop_joy/plugin/joy_footstep_marker.py: Add joy interface to toggle planning mode
+
+* Add plugin to send cmd_vel from joystick contorller (`#600 <https://github.com/jsk-ros-pkg/jsk_control/pull/600>`_)
+
+  * [jsk_teleop_joy] src/jsk_teleop_joy/joy.py : Add plugin_package option to JoyManager to use joy plugins in other packages
+  * [jsk_teleop_joy] src/jsk_teleop_joy/plugin/joy_cmd_vel.py : Add orthogonal_axis_mode, which does not allow diagonal movement
+  * [jsk_teleop_joy] src/jsk_teleop_joy/plugin/joy_cmd_vel.py : Add plugin to send cmd_vel from joystick contorller
+
+* Add utility tools for jaxon footstep planner (`#598 <https://github.com/jsk-ros-pkg/jsk_control/pull/598>`_)
+
+  * [jsk_footstep_planner] launch/joy_footstep_marker.launch : Add joy_footstep_marker launch, which control footstep_marker from joystick controller
+
+* Project odom_init to detected floor (`#579 <https://github.com/jsk-ros-pkg/jsk_control/pull/579>`_)
+
+  * [jsk_teleop_joy] Check result of service call by exception handling
+  * [jsk_teleop_joy] Display OverlayMenu before execute footstep
+  * [jsk_teleop_joy] sync pre_pose in joy_footstep_marker only at first of the pose update sequence
+  * [jsk_teleop_joy] Add marker_name arg to getCurrentMarkerPose and initialize marker by initial_footstep_marker in reset process
+  * [jsk_teleop_joy] Add footstep marker synchonization to joy_footstep_marker
+  * [jsk_teleop_joy] Add joycontroller interface plugin for footstep_marker
+
+* Contributors: Kanae Kochigami, Iory Kumagai
+
 0.1.9 (2016-03-23)
 ------------------
 

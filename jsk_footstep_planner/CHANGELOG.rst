@@ -2,6 +2,92 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.10 (2016-12-15)
+-------------------
+* [footstep_planner] fix for local_move
+* [footstep_planner, JAXON] footstep setting for leptrino foot
+* [jsk_footstep_planner] fix offset for project_footstep service
+* [footstep_planner] add local move offset
+* [footstep_planner] remove debug message / fix for very short path
+* [footstep_planner] add PathCost and Successor function
+* [jsk_footstep_planner] add project_footstep service
+* [jsk_footstep_planner/config/*footstep_planner_params.yaml] Update HRP2JSKNT, HRP2JSKNTS footstep planner params and add parameter for JAXON.
+* [jsk_footstep_planner/test/test_footstep_planning_eus_client.test] Increase test time to 5 minutes.
+* [jsk_footstep_planner/test/test_footstep_planning_eus_client.l] Add test for slope and stair
+* [jsk_footstep_planner/config/sample_robot_footstep_planner_params.yaml] Update parameters for stair slope test
+* [jsk_footstep_planner/euslisp/generate-footstep-planner-parameters-from-robot-model.l] Dump goal pos rot thre and transition limit
+* [jsk_footstep_planner/euslisp/generate-footstep-planner-parameters-from-robot-model.l] Use analysis-level coords while IK.
+* [footstep_planner] add check collision when validating goal state
+* [footstep_planner] add offset for successor test
+* [jsk_footstep_planner/euslisp/generate-footstep-planner-parameters-from-robot-model.l] Add euslisp code to generate eus sample robot footstep planner params
+* [jsk_footstep_planner/test/test_footstep_planning_eus_client.test,.l, config/sample_robot_footstep_planner_params.yaml] Add test for footstep successors and add config parameter for euslisp sample robot. Make default tested robot as sample robot.
+* [jsk_footstep_planner/CMakeLists.txt,package.xml] Add footstep planner rostest. roseus dependency is required for message generation.
+* [footstep_planner] add check collision when finalizing
+* [jsk_footstep_planner/footstep_plnner.cpp] add ROS_INFO for read successors
+* Migrate srv files from jsk_pcl_ros to jsk_recognition_msgs
+  see
+  - https://github.com/jsk-ros-pkg/jsk_recognition/pull/1827
+  - https://github.com/jsk-ros-pkg/jsk_recognition/pull/1914
+* [jsk_footstep_planner/footstep_plnner.cpp] fix successor processing using [r/l]leg_offset
+* [jsk_footstep_planner/euslisp/generate-footstep-planner-parameters-from-robot-model.l] Add generator for some footstep planner parameters using robot model
+* [jsk_footstep_planner/config/HRP2JSKNT*_footstep_planner_params.yaml] Add hrp2 footstep planner settings.
+* [jsk_footstep_planner/config/JAXON_RED_footstep_planner_params.yaml, launch/cppplanner/optimistic_footstep_planner.launch] Move some footstep parameters to parameter files.
+* [jsk_footstep_planner/launch/cppplanner/optimistic_footstep_planner.launch, README, euslisp/footstep-planner-client-sample.l, test/test_footstep_planning_eus_client.test] Use argument ROBOT instead of env ROBOT
+* [jsk_footstep_planner/test] Add simple test for footstep_planner
+* [jsk_footstep_planner/src/footstep_graph.cpp] isColliding returns false if use obstacle model is true and no obstacles are specified (point cloud size = 0).
+* [jsk_footstep_controller/euslisp/util.l,jsk_footstep_planner/euslisp/footstep-planner-client-sample.l] Move footstep action client utility to util.l and rename functions.
+* [jsk_footstep_planner/launch/cppplanner/optimistic_footstep_planner.launch] Check arg for USE_PERCEPTION for use_lazy_perception
+* [jsk_footstep_planner/launch/cppplanner/footstep_planner.rviz,optimistic_footstep_planner.launch] Enable use_obstacle_model and display obstacle model as point cloud.
+* [jsk_footstep_planner] update sample (footstep-planner-client-sample.l)
+* [heightmap.launch] use jsk_pcl_ros heightmap_converter.launch
+* Stop using deprecated jsk_topic_tools/log_utils.h
+  see
+  - https://github.com/jsk-ros-pkg/jsk_common/pull/1462
+  - https://github.com/jsk-ros-pkg/jsk_common/issues/1461
+* [footstep_planner/footstep_marker] fix offset between end-coords and center of cube
+* [jsk_footstep_planner] update launch for JAXON_RED
+* [jsk_footstep_planner] Add plane_projection params for footstep_marker
+* [jsk_footstep_planner] plane detection should be executed in fixed frame
+* [jsk_footstep_planner] enable plane_projection option only when use_footstep_plane_detection is true
+* [jsk_footstep_planner] Add launch files for footstep plane detection
+* [jsk_footstep_controller] Add plane_projection option, which projects footsteps onto subscribed planes
+* [jsk_footstep_planner] Use floor_detection to compensate initial z height errors caused by abc odom
+* [jsk_footstep_planner] fix bug in FootstepStateDiscreteCloseList, range violation of volume_key
+* [jsk_footstep_controller] fix go-pos-server.l
+* [jsk_footstep_planner] Set use_go_pos_server arg true as default
+* Add go_pos_server launch option to JAXON_RED footstep laucnh file
+* [jsk_footstep_planner] Add rviz launch option to footstep launch file for JAXON_RED
+* [jsk_footstep_planner] Add services to wait footstep execution and planning
+* [jsk_footstep_planner] Fix transformation in pose stamped command (this transformation should be written by tf2, ideally)
+* [jsk_footstep_planner] Set padding options to remove unnecessary points around a robot
+* [footstep_planner] add support_padding_x,y
+* [footstep_planner] use FootstepParameter for passing parameters
+* [footstep_planner] add footstep_parameters.h
+* [jsk_footstep_planner] fix parameter names
+* [JAXON_RED] add more parameters to JAXON_RED_footstep_planner_perception.launch
+* [jsk_footstep_planner] add planning_timeout parameter
+* [jsk_footstep_planner] fix local_move and lazy_perception
+* [footstep_marker] fix foot coordinates for rotated pose
+* [JAXON] adjust parameters for footstep
+* [footstep_planner] add parameter default_rfoot_to_lfoot_offset
+* use normal for validating footsteps
+* Merge remote-tracking branch 'origin/master' into fix_foot_center
+* fix center position of footstep
+* [jsk_footstep_planner] Add service to toggle planning mode
+* [jsk_footstep_planner] Check actionlib server connection before sending goal in execute footstep callback
+* [jsk_footstep_planner] Do not reset last footstep to connect next footstep plan result correctly in resetMarkerCB
+* [jsk_footstep_planner] update footstep_marker for appending footsteps continuously
+* [jsk_footstep_planner] Add simple footstep correction scripts
+* [jsk_footstep_planner] Add joy_footstep_marker launch, which control footstep_marker from joystick controller
+* [jsk_footstep_planner] Add viewer for footstep_planner of JAXON
+* [jsk_footstep_planner] Set skip_cropping option true as default
+* [jsk_footstep_planner] Add skip_cropping option to toggle whether enabling cropping in pointcloud support check
+* [jsk_footstep_planner] Add footstep_planner sample launch for JAXON_RED
+* [jsk_footstep_planner] waitForResult in executeFootstepCB and check result status in service callback
+* [jsk_footstep_planner] Add get_footstep_marker_pose service to footstep_marker
+* [jsk_footstep_planner] Add reset_marker and execute_footstep service to footstep_marker
+* Contributors: Iori Kumagai, Kentaro Wada, Shunichi Nozawa, Yohei Kakiuchi
+
 0.1.9 (2016-03-23)
 ------------------
 * remove dynamic_reconfigure.parameter_generator, which only used for rosbuild

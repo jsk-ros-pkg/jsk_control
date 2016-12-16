@@ -2,6 +2,14 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.10 (2016-12-15)
+-------------------
+* eus_qpoases : add missing install directory
+* [euslisp/test-eus-qpoases.l,test/eus-qpoases.test.l] Add test for sqp/slp
+* [eus_qpoases.cpp, eus-qpoases.l] Add qp with hotstart and sqp with hotstart
+* [eus_qpoases/src/eus_qpoases.cpp] Use common function for qp and lp.
+* Contributors: Kei Okada, Shunichi Nozawa
+
 0.1.9 (2016-03-23)
 ------------------
 * [eus_qpoases/euslisp/eus-qpoases.l] Use concatenate matrix functions in irteus and fix checking of ineq and eq existence
