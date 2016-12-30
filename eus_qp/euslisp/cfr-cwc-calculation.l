@@ -670,7 +670,7 @@
         (grav-grasp-matrix (m* (concatenate-matrix-diagonal (transpose grav-rot) (transpose grav-rot)) grasp-matrix))
         (diff-angular-momentum (float-vector 0 0 0))
         (grav-local-diff-angular-momentum (transform (transpose grav-rot) diff-angular-momentum))
-        (object-model)
+        ((:object-model obj))
         (lp-solver #'solve-qpoases-lp))
   "Calculate min/max COG position [mm] considering dynamics and contact constraints using LP.
    Direct projection version (state is wrench vector, does not include COM).
@@ -703,6 +703,16 @@
                             tmp-eq-vec))
          (inequality-matrix contact-constraint-matrix)
          (inequality-min-vector contact-constraint-vector))
+    (when obj
+      (multiple-value-setq
+       (inequality-matrix inequality-min-vector)
+       (calc-constraint-matrix-vector-for-obj-env-constraint
+        contact-coords-list
+        :use-local-contact use-local-contact
+        :contact-constraint-matrix contact-constraint-matrix
+        :contact-constraint-vector contact-constraint-vector
+        :contact-constraint-list contact-constraint-list
+        :object-model obj)))
     (setq *grav-rot* grav-rot)
     (if (eq min/max :max) (setq eval-coeff-vector (scale -1 eval-coeff-vector)))
     ;; Solve LP
