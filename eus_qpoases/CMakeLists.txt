@@ -3,8 +3,6 @@ project(eus_qpoases)
 
 find_package(catkin REQUIRED COMPONENTS rostest)
 
-catkin_package()
-
 include(ExternalProject)
 
 ExternalProject_Add(qpoases
@@ -21,6 +19,11 @@ ExternalProject_Add(qpoases
   LOG_BUILD ON
   )
 ExternalProject_Get_Property(qpoases source_dir)
+
+catkin_package(
+ INCLUDE_DIRS ${source_dir}/include
+)
+
 link_directories(${source_dir}/libs)
 include_directories(${source_dir}/include)
 
