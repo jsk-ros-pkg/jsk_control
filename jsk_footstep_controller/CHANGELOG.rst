@@ -2,6 +2,9 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.10 (2016-12-15)
 -------------------
 * [jsk_footstep_controlelr/euslisp/util.l] Add function to gen pointcloud from face list

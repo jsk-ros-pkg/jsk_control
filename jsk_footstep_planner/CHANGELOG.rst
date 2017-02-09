@@ -2,6 +2,9 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.10 (2016-12-15)
 -------------------
 * [footstep_planner] fix for local_move

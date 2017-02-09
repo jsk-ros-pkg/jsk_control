@@ -2,6 +2,11 @@
 Changelog for package contact_states_observer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [contact_states_observer/euslisp/contact-states-observer.l] Use robot-init and update for latest jaxon methods
+* Contributors: Shunichi Nozawa
+
 0.1.10 (2016-12-15)
 -------------------
 * [contact_states_observer/README.md] Add README for contact state observer.

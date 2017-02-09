@@ -2,6 +2,11 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Set include path of qpoases in eus_qpoases
+* Contributors: Kei Okada, Kentaro Wada
+
 0.1.10 (2016-12-15)
 -------------------
 * eus_qpoases : add missing install directory
