@@ -2,8 +2,8 @@
 Changelog for package eus_nlopt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.11 (2017-02-09)
+-------------------
 * add install rules
 * Contributors: Kei Okada
 

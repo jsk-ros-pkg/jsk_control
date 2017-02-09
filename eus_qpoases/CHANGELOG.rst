@@ -2,8 +2,8 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.11 (2017-02-09)
+-------------------
 * Set include path of qpoases in eus_qpoases
 * Contributors: Kei Okada, Kentaro Wada
 
