@@ -17,6 +17,8 @@ env:
   matrix:
     - ROS_DISTRO=hydro  ROSWS=wstool BUILDER=catkin    USE_DEB=false  BEFORE_SCRIPT='$CI_SOURCE_PATH/.travis_before_script_jsk_recognition_utils.bash'
     - ROS_DISTRO=indigo  ROSWS=wstool BUILDER=catkin   USE_DEB=true
+    - ROS_DISTRO=jade    ROSWS=wstool BUILDER=catkin   USE_DEB=true
+    - ROS_DISTRO=kinetic ROSWS=wstool BUILDER=catkin   USE_DEB=true
 script: source .travis/travis.sh
 before_script:
   - export ROS_PARALLEL_JOBS="-j2 -l2"
