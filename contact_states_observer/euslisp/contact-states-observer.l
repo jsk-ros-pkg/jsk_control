@@ -186,29 +186,34 @@
 (defun publish-hrpsysrosbridge-contact-states ()
   (let* ((stamp (ros::time-now))
          (force-cs (null-output (send *ri* :state :act-contact-states)))
-         (cs (instance hrpsys_ros_bridge::ContactStatesStamped
-                       :init
-                       :states
-                       (mapcar #'(lambda (co fcs)
-                                   (let ((ret (instance hrpsys_ros_bridge::ContactStateStamped
-                                                        :init
-                                                        :state (instance hrpsys_ros_bridge::ContactState
-                                                                         :init
-                                                                         :state (if (string= "grasp" (send co :mode))
-                                                                                    (if (string= "Off" (send co :get-result))
-                                                                                        hrpsys_ros_bridge::contactstate::*off*
-                                                                                      hrpsys_ros_bridge::contactstate::*on*)
-                                                                                  (if (= fcs 0)
-                                                                                      hrpsys_ros_bridge::contactstate::*off*
-                                                                                    hrpsys_ros_bridge::contactstate::*on*))))))
-                                     (send (send ret :header) :frame_id (send (send (send *robot* (send co :name) :end-coords) :parent) :name))
-                                     ret))
-                               (remove-if-not #'(lambda (x) (memq (send x :name) (get-limbs-in-force-sensor-order *robot*))) *col*)
-                               force-cs)
-                       )))
-    (send cs :header :stamp stamp)
-    (ros::publish "contact_grasp_states" cs)
-    ))
+         (co-list (remove-if-not #'(lambda (x) (memq (send x :name) (get-limbs-in-force-sensor-order *robot*))) *col*)))
+    (unless (= (length co-list) (length force-cs))
+      (warn ";; [contact-states-observer.l] Invalid length in publish-hrpsysrosbridge-contact-states ~A, ~A~%"
+            (length co-list) (length force-cs))
+      (return-from publish-hrpsysrosbridge-contact-states nil))
+    (let ((cs (instance hrpsys_ros_bridge::ContactStatesStamped
+                        :init
+                        :states
+                        (mapcar #'(lambda (co fcs)
+                                    (warn ";; HOGE~%")
+                                    (let ((ret (instance hrpsys_ros_bridge::ContactStateStamped
+                                                         :init
+                                                         :state (instance hrpsys_ros_bridge::ContactState
+                                                                          :init
+                                                                          :state (if (string= "grasp" (send co :mode))
+                                                                                     (if (string= "Off" (send co :get-result))
+                                                                                         hrpsys_ros_bridge::contactstate::*off*
+                                                                                       hrpsys_ros_bridge::contactstate::*on*)
+                                                                                   (if (= fcs 0)
+                                                                                       hrpsys_ros_bridge::contactstate::*off*
+                                                                                     hrpsys_ros_bridge::contactstate::*on*))))))
+                                      (send (send ret :header) :frame_id (send (send (send *robot* (send co :name) :end-coords) :parent) :name))
+                                      ret))
+                                co-list force-cs)
+                        )))
+      (send cs :header :stamp stamp)
+      (ros::publish "contact_grasp_states" cs)
+      )))
 
 (defun publish-grasp-states
   ()
