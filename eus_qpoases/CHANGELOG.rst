@@ -2,8 +2,8 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.12 (2017-02-22)
+-------------------
 * mv .gitignore to .placeholder
 * Contributors: Kei Okada
 
