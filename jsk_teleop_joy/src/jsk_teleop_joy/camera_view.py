@@ -19,6 +19,29 @@ class CameraView():
     self.distance = 2.0
     self.focus = numpy.array((0, 0, 0))
     self.z_up = numpy.array((0, 0, 1))
+
+  @staticmethod
+  def createFromCameraPlacement(camera_placement):
+    instance = CameraView()
+    ceye = numpy.array((camera_placement.eye.point.x,
+                        camera_placement.eye.point.y,
+                        camera_placement.eye.point.z))
+    cfocus = numpy.array((camera_placement.focus.point.x,
+                          camera_placement.focus.point.y,
+                          camera_placement.focus.point.z))
+    instance.focus = cfocus
+    viewdir = ceye - cfocus
+    instance.distance = numpy.linalg.norm(viewdir)
+
+    instance.z_up[0] = camera_placement.up.vector.x
+    instance.z_up[1] = camera_placement.up.vector.y
+    instance.z_up[2] = camera_placement.up.vector.z
+
+    instance.pitch = math.asin(viewdir[2]/instance.distance)
+    instance.yaw   = math.atan2(viewdir[1], viewdir[0])
+
+    return instance
+
   def viewPoint(self):
     p = numpy.array((self.distance * math.cos(self.yaw) * math.cos(self.pitch) + self.focus[0],
                      self.distance * math.sin(self.yaw) * math.cos(self.pitch) + self.focus[1],

@@ -11,27 +11,30 @@ except:
 
 class JoyStatus():
     def __init__(self):
+        ## buttons
         self.center = False
         self.select = False
         self.start = False
-        self.L3 = False
-        self.R3 = False
-        self.square = False
         self.up = False
         self.down = False
         self.left = False
         self.right = False
-        self.triangle = False
-        self.cross = False
         self.circle = False
+        self.cross = False
+        self.triangle = False
+        self.square = False
         self.L1 = False
         self.R1 = False
         self.L2 = False
         self.R2 = False
+        self.L3 = False
+        self.R3 = False
+        ## analog axis
         self.left_analog_x = 0.0
         self.left_analog_y = 0.0
         self.right_analog_x = 0.0
         self.right_analog_y = 0.0
+        ## analog as buttons
         self.left_analog_up = False
         self.left_analog_down = False
         self.left_analog_left = False
@@ -112,6 +115,17 @@ class JoyStatus():
 
 class XBoxStatus(JoyStatus):
     def __init__(self, msg):
+        '''
+        Xbox game pad
+        Y button => triangle
+        X button => square
+        B button => circle
+        A button => cross
+        RB => R1
+        LB => L1
+        RT => R2
+        LT => L2
+        '''
         JoyStatus.__init__(self)
         if msg.buttons[8] == 1:
             self.center = True
