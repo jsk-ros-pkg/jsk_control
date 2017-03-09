@@ -25,12 +25,22 @@ def signedSquare(val):
 
 
 class RVizViewControllerManager():
+  '''
+Description:
+  This class is used as a singleton instance named RVizViewControllerManagerSingleton.
+  Plugin class using this class is RVizViewController.
+  Use TabletViewController(jsk_rviz_plugin) in rviz (selected at 'Views' Panel)
+  '''
   def __init__(self):
-    self.camera_pub = rospy.Publisher('/rviz/camera_placement', CameraPlacement)
+    self.camera_pub = rospy.Publisher('/rviz/camera_placement', CameraPlacement, queue_size = 1)
+    self.camera_sub = rospy.Subscriber('/rviz/current_camera_placement', CameraPlacement,
+                                       self.cameraCB, queue_size = 1)
     self.pre_view = CameraView()
     self.follow_view = False
     self.counter = 0
     self.prev_time = rospy.Time.from_sec(time.time())
+  def cameraCB(self, msg):
+    self.pre_view = CameraView.createFromCameraPlacement(msg)
   def joyCB(self, status, history, pre_pose):
     self.counter = self.counter + 1
     if self.counter > 1024:
@@ -43,10 +53,23 @@ class RVizViewControllerManager():
     view.distance = pre_view.distance
     view_updated = False
     if status.R3:
+      if status.L3:
+        ## reset camera pose
+        v = CameraView()
+        self.publishView(v)
+        return
+      if status.L1:
+        ## focus to pose
+        view.focus = numpy.array((pre_pose.pose.position.x,
+                                  pre_pose.pose.position.y,
+                                  pre_pose.pose.position.z))
+        self.publishView(view)
+        return
+      ## calc distance
       if not status.left_analog_y == 0.0:
         view.distance = view.distance - signedSquare(status.left_analog_y) * 0.05
         view_updated = True
-      # calc camera orietation
+      # calc camera orietation(x)
       if status.left:
         view_updated = True
         view_x = 1.0
@@ -55,6 +78,7 @@ class RVizViewControllerManager():
         view_x = -1.0
       else:
         view_x = 0.0
+      # calc camera orietation(y)
       if status.up:
         view_updated = True
         view_y = 1.0
@@ -63,20 +87,28 @@ class RVizViewControllerManager():
         view_y = -1.0
       else:
         view_y = 0.0
+
+      if not status.left_analog_x == 0.0:
+        view_updated = True
+
       focus_diff = numpy.dot(view.cameraOrientation(),
-                             numpy.array((view_x / 20.0 / view.distance,
-                                          view_y / 20.0 / view.distance,
-                                          0)))
+                             numpy.array((view_x / 7.0 / view.distance,
+                                          view_y / 7.0 / view.distance,
+                                          - status.left_analog_x / 7.0 / view.distance)))
       view.focus = view.focus + focus_diff
     else:
       if status.right_analog_x != 0.0:
         view_updated = True
       if status.right_analog_y != 0.0:
         view_updated = True
-      
+
       view.yaw = view.yaw - 0.05 * signedSquare(status.right_analog_x)
       view.pitch = view.pitch + 0.05 * signedSquare(status.right_analog_y)
+      ## invert z up
+      if (int(math.floor((2 * math.fabs(view.pitch))/math.pi)) + 1) % 4 > 1:
+        view.z_up[2] = -1
 
+    ## follow view mode
     if self.follow_view and self.support_follow_view:
       view_updated = True
       view.focus = numpy.array((pre_pose.pose.position.x,
@@ -106,6 +138,10 @@ class RVizViewControllerManager():
       view.yaw = yaw
       z_up = numpy.dot(mat, numpy.array((1, 0, 0, 1)))
       view.z_up = z_up[:3]
+    if view_updated:
+      self.publishView(view)
+
+  def publishView(self, view):
     now = rospy.Time.from_sec(time.time())
     placement = view.cameraPlacement()
     placement.time_from_start = now - self.prev_time
@@ -114,7 +150,4 @@ class RVizViewControllerManager():
       self.prev_time = now
     self.pre_view = view
 
-
 RVizViewControllerManagerSingleton = RVizViewControllerManager()
-
-
