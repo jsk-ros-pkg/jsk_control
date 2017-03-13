@@ -581,6 +581,7 @@ namespace jsk_footstep_planner
 
     graph_->setSuccessorFunction(boost::bind(&FootstepGraph::successors_original, graph_, _1, _2));
     graph_->setPathCostFunction(boost::bind(&FootstepGraph::path_cost_original, graph_, _1, _2, _3));
+
     //ROS_INFO_STREAM(graph_->infoString());
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
@@ -601,6 +602,9 @@ namespace jsk_footstep_planner
     }
     else if (heuristic_ == "straight_rotation") {
       solver.setHeuristic(boost::bind(&FootstepPlanner::straightRotationHeuristic, this, _1, _2));
+    }
+    else if (heuristic_ == "follow_path") {
+      solver.setHeuristic(boost::bind(&FootstepPlanner::followPathLineHeuristic, this, _1, _2));
     }
     else {
       ROS_ERROR("Unknown heuristics");
@@ -730,7 +734,13 @@ namespace jsk_footstep_planner
   {
     return footstepHeuristicStraightRotation(node, graph);
   }
-  
+
+  double FootstepPlanner::followPathLineHeuristic(
+    SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
+  {
+    return footstepHeuristicFollowPathLine(node, graph);
+  }
+
   /**
      format is
        successors:
@@ -914,6 +924,7 @@ namespace jsk_footstep_planner
     parameters_.obstacle_resolution = config.obstacle_resolution;
     if (need_to_rebuild_graph) {
       if (graph_) {             // In order to skip first initialization
+        ROS_INFO("re-building graph");
         buildGraph();
       }
     }
@@ -938,5 +949,9 @@ namespace jsk_footstep_planner
     graph_->setParameters(parameters_);
     graph_->setBasicSuccessors(successors_);
   }
-}
 
+  void FootstepPlanner::setHeuristicPathLine(jsk_recognition_utils::PolyLine &path_line)
+  {
+    graph_->setHeuristicPathLine(path_line); // copy ???
+  }
+}

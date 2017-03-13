@@ -385,12 +385,14 @@ namespace jsk_footstep_planner
   double footstepHeuristicZero(
     SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
   {
+    // best-first search
     return 0;
   }
   
   double footstepHeuristicStraight(
     SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
   {
+    // distance_to_goal / maxSuccessor
     FootstepState::Ptr state = node->getState();
     FootstepState::Ptr goal = graph->getGoal(state->getLeg());
     Eigen::Vector3f state_pos(state->getPose().translation());
@@ -401,6 +403,7 @@ namespace jsk_footstep_planner
   double footstepHeuristicStraightRotation(
     SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
   {
+    // distance_to_goal / maxSuccessor.trans + rotation_to_goal / maxSuccessor.rot
     FootstepState::Ptr state = node->getState();
     FootstepState::Ptr goal = graph->getGoal(state->getLeg());
     Eigen::Affine3f transform = state->getPose().inverse() * goal->getPose();
@@ -447,4 +450,53 @@ namespace jsk_footstep_planner
       (first_theta * first_rotation_weight + second_theta * second_rotation_weight) / graph->maxSuccessorRotation();
   }
 
+  double footstepHeuristicFollowPathLine(
+    SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
+  {
+    FootstepState::Ptr state = node->getState();
+    FootstepState::Ptr goal = graph->getGoal(state->getLeg());
+
+    Eigen::Vector3f goal_pos(goal->getPose().translation());
+    Eigen::Vector3f state_pos(state->getPose().translation());
+    Eigen::Vector3f state_mid_pos;
+    if (state->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
+      Eigen::Vector3f p(0, -0.1, 0);
+      state_mid_pos = state->getPose() * p;
+    } else { // Right
+      Eigen::Vector3f p(0, 0.1, 0);
+      state_mid_pos = state->getPose() * p;
+    }
+    double dist, to_goal, alp;
+    int idx;
+    Eigen::Vector3f foot;
+    dist = graph->heuristic_path_->distanceToPoint(state_mid_pos, foot, to_goal, idx, alp);
+
+    //jsk_recognition_utils::FiniteLine::Ptr ln = graph->heuristic_path_->at(idx);
+    Eigen::Vector3f dir = graph->heuristic_path_->getDirection(idx);
+
+    Eigen::Quaternionf path_foot_rot;
+    path_foot_rot.setFromTwoVectors(state->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX(),
+                               dir);
+    double path_foot_theta = acos(path_foot_rot.w()) * 2;
+    if (path_foot_theta > M_PI) {
+      path_foot_theta = 2.0 * M_PI - path_foot_theta;
+      // foot_theta : [0, M_PI]
+    }
+
+    double step_cost = to_goal / graph->maxSuccessorDistance();
+    double follow_cost = dist / 0.04; // ???
+    double path_foot_rot_cost = path_foot_theta / graph->maxSuccessorRotation();
+
+    Eigen::Vector3f goal_diff = goal_pos - state_pos;
+    Eigen::Quaternionf goal_foot_rot;
+    goal_foot_rot.setFromTwoVectors(state->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX(),
+                                    goal->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX());
+    double goal_foot_theta = acos(goal_foot_rot.w()) * 2;
+    if (goal_foot_theta > M_PI) {
+      goal_foot_theta = 2.0 * M_PI - goal_foot_theta;
+    }
+    double goal_foot_rot_cost = goal_foot_theta / graph->maxSuccessorRotation();
+
+    return step_cost + follow_cost + (4.0 * goal_foot_rot_cost) + (0.5 * path_foot_rot_cost);
+  }
 }

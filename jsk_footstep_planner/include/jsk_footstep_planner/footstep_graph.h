@@ -55,6 +55,8 @@ namespace jsk_footstep_planner
     typedef typename boost::function< bool(StatePtr target_state, std::vector<StatePtr> &) > SuccessorFunction;
     typedef typename boost::function< double(StatePtr, StatePtr, double) > PathCostFunction;
 
+    friend double footstepHeuristicFollowPathLine(SolverNode<FootstepState, FootstepGraph>::Ptr node,
+                                                  FootstepGraph::Ptr graph);
     FootstepGraph(const Eigen::Vector3f& resolution,
                   const bool use_pointcloud_model = false,
                   const bool lazy_projection = true,
@@ -216,7 +218,12 @@ namespace jsk_footstep_planner
     }
     bool successors_original(StatePtr target_state, std::vector<FootstepGraph::StatePtr> &ret);
     double path_cost_original(StatePtr from, StatePtr to, double prev_cost) {
+      // path cost is a number of steps
       return prev_cost + 1;
+    }
+    void setHeuristicPathLine(jsk_recognition_utils::PolyLine &path_line)
+    {
+      heuristic_path_.reset(new jsk_recognition_utils::PolyLine(path_line)); // copy ???
     }
   protected:
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
@@ -254,6 +261,9 @@ namespace jsk_footstep_planner
     FootstepParameters parameters_;
 
     ros::WallDuration perception_duration_;
+
+    // add hint for huristic
+    jsk_recognition_utils::PolyLine::Ptr heuristic_path_;
   private:
     SuccessorFunction successor_func_;
     PathCostFunction  path_cost_func_;
@@ -270,6 +280,8 @@ namespace jsk_footstep_planner
     SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph,
     double first_rotation_weight,
     double second_rotation_weight);
+  double footstepHeuristicFollowPathLine(
+    SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
 }
 
 #endif

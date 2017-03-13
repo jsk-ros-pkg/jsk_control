@@ -75,6 +75,8 @@ namespace jsk_footstep_planner
     typedef boost::shared_ptr<FootstepPlanner> Ptr;
     typedef FootstepPlannerConfig Config;
     FootstepPlanner(ros::NodeHandle& nh);
+    virtual void setHeuristicPathLine(jsk_recognition_utils::PolyLine &path_line);
+
   protected:
 
     // Initialization
@@ -97,6 +99,8 @@ namespace jsk_footstep_planner
     virtual double straightHeuristic(
       SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
     virtual double straightRotationHeuristic(
+      SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
+    virtual double followPathLineHeuristic(
       SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
     virtual void profile(FootstepAStarSolver<FootstepGraph>& solver, FootstepGraph::Ptr graph);
     virtual void publishPointCloud(
@@ -124,6 +128,7 @@ namespace jsk_footstep_planner
     virtual void publishText(ros::Publisher& pub,
                              const std::string& text,
                              PlanningStatus status);
+
     boost::mutex mutex_;
     actionlib::SimpleActionServer<jsk_footstep_msgs::PlanFootstepsAction> as_;
     jsk_footstep_msgs::PlanFootstepsResult result_;
