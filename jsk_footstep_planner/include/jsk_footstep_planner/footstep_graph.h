@@ -45,6 +45,7 @@
 #include "jsk_footstep_planner/ann_grid.h"
 #include "jsk_footstep_planner/transition_limit.h"
 #include "jsk_footstep_planner/footstep_parameters.h"
+#include "jsk_recognition_utils/geo_util.h"
 
 namespace jsk_footstep_planner
 {
