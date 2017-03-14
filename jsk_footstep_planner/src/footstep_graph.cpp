@@ -469,7 +469,7 @@ namespace jsk_footstep_planner
     double dist, to_goal, alp;
     int idx;
     Eigen::Vector3f foot;
-    dist = graph->heuristic_path_->distanceToPoint(state_mid_pos, foot, to_goal, idx, alp);
+    dist = graph->heuristic_path_->distanceWithInfo(state_mid_pos, foot, to_goal, idx, alp);
 
     //jsk_recognition_utils::FiniteLine::Ptr ln = graph->heuristic_path_->at(idx);
     Eigen::Vector3f dir = graph->heuristic_path_->getDirection(idx);
