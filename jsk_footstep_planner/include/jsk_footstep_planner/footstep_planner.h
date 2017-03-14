@@ -60,7 +60,6 @@
 
 namespace jsk_footstep_planner
 {
-
   enum PlanningStatus
   {
     OK, WARNING, ERROR

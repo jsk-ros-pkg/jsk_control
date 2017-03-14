@@ -54,8 +54,9 @@ namespace jsk_footstep_planner
     typedef typename std::priority_queue<SolverNodePtr,
                                          std::vector<SolverNodePtr>,
                                          std::greater<SolverNodePtr> > OpenList;
+
     BestFirstSearchSolver(GraphPtr graph): Solver<GraphT>(graph) {}
-    
+
     virtual void addToOpenList(SolverNodePtr node)
     {
       node->setSortValue(fn(node));
@@ -77,11 +78,9 @@ namespace jsk_footstep_planner
     {
       return n->getCost();
     }
-    
   protected:
     OpenList open_list_;
   private:
-    
   };
 }
 
