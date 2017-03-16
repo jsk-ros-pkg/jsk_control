@@ -380,26 +380,36 @@ You can create `*ri*' like
 
 ;; Functions to use footstep planning from euslisp
 (defun initialize-eus-footstep-planning-client
-  ()
+  (&key (server "footstep_planner")
+        (node-name "footstep_planner_client")
+        (marker-topic "/footstep_from_marker")
+        (pointcloud-topic "/accumulated_heightmap_pointcloud_static/output")
+        (obstacle-topic "/footstep_planner/obstacle_model"))
   "Initialize footstep planning client from euslisp."
-  (ros::roseus "footstep_planner_client")
+  (ros::roseus node-name)
   ;; For obstacles
-  (ros::advertise "/footstep_planner/obstacle_model" sensor_msgs::PointCloud2 1)
-  (ros::advertise "/accumulated_heightmap_pointcloud_static/output" sensor_msgs::PointCloud2 1)
+  (when obstacle-topic
+    (ros::advertise obstacle-topic sensor_msgs::PointCloud2 1))
+  (when pointcloud-topic
+    (ros::advertise pointcloud-topic sensor_msgs::PointCloud2 1))
   (ros::load-ros-manifest "sensor_msgs")
   ;; For visualization
-  (ros::advertise "/footstep_from_marker" jsk_footstep_msgs::FootstepArray 1)
+  (when marker-topic
+    (ros::advertise marker-topic jsk_footstep_msgs::FootstepArray 1))
   ;; For footstep planning action server
-  (setq *footstep-planning-client* (instance ros::simple-action-client :init
-                                             "footstep_planner" jsk_footstep_msgs::PlanFootstepsAction))
+  (setq *footstep-planning-client*
+        (instance ros::simple-action-client :init
+                  server jsk_footstep_msgs::PlanFootstepsAction))
   (unix:sleep 3)
   (ros::ros-info "waiting actionlib server")
   (send *footstep-planning-client* :wait-for-server)
   (ros::ros-info "waited actionlib server")
+  *footstep-planning-client*
   )
 
 (defun plan-footstep-from-goal-coords
-  (goal-coords &key (publish-result t) (start-coords (make-coords)) (frame-id "odom") (robot))
+  (goal-coords &key (publish-result t) (marker-topic "/footstep_from_marker")
+               (start-coords (make-coords)) (frame-id "odom") (robot))
   "Plan footstep from goal-coords."
   (let ((goal (make-footstep-planning-msgs
                start-coords goal-coords :frame-id frame-id :robot robot)))
@@ -409,22 +419,27 @@ You can create `*ri*' like
     (send *footstep-planning-client* :wait-for-result)
     ;; (ros::ros-info "result: ~A" (send *footstep-planning-client* :get-result))
     (when publish-result
-      (ros::publish "/footstep_from_marker" (send (send *footstep-planning-client* :get-result) :result)))
+      (ros::publish marker-topic
+                    (send (send *footstep-planning-client* :get-result) :result)))
     (send (send *footstep-planning-client* :get-result) :result)
     ))
 
 (defun publish-footstep-planning-obstacle-model-from-eus-pointcloud
-  (a-pointcloud &key (frame-id "odom"))
+  (a-pointcloud &key (frame-id "odom") (obstacle-topic "/footstep_planner/obstacle_model"))
   "Publish obsacle_model used in footstep planning.
    A eus-style pointcloud is required as an argument."
-  (ros::publish "/footstep_planner/obstacle_model" (make-ros-msg-from-eus-pointcloud a-pointcloud :frame frame-id))
+  (when obstacle-topic
+    (ros::publish obstacle-topic
+                  (make-ros-msg-from-eus-pointcloud a-pointcloud :frame frame-id)))
   )
 
 (defun publish-footstep-planning-pointcloud-model-from-eus-pointcloud
   (a-pointcloud &key (frame-id "odom") (pointcloud-topic-name "/accumulated_heightmap_pointcloud_static/output"))
   "Publish obsacle_model used in footstep planning.
    A eus-style pointcloud is required as an argument."
-  (ros::publish pointcloud-topic-name (make-ros-msg-from-eus-pointcloud a-pointcloud :frame frame-id))
+  (when pointcloud-topic-name
+    (ros::publish pointcloud-topic-name
+                  (make-ros-msg-from-eus-pointcloud a-pointcloud :frame frame-id)))
   )
 
 (defun get-pointcloud-within-bodies-2D
