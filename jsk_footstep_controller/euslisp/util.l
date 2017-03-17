@@ -1,3 +1,6 @@
+(ros::load-ros-manifest "jsk_footstep_planner")
+(ros::load-ros-manifest "dynamic_reconfigure")
+
 (defun robot-interface-file (name)
   "You can get robot-interface file according to `name' argument.
 You can create `*ri*' like 
@@ -101,7 +104,7 @@ You can create `*ri*' like
 (defun make-footstep-planning-msgs (start-coords target-coords
                                     &key (frame-id "map") (stamp (ros::time 0))
                                     (start-leg :lleg) (end-leg :lleg)
-                                    (robot)
+                                    (robot) (timeout)
                                     (default-half-offset-length (if robot (elt (cadr (memq :default-half-offset (send robot :footstep-parameter))) 1) 100))
                                     (lleg-offset (make-coords :pos (float-vector 0 default-half-offset-length 0)))
                                     (rleg-offset (make-coords :pos (float-vector 0 (- default-half-offset-length) 0)))
@@ -148,6 +151,10 @@ You can create `*ri*' like
             (make-footsteps initial-steps :frame-id frame-id :stamp stamp))
       (send goal :goal :goal_footstep
             (make-footsteps goal-steps :frame-id frame-id :stamp stamp))
+      (when timeout
+        (let ((tm (instance ros::Time :init)))
+          (send tm :from-sec timeout)
+          (send goal :goal :timeout tm)))
       goal)
     ))
 
@@ -386,7 +393,8 @@ You can create `*ri*' like
         (pointcloud-topic "/accumulated_heightmap_pointcloud_static/output")
         (obstacle-topic "/footstep_planner/obstacle_model"))
   "Initialize footstep planning client from euslisp."
-  (ros::roseus node-name)
+  (when node-name
+    (ros::roseus node-name))
   ;; For obstacles
   (when obstacle-topic
     (ros::advertise obstacle-topic sensor_msgs::PointCloud2 1))
@@ -409,19 +417,43 @@ You can create `*ri*' like
 
 (defun plan-footstep-from-goal-coords
   (goal-coords &key (publish-result t) (marker-topic "/footstep_from_marker")
+               (client *footstep-planning-client*)
+               (timeout 0.0) ;; if timeout == 0.0 then use default
                (start-coords (make-coords)) (frame-id "odom") (robot))
   "Plan footstep from goal-coords."
   (let ((goal (make-footstep-planning-msgs
-               start-coords goal-coords :frame-id frame-id :robot robot)))
+               start-coords goal-coords :frame-id frame-id :robot robot :timeout timeout)))
     (ros::ros-info "sending goal")
-    (send *footstep-planning-client* :send-goal goal)
+    (send client :send-goal goal)
     (ros::ros-info "waiting for result")
-    (send *footstep-planning-client* :wait-for-result)
+    (send client :wait-for-result)
     ;; (ros::ros-info "result: ~A" (send *footstep-planning-client* :get-result))
     (when publish-result
       (ros::publish marker-topic
-                    (send (send *footstep-planning-client* :get-result) :result)))
-    (send (send *footstep-planning-client* :get-result) :result)
+                    (send (send client :get-result) :result)))
+    (send (send client :get-result) :result)
+    ))
+
+(defun set-heuristic (&key (heuristic "step_cost")
+                           (server "footstep_planner")
+                           (service-name (format nil "~A/set_parameters" server)))
+  "change heuristic function of footstep_planner"
+  (let ((req (instance dynamic_reconfigure::ReconfigureRequest :init)))
+    (send req :config
+          :strs (list (instance dynamic_reconfigure::StrParameter :init :name "heuristic" :value heuristic))
+          )
+    (ros::service-call service-name req)
+    ))
+
+(defun set-timeout (&key (timeout 10.0)
+                         (server "footstep_planner")
+                         (service-name (format nil "~A/set_parameters" server)))
+  "change default timeout of footstep_planner"
+  (let ((req (instance dynamic_reconfigure::ReconfigureRequest :init)))
+    (send req :config
+          :doubles (list (instance dynamic_reconfigure::DoubleParameter :init :name "planning_timeout" :value timeout))
+          )
+    (ros::service-call service-name req)
     ))
 
 (defun publish-footstep-planning-obstacle-model-from-eus-pointcloud
