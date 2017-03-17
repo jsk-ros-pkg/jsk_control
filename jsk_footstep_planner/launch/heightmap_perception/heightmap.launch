@@ -87,7 +87,8 @@
   <rosparam param="map_origin_polygon" subst_value="true">
     use_message: true
     frame_ids: [$(arg STAND_FRAME)]
-    polygon_array: [[[0.5, 0.5, -0.01], [-0.5, 0.5, -0.01], [-0.5, -0.5, -0.01], [0.5, -0.5, -0.01]]]
+    # polygon_array: [[[0.5, 0.5, -0.01], [-0.5, 0.5, -0.01], [-0.5, -0.5, -0.01], [0.5, -0.5, -0.01]]]
+    polygon_array: [[[0.25, 0.25, -0.01], [-0.25, 0.25, -0.01], [-0.25, -0.25, -0.01], [0.25, -0.25, -0.01]]]
   </rosparam>
   <rosparam param="robot_center_map_origin_points" subst_value="true">
     target_frame_id: $(arg ROBOT_FRAME)
