@@ -330,6 +330,9 @@ namespace jsk_footstep_planner
   FootstepState::Ptr FootstepGraph::projectFootstep(FootstepState::Ptr in,
                                                     unsigned int& error_state)
   {
+    if(!use_pointcloud_model_) {
+      return in;
+    }
     ros::WallTime start_time = ros::WallTime::now();
     FootstepState::Ptr projected_footstep = in->projectToCloud(
       *tree_model_,
@@ -476,7 +479,7 @@ namespace jsk_footstep_planner
 
     Eigen::Quaternionf path_foot_rot;
     path_foot_rot.setFromTwoVectors(state->getPose().matrix().block<3, 3>(0, 0) * Eigen::Vector3f::UnitX(),
-                               dir);
+                                    dir);
     double path_foot_theta = acos(path_foot_rot.w()) * 2;
     if (path_foot_theta > M_PI) {
       path_foot_theta = 2.0 * M_PI - path_foot_theta;
@@ -484,7 +487,7 @@ namespace jsk_footstep_planner
     }
 
     double step_cost = to_goal / graph->maxSuccessorDistance();
-    double follow_cost = dist / 0.04; // ???
+    double follow_cost = dist / 0.02; // ???
     double path_foot_rot_cost = path_foot_theta / graph->maxSuccessorRotation();
 
     Eigen::Vector3f goal_diff = goal_pos - state_pos;
@@ -497,6 +500,7 @@ namespace jsk_footstep_planner
     }
     double goal_foot_rot_cost = goal_foot_theta / graph->maxSuccessorRotation();
 
-    return step_cost + follow_cost + (4.0 * goal_foot_rot_cost) + (0.5 * path_foot_rot_cost);
+    //return step_cost + follow_cost + (4.0 * goal_foot_rot_cost) + (0.5 * path_foot_rot_cost);
+    return 2*(step_cost + follow_cost + (0.5 * path_foot_rot_cost));
   }
 }
