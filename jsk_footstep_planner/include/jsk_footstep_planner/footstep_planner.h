@@ -57,6 +57,7 @@
 #include <jsk_interactive_marker/SnapFootPrint.h>
 
 #include "jsk_footstep_planner/ProjectFootstep.h"
+#include "jsk_footstep_planner/setHeuristicPath.h"
 
 namespace jsk_footstep_planner
 {
@@ -124,6 +125,9 @@ namespace jsk_footstep_planner
     virtual bool projectFootPrintWithLocalSearchService(
       jsk_interactive_marker::SnapFootPrint::Request& req,
       jsk_interactive_marker::SnapFootPrint::Response& res);
+    virtual bool setHeuristicPathService(
+      jsk_footstep_planner::setHeuristicPath::Request& req,
+      jsk_footstep_planner::setHeuristicPath::Response& res);
     virtual void publishText(ros::Publisher& pub,
                              const std::string& text,
                              PlanningStatus status);
@@ -141,6 +145,7 @@ namespace jsk_footstep_planner
     ros::ServiceServer srv_project_footprint_with_local_search_;
     ros::ServiceServer srv_collision_bounding_box_info_;
     ros::ServiceServer srv_project_footstep_;
+    ros::ServiceServer srv_set_heuristic_path_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_model_;
     FootstepGraph::Ptr graph_;
