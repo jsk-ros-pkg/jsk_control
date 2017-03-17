@@ -2,6 +2,9 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.12 (2017-02-22)
+-------------------
+
 0.1.11 (2017-02-09)
 -------------------
 * [eus_qp/README.md] Add readme for eus_qp and euslisp programs.

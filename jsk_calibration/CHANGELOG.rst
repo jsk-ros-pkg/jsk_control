@@ -2,6 +2,11 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.12 (2017-02-22)
+-------------------
+* CMakeLists.txt: remove pr2\_* dependency, add install
+* Contributors: Kei Okada
+
 0.1.11 (2017-02-09)
 -------------------
 
