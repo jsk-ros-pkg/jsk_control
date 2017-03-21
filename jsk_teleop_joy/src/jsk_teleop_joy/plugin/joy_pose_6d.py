@@ -49,7 +49,7 @@ set_pose [String, default: set_pose]: topic name for setting pose by topic
     self.pre_pose.pose.orientation.w = 1
     self.prev_time = rospy.Time.from_sec(time.time())
     self.publish_pose = self.getArg('publish_pose', True)
-    self.frame_id = self.getArg('frame_id', '/map')
+    self.frame_id = self.getArg('frame_id', 'map')
     if self.publish_pose:
       self.pose_pub = rospy.Publisher(self.getArg('pose', 'pose'),
                                       PoseStamped)
