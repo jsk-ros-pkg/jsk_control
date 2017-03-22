@@ -10,6 +10,7 @@ import actionlib
 from jsk_rviz_plugins.msg import OverlayMenu
 from joy_pose_6d import JoyPose6D
 from jsk_interactive_marker.srv import GetTransformableMarkerPose
+from jsk_interactive_marker.srv import SetPose
 from geometry_msgs.msg import PoseStamped
 from std_srvs.srv import Empty
 import copy
@@ -20,6 +21,21 @@ def isSamePose(pose1, pose2):
   return all([getattr(pose1.position, attr) == getattr(pose2.position, attr) for attr in ["x", "y", "z"]]) and all ([getattr(pose1.orientation, attr) == getattr(pose2.orientation, attr) for attr in ["x", "y", "z", "w"]])
 
 class JoyFootstepMarker(JoyPose6D):
+  '''
+Usage:
+Refer JoyPose6D
+circle: execute footstep
+cross: reset marker
+triangle: stack footstep (only used in stack mode)
+start: toggle footstep marker mode (single -> continuous -> stack)
+
+Args:
+use_tf [Boolean, default: True]: update marker pose using tf
+publish_pose : forced False
+frame_id [String, default: map]: frame_id of publishing pose, this is overwritten by parameter, ~frame_id
+pose [String, default: pose]: topic name for publishing pose
+set_pose [String, default: set_pose]: topic name for setting pose by topic
+  '''
   def __init__(self, name, args):
     args['publish_pose'] = False # supress publishing pose of joy_pose_6d
     JoyPose6D.__init__(self, name, args)
@@ -29,9 +45,9 @@ class JoyFootstepMarker(JoyPose6D):
     self.pose_updated = False
 
     # make publisher
-    self.pub = rospy.Publisher("joy_footstep_menu", OverlayMenu)    
+    self.pub = rospy.Publisher("joy_footstep_menu", OverlayMenu)
     self.menu = None
-  
+
     # make service proxy
     rospy.wait_for_service('/footstep_marker/reset_marker')
     self.reset_marker_srv = rospy.ServiceProxy('/footstep_marker/reset_marker', Empty)
@@ -41,12 +57,14 @@ class JoyFootstepMarker(JoyPose6D):
     self.execute_footstep_srv = rospy.ServiceProxy('/footstep_marker/execute_footstep', Empty)
     rospy.wait_for_service('/footstep_marker/get_footstep_marker_pose')
     self.get_footstep_marker_pose_srv = rospy.ServiceProxy('/footstep_marker/get_footstep_marker_pose', GetTransformableMarkerPose)
+    rospy.wait_for_service('/footstep_marker/stack_marker_pose')
+    self.get_stack_marker_pose_srv = rospy.ServiceProxy('/footstep_marker/stack_marker_pose', SetPose)
 
     # initialize maker pose
     marker_pose = self.getCurrentMarkerPose("movable_footstep_marker")
     if marker_pose != None:
       self.pre_pose = marker_pose
-      
+
   def joyCB(self, status, history):
     now = rospy.Time.from_sec(time.time())
     latest = history.latest()
@@ -60,7 +78,7 @@ class JoyFootstepMarker(JoyPose6D):
         self.pub.publish(self.menu)
       elif status.down and not latest.down:
         self.menu.current_index = (self.menu.current_index + 1) % len(self.menu.menus)
-        self.pub.publish(self.menu)        
+        self.pub.publish(self.menu)
       elif status.circle and not latest.circle:
         self.menu.action = OverlayMenu.ACTION_CLOSE
         if self.menu.current_index == self.menu.menus.index("Yes"):
@@ -78,7 +96,7 @@ class JoyFootstepMarker(JoyPose6D):
         self.pub.publish(self.menu)
       return
 
-    # control mode    
+    # control mode
     JoyPose6D.joyCB(self, status, history)
     if status.circle and not latest.circle: # go into execute footsteps menu
       self.menu = OverlayMenu()
@@ -94,6 +112,9 @@ class JoyFootstepMarker(JoyPose6D):
       else:
         self.pre_pose = PoseStamped()
         self.pre_pose.pose.orientation.w = 1
+    elif status.triangle and not latest.triangle:
+      #req = SetPoseRequest(self.pre_pose)
+      res = self.get_stack_marker_pose_srv(self.pre_pose, [])
     elif status.start and not latest.start: # toggle footstep_marker mode
       self.toggle_footstep_marker_mode_srv()
 
@@ -110,9 +131,9 @@ class JoyFootstepMarker(JoyPose6D):
         self.current_goal_pose = copy.deepcopy(self.pre_pose)
     else:
       self.pose_updated = False
-        
+
   def getCurrentMarkerPose(self, marker_name):
-    try:      
+    try:
       marker_pose = self.get_footstep_marker_pose_srv(marker_name).pose_stamped
       if self.use_tf:
         marker_pose = self.tf_listener.transformPose(self.frame_id, marker_pose)
