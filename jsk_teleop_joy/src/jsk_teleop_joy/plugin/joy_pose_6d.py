@@ -38,7 +38,7 @@ R3(Right Analog button): suppressing buttons/sticks for controlling pose
 
 Args:
 publish_pose [Boolean, default: True]: Publish or not pose
-frame_id [String, default: /map]: frame_id of publishing pose, this is overwritten by parameter, ~frame_id
+frame_id [String, default: map]: frame_id of publishing pose, this is overwritten by parameter, ~frame_id
 pose [String, default: pose]: topic name for publishing pose
 set_pose [String, default: set_pose]: topic name for setting pose by topic
   '''

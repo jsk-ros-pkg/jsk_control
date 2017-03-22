@@ -42,6 +42,7 @@
 #include <jsk_footstep_msgs/PlanFootstepsAction.h>
 #include <jsk_footstep_msgs/ExecFootstepsAction.h>
 #include <jsk_interactive_marker/GetTransformableMarkerPose.h>
+#include <jsk_interactive_marker/SetPose.h>
 #include <interactive_markers/interactive_marker_server.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -89,9 +90,8 @@ namespace jsk_footstep_planner
     std::string first_name_;
     std::string second_name_;
   private:
-    
   };
-  
+
   class FootstepMarker
   {
   public:
@@ -106,6 +106,7 @@ namespace jsk_footstep_planner
     MenuCallbackFunction;
 
     typedef enum {NOT_STARTED, FINISHED, ON_GOING} PlanningState;
+    typedef enum {SINGLE, CONTINUOUS, STACK} CommandMode;
     typedef FootstepMarkerConfig Config;
     FootstepMarker();
     virtual ~FootstepMarker();
@@ -136,7 +137,11 @@ namespace jsk_footstep_planner
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void enableContinuousCB(
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+    virtual void enableStackCB(
+      const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void executeFootstepCB(
+      const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+    virtual void stackFootstepCB(
       const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
     virtual void executeDoneCB(const actionlib::SimpleClientGoalState &state,
                                const ExecResult::ConstPtr &result);
@@ -169,6 +174,8 @@ namespace jsk_footstep_planner
       const std_msgs::Header& header, const geometry_msgs::Pose& pose);
     virtual visualization_msgs::Marker goalBoundingBoxMarker(
       const std_msgs::Header& header, const geometry_msgs::Pose& pose);
+    virtual visualization_msgs::Marker stackedPosesMarker(
+      const std_msgs::Header& header, const geometry_msgs::Pose& pose);
     virtual void setupMenuHandler();
 
     virtual void configCallback(Config& config, uint32_t level);
@@ -192,9 +199,12 @@ namespace jsk_footstep_planner
     virtual bool getFootstepMarkerPoseService(
       jsk_interactive_marker::GetTransformableMarkerPose::Request& req,
       jsk_interactive_marker::GetTransformableMarkerPose::Response& res);
+    virtual bool stackMarkerPoseService(
+      jsk_interactive_marker::SetPose::Request& req,
+      jsk_interactive_marker::SetPose::Response& res);
 
     virtual void publishCurrentMarkerMode();
-    
+
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
 
@@ -204,13 +214,14 @@ namespace jsk_footstep_planner
     ros::Publisher pub_plan_result_;
     ros::Publisher pub_current_marker_mode_;
     ros::Subscriber sub_pose_stamped_command_;
-    ros::ServiceServer srv_reset_marker_;
-    ros::ServiceServer srv_toggle_footstep_marker_mode_;
+    ros::ServiceServer srv_reset_fs_marker_;
+    ros::ServiceServer srv_toggle_fs_com_mode_;
     ros::ServiceServer srv_execute_footstep_;
-    ros::ServiceServer srv_wait_for_execute_footstep_;
-    ros::ServiceServer srv_wait_for_footstep_plan_;
-    ros::ServiceServer srv_get_footstep_marker_pose_;    
-    
+    ros::ServiceServer srv_wait_for_exec_fs_;
+    ros::ServiceServer srv_wait_for_fs_plan_;
+    ros::ServiceServer srv_get_fs_marker_pose_;
+    ros::ServiceServer srv_stack_marker_pose_;
+
     std::string odom_frame_id_;
     std::string lleg_end_coords_, rleg_end_coords_;
     PosePair::Ptr original_foot_poses_;
@@ -218,25 +229,27 @@ namespace jsk_footstep_planner
     FootstepTrans current_lleg_offset_, current_rleg_offset_;
     FootstepVec lleg_footstep_offset_, rleg_footstep_offset_;
     double default_footstep_margin_;
-    
+
     jsk_footstep_msgs::FootstepArray plan_result_;
     boost::shared_ptr<tf2_ros::BufferClient> tf_client_;
     boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
     boost::shared_ptr<dynamic_reconfigure::Server<Config> > srv_;
     interactive_markers::MenuHandler menu_handler_;
+    interactive_markers::MenuHandler::EntryHandle stack_btn_;
     interactive_markers::MenuHandler::EntryHandle entry_2d_mode_;
     interactive_markers::MenuHandler::EntryHandle entry_3d_mode_;
     interactive_markers::MenuHandler::EntryHandle cube_mode_;
     interactive_markers::MenuHandler::EntryHandle line_mode_;
     interactive_markers::MenuHandler::EntryHandle single_mode_;
     interactive_markers::MenuHandler::EntryHandle cont_mode_;
+    interactive_markers::MenuHandler::EntryHandle stack_mode_;
     bool is_2d_mode_;
     bool is_cube_mode_;
-    bool is_single_mode_;
-    
+    CommandMode command_mode_;
+
     double foot_size_x_, foot_size_y_, foot_size_z_;
     bool disable_tf_;
-    
+
     boost::mutex planner_mutex_;
     PlanningState planning_state_;
     FootstepVec collision_bbox_size_;
@@ -244,8 +257,8 @@ namespace jsk_footstep_planner
 
     bool have_last_step_;
     jsk_footstep_msgs::Footstep last_steps_[2];
+    std::vector<FootstepTrans > stacked_poses_;
   private:
-    
   };
 }
 
