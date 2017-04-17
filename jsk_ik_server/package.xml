@@ -4,7 +4,9 @@
      jsk_ik_server
   </description>
   <author email="furuta@jsk.t.u-tokyo.ac.jp">furuta</author>
-  <maintainer email="furuta@jsk.t.u-tokyo.ac.jp">furuta</maintainer>
+  <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
+  <maintainer email="murooka@jsk.t.u-tokyo.ac.jp">Masaki Murooka</maintainer>
+  <maintainer email="s-noda@jsk.t.u-tokyo.ac.jp">Noda Shintaro</maintainer>
   <license>BSD</license>
   <version>0.1.12</version>
   <url>http://ros.org/wiki/jsk_ik_server</url>
