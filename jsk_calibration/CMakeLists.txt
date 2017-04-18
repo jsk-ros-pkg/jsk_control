@@ -4,7 +4,7 @@ project(jsk_calibration)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED roseus pr2_msgs pr2_controllers_msgs)
+find_package(catkin REQUIRED roseus pr2_msgs)
 
 
 
@@ -78,7 +78,7 @@ find_package(catkin REQUIRED roseus pr2_msgs pr2_controllers_msgs)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  CATKIN_DEPENDS roseus pr2_msgs pr2_controllers_msgs
+  CATKIN_DEPENDS roseus pr2_msgs
 )
 
 ###########
@@ -135,11 +135,14 @@ catkin_package(
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(DIRECTORY launch scripts config euslisp
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  USE_SOURCE_PERMISSIONS
+  )
+
+install(FILES README.md
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
 #############
 ## Testing ##

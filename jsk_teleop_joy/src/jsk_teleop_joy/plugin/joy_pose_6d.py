@@ -24,6 +24,24 @@ def signedSquare(val):
  return val * val * sign
 
 class JoyPose6D(RVizViewController):
+  '''
+Usage:
+Left Analog x/y: translate x/y
+Up/Down/Right/Left: rotate pitch/roll
+L1/R2: rotate yaw
+L2/R2: translate z
+square: move faster
+
+Right Analog x/y: yaw/pitch of camera position (see parent class, RVizViewController)
+R3(Right Analog button): suppressing buttons/sticks for controlling pose
+   R3 + L2 + R2: enable follow view mode
+
+Args:
+publish_pose [Boolean, default: True]: Publish or not pose
+frame_id [String, default: map]: frame_id of publishing pose, this is overwritten by parameter, ~frame_id
+pose [String, default: pose]: topic name for publishing pose
+set_pose [String, default: set_pose]: topic name for setting pose by topic
+  '''
   #def __init__(self, name='JoyPose6D', publish_pose=True):
   def __init__(self, name, args):
     RVizViewController.__init__(self, name, args)
@@ -31,14 +49,15 @@ class JoyPose6D(RVizViewController):
     self.pre_pose.pose.orientation.w = 1
     self.prev_time = rospy.Time.from_sec(time.time())
     self.publish_pose = self.getArg('publish_pose', True)
-    self.frame_id = self.getArg('frame_id', '/map')
+    self.frame_id = self.getArg('frame_id', 'map')
     if self.publish_pose:
-      self.pose_pub = rospy.Publisher(self.getArg('pose', 'pose'), 
+      self.pose_pub = rospy.Publisher(self.getArg('pose', 'pose'),
                                       PoseStamped)
     self.supportFollowView(True)
 
     self.puse_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'), PoseStamped, self.setPoseCB)
-    self.frame_id = rospy.get_param('~frame_id', '/map')
+    if rospy.has_param('~frame_id'):
+      self.frame_id = rospy.get_param('~frame_id')
     self.tf_listener = tf.TransformListener()
 
   def setPoseCB(self, pose):
@@ -54,7 +73,8 @@ class JoyPose6D(RVizViewController):
       latest = history.latest()
       if status.R3 and status.L2 and status.R2 and not (latest.R3 and latest.L2 and latest.R2):
         self.followView(not self.followView())
-    RVizViewController.joyCB(self, status, history)
+    if self.control_view:
+      RVizViewController.joyCB(self, status, history)
     new_pose = PoseStamped()
     new_pose.header.frame_id = self.frame_id
     new_pose.header.stamp = rospy.Time(0.0)

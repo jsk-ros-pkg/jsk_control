@@ -4,8 +4,11 @@
   <arg name="NODELET_INDEX"        default="0"/>
 
   <arg name="INPUT" default="/distance_filtered_laser_snapshots/output_cloud" />
+  <arg name="TO_HEIGHTMAP_CONVERTER" value="/heightmap_converter_input" />
   <arg name="DEBUG_VIEW" default="true" />
 
+  <arg name="MAXIMUM_Z" default="2.3" /> <!-- lower than ceiling -->
+  <arg name="MINIMUM_Z" default="-2.0" />
   <!-- frames -->
   <arg name="STATIC_FRAME" default="map" />
   <arg name="STAND_FRAME"  default="odom_init" />
@@ -70,6 +73,13 @@
               to: /robot_bbox_clipper/output/point_indices
         - name: robot_center_pointcloud_with_map_origin_points
           type: pcl/PointCloudConcatenateDataSynchronizer
+        - name: pass_through_z
+          type: pcl/PassThrough
+          remappings:
+            - from: ~input
+              to: robot_center_pointcloud_with_map_origin_points/output
+            - from: ~output
+              to: $(arg TO_HEIGHTMAP_CONVERTER)
     </rosparam>
   </group>
 
@@ -77,7 +87,8 @@
   <rosparam param="map_origin_polygon" subst_value="true">
     use_message: true
     frame_ids: [$(arg STAND_FRAME)]
-    polygon_array: [[[0.5, 0.5, -0.01], [-0.5, 0.5, -0.01], [-0.5, -0.5, -0.01], [0.5, -0.5, -0.01]]]
+    # polygon_array: [[[0.5, 0.5, -0.01], [-0.5, 0.5, -0.01], [-0.5, -0.5, -0.01], [0.5, -0.5, -0.01]]]
+    polygon_array: [[[0.25, 0.25, -0.01], [-0.25, 0.25, -0.01], [-0.25, -0.25, -0.01], [0.25, -0.25, -0.01]]]
   </rosparam>
   <rosparam param="robot_center_map_origin_points" subst_value="true">
     target_frame_id: $(arg ROBOT_FRAME)
@@ -97,6 +108,12 @@
   <rosparam param="robot_center_pointcloud_bbox_clipped" subst_value="true">
     negative: true
   </rosparam>
+  <rosparam param="pass_through_z" subst_value="true" >
+    filter_field_name: z
+    filter_limit_min: $(arg MINIMUM_Z)
+    filter_limit_max: $(arg MAXIMUM_Z)  ## as same as robot height?
+    filter_limit_negative: False
+  </rosparam>
 
   <!-- height map -->
   <include file="$(find jsk_pcl_ros)/launch/heightmap_converter.launch">
@@ -105,8 +122,7 @@
     <arg name="NODELET_INDEX"        value="1$(arg NODELET_INDEX)"/>
     <arg name="DEBUG_VIEW"           value="$(arg DEBUG_VIEW)" />
 
-    <arg name="INPUT"
-         value="robot_center_pointcloud_with_map_origin_points/output" />
+    <arg name="INPUT" value="$(arg TO_HEIGHTMAP_CONVERTER)" />
 
     <arg name="STATIC_FRAME" default="$(arg STATIC_FRAME)" />
     <arg name="ROBOT_FRAME"  default="$(arg ROBOT_FRAME)" />

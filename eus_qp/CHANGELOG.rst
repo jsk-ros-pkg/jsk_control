@@ -2,6 +2,16 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.12 (2017-02-22)
+-------------------
+
+0.1.11 (2017-02-09)
+-------------------
+* [eus_qp/README.md] Add readme for eus_qp and euslisp programs.
+* [eus_qp/euslisp/cfr-cwc-calculation.l] Use obj env constraint in calc-dynamic-min-max-cog-pos
+* [eus_qp/euslisp/cfr-cwc-calculation.l] Remove unused argument for calc-constraint-matrix-vector-for-obj-env-constraint
+* Contributors: Shunichi Nozawa
+
 0.1.10 (2016-12-15)
 -------------------
 * package.xml : remove unnecessary space within name tag

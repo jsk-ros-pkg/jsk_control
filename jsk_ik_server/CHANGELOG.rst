@@ -2,6 +2,12 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.12 (2017-02-22)
+-------------------
+
+0.1.11 (2017-02-09)
+-------------------
+
 0.1.10 (2016-12-15)
 -------------------
 * Add centroid method to ik-grid (`#636 <https://github.com/jsk-ros-pkg/jsk_control/pull/636>`_)

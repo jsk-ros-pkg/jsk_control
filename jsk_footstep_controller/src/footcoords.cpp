@@ -1007,7 +1007,9 @@ namespace jsk_footstep_controller
     std::vector<geometry_msgs::TransformStamped> tf_transforms;
     tf_transforms.push_back(ros_midcoords);
     tf_transforms.push_back(ros_ground_coords);
-    tf_transforms.push_back(ros_odom_to_body_coords);
+    if (publish_odom_tf_) {
+      tf_transforms.push_back(ros_odom_to_body_coords);
+    }
     tf_transforms.push_back(ros_body_on_odom_coords);
     tf_transforms.push_back(ros_odom_init_coords);
     tf_broadcaster_.sendTransform(tf_transforms);
