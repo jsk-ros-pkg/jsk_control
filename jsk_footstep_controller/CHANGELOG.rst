@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.13 (2017-04-18)
+-------------------
 * CMakeLists.txt : fix typo on install DESTINATION
 * [jsk_footstep_controller] prevent too large footstep refine
 * [jsk_footstep_controller] add utilitiy functions and update for footstep_planner
