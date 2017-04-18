@@ -5,7 +5,7 @@
   </description>
   <author email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</author>
   <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
-  <version>0.1.12</version>
+  <version>0.1.13</version>
   <license>BSD</license>
   <url>http://ros.org/wiki/jsk_teleop_joy</url>
   <buildtool_depend>catkin</buildtool_depend>

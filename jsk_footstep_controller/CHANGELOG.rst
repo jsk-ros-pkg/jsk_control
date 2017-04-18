@@ -2,6 +2,16 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.13 (2017-04-18)
+-------------------
+* CMakeLists.txt : fix typo on install DESTINATION
+* [jsk_footstep_controller] prevent too large footstep refine
+* [jsk_footstep_controller] add utilitiy functions and update for footstep_planner
+* [jsk_footstep_controller] add keyword for sample footstep client
+* [jsk_footstep_contorller] Do not publish odom tf when publish_odom_tf param is false
+* [jsk_footstep_contorller] Update footstep params for JAXON
+* Contributors: Kei Okada, Yohei Kakiuchi, Iori Kumagai
+
 0.1.12 (2017-02-22)
 -------------------
 

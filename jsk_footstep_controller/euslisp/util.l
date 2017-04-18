@@ -208,8 +208,8 @@ You can create `*ri*' like
 (defun check-footstep-collision (current next &key (debug nil))
   ;; fix next footstep to avoid collision
   ;; return original next footstep if current and next would not cause collision
-  (let ((current-foot (make-cube 235 135 20))
-        (next-foot (make-cube 235 135 20)))
+  (let ((current-foot (make-cube 235 145 20))
+        (next-foot (make-cube 235 145 20)))
 
     (send current-foot :move-to (send current :coords) :world)
     (send next-foot :move-to (send next :coords) :world)
@@ -238,7 +238,8 @@ You can create `*ri*' like
                      (collision-avoid nil) (debug t))
   (let ((steps (butlast (car remaining-steps)))
         (idx (cadr remaining-steps))
-        istep newsteps trans)
+        (large-error-p nil)
+        istep newsteps trans tr-list)
     (setq istep (elt steps offset))
     (setq steps (subseq steps (+ offset 1)))
     ;;
@@ -248,7 +249,7 @@ You can create `*ri*' like
                           (send (send last-cds :copy-worldcoords) :transform expand-step)
                           :world))
              (len (float (- (length steps) 2)))
-             (cntr 0))
+             (cntr 0) (diff-norm-limit 10))
         (when debug
           (pprint (list 'trans trans expand-step))
           (pprint (list 'org-steps steps)))
@@ -261,6 +262,12 @@ You can create `*ri*' like
                       (when (> nm 15)
                         (setq tr (midcoords (/ 15 nm) (make-coords) tr)))
                       |#
+                      (setq nm (norm (send tr :worldpos)))
+                      (ros::ros-warn "diff norm ~A" nm)
+                      (when (> nm (* diff-norm-limit cntr))
+                        (setq large-error-p t)
+                        )
+                      (push tr tr-list)
                       (send s :transform tr :world)
                       (incf cntr)
                       s)) (butlast steps))
@@ -290,8 +297,16 @@ You can create `*ri*' like
 
     (if debug (pprint (list 'new newsteps)))
     (when exec
-      (send *ri* :set-foot-steps-no-wait newsteps
-            :overwrite-footstep-index (+ idx offset 1)))
+      (if large-error-p
+          (progn
+            (ros::ros-warn "Too large error in step refine, cancel refine steps")
+            ;; (send *ri* :go-stop)
+            (if debug (pprint (list 'trans-list tr-list)))
+            )
+        (send *ri* :set-foot-steps-no-wait newsteps
+              :overwrite-footstep-index (+ idx offset 1))
+        )
+      )
     ))
 
 ;; copied from obsoluted euslisp footstep planner: footstep_planner_util.l
