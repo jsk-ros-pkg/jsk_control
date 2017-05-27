@@ -1,6 +1,8 @@
 cmd_vel_smoother
 ===============
 
+![interpolate](https://cloud.githubusercontent.com/assets/1901008/26520991/c6dfd076-4318-11e7-91ec-8777bb94c1aa.png)
+
 Interpolate velocity command to be published periodically
 
 ### What is this?
