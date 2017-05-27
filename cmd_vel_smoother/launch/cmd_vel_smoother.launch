@@ -1,0 +1,12 @@
+<launch>
+  <node name="cmd_vel_smoother" pkg="cmd_vel_smoother" type="cmd_vel_smoother" output="screen">
+    <remap from="input" to="/base_controller/command_unchecked" />
+    <remap from="output" to="/base_controller/command" />
+
+    <param name="desired_rate" value="10.0" />
+    <param name="x_acc_lim" value="1.0" />
+    <param name="y_acc_lim" value="2.0" />
+    <param name="yaw_acc_lim" value="0.1" />
+    <param name="max_count" value="5" />
+  </node>
+</launch>
