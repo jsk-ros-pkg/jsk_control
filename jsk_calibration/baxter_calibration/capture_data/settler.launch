@@ -1,0 +1,19 @@
+<launch>
+  <group>
+    <group ns="LARM_chain">
+      <node pkg="joint_states_settler" type="joint_states_settler_action"
+            name="settler" output="screen">
+      </node>
+    </group>
+    <group ns="RARM_chain">
+      <node pkg="joint_states_settler" type="joint_states_settler_action"
+            name="settler" output="screen">
+      </node>
+    </group>
+    <group ns="head_chain">
+      <node pkg="joint_states_settler" type="joint_states_settler_action"
+            name="settler" output="screen">
+      </node>
+    </group>
+  </group>
+</launch>
