@@ -8,7 +8,7 @@ joint_commands:
 - controller: RARM_controller
   segments:
   - duration: 15.0
-    positions: [-0.6319994301104147, 0.46556308731098345, 2.0378987945061393, 1.446926819122355, -0.08398541813889233, 2.09312101203924, -1.10369909507141]
+    positions: [-0.643121, 0.469782, 2.27758, 1.84921, -0.021476, 1.88028, -1.01741]
 - controller: head_controller
   segments:
   - duration: 15.0
@@ -16,5 +16,5 @@ joint_commands:
 joint_measurements:
 - {chain_id: RARM_chain,  config: tight_tol}
 - {chain_id: head_chain,  config: tight_tol}
-sample_id: RARM_0000
+sample_id: RARM_0007
 target: {chain_id: RARM_chain, target_id: mmurooka_board}
