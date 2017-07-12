@@ -4,17 +4,18 @@ joint_commands:
 - controller: LARM_controller
   segments:
   - duration: 15.0
-    positions: [0.516568, 0.678786, -2.17212, 2.05784, 0.058675, 1.75909, -0.79]
+    positions: [0.516568, 0.678786, -2.17212, 2.05784, 0.058675, 1.75909, 0.79]
 - controller: RARM_controller
   segments:
   - duration: 15.0
-    positions: [-0.9514522790906927, -0.27304803482825285, 1.5163403088034215, 2.1816964715779514, -0.35818519574053626, -0.3420775520738806, 1.0408061554757946]
+    positions: [-0.9514522790906927, -0.27304803482825285, 1.5163403088034215, 2.1816964715779514,
+      -0.35818519574053626, -0.3420775520738806, 1.0408061554757946]
 - controller: head_controller
   segments:
   - duration: 15.0
     positions: [0.8697673794388542]
 joint_measurements:
-- {chain_id: LARM_chain,  config: tight_tol}
-- {chain_id: head_chain,  config: tight_tol}
+- {chain_id: LARM_chain, config: tight_tol}
+- {chain_id: head_chain, config: tight_tol}
 sample_id: LARM_0026
 target: {chain_id: LARM_chain, target_id: mmurooka_board}
