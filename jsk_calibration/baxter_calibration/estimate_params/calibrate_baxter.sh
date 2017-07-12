@@ -37,7 +37,7 @@ echo "Success"
 # master
 export ROS_MASTER_URI=http://localhost:${port}
 # baxter_calibration
-roslaunch jsk_calibration baxter_estimation_config.launch
+roslaunch jsk_calibration baxter_estimation_config.launch &
 rosrun rviz rviz -d $(rospack find jsk_calibration)/hrp2jsknt_calibration/view_results/pose_guess.rviz &
 sleep 5 ## wait rviz
 rosrun calibration_estimation multi_step_cov_estimator.py ${calibdir}/cal_measurements.bag ${logdir} __name:=cal_cov_estimator | tee ${logdir}/console_output.log
