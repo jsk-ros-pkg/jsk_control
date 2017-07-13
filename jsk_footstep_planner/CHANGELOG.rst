@@ -2,6 +2,13 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.13 (2017-04-18)
+-------------------
+* [jsk_footstep_planner, jsk_teleop_joy] add stack mode to footstep_marker
+* [jsk_footstep_planner] add pass through filter for creating heightmap (remove points of a ceiling)
+* [jsk_footstep_planner] Make initial map_origin_pointcloud smaller
+* Contributors: Yohei Kakiuchi
+
 0.1.12 (2017-02-22)
 -------------------
 

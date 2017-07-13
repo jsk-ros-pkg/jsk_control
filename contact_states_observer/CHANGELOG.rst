@@ -2,6 +2,9 @@
 Changelog for package contact_states_observer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.13 (2017-04-18)
+-------------------
+
 0.1.12 (2017-02-22)
 -------------------
 * [contact_states_observer/euslisp/contact-states-observer.l] Check length of data list in contact states observer publishing parts.

@@ -1,18 +1,18 @@
 (load "package://eus_qp/euslisp/model-predictive-control.l")
 
 (defun gen-default-contact-constraint
-  (l)
+  (l &key (mu-trans 1.0) (mu-rot 0.05) (cop-margin-ratio 1.0))
   (instance* default-contact-constraint
              :init
              :name l
-             :mu-trans 1.0
-             :mu-rot 0.05
+             :mu-trans mu-trans
+             :mu-rot mu-rot
              (if (send *robot* :support-polygon l)
                  (let* ((vs (mapcar #'(lambda (v) (send *robot* l :end-coords :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
-                   (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
-                         :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
-                         :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
-                         :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
+                   (list :l-min-x (* cop-margin-ratio (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0))
+                         :l-max-x (* cop-margin-ratio (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0))
+                         :l-min-y (* cop-margin-ratio (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1))
+                         :l-max-y (* cop-margin-ratio (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1))
                          ))
                (list :l-min-x 0 :l-max-x 0 :l-min-y 0 :l-max-y 0)))
   )
@@ -468,6 +468,224 @@
                           (mapcar #'(lambda (x) (elt (cadr (memq :refcog x)) 0)) cog-ret)
                           (mapcar #'(lambda (x) (elt (cadr (memq :refcog x)) 1)) cog-ret))))
     cog-ret))
+
+(defun demo-MPC-gen-motion-5
+  (&key (limbs '(:rleg :lleg))
+        (foot-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
+        (foot-rot-diff (list (list 0 0 0) (list 0 0 0)))
+        (dt 0.05) ;; [s]
+        (default-step-time 1.0) ;; [s]
+        (default-step-height 50.0) ;; [mm]
+        (double-support-ratio 0.2) ;; [0, 1]
+        (mu-trans 0.2) (cop-margin-ratio 1.0)
+        (fs-list)
+        ((:receding-horizon-proc-count rhpc) 1))
+  "COG XY MPC test. Walking by footstep list. Please set :fs-list argument."
+  ;; Set initial pose
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+  (mapcar #'(lambda (l d)
+              (send *robot* l :move-end-pos d :world))
+          limbs foot-pos-diff)
+  (mapcar #'(lambda (l d)
+              (mapcar #'(lambda (dd a)
+                          (send *robot* l :move-end-rot dd a))
+                      d '(:x :y :z)))
+          limbs foot-rot-diff)
+  (send *robot* :fix-leg-to-coords (make-coords))
+  (send *robot* :move-centroid-on-foot (if (> (length limbs) 1) :both (car limbs)) '(:rleg :lleg))
+  (unless fs-list
+    ;;(Setq fs-list (send *robot* :go-pos-params->footstep-list 200 0 0)))
+    (Setq fs-list (send *robot* :go-pos-params->footstep-list 100 0 0)))
+  (let* ((limbs '(:rleg :lleg))
+         (preview-window 10)
+         (total-mass (* 1e-3 (send *robot* :weight))) ;; [kg]
+         (mg (* total-mass 1e-3 (elt *g-vec* 2))) ;; [N]
+         (cog-z (* 1e-3 (elt (send *robot* :centroid) 2))) ;; [m]
+         (tmp-gait-generator (instance gait-generator :init *robot* dt))
+         (support-limb-list (send-all (butlast fs-list) :name))
+         (support-coords-list (send-all (butlast fs-list) :copy-worldcoords))
+         (swing-dst-coords-list (send-all (subseq fs-list 1) :copy-worldcoords))
+         (swing-src-coords-list (append (list (send (send *robot* (if (eq (car support-limb-list) :rleg) :lleg :rleg) :end-coords) :copy-worldcoords))
+                                        (send-all (butlast fs-list 2) :copy-worldcoords)))
+         (half-double-support-ratio (* 0.5 double-support-ratio))
+         (time-count (/ default-step-time dt))
+         (prm-list) (cog-ret) (ret))
+    (labels ((COM-pos->state
+              (com total-mass)
+              (float-vector (* total-mass 1e-3 (elt com 0)) 0
+                            (* total-mass 1e-3 (elt com 1)) 0
+                            0 0))
+             (counter-foot-step
+              (fs &key (double-support-p nil))
+              (send (send fs :copy-worldcoords) :translate
+                    (scale (* (if double-support-p 1.0 2.0)
+                              (if (eq (send fs :name) :rleg) 1.0 -1.0))
+                           (cadr (memq :default-half-offset (send *robot* :footstep-parameter))))))
+             (calc-double-support-param
+              (state end-coords-list)
+              (instance MPC-horizontal-cog-motion-generator-param
+                        :init
+                        dt
+                        state
+                        end-coords-list
+                        (mapcar #'(lambda (l) (gen-default-contact-constraint l :mu-trans mu-trans :cop-margin-ratio cop-margin-ratio)) limbs)
+                        limbs
+                        mg cog-z total-mass
+                        :all-limbs limbs)))
+      ;; Print
+      (mapcar #'(lambda (l sp swd sws)
+                  (format t ";; sp ~A, spc ~A, sw ~A, swc ~A->~A~%"
+                          l (send sp :worldpos)
+                          (if (eq l :rleg) :lleg :rleg) (send sws :worldpos) (send swd :worldpos)))
+              support-limb-list support-coords-list
+              swing-dst-coords-list swing-src-coords-list)
+      ;; Generate param list
+      (setq prm-list
+            (append
+             ;; Initial double support phase
+             (mapcar #'(lambda (x)
+                         (calc-double-support-param
+                          (com-pos->state (send (counter-foot-step (car fs-list) :double-support-p t) :worldpos) total-mass)
+                          (mapcar #'(lambda (l) (send *robot* l :end-coords :copy-worldcoords)) limbs)
+                          ))
+                     (make-list (round time-count)))
+             ;; 2 ~ pre-last foot steps
+             (apply
+              #'append
+              (mapcar
+               #'(lambda (spl spc swd sws)
+                   (append
+                    ;; Start double support
+                    (mapcar #'(lambda (x)
+                                (calc-double-support-param
+                                 (com-pos->state (midpoint 0.5 (send spc :worldpos) (send sws :worldpos)) total-mass)
+                                 (mapcar #'(lambda (l) (if (eq l spl) spc sws)) limbs)
+                                 ))
+                            (make-list (round (* half-double-support-ratio time-count))))
+                    ;; Swing phase
+                    (let ((count -1) (time-count2 (* (- 1.0 double-support-ratio) time-count)))
+                      (mapcar #'(lambda (x)
+                                  (incf count)
+                                  (instance MPC-horizontal-cog-motion-generator-param
+                                            :init
+                                            dt
+                                            (com-pos->state (send spc :worldpos) total-mass)
+                                            (mapcar #'(lambda (l)
+                                                        (if (eq l spl)
+                                                            spc
+                                                          (send tmp-gait-generator
+                                                                :cycloid-midcoords
+                                                                (/ count time-count2)
+                                                                sws swd default-step-height)))
+                                                    limbs)
+                                            (list (gen-default-contact-constraint spl :mu-trans mu-trans :cop-margin-ratio cop-margin-ratio))
+                                            (list spl)
+                                            mg cog-z total-mass
+                                            :all-limbs limbs
+                                            ))
+                              (make-list (round time-count2))))
+                    ;; End double support
+                    (mapcar #'(lambda (x)
+                                (calc-double-support-param
+                                 (com-pos->state (midpoint 0.5 (send spc :worldpos) (send swd :worldpos)) total-mass)
+                                 (mapcar #'(lambda (l) (if (eq l spl) spc swd)) limbs)
+                                 ))
+                            (make-list (round (* half-double-support-ratio time-count))))))
+               support-limb-list
+               support-coords-list
+               swing-dst-coords-list
+               swing-src-coords-list))
+             ;; Final double support phase
+             (mapcar #'(lambda (x)
+                         (calc-double-support-param
+                          (com-pos->state (send (counter-foot-step (car (last fs-list)) :double-support-p t) :worldpos) total-mass)
+                          (mapcar #'(lambda (l)
+                                      (if (eq (send (car (last fs-list)) :name) l)
+                                          (send (car (last fs-list)) :copy-worldcoords)
+                                        (counter-foot-step (car (last fs-list)))))
+                                  limbs)
+                          ))
+                     (make-list (round (* 2 time-count))))))
+      ;; MPC
+      (let ((tm 0.0)
+            (mpc (instance MPC-horizontal-cog-motion-generator
+                           :init preview-window
+                           :initial-state (com-pos->state (send (counter-foot-step (car fs-list) :double-support-p t) :worldpos) total-mass)
+                           :receding-horizon-proc-count rhpc)))
+        (dolist (prm prm-list)
+          (let ((r (send mpc :append-param prm)))
+            ;;(print (list (position prm prm-list) r))
+            (when r
+              (format t ";; initial state~%")
+              (format t ";;   state = ~A~%" (mpc . current-state))
+              (send mpc :proc-model-predictive-control)
+              (format t ";;   input = ~A~%" (elt (send mpc :input-value-list) 0))
+              (setq tm (+ tm ((elt (mpc . param-list) 0) . dt)))
+              (let ((wr-list (send mpc :calc-wrench-list-from-result-input-value))
+                    (ec-list (send mpc :get-all-end-coords-from-preview-index)))
+                (push (list :cog (send mpc :get-cog-from-preview-index) :refcog (send mpc :get-ref-cog-from-preview-index)
+                            :end-coords ec-list :wrench-list wr-list
+                            :zmp (send *robot* :calc-zmp-from-forces-moments
+                                       (car wr-list) (cadr wr-list)
+                                       :limbs limbs :force-sensors ec-list :cop-coords ec-list)
+                            :contact-constraint-list (send mpc :get-contact-constraint-list-from-preview-index)
+                            :time tm)
+                      cog-ret)
+                )))))
+      (setq cog-ret (reverse cog-ret))
+      (dolist (r cog-ret)
+        (send *robot* :fullbody-inverse-kinematics
+              (cadr (memq :end-coords r))
+              :move-target (mapcar #'(lambda (x) (send *robot* x :end-coords)) limbs)
+              :link-list (mapcar #'(lambda (x) (send *robot* :link-list (send *robot* x :end-coords :parent))) limbs)
+              :root-link-virtual-joint-weight #f(0.1 0.1 0 0 0 0.1)
+              :target-centroid-pos (cadr (memq :cog r)))
+        (send *irtviewer* :draw-objects :flush nil)
+        (push (append (list :angle-vector (send *robot* :angle-vector)
+                            :root-coords (send (car (send *robot* :links)) :copy-worldcoords))
+                      r)
+              ret)
+        (draw-force-value r))
+      (when (boundp 'gnuplot)
+        (print ";; COM plot")
+        (graph-view (list (mapcar #'(lambda (x) (elt (cadr (memq :cog x)) 0)) cog-ret)
+                          (mapcar #'(lambda (x) (elt (cadr (memq :cog x)) 1)) cog-ret)
+                          (mapcar #'(lambda (x) (elt (cadr (memq :refcog x)) 0)) cog-ret)
+                          (mapcar #'(lambda (x) (elt (cadr (memq :refcog x)) 1)) cog-ret)
+                          (mapcar #'(lambda (x) (elt (cadr (memq :zmp x)) 0)) cog-ret)
+                          (mapcar #'(lambda (x) (elt (cadr (memq :zmp x)) 1)) cog-ret)
+                          )
+                    (mapcar #'(lambda (x) (cadr (memq :time x))) cog-ret)
+                    :xlabel "Time [s]" :ylabel "COM [mm]" :title "COM and ZMP"
+                    :keylist (list "Act COM X" "Act COM Y" "Ref COM X" "Ref COM Y" "ZMP X" "ZMP Y")
+                    )
+        (print ";; COM plot done")
+        (read-line)
+        (print ";; Force plot")
+        (graph-view
+         (apply
+          #'append
+          (mapcar #'(lambda (axis-idx)
+                      (mapcar #'(lambda (limb-idx)
+                                  (mapcar #'(lambda (x)
+                                              (let ((w (elt (car (cadr (memq :wrench-list x))) limb-idx)))
+                                                (if (eps= (elt w 2) 0.0) 0.0 (/ (elt w axis-idx) (elt w 2))))) cog-ret))
+                              (list 0 1)))
+                  (list 0 1)))
+         (mapcar #'(lambda (x) (cadr (memq :time x))) cog-ret)
+         :xlabel "Time [s]" :ylabel "Fxy/Fz" :title "Fxy/Fz"
+         :keylist (apply
+                   #'append
+                   (mapcar #'(lambda (axis-name)
+                               (mapcar #'(lambda (limb-name)
+                                           (format nil "~A F~A/Fz" (string-downcase limb-name) axis-name))
+                                       limbs))
+                           (list "x" "y")))
+         )
+        (print ";; Force plot done")
+        )
+      (reverse ret))))
 
 (defun get-max-id-for-demo-functions
   (demo-function-sym)

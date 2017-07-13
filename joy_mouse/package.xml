@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>joy_mouse</name>
-  <version>0.1.12</version>
+  <version>0.1.13</version>
   <description>The joy_mouse package</description>
   <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
   <license>BSD</license>
