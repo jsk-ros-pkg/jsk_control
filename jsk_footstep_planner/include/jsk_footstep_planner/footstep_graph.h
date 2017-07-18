@@ -36,16 +36,18 @@
 
 #ifndef JSK_FOOTSTEP_PLANNER_FOOTSTEP_GRAPH_H_
 #define JSK_FOOTSTEP_PLANNER_FOOTSTEP_GRAPH_H_
+
 #include <ros/ros.h>
+#include <pcl_ros/point_cloud.h>
 #include <jsk_footstep_msgs/FootstepArray.h>
 
+#include "jsk_recognition_utils/geo_util.h"
 #include "jsk_footstep_planner/graph.h"
 #include "jsk_footstep_planner/footstep_state.h"
 #include "jsk_footstep_planner/astar_solver.h"
 #include "jsk_footstep_planner/ann_grid.h"
 #include "jsk_footstep_planner/transition_limit.h"
 #include "jsk_footstep_planner/footstep_parameters.h"
-#include "jsk_recognition_utils/geo_util.h"
 
 namespace jsk_footstep_planner
 {
