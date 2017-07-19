@@ -57,7 +57,7 @@
 #include <jsk_interactive_marker/SnapFootPrint.h>
 
 #include "jsk_footstep_planner/ProjectFootstep.h"
-#include "jsk_footstep_planner/setHeuristicPath.h"
+#include "jsk_footstep_planner/SetHeuristicPath.h"
 
 namespace jsk_footstep_planner
 {
@@ -126,8 +126,8 @@ namespace jsk_footstep_planner
       jsk_interactive_marker::SnapFootPrint::Request& req,
       jsk_interactive_marker::SnapFootPrint::Response& res);
     virtual bool setHeuristicPathService(
-      jsk_footstep_planner::setHeuristicPath::Request& req,
-      jsk_footstep_planner::setHeuristicPath::Response& res);
+      jsk_footstep_planner::SetHeuristicPath::Request& req,
+      jsk_footstep_planner::SetHeuristicPath::Response& res);
     virtual void publishText(ros::Publisher& pub,
                              const std::string& text,
                              PlanningStatus status);

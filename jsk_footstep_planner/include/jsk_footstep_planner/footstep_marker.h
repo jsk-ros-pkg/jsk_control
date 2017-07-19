@@ -53,6 +53,7 @@
 #include <visualization_msgs/MarkerArray.h>
 #include "jsk_footstep_planner/marker_array_publisher.h"
 #include "jsk_footstep_planner/FootstepMarkerConfig.h"
+#include "jsk_footstep_planner/SetHeuristicPath.h"
 #include <dynamic_reconfigure/server.h>
 #include <jsk_rviz_plugins/OverlayText.h>
 
@@ -205,6 +206,9 @@ namespace jsk_footstep_planner
 
     virtual void publishCurrentMarkerMode();
 
+    virtual void callFollowPathPlan(
+      const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback);
+
     ros::NodeHandle nh_;
     ros::NodeHandle pnh_;
 
@@ -249,6 +253,7 @@ namespace jsk_footstep_planner
 
     double foot_size_x_, foot_size_y_, foot_size_z_;
     bool disable_tf_;
+    bool use_default_goal_;
 
     boost::mutex planner_mutex_;
     PlanningState planning_state_;
