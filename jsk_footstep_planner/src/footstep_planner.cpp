@@ -346,8 +346,8 @@ namespace jsk_footstep_planner
     }
   }
   bool FootstepPlanner::setHeuristicPathService (
-    jsk_footstep_planner::setHeuristicPath::Request& req,
-    jsk_footstep_planner::setHeuristicPath::Response& res)
+    jsk_footstep_planner::SetHeuristicPath::Request& req,
+    jsk_footstep_planner::SetHeuristicPath::Response& res)
   {
     boost::mutex::scoped_lock lock(mutex_);
     if (!graph_) {
@@ -841,6 +841,9 @@ namespace jsk_footstep_planner
         theta = jsk_topic_tools::getXMLDoubleValue(successor_xml["theta"]);
         theta += default_theta;
       }
+      // successors written in parameters should not include offset
+      // successors using in graph include offset(between the center of the cube and the end-coords)
+      // Footstep returned to a client, its pose indicates end-coords
       Eigen::Affine3f successor =
         Eigen::Translation3f(inv_lleg_footstep_offset_[0],
                              inv_lleg_footstep_offset_[1],
