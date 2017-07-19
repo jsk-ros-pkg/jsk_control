@@ -72,9 +72,17 @@ target_link_libraries(footstep_projection_demo jsk_footstep_planner)
 add_executable(pointcloud_model_generator_node src/pointcloud_model_generator_node.cpp)
 target_link_libraries(pointcloud_model_generator_node jsk_footstep_planner)
 
+add_library(jsk_grid_path_planner
+  src/grid_path_planner.cpp
+  )
+add_executable(grid_path_planner_node src/grid_path_planner_node.cpp)
+target_link_libraries(grid_path_planner_node jsk_grid_path_planner)
+
 add_dependencies(jsk_footstep_planner ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
+add_dependencies(jsk_grid_path_planner ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
 add_dependencies(footstep_planner_node ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
 add_dependencies(pointcloud_model_generator_node ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
+add_dependencies(grid_path_planner_node ${PROJECT_NAME}_gencpp ${PROJECT_NAME}_gencfg)
 
 install(DIRECTORY euslisp launch scripts
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
