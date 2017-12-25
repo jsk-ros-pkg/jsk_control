@@ -54,22 +54,19 @@ namespace jsk_footstep_planner
     typedef boost::shared_ptr<StateT> StatePtr;
     typedef typename GraphT::Ptr GraphPtr;
     typedef typename boost::weak_ptr<GraphT> GraphWeakPtr;
-    
+    //typedef boost::unordered_map< StatePtr, Ptr > SolverList;
+
     SolverNode(StatePtr state, const double cost,
                Ptr parent, GraphPtr graph):
       cost_(cost), state_(state), parent_(parent), graph_(graph) {}
-    // SolverNode(StatePtr state, const double cost):
-    //   cost_(cost), state_(state) {}
-    
+
     SolverNode(StatePtr state, const double cost, GraphPtr graph):
       cost_(cost), state_(state), graph_(graph) {}
-    
-    // SolverNode(StatePtr state, Ptr parent):
-    //   cost_(0.0), state_(state), parent_(parent) {}
+
     virtual
     StatePtr getState() const { return state_; }
 
-    virtual 
+    virtual
     std::vector<Ptr> wrapWithSolverNodes(Ptr this_ptr, std::vector<StatePtr> successors)
     {
       GraphPtr graph_ptr = graph_.lock();
@@ -112,7 +109,7 @@ namespace jsk_footstep_planner
     void setGraph(GraphPtr graph) { graph_ = graph; }
     void setSortValue(double v) { sort_value_ = v; }
     void setCost(double c) { cost_ = c; }
-    
+
     std::vector<SolverNode::Ptr>
     getPathWithoutThis()
     {
@@ -127,7 +124,7 @@ namespace jsk_footstep_planner
     }
 
     virtual void setState(StatePtr state) { state_ = state; }
-    
+
     friend bool operator<(const SolverNode<StateT, GraphT>::Ptr a,
                           const SolverNode<StateT, GraphT>::Ptr b)
     {
@@ -141,7 +138,7 @@ namespace jsk_footstep_planner
     }
 
     virtual Ptr getParent() const { return parent_; }
-    
+
   protected:
     double cost_;
     double sort_value_;     // for best first search
@@ -150,10 +147,66 @@ namespace jsk_footstep_planner
     GraphWeakPtr graph_;
     //std::vector<SolverNode::Ptr> memoized_path_;
   private:
-    
   };
 
-  
+#if 0 // Not using, but for testing
+  template <class StateT, class GraphT>
+  class SolverNodeSingleton : public SolverNode< StateT, GraphT >
+  {
+  public:
+    typedef boost::shared_ptr<SolverNodeSingleton> SPtr;
+    typedef boost::shared_ptr< SolverNode< StateT, GraphT > > Ptr;
+    typedef boost::shared_ptr<StateT> StatePtr;
+    typedef typename GraphT::Ptr GraphPtr;
+    typedef typename boost::weak_ptr<GraphT> GraphWeakPtr;
+
+    using SolverNode< StateT, GraphT >::isRoot;
+
+    SolverNodeSingleton(StatePtr state, const double cost,
+                        Ptr parent, GraphPtr graph) :
+      SolverNode< StateT, GraphT > (state, cost, parent, graph) {}
+
+    SolverNodeSingleton(StatePtr state, const double cost, GraphPtr graph) :
+      SolverNode< StateT, GraphT >(state, cost, graph) {}
+
+    virtual
+    std::vector<Ptr> wrapWithSolverNodes(Ptr this_ptr, std::vector<StatePtr> successors)
+    {
+      GraphPtr graph_ptr = graph_.lock();
+      std::vector<Ptr> solver_nodes;
+      for (size_t i = 0; i < successors.size(); i++) {
+        StatePtr next_state = successors[i];
+        Ptr solver_node(new SolverNodeSingleton(
+                                next_state,
+                                graph_ptr->pathCost(state_, next_state, cost_),
+                                this_ptr,
+                                graph_ptr));
+        solver_nodes.push_back(solver_node);
+      }
+      return solver_nodes;
+    }
+
+    std::vector<Ptr>
+    getPathWithoutThis()
+    {
+      if (isRoot()) {
+        return std::vector<Ptr>();
+      }
+      else {
+        std::vector<Ptr> parent_path = parent_->getPathWithoutThis();
+        parent_path.push_back(graph_->getNode(parent_)); // recursive?
+        return parent_path;
+      }
+    }
+  protected:
+    using SolverNode< StateT, GraphT >::cost_;
+    using SolverNode< StateT, GraphT >::sort_value_;     // for best first search
+    using SolverNode< StateT, GraphT >::state_;
+    using SolverNode< StateT, GraphT >::parent_;
+    using SolverNode< StateT, GraphT >::graph_;
+  private:
+  };
+#endif
 }
 
 #endif

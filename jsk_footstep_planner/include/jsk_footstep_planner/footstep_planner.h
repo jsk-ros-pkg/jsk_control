@@ -57,10 +57,10 @@
 #include <jsk_interactive_marker/SnapFootPrint.h>
 
 #include "jsk_footstep_planner/ProjectFootstep.h"
+#include "jsk_footstep_planner/SetHeuristicPath.h"
 
 namespace jsk_footstep_planner
 {
-
   enum PlanningStatus
   {
     OK, WARNING, ERROR
@@ -75,6 +75,8 @@ namespace jsk_footstep_planner
     typedef boost::shared_ptr<FootstepPlanner> Ptr;
     typedef FootstepPlannerConfig Config;
     FootstepPlanner(ros::NodeHandle& nh);
+    virtual void setHeuristicPathLine(jsk_recognition_utils::PolyLine &path_line);
+
   protected:
 
     // Initialization
@@ -97,6 +99,8 @@ namespace jsk_footstep_planner
     virtual double straightHeuristic(
       SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
     virtual double straightRotationHeuristic(
+      SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
+    virtual double followPathLineHeuristic(
       SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph);
     virtual void profile(FootstepAStarSolver<FootstepGraph>& solver, FootstepGraph::Ptr graph);
     virtual void publishPointCloud(
@@ -121,9 +125,13 @@ namespace jsk_footstep_planner
     virtual bool projectFootPrintWithLocalSearchService(
       jsk_interactive_marker::SnapFootPrint::Request& req,
       jsk_interactive_marker::SnapFootPrint::Response& res);
+    virtual bool setHeuristicPathService(
+      jsk_footstep_planner::SetHeuristicPath::Request& req,
+      jsk_footstep_planner::SetHeuristicPath::Response& res);
     virtual void publishText(ros::Publisher& pub,
                              const std::string& text,
                              PlanningStatus status);
+
     boost::mutex mutex_;
     actionlib::SimpleActionServer<jsk_footstep_msgs::PlanFootstepsAction> as_;
     jsk_footstep_msgs::PlanFootstepsResult result_;
@@ -137,6 +145,7 @@ namespace jsk_footstep_planner
     ros::ServiceServer srv_project_footprint_with_local_search_;
     ros::ServiceServer srv_collision_bounding_box_info_;
     ros::ServiceServer srv_project_footstep_;
+    ros::ServiceServer srv_set_heuristic_path_;
     pcl::PointCloud<pcl::PointNormal>::Ptr pointcloud_model_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_model_;
     FootstepGraph::Ptr graph_;
