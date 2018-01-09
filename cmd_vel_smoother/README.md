@@ -3,7 +3,7 @@ cmd_vel_smoother
 
 ![interpolate](https://cloud.githubusercontent.com/assets/1901008/26520991/c6dfd076-4318-11e7-91ec-8777bb94c1aa.png)
 
-Interpolate velocity command to be published periodically
+Interpolate velocity command to be published periodically with acceleration / deceleration limit.
 
 ### What is this?
 
@@ -34,6 +34,12 @@ If `move_base` node publishes `cmd_vel` lower than 10Hz (let it be 5Hz) but cont
 * `~interpolate_max_frame` (Int, default: `5`)
 
   Max message count to be published from last received velocity command.
+
+### Discussion
+
+- This package is originated from the discussion in https://github.com/ros-planning/navigation/issues/405 .
+
+  I have not looked into detail of implementation but it seems that similar nodes for turtlebot robots exist: https://github.com/yujinrobot/yujin_ocs/tree/devel/yocs_velocity_smoother .
 
 ### Author
 
