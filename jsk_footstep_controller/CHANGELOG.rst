@@ -2,6 +2,9 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.13 (2017-04-18)
 -------------------
 * CMakeLists.txt : fix typo on install DESTINATION

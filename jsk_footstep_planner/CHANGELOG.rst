@@ -2,6 +2,22 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* [jsk_footstep_planner] add grid_path_planner (`#688 <https://github.com/jsk-ros-pkg/jsk_control/issues/688>`_)
+  * [jsk_foostep_planner/footstep_marker] add use_default_step_as_goal
+* [jsk_foostep_planner/JAXON] update launch (`#687 <https://github.com/jsk-ros-pkg/jsk_control/issues/687>`_)
+* Add follow_path heuristic to footstep_planner (`#675 <https://github.com/jsk-ros-pkg/jsk_control/issues/675>`_)
+  * [jsk_footstep_planner] remove not used settings from CMakeLists.txt and change order of include
+  * [jsk_footstep_planner] add set heuristic path service
+  * [jsk_footstep_planner] update follow_path heuristic
+  * [jsk_footstep_planner] fix method name
+  * [jsk_footstep_planner] refine solver
+  * [jsk_footstep_planner] fix include
+  * [jsk_footstep_planner] add follow_path heuristic to cfg
+  * [footstep_planner] add follow_path footstep_planning
+* Contributors: Yohei Kakiuchi, Yuki Furuta
+
 0.1.13 (2017-04-18)
 -------------------
 * [jsk_footstep_planner, jsk_teleop_joy] add stack mode to footstep_marker

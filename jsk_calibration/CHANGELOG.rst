@@ -2,6 +2,9 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.13 (2017-04-18)
 -------------------
 
