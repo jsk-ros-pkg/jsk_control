@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.14 (2018-01-15)
+-------------------
 * [jsk_footstep_planner] add grid_path_planner (`#688 <https://github.com/jsk-ros-pkg/jsk_control/issues/688>`_)
   * [jsk_foostep_planner/footstep_marker] add use_default_step_as_goal
 * [jsk_foostep_planner/JAXON] update launch (`#687 <https://github.com/jsk-ros-pkg/jsk_control/issues/687>`_)

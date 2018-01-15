@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>contact_states_observer</name>
-  <version>0.1.13</version>
+  <version>0.1.14</version>
   <description>The contact_states_observer package</description>
 
   <maintainer email="nozawa@jsk.t.u-tokyo.ac.jp">nozawa</maintainer>
