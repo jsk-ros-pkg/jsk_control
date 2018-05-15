@@ -9,16 +9,7 @@
   <license>BSD</license>
   <url>http://ros.org/wiki/jsk_teleop_joy</url>
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>ps3joy</build_depend>
-  <build_depend>tf</build_depend>
-  <build_depend>view_controller_msgs</build_depend>
-  <build_depend>interactive_markers</build_depend>
-  <build_depend>visualization_msgs</build_depend>
-  <build_depend>jsk_footstep_msgs</build_depend>
-  <build_depend>jsk_interactive_marker</build_depend>
-  <build_depend>diagnostic_msgs</build_depend>
-  <build_depend>diagnostic_updater</build_depend>
-  <build_depend>jsk_rviz_plugins</build_depend>
+
   <run_depend>ps3joy</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>view_controller_msgs</run_depend>
@@ -29,10 +20,10 @@
   <run_depend>diagnostic_msgs</run_depend>
   <run_depend>diagnostic_updater</run_depend>
   <run_depend>jsk_rviz_plugins</run_depend>
-  <build_depend>joy_mouse</build_depend>
   <run_depend>joy_mouse</run_depend>
   <run_depend>image_view2</run_depend>
   <run_depend>python-pygame</run_depend>
+
   <export>
     <jsk_teleop_joy plugin="${prefix}/plugin.xml"/>
   </export>
