@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.15 (2018-05-16)
+-------------------
 * Merge pull request `#692 <https://github.com/jsk-ros-pkg/jsk_control/issues/692>`_ from orikuma/replace-footstep-state-to-state-ptr
   Replace FootstepState::Ptr to StatePtr in footstep_astar_solver to be used with a GraphT which has different state type
 * [jsk_footstep_planner] Replace FootstepState::Ptr -> StatePtr in footstep_astar_solver to be used with a GraphT which has different state type

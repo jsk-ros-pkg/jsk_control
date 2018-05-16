@@ -2,8 +2,8 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.15 (2018-05-16)
+-------------------
 * Merge pull request `#693 <https://github.com/jsk-ros-pkg/jsk_control/issues/693>`_ from k-okada/fix_apt_slow
   remove unused build_depends
 * remove unused build_depends

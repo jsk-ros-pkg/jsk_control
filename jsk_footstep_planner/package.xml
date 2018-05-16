@@ -1,6 +1,6 @@
 <package>
   <name>jsk_footstep_planner</name>
-  <version>0.1.14</version>
+  <version>0.1.15</version>
   <description>jsk_footstep_planner</description>
   <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
 
