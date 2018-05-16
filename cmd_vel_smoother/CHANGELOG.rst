@@ -2,6 +2,9 @@
 Changelog for package cmd_vel_smoother
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.14 (2018-01-15)
 -------------------
 * add cmd_vel_smoother package (`#683 <https://github.com/jsk-ros-pkg/jsk_control/issues/683>`_)

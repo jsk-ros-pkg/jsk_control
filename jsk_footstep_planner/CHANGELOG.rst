@@ -2,6 +2,13 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge pull request `#692 <https://github.com/jsk-ros-pkg/jsk_control/issues/692>`_ from orikuma/replace-footstep-state-to-state-ptr
+  Replace FootstepState::Ptr to StatePtr in footstep_astar_solver to be used with a GraphT which has different state type
+* [jsk_footstep_planner] Replace FootstepState::Ptr -> StatePtr in footstep_astar_solver to be used with a GraphT which has different state type
+* Contributors: Iori Kumagai, Yohei Kakiuchi
+
 0.1.14 (2018-01-15)
 -------------------
 * [jsk_footstep_planner] add grid_path_planner (`#688 <https://github.com/jsk-ros-pkg/jsk_control/issues/688>`_)

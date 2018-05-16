@@ -2,6 +2,9 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.14 (2018-01-15)
 -------------------
 * [eus_qp/euslisp/test-model-predictive-control.l] Add walking example by footstep list (`#682 <https://github.com/jsk-ros-pkg/jsk_control/issues/682>`_)
