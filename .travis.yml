@@ -25,6 +25,7 @@ matrix:
   fast_finish: true
   allow_failures:
     - env: ROS_DISTRO=hydro   USE_DEB=false  BEFORE_SCRIPT='$CI_SOURCE_PATH/.travis_before_script_jsk_recognition_utils.bash'
+    - env: ROS_DISTRO=jade    USE_DEB=true
 script: source .travis/travis.sh
 before_script:
   - export ROS_PARALLEL_JOBS="-j2 -l2"
