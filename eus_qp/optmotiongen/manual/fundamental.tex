@@ -1,0 +1,245 @@
+%%%%%
+\subsection{タスク関数のノルムを最小にするコンフィギュレーションの探索}
+
+$\bm{q} \in \mathbb{R}^{n_q}$を設計対象のコンフィギュレーションとする．
+例えば一般の逆運動学計算では，
+$\bm{q}$はある瞬間のロボットの関節角度を表すベクトルで，
+コンフィギュレーションの次元$n_q$はロボットの関節自由度数となる．
+
+動作生成問題を，
+所望のタスクに対応するタスク関数$\bm{e}(\bm{q}): \mathbb{R}^{n_q} \to \mathbb{R}^{n_e}$について，
+次式を満たす$\bm{q}$を得ることとして定義する．
+\begin{eqnarray}
+  \bm{e}(\bm{q}) = \bm{0} \label{eq:ik-eq}
+\end{eqnarray}
+例えば一般の逆運動学計算では，
+$\bm{e}(\bm{q})$はエンドエフェクタの目標位置姿勢と現在位置姿勢の差を表す6次元ベクトルである．
+非線形方程式(\ref{eq:ik-eq})の解を解析的に得ることは難しく，反復計算による数値解法が採られる．
+\eqref{eq:ik-eq}が解をもたないときでも
+最善のコンフィギュレーションを得られるように一般化すると，
+\eqref{eq:ik-eq}の求解は次の最適化問題として表される
+\footnote{
+任意の半正定値行列$\bm{W}$に対して，
+$\| \bm{e}(\bm{q}) \|_{\bm{W}}^2 = \bm{e}(\bm{q})^T\bm{W}\bm{e}(\bm{q}) = \bm{e}(\bm{q})^T\bm{S}^T\bm{S}\bm{e}(\bm{q}) = \| \bm{S} \bm{e}(\bm{q}) \|^2 $
+を満たす$\bm{S}$が必ず存在するので，
+\eqref{eq:ik-opt-1b}は任意の重み付きノルムを表現可能である．
+}．
+\begin{subequations}\label{eq:ik-opt-1}
+\begin{eqnarray}
+  &&\min_{\bm{q}} \ F(\bm{q}) \label{eq:ik-opt-1a} \\
+  &&{\rm where} \ \ F(\bm{q}) \eqdef \frac{1}{2} \| \bm{e}(\bm{q}) \|^2 \label{eq:ik-opt-1b}
+\end{eqnarray}
+\end{subequations}
+コンフィギュレーションが
+最小値$\bm{q}_{\mathit{min}}$と最大値$\bm{q}_{\mathit{max}}$の間に含まれる必要があるとき，
+逆運動学計算は次の制約付き非線形最適化問題として表される．
+\begin{eqnarray}
+  &&\min_{\bm{q}} \  F(\bm{q}) \hspace{4mm} {\rm s.t.} \ \  \bm{q}_{\mathit{min}} \leq \bm{q} \leq \bm{q}_{\mathit{max}} \label{eq:ik-opt-2}
+\end{eqnarray}
+例えば一般の逆運動学計算では，
+$\bm{q}_{\mathit{min}}, \bm{q}_{\mathit{max}}$は関節角度の許容範囲の最小値，最大値を表す．
+以降では，\eqref{eq:ik-opt-2}の制約を，より一般の形式である線形等式制約，線形不等式制約として次式のように表す
+\footnote{
+  \eqref{eq:ik-opt-2}における関節角度の最小値，最大値に関する制約は次式のように表される．
+  \begin{eqnarray}
+    && \bm{q}_{\mathit{min}} \leq \bm{q} \leq \bm{q}_{\mathit{max}} \nonumber \\
+    \Leftrightarrow && \begin{pmatrix} \bm{I} \\ - \bm{I} \end{pmatrix} \bm{q} \geq \begin{pmatrix} \bm{q}_{\mathit{min}} \\ - \bm{q}_{\mathit{max}} \end{pmatrix} \nonumber
+  \end{eqnarray}
+}．
+\begin{subequations}\label{eq:ik-opt-3}
+\begin{eqnarray}
+  &&\min_{\bm{q}} \  F(\bm{q}) \label{eq:ik-opt-3a} \\
+  &&{\rm s.t.} \ \  \bm{A} \bm{q} = \bm{\bar{b}} \\
+  &&\phantom{\rm s.t.} \ \  \bm{C} \bm{q} \geq \bm{\bar{d}}
+\end{eqnarray}
+\end{subequations}
+
+制約付き非線形最適化問題の解法のひとつである逐次二次計画法では，
+次の二次計画問題の最適解として得られる$\Delta \bm{q}_k^*$を用いて，$\bm{q}_{k+1} = \bm{q}_k + \Delta \bm{q}_k^*$として反復更新することで，
+\eqref{eq:ik-opt-3}の最適解を導出する\footnote{\eqref{eq:sqp-1a}は$F(\bm{q})$を$\bm{q}_k$の周りでテーラー展開し三次以下の項を省略したものに一致する．
+  逐次二次計画法については，以下の書籍の18章で詳しく説明されている．\\
+  Numerical optimization,
+  S. Wright and J. Nocedal,
+  Springer Science,
+  vol. 35,
+  1999,
+  \url{http://www.xn--vjq503akpco3w.top/literature/Nocedal_Wright_Numerical_optimization_v2.pdf}.
+}．
+\begin{subequations}\label{eq:sqp-1}
+\begin{eqnarray}
+  &&\min_{\Delta \bm{q}_k} \ F(\bm{q}_k) + \nabla F(\bm{q}_k)^T \Delta \bm{q}_k + \frac{1}{2} \Delta \bm{q}_k^T \nabla^2 F(\bm{q}_k) \Delta \bm{q}_k \label{eq:sqp-1a} \\
+  &&{\rm s.t.} \ \ \bm{A} \Delta \bm{q}_k = \bm{\bar{b}} - \bm{A} \bm{q}_k \\
+  &&\phantom{\rm s.t.} \ \ \bm{C} \Delta \bm{q}_k \geq \bm{\bar{d}} - \bm{C} \bm{q}_k
+\end{eqnarray}
+\end{subequations}
+$\nabla F(\bm{q}_k), \nabla^2 F(\bm{q}_k)$はそれぞれ，
+$F(\bm{q}_k)$の勾配，ヘッセ行列
+\footnote{\eqref{eq:sqp-1a}の$\nabla^2 F(\bm{q}_k)$の部分は一般にはラグランジュ関数の$\bm{q}_k$に関するヘッセ行列であるが，等式・不等式制約が線形の場合は$F(\bm{q}_k)$のヘッセ行列と等価になる．}
+で，
+次式で表される．
+\begin{subequations}
+\begin{eqnarray}
+  \nabla F(\bm{q}) &=& \left( \frac{\partial \bm{e}(\bm{q})}{\partial \bm{q}} \right)^T \bm{e}(\bm{q}) \label{eq:sqp-2a} \\
+  &=& \bm{J}(\bm{q})^T \bm{e}(\bm{q}) \\
+  \nabla^2 F(\bm{q}) &=& \sum_{i=1}^m e_i(\bm{q}) \nabla^2 e_i(\bm{q})
+  + \left( \frac{\partial \bm{e}(\bm{q})}{\partial \bm{q}} \right)^T \frac{\partial \bm{e}(\bm{q})}{\partial \bm{q}} \label{eq:sqp-2b} \\
+  &\approx& \left( \frac{\partial \bm{e}(\bm{q})}{\partial \bm{q}} \right)^T \frac{\partial \bm{e}(\bm{q})}{\partial \bm{q}} \label{eq:sqp-2c} \\
+  &=& \bm{J}(\bm{q})^T \bm{J}(\bm{q})
+\end{eqnarray}
+\end{subequations}
+ただし，
+$e_i(\bm{q}) \ \ (i=1,2,\cdots,m)$は$\bm{e}(\bm{q})$の$i$番目の要素である．
+\eqref{eq:sqp-2b}から\eqref{eq:sqp-2c}への変形では
+$\bm{e}(\bm{q})$の二階微分がゼロであると近似している．
+$\bm{J}(\bm{q}) \eqdef \frac{\partial \bm{e}(\bm{q})}{\partial \bm{q}} \in \mathbb{R}^{n_e \times n_q}$は$\bm{e}(\bm{q})$のヤコビ行列である．
+
+\eqref{eq:sqp-2a}, \eqref{eq:sqp-2c}から
+\eqref{eq:sqp-1a}の目的関数は次式で表される
+\footnote{\eqref{eq:sqp-3b}は，以下の論文で紹介されている二次計画法によってコンフィギュレーション速度を導出する逆運動学解法における目的関数と一致する．\\
+Feasible pattern generation method for humanoid robots,
+F. Kanehiro et al.,
+Proceedings of the 2009 IEEE-RAS International Conference on Humanoid Robots,
+pp. 542-548,
+2009.
+}．
+\begin{subequations}\label{eq:sqp-3}
+\begin{eqnarray}
+  &&\frac{1}{2} \bm{e}_k^T \bm{e}_k + \bm{e}_k^T \bm{J}_k \Delta \bm{q}_k + \frac{1}{2} \Delta \bm{q}_k^T \bm{J}_k^T \bm{J}_k \Delta \bm{q}_k \label{eq:sqp-3a} \\
+  &=& \frac{1}{2} \| \bm{e}_k + \bm{J}_k \Delta \bm{q}_k \|^2 \label{eq:sqp-3b}
+\end{eqnarray}
+\end{subequations}
+ただし，
+$\bm{e}_k \eqdef \bm{e}(\bm{q}_k), \bm{J}_k \eqdef \bm{J}(\bm{q}_k)$とした．
+
+結局，逐次二次計画法で反復的に解かれる二次計画問題(\ref{eq:sqp-1})は次式で表される．
+\begin{subequations}\label{eq:sqp-4}
+\begin{eqnarray}
+  &&\min_{\Delta \bm{q}_k} \ \frac{1}{2} \Delta \bm{q}_k^T \bm{J}_k^T \bm{J}_k \Delta \bm{q}_k + \bm{e}_k^T \bm{J}_k \Delta \bm{q}_k \label{eq:sqp-4a} \\
+  &&{\rm s.t.} \ \ \bm{A} \Delta \bm{q}_k = \bm{b} \\
+  &&\phantom{\rm s.t.} \ \ \bm{C} \Delta \bm{q}_k \geq \bm{d}
+\end{eqnarray}
+\end{subequations}
+ここで，
+\begin{eqnarray}
+  \bm{b} &=& \bm{\bar{b}} - \bm{A} \bm{q}_k \\
+  \bm{d} &=& \bm{\bar{d}} - \bm{C} \bm{q}_k
+\end{eqnarray}
+とおいた．
+
+%%%%%
+\subsection{コンフィギュレーション二次形式の正則化項の追加}
+
+\eqref{eq:ik-opt-1a}の最適化問題の目的関数を，次式の$\hat{F}(\bm{q})$で置き換える．
+\begin{eqnarray}
+  && \hat{F}(\bm{q}) = F(\bm{q}) + F_{\mathit{reg}}(\bm{q}) \\
+  && {\rm where} \ \ F_{\mathit{reg}}(\bm{q}) = \frac{1}{2} \bm{q}^T \bm{\bar{W}}_{\mathit{reg}} \bm{q}
+\end{eqnarray}
+
+目的関数$\hat{F}(\bm{q})$の勾配，ヘッセ行列は次式で表される．
+\begin{subequations}
+\begin{eqnarray}
+  \nabla \hat{F}(\bm{q})
+  &=& \nabla F(\bm{q}) + \nabla F_{\mathit{reg}}(\bm{q}) \\
+  &=& \bm{J}(\bm{q})^T \bm{e}(\bm{q}) + \bm{\bar{W}}_{\mathit{reg}} \bm{q} \\
+  \nabla^2 \hat{F}(\bm{q}) &=& \nabla^2 F(\bm{q}) + \nabla^2 F_{\mathit{reg}}(\bm{q}) \\
+  &\approx& \bm{J}(\bm{q})^T \bm{J}(\bm{q}) + \bm{\bar{W}}_{\mathit{reg}}
+\end{eqnarray}
+\end{subequations}
+
+したがって，\eqref{eq:sqp-4}の二次計画問題は次式で表される．
+\begin{subequations}\label{eq:sqp-5}
+\begin{eqnarray}
+  &&\min_{\Delta \bm{q}_k} \ \frac{1}{2} \Delta \bm{q}_k^T \left( \bm{J}_k^T \bm{J}_k + \bm{\bar{W}}_{\mathit{reg}} \right) \Delta \bm{q}_k + \left( \bm{J}_k^T \bm{e}_k + \bm{\bar{W}}_{\mathit{reg}} \bm{q}_k \right)^T \Delta \bm{q}_k \label{eq:sqp-5a} \\
+  &&{\rm s.t.} \ \ \bm{A} \Delta \bm{q}_k = \bm{b} \\
+  &&\phantom{\rm s.t.} \ \ \bm{C} \Delta \bm{q}_k \geq \bm{d}
+\end{eqnarray}
+\end{subequations}
+
+%%%%%
+\subsection{コンフィギュレーション更新量の正則項の追加}
+
+Gauss-Newton法とLevenberg-Marquardt法の比較を参考に，
+\eqref{eq:sqp-5a}の二次形式項の行列に，次式のように微小な係数をかけた単位行列を加えると，一部の適用例について逐次二次計画法の収束性が改善された
+\footnote{これは，最適化における信頼領域(trust region)に関連している．}．
+\begin{subequations}\label{eq:sqp-6}
+\begin{eqnarray}
+  &&\min_{\Delta \bm{q}_k} \ \frac{1}{2} \Delta \bm{q}_k^T \left( \bm{J}_k^T \bm{J}_k + \bm{\bar{W}}_{\mathit{reg}} + \lambda \bm{I} \right) \Delta \bm{q}_k + \left( \bm{J}_k^T \bm{e}_k + \bm{\bar{W}}_{\mathit{reg}} \bm{q}_k \right)^T \Delta \bm{q}_k \label{eq:sqp-6a} \\
+  &&{\rm s.t.} \ \ \bm{A} \Delta \bm{q}_k = \bm{b} \\
+  &&\phantom{\rm s.t.} \ \ \bm{C} \Delta \bm{q}_k \geq \bm{d}
+\end{eqnarray}
+\end{subequations}
+改良誤差減衰最小二乗法
+\footnote{
+Levenberg-Marquardt法による可解性を問わない逆運動学,
+杉原 知道,
+日本ロボット学会誌,
+vol. 29,
+no. 3,
+pp. 269-277,
+2011.
+}
+を参考にすると，
+$\lambda$は次式のように決定される．
+\begin{eqnarray}
+  \lambda = \lambda_r F(\bm{q}_k) + w_r
+\end{eqnarray}
+$\lambda_r$と$w_r$は正の定数である．
+
+%%%%%
+\subsection{ソースコードと数式の対応}
+
+\begin{subequations}
+\begin{eqnarray}
+  \bm{W}_{\mathit{reg}} &\eqdef& \bm{\bar{W}}_{\mathit{reg}} + \lambda \bm{I} \\
+  \bm{v}_{\mathit{reg}} &\eqdef& \bm{\bar{W}}_{\mathit{reg}} \bm{q}_k
+\end{eqnarray}
+\end{subequations}
+とすると，\eqref{eq:sqp-6}は次式で表される．
+\begin{subequations}\label{eq:sqp-7}
+\begin{eqnarray}
+  &&\min_{\Delta \bm{q}_k} \ \frac{1}{2} \Delta \bm{q}_k^T \left( \bm{J}_k^T \bm{J}_k + \bm{W} \right) \Delta \bm{q}_k + \left( \bm{J}_k^T \bm{e}_k + \bm{v}_{\mathit{reg}} \right)^T \Delta \bm{q}_k \label{eq:sqp-7a} \\
+  &&{\rm s.t.} \ \ \bm{A} \Delta \bm{q}_k = \bm{b} \\
+  &&\phantom{\rm s.t.} \ \ \bm{C} \Delta \bm{q}_k \geq \bm{d}
+\end{eqnarray}
+\end{subequations}
+
+\secref{chap:config-task}や\chapref{chap:extended}で説明する
+{\it ***-configuration-task}クラスのメソッドは
+\eqref{eq:sqp-7}中の記号と以下のように対応している．
+
+\begin{description}[labelindent=10mm, labelwidth=70mm]
+  \setlength{\itemsep}{-2pt}
+  \item[{\it :config-vector}] get $\bm{q}$
+  \item[{\it :set-config}] set $\bm{q}$
+  \item[{\it :task-value}] get $\bm{e}(\bm{q})$
+  \item[{\it :task-jacobian}] get $\bm{J}(\bm{q}) \eqdef \frac{\partial \bm{e}(\bm{q})}{\partial \bm{q}}$
+  \item[{\it :config-equality-constraint-matrix}] get $\bm{A}$
+  \item[{\it :config-equality-constraint-vector}] get $\bm{b}$
+  \item[{\it :config-inequality-constraint-matrix}] get $\bm{C}$
+  \item[{\it :config-inequality-constraint-vector}] get $\bm{d}$
+  \item[{\it :regular-matrix}] get $\bm{W}_{\mathit{reg}}$
+  \item[{\it :regular-vector}] get $\bm{v}_{\mathit{reg}}$
+\end{description}
+
+%%%%%
+\subsection{章の構成}
+
+\chapref{chap:config-task}では，
+コンフィギュレーション$\bm{q}$の取得・更新，タスク関数$\bm{e}(\bm{q})$の取得，タスク関数のヤコビ行列$\bm{J}(\bm{q}) \eqdef \frac{\partial \bm{e}(\bm{q})}{\partial \bm{q}}$の取得，コンフィギュレーションの等式・不等式制約$\bm{A}, \bm{b}, \bm{C}, \bm{d}$の取得のためのクラスを説明する．
+\secref{sec:instant-config-task}ではコンフィギュレーション$\bm{q}$が瞬時の情報，
+\secref{sec:trajectory-config-task}ではコンフィギュレーション$\bm{q}$が時系列の情報を表す場合をそれぞれ説明する．
+
+\chapref{chap:sqp}では，\chapref{chap:config-task}で説明されるクラスを用いて逐次二次計画法により最適化を行うためのクラスを説明する．
+
+\chapref{chap:extended}では，
+用途に応じて拡張されたコンフィギュレーションとタスク関数のクラスを説明する．
+\secref{sec:manip}では，
+マニピュレーションのために，ロボットに加えて物体のコンフィギュレーションを計画する場合を説明する．
+\secref{sec:bspline}では，
+ロボットの関節位置の軌道をBスプライン関数でパラメトリックに表現する場合を説明する．
+いずれにおいても，最適化では\chapref{chap:sqp}で説明された逐次二次計画法のクラスが利用される．
+
+\chapref{chap:appendix}では，その他の補足事項を説明する．
+\secref{sec:base-extention}では，jskeusで定義されているクラスの拡張について説明する．
+\secref{sec:robot-environment}では，環境との接触を有するロボットの問題設定を記述するためのクラスについて説明する．
+\secref{sec:torque-jacobian}では，関節トルクを関節角度で微分したヤコビ行列を導出するための関数について説明する．
