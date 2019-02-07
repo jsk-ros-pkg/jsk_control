@@ -1,0 +1,398 @@
+%%
+\subsubsection*{一般のBスプライン基底関数の定義}
+
+Bスプライン基底関数は以下で定義される．
+\begin{eqnarray}
+  b_{i, 0}(t) &\eqdef& \left\{ \begin{array}{ll} 1 & {\rm if \ \ } t_i \leq t < t_{i+1}\\ 0 & {\rm otherwise}\end{array}\right. \label{eq:bspline-def-1} \\
+  b_{i, n}(t) &\eqdef& \frac{t - t_i}{t_{i+n} - t_i} b_{i, n-1}(t) + \frac{t_{i+n+1} - t}{t_{i+n+1} - t_{i+1}} b_{i+1, n-1}(t) \label{eq:bspline-def-2}
+\end{eqnarray}
+$t_i$はノットと呼ばれる．
+
+%%
+\subsubsection*{使用区間を指定してノットを一様とする場合のBスプライン基底関数}
+
+$t_s, t_f$をBスプラインの使用区間の初期，終端時刻とする．
+
+$n < m$とする．
+\begin{eqnarray}
+  t_n = t_s \\
+  t_m = t_f
+\end{eqnarray}
+とする．$t_i \ (0 \leq i \leq n+m)$が等間隔に並ぶとすると，
+\begin{eqnarray}
+  t_i &=& \frac{i - n}{m - n} (t_f - t_s) + t_s \\
+  &=& h i + \frac{m t_s - n t_f}{m - n} \label{eq:bspline-t-def-1}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  h \eqdef \frac{t_f - t_s}{m - n}
+\end{eqnarray}
+\eqref{eq:bspline-t-def-1}を\eqref{eq:bspline-def-1}, \eqref{eq:bspline-def-2}に代入すると，
+Bスプライン基底関数は次式で得られる．
+\begin{eqnarray}
+  b_{i, 0}(t) &=& \left\{ \begin{array}{ll} 1 & {\rm if \ \ } t_i \leq t < t_{i+1}\\ 0 & {\rm otherwise}\end{array}\right. \label{eq:bspline-uniform-knot-1} \\
+  b_{i, n}(t) &=& \frac{(t - t_i) b_{i, n-1}(t) + (t_{i+n+1} - t) b_{i+1, n-1}(t)}{n h} \label{eq:bspline-uniform-knot-2}
+\end{eqnarray}
+以降では，$n$をBスプラインの次数，$m$を制御点の個数と呼ぶ．
+
+%%
+\subsubsection*{Bスプラインの凸包性}
+
+\eqref{eq:bspline-uniform-knot-1},\eqref{eq:bspline-uniform-knot-2}で定義されるBスプライン基底関数$b_{i,n}(t)$は次式のように凸包性を持つ．
+\begin{eqnarray}
+  &&\sum_{i=0}^{m-1} b_{i,n}(t) = 1 \ \ (t_s \leq t \leq t_f) \label{eq:bspline-convex-1} \\
+  &&0 \leq b_{i,n}(t) \leq 1 \ \ (i = 0,1,\cdots,m-1, \ t_s \leq t \leq t_f) \label{eq:bspline-convex-2}
+\end{eqnarray}
+
+%%
+\subsubsection*{Bスプラインの微分}
+
+Bスプライン基底関数の微分に関して次式が成り立つ\footnote{数学的帰納法で証明できる．\url{http://mat.fsv.cvut.cz/gcg/sbornik/prochazkova.pdf}}．
+\begin{eqnarray}
+  &&\bm{\dot{b}}_n(t) = \frac{d \bm{b}_n(t)}{d t} = \bm{D} \bm{b}_{n-1}(t) \label{eq:bspline-derivative}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{b}_n(t) &\eqdef& \begin{pmatrix} b_{0,n}(t) \\ b_{1,n}(t) \\ \vdots \\ b_{m-1,n}(t) \end{pmatrix} \in \mathbb{R}^m \\
+  \bm{D} &\eqdef& \frac{1}{h} \begin{pmatrix} 1 & -1 &&&\bm{O}\\ & 1 & -1 &&\\&&\ddots&\ddots&\\&&&\ddots&-1\\\bm{O}&&&&1\end{pmatrix} \in \mathbb{R}^{m \times m}
+\end{eqnarray}
+したがって，$k$階微分に関して次式が成り立つ．
+\begin{eqnarray}
+  &&\bm{b}_n^{(k)}(t) = \frac{d^{(k)} \bm{b}_n(t)}{d t^{(k)}} = \bm{D}^k \bm{b}_{n-k}(t) \label{eq:bspline-derivative-k}
+\end{eqnarray}
+
+%%
+\subsubsection*{Bスプラインによる関節角軌道の表現}
+
+$j$番目の関節角軌道$\theta_j (t)$を次式で表す．
+\begin{eqnarray}
+  \theta_j (t) \eqdef \sum_{i=0}^{m-1} p_{j,i} b_{i, n}(t) = \bm{p}_j^T \bm{b}_n(t) \in \mathbb{R} \ \ (t_s \leq t \leq t_f) \label{eq:bspline-theta-j}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{p}_j = \begin{pmatrix} p_{j,0} \\ p_{j,1} \\ \vdots \\ p_{j,m-1} \end{pmatrix} \in \mathbb{R}^m, \ \ 
+  \bm{b}_n(t) = \begin{pmatrix} b_{0,n}(t) \\ b_{1,n}(t) \\ \vdots \\ b_{m-1,n}(t) \end{pmatrix} \in \mathbb{R}^m
+\end{eqnarray}
+以降では，$\bm{p}_j$を制御点，$\bm{b}_n(t)$を基底関数と呼ぶ．
+制御点$\bm{p}_j$を決定すると関節角軌道が定まる．制御点$\bm{p}_j$を動作計画の設計変数とする．
+
+$j=1,2,\cdots,N_{\mathit{joint}}$番目の関節角軌道を並べたベクトル関数は，
+\begin{eqnarray}
+  \bm{\theta}(t) \eqdef \begin{pmatrix} \theta_1(t) \\ \theta_2(t) \\ \vdots \\ \theta_{N_{\mathit{joint}}}(t) \end{pmatrix}
+  = \begin{pmatrix} \bm{p}_1^T \bm{b}_n(t) \\ \bm{p}_2^T \bm{b}_n(t) \\ \vdots \\ \bm{p}_{N_{\mathit{joint}}}^T \bm{b}_n(t) \end{pmatrix}
+  = \begin{pmatrix} \bm{p}_1^T \\ \bm{p}_2^T \\ \vdots \\ \bm{p}_{N_{\mathit{joint}}}^T \end{pmatrix} \bm{b}_n(t)
+  = \bm{P} \bm{b}_n(t)
+  \in \mathbb{R}^{N_{\mathit{joint}}} \label{eq:spline-theta-vec}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{P} \eqdef \begin{pmatrix} \bm{p}_1^T \\ \bm{p}_2^T \\ \vdots \\ \bm{p}_{N_{\mathit{joint}}}^T \end{pmatrix} \in \mathbb{R}^{N_{\mathit{joint}} \times m}
+\end{eqnarray}
+
+\eqref{eq:spline-theta-vec}は，制御点を縦に並べたベクトルとして分離して，以下のようにも表現できる．
+\begin{eqnarray}
+  \bm{\theta}(t) = \begin{pmatrix} \theta_1(t) \\ \theta_2(t) \\ \vdots \\ \theta_{N_{\mathit{joint}}}(t) \end{pmatrix}
+  = \begin{pmatrix} \bm{b}_n^T(t) \bm{p}_1 \\  \bm{b}_n^T(t) \bm{p}_2 \\  \vdots \\ \bm{b}_n^T(t) \bm{p}_{N_{\mathit{joint}}} \end{pmatrix}
+  = \begin{pmatrix} \bm{b}_n^T(t)&&&\bm{O}\\&\bm{b}_n^T(t)&&\\&&\ddots&\\\bm{O}&&&\bm{b}_n^T(t) \end{pmatrix}
+  \begin{pmatrix} \bm{p}_1 \\  \bm{p}_2 \\  \vdots \\ \bm{p}_{N_{\mathit{joint}}} \end{pmatrix}
+  = \bm{B}_n(t) \bm{p}
+  \in \mathbb{R}^{N_{\mathit{joint}}} \label{eq:spline-theta-vec-2}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{B}_n(t) \eqdef \begin{pmatrix} \bm{b}_n^T(t)&&&\bm{O}\\&\bm{b}_n^T(t)&&\\&&\ddots&\\\bm{O}&&&\bm{b}_n^T(t) \end{pmatrix} \in \mathbb{R}^{N_{\mathit{joint}} \times m N_{\mathit{joint}}}, \ \
+  \bm{p} \eqdef \begin{pmatrix} \bm{p}_1 \\  \bm{p}_2 \\  \vdots \\ \bm{p}_{N_{\mathit{joint}}} \end{pmatrix} \in \mathbb{R}^{m N_{\mathit{joint}}}
+\end{eqnarray}
+
+%%
+\subsubsection*{Bスプラインによる関節角軌道の微分}
+
+\eqref{eq:spline-theta-vec}と\eqref{eq:bspline-derivative}から，関節角速度軌道は次式で得られる．
+\begin{eqnarray}
+  \bm{\dot{\theta}}(t) &=& \bm{P} \bm{\dot{b}}_n(t) \\
+  &=& \bm{P} \bm{D} \bm{b}_{n-1}(t) \\
+  &=& \begin{pmatrix} \bm{p}_1^T \\ \vdots \\ \bm{p}_{N_{\mathit{joint}}}^T \end{pmatrix} \bm{D} \bm{b}_{n-1}(t) \\
+  &=& \begin{pmatrix} \bm{p}_1^T \bm{D} \bm{b}_{n-1}(t) \\ \vdots \\ \bm{p}_{N_{\mathit{joint}}}^T \bm{D} \bm{b}_{n-1}(t) \end{pmatrix} \\
+  &=& \begin{pmatrix} \bm{b}_{n-1}^T(t) \bm{D}^T \bm{p}_1 \\ \vdots \\ \bm{b}_{n-1}^T(t) \bm{D}^T \bm{p}_{N_{\mathit{joint}}} \end{pmatrix} \\
+  &=& \begin{pmatrix} \bm{b}_{n-1}^T(t) \bm{D}^T && \bm{O} \\ &\ddots& \\ \bm{O} && \bm{b}_{n-1}^T(t) \bm{D}^T \end{pmatrix} \begin{pmatrix} \bm{p}_1 \\ \vdots \\ \bm{p}_{N_{\mathit{joint}}} \end{pmatrix} \\
+  &=& \begin{pmatrix} \bm{b}_{n-1}^T(t) && \bm{O} \\ &\ddots& \\ \bm{O} && \bm{b}_{n-1}^T(t) \end{pmatrix} \begin{pmatrix} \bm{D}^T && \bm{O} \\ &\ddots& \\ \bm{O} && \bm{D}^T \end{pmatrix} \begin{pmatrix} \bm{p}_1 \\ \vdots \\ \bm{p}_{N_{\mathit{joint}}} \end{pmatrix} \\
+  &=& \bm{B}_{n-1}(t) \bm{\hat{D}}_1 \bm{p}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{\hat{D}}_1 &=& \begin{pmatrix} \bm{D}^T&&&\bm{O}\\&\bm{D}^T&&\\&&\ddots&\\\bm{O}&&&\bm{D}^T \end{pmatrix} \in \mathbb{R}^{m N_{\mathit{joint}} \times m N_{\mathit{joint}}}
+\end{eqnarray}
+同様にして，関節角軌道の$k$階微分は次式で得られる．
+\begin{eqnarray}
+  \bm{\theta}^{(k)}(t) &=& \frac{d^{(k)} \bm{\theta}(t)}{d t^{(k)}} \\
+  &=& \bm{P} \bm{D}^k \bm{b}_{n-k}(t) \label{eq:spline-theta-dot-k-1} \\
+  &=& \bm{B}_{n-k}(t) \bm{\hat{D}}_k \bm{p} \label{eq:spline-theta-dot-k-2}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{\hat{D}}_k &=& \begin{pmatrix} (\bm{D}^k)^T&&\bm{O}\\&\ddots&\\\bm{O}&&(\bm{D}^k)^T \end{pmatrix} = (\bm{\hat{D}}_1)^k \in \mathbb{R}^{m N_{\mathit{joint}} \times m N_{\mathit{joint}}}
+\end{eqnarray}
+計算時間は\eqref{eq:spline-theta-dot-k-1}のほうが\eqref{eq:spline-theta-dot-k-2}より速い．
+
+%%
+\subsubsection*{エンドエフェクタ位置姿勢拘束のタスク関数}
+
+関節角$\bm{\theta} \in \mathbb{R}^{N_{\mathit{joint}}}$からエンドエフェクタ位置姿勢$\bm{r} \in \mathbb{R}^6$への写像を$\bm{f}(\bm{\theta})$で表す．
+\begin{eqnarray}
+  \bm{r} = \bm{f}(\bm{\theta})
+\end{eqnarray}
+
+関節角軌道が\eqref{eq:spline-theta-vec-2}で表現されるとき，エンドエフェクタ軌道は次式で表される．
+\begin{eqnarray}
+  \bm{r}(t) = \bm{f}(\bm{\theta}(t)) = \bm{f}(\bm{B}_n(t) \bm{p})
+\end{eqnarray}
+
+$l = 1,2,\cdots,{N_{\mathit{tm}}}$について，時刻$t_l$でエンドエフェクタの位置姿勢が$\bm{r}_l$であるタスクのタスク関数は次式で表される．
+以降では，$t_l$をタイミングと呼ぶ．
+\begin{eqnarray}
+  \bm{e}(\bm{p}, \bm{t}) \eqdef
+  \begin{pmatrix} \bm{e}_1(\bm{p}, \bm{t}) \\ \bm{e}_2(\bm{p}, \bm{t}) \\ \vdots \\ \bm{e}_{N_{\mathit{tm}}}(\bm{p}, \bm{t}) \end{pmatrix} =
+  \begin{pmatrix} \bm{r}_1 - \bm{f}(\bm{\theta}(t_1)) \\ \bm{r}_2 - \bm{f}(\bm{\theta}(t_2)) \\ \vdots \\ \bm{r}_{N_{\mathit{tm}}} - \bm{f}(\bm{\theta}(t_{N_{\mathit{tm}}})) \end{pmatrix} =
+  \begin{pmatrix} \bm{r}_1 - \bm{f}(\bm{B}_n(t_1)\bm{p}) \\ \bm{r}_2 - \bm{f}(\bm{B}_n(t_2)\bm{p}) \\ \vdots \\ \bm{r}_{N_{\mathit{tm}}} - \bm{f}(\bm{B}_n(t_{N_{\mathit{tm}}})\bm{p}) \end{pmatrix} \in \mathbb{R}^{6{N_{\mathit{tm}}}} \label{eq:bspline-task}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{e}_l(\bm{p}, \bm{t}) &\eqdef& \bm{r}_l - \bm{f}(\bm{\theta}(t_l)) = \bm{r}_l - \bm{f}(\bm{B}_n(t_l)\bm{p}) \in \mathbb{R}^6 \ (l = 1,2,\cdots,{N_{\mathit{tm}}}) \\
+  \bm{t} &\eqdef& \begin{pmatrix} t_1 \\ t_2 \\ \vdots \\ t_{N_{\mathit{tm}}} \end{pmatrix} \in \mathbb{R}^{N_{\mathit{tm}}}
+\end{eqnarray}
+
+このタスクを実現する関節角軌道は，次の評価関数を最小にする制御点$\bm{p}$，タイミング$\bm{t}$を求めることで導出することができる．
+\begin{eqnarray}
+  F(\bm{p}, \bm{t}) &\eqdef& \frac{1}{2} \| \bm{e}(\bm{p}, \bm{t}) \|^2 \\
+  &=& \frac{1}{2} \sum_{l=1}^{{N_{\mathit{tm}}}} \| \bm{r}_l - \bm{f}(\bm{\theta}(t_l)) \|^2 \\
+  &=& \frac{1}{2} \sum_{l=1}^{{N_{\mathit{tm}}}} \| \bm{r}_l - \bm{f}(\bm{B}_n(t_l) \bm{p}) \|^2 \label{eq:bspline-objective}
+\end{eqnarray}
+
+また，$l$番目の幾何拘束の許容誤差を$\bm{e}_{\mathit{tol},l} \geq \bm{0} \in \mathbb{R}^6$とする場合，タスク関数$\bm{\tilde{e}}_{l}(\bm{p}, \bm{t})$は次式で表される．
+\begin{eqnarray}
+  \tilde{e}_{l,i}(\bm{p}, \bm{t}) \eqdef
+  \left\{ \begin{array}{ll}
+    e_{l,i}(\bm{p}, \bm{t}) - e_{\mathit{tol},l,i} & e_{l,i}(\bm{p}, \bm{t}) > e_{\mathit{tol},l,i} \\
+    e_{l,i}(\bm{p}, \bm{t}) + e_{\mathit{tol},l,i} & e_{l,i}(\bm{p}, \bm{t}) < - e_{\mathit{tol},l,i} \\
+    0 & {\rm otherwise} \\
+  \end{array} \right. \ \ (i = 1,2,\cdots,6)
+\end{eqnarray}
+$\tilde{e}_{l,i}(\bm{p}, \bm{t})$は$\bm{\tilde{e}}_{l}(\bm{p}, \bm{t})$の$i$番目の要素である．
+$e_{l,i}(\bm{p}, \bm{t})$は$\bm{e}(\bm{p}, \bm{t})$の$i$番目の要素である．
+
+%%
+\subsubsection*{タスク関数を制御点で微分したヤコビ行列}
+
+\eqref{eq:bspline-objective}を目的関数とする最適化問題をGauss-Newton法，Levenberg-Marquardt法や逐次二次計画法で解く場合，
+タスク関数(\ref{eq:bspline-task})のヤコビ行列が必要となる．
+
+各時刻でのエンドエフェクタ位置姿勢拘束のタスク関数$\bm{e}_l(\bm{p}, \bm{t})$の制御点$\bm{p}$に対するヤコビ行列は次式で求められる．
+\begin{eqnarray}
+  \frac{\partial \bm{e}_l(\bm{p}, \bm{t})}{\partial \bm{p}} &=& \frac{\partial}{\partial \bm{p}} \{ \bm{r}_l - \bm{f}(\bm{B}_n(t_l)\bm{p}) \} \\
+  &=& - \frac{\partial}{\partial \bm{p}} \bm{f}(\bm{B}_n(t_l)\bm{p}) \\
+  &=& - \left. \frac{\partial \bm{f}}{\partial \bm{\theta}} \right|_{\bm{\theta} = \bm{\theta}(t_l)} \frac{\partial \bm{\theta}}{\partial \bm{p}} \\
+  &=& - \bm{J}(\bm{\theta}(t_l)) \frac{\partial}{\partial \bm{p}} \{ \bm{B}_n(t_l)\bm{p} \} \\
+  &=& - \bm{J}(\bm{\theta}(t_l)) \bm{B}_n(t_l) \label{eq:bspline-task-jacobian-with-control}
+\end{eqnarray}
+途中の変形で，$\bm{\theta}(\bm{p}; t) = \bm{B}_n(t) \bm{p}$であることを利用した．
+ただし，
+\begin{eqnarray}
+  \bm{J} \eqdef \frac{\partial \bm{f}}{\partial \bm{\theta}}
+\end{eqnarray}
+
+%%
+\subsubsection*{タスク関数をタイミングで微分したヤコビ行列}
+
+各時刻でのエンドエフェクタ位置姿勢拘束のタスク関数$\bm{e}_l(\bm{p}, \bm{t})$のタイミング$\bm{t}$に対するヤコビ行列は次式で求められる．
+\begin{eqnarray}
+  \frac{\partial \bm{e}_l(\bm{p}, \bm{t})}{\partial t_l} &=& \frac{\partial}{\partial t_l} \{ \bm{r}_l - \bm{f}(\bm{P}\bm{b}_n(t_l)) \} \\
+  &=& - \frac{\partial}{\partial t_l} \bm{f}(\bm{P}\bm{b}_n(t_l)) \\
+  &=& - \left. \frac{\partial \bm{f}}{\partial \bm{\theta}} \right|_{\bm{\theta} = \bm{\theta}(t_l)} \frac{\partial \bm{\theta}}{\partial t_l} \\
+  &=& - \bm{J}(\bm{\theta}(t_l)) \frac{\partial}{\partial t_l} \{ \bm{P}\bm{b}_n(t_l) \} \\
+  &=& - \bm{J}(\bm{\theta}(t_l)) \bm{P} \bm{\dot{b}}_n(t_l) \\
+  &=& - \bm{J}(\bm{\theta}(t_l)) \bm{P} \bm{D} \bm{b}_{n-1}(t_l) \label{eq:bspline-task-jacobian-with-timing}
+\end{eqnarray}
+途中の変形で，$\bm{\theta}(\bm{p}; t) = \bm{P} \bm{b}_n(t)$であることを利用した．
+
+%%
+\subsubsection*{初期・終端関節速度・加速度のタスク関数とヤコビ行列}
+
+初期，終端時刻の関節速度，加速度はゼロであるべきである．
+タスク関数は次式となる．
+\begin{eqnarray}
+  \bm{e}_{sv}(\bm{p}, \bm{t})
+  &\eqdef& \bm{\dot{\theta}}(t_s) \\
+  &=& \bm{B}_{n-1}(t_s) \bm{\hat{D}}_1 \bm{p} \\
+  &=& \bm{P} \bm{D} \bm{b}_{n-1}(t_s) \\
+  \bm{e}_{fv}(\bm{p}, \bm{t})
+  &\eqdef& \bm{\dot{\theta}}(t_f) \\
+  &=& \bm{B}_{n-1}(t_f) \bm{\hat{D}}_1 \bm{p} \\
+  &=& \bm{P} \bm{D} \bm{b}_{n-1}(t_f) \\
+  \bm{e}_{sa}(\bm{p}, \bm{t})
+  &\eqdef& \bm{\ddot{\theta}}(t_s) \\
+  &=& \bm{B}_{n-2}(t_s) \bm{\hat{D}}_2 \bm{p} \\
+  &=& \bm{P} \bm{D}^2 \bm{b}_{n-2}(t_s) \\
+  \bm{e}_{fa}(\bm{p}, \bm{t})
+  &\eqdef& \bm{\ddot{\theta}}(t_f) \\
+  &=& \bm{B}_{n-2}(t_f) \bm{\hat{D}}_2 \bm{p} \\
+  &=& \bm{P} \bm{D}^2 \bm{b}_{n-2}(t_f)
+\end{eqnarray}
+
+制御点で微分したヤコビ行列は次式で表される．
+\begin{eqnarray}
+  \frac{\partial \bm{e}_{sv}(\bm{p}, \bm{t})}{\partial \bm{p}} &=& \bm{B}_{n-1}(t_s) \bm{\hat{D}}_1 \label{eq:bspline-stationery-task-jacobian-with-control-sv} \\
+  \frac{\partial \bm{e}_{fv}(\bm{p}, \bm{t})}{\partial \bm{p}} &=& \bm{B}_{n-1}(t_f) \bm{\hat{D}}_1 \label{eq:bspline-stationery-task-jacobian-with-control-fv} \\
+  \frac{\partial \bm{e}_{sa}(\bm{p}, \bm{t})}{\partial \bm{p}} &=& \bm{B}_{n-2}(t_s) \bm{\hat{D}}_2 \label{eq:bspline-stationery-task-jacobian-with-control-sa} \\
+  \frac{\partial \bm{e}_{fa}(\bm{p}, \bm{t})}{\partial \bm{p}} &=& \bm{B}_{n-2}(t_f) \bm{\hat{D}}_2 \label{eq:bspline-stationery-task-jacobian-with-control-fa}
+\end{eqnarray}
+
+初期時刻，終端時刻で微分したヤコビ行列は次式で表される．
+\begin{eqnarray}
+  \frac{\partial \bm{e}_{sv}(\bm{p}, \bm{t})}{\partial t_s} &=& \bm{P} \bm{D} \frac{\partial \bm{b}_{n-1}(t_s)}{\partial t_s}
+  = \bm{P} \bm{D}^2 \bm{b}_{n-2}(t_s) \label{eq:bspline-stationery-task-jacobian-with-timing-sv} \\
+  \frac{\partial \bm{e}_{fv}(\bm{p}, \bm{t})}{\partial t_f} &=& \bm{P} \bm{D} \frac{\partial \bm{b}_{n-1}(t_f)}{\partial t_f}
+  = \bm{P} \bm{D}^2 \bm{b}_{n-2}(t_f) \label{eq:bspline-stationery-task-jacobian-with-timing-fv} \\
+  \frac{\partial \bm{e}_{sa}(\bm{p}, \bm{t})}{\partial t_s} &=& \bm{P} \bm{D}^2 \frac{\partial \bm{b}_{n-2}(t_s)}{\partial t_s}
+  = \bm{P} \bm{D}^3 \bm{b}_{n-3}(t_s) \label{eq:bspline-stationery-task-jacobian-with-timing-sa} \\
+  \frac{\partial \bm{e}_{fa}(\bm{p}, \bm{t})}{\partial t_f} &=& \bm{P} \bm{D}^2 \frac{\partial \bm{b}_{n-2}(t_f)}{\partial t_f}
+  = \bm{P} \bm{D}^3 \bm{b}_{n-3}(t_f) \label{eq:bspline-stationery-task-jacobian-with-timing-fa}
+\end{eqnarray}
+
+%%
+\subsubsection*{関節角上下限制約}
+
+\eqref{eq:bspline-theta-j}の関節角軌道定義において，
+\begin{eqnarray}
+  \bm{p}_j \leq \theta_{max,j} \bm{1}_m
+\end{eqnarray}
+のとき，Bスプラインの凸包性(\eqref{eq:bspline-convex-1}, \eqref{eq:bspline-convex-2})より次式が成り立つ．
+ただし，$\bm{1}_m \in \mathbb{R}^m$は全要素が$1$の$m$次元ベクトルである．
+\begin{eqnarray}
+  \theta_j (t) &=& \sum_{i=0}^{m-1} p_{j,i} b_{i, n}(t) \\
+  &\leq& \sum_{i=0}^{m-1} \theta_{max,j} b_{i, n}(t) \\
+  &=& \theta_{max,j} \sum_{i=0}^{m-1} b_{i, n}(t) \\
+  &=& \theta_{max,j}
+\end{eqnarray}
+同様に，$\theta_{min,j} \bm{1}_m \leq \bm{p}_j$とすれば，$\theta_{min,j} \leq \theta_j (t)$が成り立つ．
+
+したがって，$j$番目の関節角の上下限を$\theta_{max,j}, \theta_{min,j}$とすると，次式の制約を制御点に課すことで，関節角上下限制約を満たす関節角軌道が得られる．
+\begin{eqnarray}
+  \theta_{min,j} \bm{1}_m \leq \bm{p}_j \leq \theta_{max,j} \bm{1}_m \ (j = 1,2,\cdots,N_{\mathit{joint}})
+\end{eqnarray}
+つまり，
+\begin{eqnarray}
+  &&\bm{\hat{E}} \bm{\theta}_{min} \leq \bm{p} \leq \bm{\hat{E}} \bm{\theta}_{max} \label{eq:bspline-theta-constraint} \\
+  \Leftrightarrow&&
+  \begin{pmatrix} \bm{I} \\ - \bm{I} \end{pmatrix} \bm{p} \geq \begin{pmatrix} \bm{\hat{E}} \bm{\theta}_{min} \\ - \bm{\hat{E}} \bm{\theta}_{max} \end{pmatrix}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{\hat{E}} \eqdef \begin{pmatrix} \bm{1}_m&&&\bm{0}_m\\&\bm{1}_m&&\\&&\ddots&\\\bm{0}_m&&&\bm{1}_m \end{pmatrix} \in \mathbb{R}^{m N_{\mathit{joint}} \times N_{\mathit{joint}}}
+\end{eqnarray}
+これは，逐次二次計画法の中で，次式の不等式制約となる．
+\begin{eqnarray}
+  \begin{pmatrix} \bm{I} \\ - \bm{I} \end{pmatrix} \Delta \bm{p} \geq \begin{pmatrix} \bm{\hat{E}} \bm{\theta}_{min} - \bm{p} \\ - \bm{\hat{E}} \bm{\theta}_{max} + \bm{p} \end{pmatrix}
+\end{eqnarray}
+
+%%
+\subsubsection*{関節角速度・角加速度上下限制約}
+
+\eqref{eq:bspline-theta-j}と\eqref{eq:bspline-derivative}より，関節角速度軌道，角加速度軌道は次式で表される．
+\begin{eqnarray}
+  \dot{\theta}_j (t) &=& \bm{p}_j^T \bm{\dot{b}}_n(t) = \bm{p}_j^T \bm{D} \bm{b}_{n-1}(t) = (\bm{D}^T \bm{p}_j)^T \bm{b}_{n-1}(t) \in \mathbb{R} \ \ (t_s \leq t \leq t_f) \label{eq:bspline-vel-j} \\
+  \ddot{\theta}_j (t) &=& \bm{p}_j^T \bm{\ddot{b}}_n(t) = \bm{p}_j^T \bm{D}^2 \bm{b}_{n-2}(t) = ((\bm{D}^2)^T \bm{p}_j)^T \bm{b}_{n-2}(t) \in \mathbb{R} \ \ (t_s \leq t \leq t_f) \label{eq:bspline-acc-j}
+\end{eqnarray}
+
+$j$番目の関節角速度，角加速度の上限を$v_{max,j}, a_{max,j}$とする．
+関節角上下限制約の導出と同様に考えると，
+次式の制約を制御点に課すことで，関節角速度・角加速度上下限制約を満たす関節角軌道が得られる．
+\begin{eqnarray}
+  &&- v_{max,j} \bm{1}_m \leq \bm{D}^T \bm{p}_j \leq v_{max,j} \bm{1}_m \ (j = 1,2,\cdots,N_{\mathit{joint}}) \\
+  &&- a_{max,j} \bm{1}_m \leq (\bm{D}^2)^T \bm{p}_j \leq a_{max,j} \bm{1}_m \ (j = 1,2,\cdots,N_{\mathit{joint}})
+\end{eqnarray}
+つまり，
+\begin{eqnarray}
+  &&- \bm{\hat{E}} \bm{v}_{max} \leq \bm{\hat{D}}_1 \bm{p} \leq \bm{\hat{E}} \bm{v}_{max} \label{eq:bspline-theta-dot-constraint} \\
+  \Leftrightarrow&&
+  \begin{pmatrix} \bm{\hat{D}}_1 \\ - \bm{\hat{D}}_1 \end{pmatrix} \bm{p} \geq \begin{pmatrix} - \bm{\hat{E}} \bm{v}_{max} \\ - \bm{\hat{E}} \bm{v}_{max} \end{pmatrix} \\
+  &&- \bm{\hat{E}} \bm{a}_{max} \leq \bm{\hat{D}}_2 \bm{p} \leq \bm{\hat{E}} \bm{a}_{max} \label{eq:bspline-theta-ddot-constraint} \\
+  \Leftrightarrow&&
+  \begin{pmatrix} \bm{\hat{D}}_2 \\ - \bm{\hat{D}}_2 \end{pmatrix} \bm{p} \geq \begin{pmatrix} - \bm{\hat{E}} \bm{a}_{max} \\ - \bm{\hat{E}} \bm{a}_{max} \end{pmatrix}
+\end{eqnarray}
+これは，逐次二次計画法の中で，次式の不等式制約となる．
+\begin{eqnarray}
+  &&\begin{pmatrix} \bm{\hat{D}}_1 \\ - \bm{\hat{D}}_1 \end{pmatrix} \Delta \bm{p} \geq \begin{pmatrix} - \bm{\hat{E}} \bm{v}_{max} - \bm{\hat{D}}_1 \bm{p} \\ - \bm{\hat{E}} \bm{v}_{max} + \bm{\hat{D}}_1 \bm{p} \end{pmatrix} \\
+  &&\begin{pmatrix} \bm{\hat{D}}_2 \\ - \bm{\hat{D}}_2 \end{pmatrix} \Delta \bm{p} \geq \begin{pmatrix} - \bm{\hat{E}} \bm{a}_{max} - \bm{\hat{D}}_2 \bm{p} \\ - \bm{\hat{E}} \bm{a}_{max} + \bm{\hat{D}}_2 \bm{p} \end{pmatrix}
+\end{eqnarray}
+
+%%
+\subsubsection*{タイミング上下限制約}
+タイミングが初期，終端時刻の間に含まれる制約は次式で表される．
+\begin{eqnarray}
+  &&t_s \leq t_l \leq t_f \ \ (l = 1,2,\cdots,N_{\mathit{tm}}) \\
+  \Leftrightarrow&&
+  t_s \bm{1} \leq \bm{t} \leq t_f \bm{1} \label{eq:bspline-timing-min-max-constraint} \\
+  \Leftrightarrow&&
+  \begin{pmatrix} \bm{I} \\ - \bm{I} \end{pmatrix} \bm{t} \geq \begin{pmatrix} t_s \bm{1} \\ - t_f \bm{1} \end{pmatrix}
+\end{eqnarray}
+これは，逐次二次計画法の中で，次式の不等式制約となる．
+\begin{eqnarray}
+  \begin{pmatrix} \bm{I} \\ - \bm{I} \end{pmatrix} \Delta \bm{t} \geq \begin{pmatrix} t_s \bm{1} - \bm{t} \\ - t_f \bm{1} + \bm{t} \end{pmatrix} \\
+\end{eqnarray}
+
+また，タイミングの順序が入れ替わることを許容しない場合，その制約は次式で表される．
+\begin{eqnarray}
+  &&t_l \leq t_{l+1} \ \ (l = 1,2,\cdots,N_{\mathit{tm}}-1) \\
+  \Leftrightarrow&&
+  - t_l + t_{l+1} \geq 0 \ \ (l = 1,2,\cdots,N_{\mathit{tm}}-1) \\
+  \Leftrightarrow&&
+  \bm{D}_{\mathit{tm}} \bm{t} \geq \bm{0} \label{eq:bspline-timing-order-constraint}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{D}_{\mathit{tm}} = \begin{pmatrix} -1 & 1 &&&& \bm{O} \\ & -1 & 1 &&& \\ &&&\ddots& \\ \bm{O} &&&& -1 & 1 \end{pmatrix} \in \mathbb{R}^{(N_{\mathit{tm}}-1) \times N_{\mathit{tm}}}
+\end{eqnarray}
+これは，逐次二次計画法の中で，次式の不等式制約となる．
+\begin{eqnarray}
+  \bm{D}_{\mathit{tm}} \Delta \bm{t} \geq - \bm{D}_{\mathit{tm}} \bm{t}
+\end{eqnarray}
+
+%%
+\subsubsection*{関節角微分二乗積分最小化}
+
+関節角微分の二乗積分は次式で得られる．
+\begin{eqnarray}
+  F_{sqr,k}(\bm{p})
+  &=& \int_{t_s}^{t_f} \left\| \bm{\theta}^{(k)}(t) \right\|^2 dt \\
+  &=& \int_{t_s}^{t_f} \left\| \bm{B}_{n-k}(t) \bm{\hat{D}}_k \bm{p} \right\|^2 dt \\
+  &=& \int_{t_s}^{t_f} \left( \bm{B}_{n-k}(t) \bm{\hat{D}}_k \bm{p} \right)^T \left( \bm{B}_{n-k}(t) \bm{\hat{D}}_k \bm{p} \right) dt \\
+  &=& \bm{p}^T \left\{ \int_{t_s}^{t_f} \left( \bm{B}_{n-k}(t) \bm{\hat{D}}_k \right)^T \bm{B}_{n-k}(t) \bm{\hat{D}}_k dt \right\} \bm{p} \\
+  &=& \bm{p}^T \bm{H}_k \bm{p} \label{eq:bspline-square-integration}
+\end{eqnarray}
+ただし，
+\begin{eqnarray}
+  \bm{H}_k
+  &=& \int_{t_s}^{t_f} \left( \bm{B}_{n-k}(t) \bm{\hat{D}}_k \right)^T \bm{B}_{n-k}(t) \bm{\hat{D}}_k dt \\
+  \bm{B}_{n-k}(t) \bm{\hat{D}}_k
+  &=& \begin{pmatrix} \bm{b}_{n-k}^T(t) && \bm{O} \\ &\ddots& \\ \bm{O} && \bm{b}_{n-k}^T(t) \end{pmatrix} \begin{pmatrix} (\bm{D}^k)^T && \bm{O} \\ &\ddots& \\ \bm{O} && (\bm{D}^k)^T \end{pmatrix} \\
+  &=& \begin{pmatrix} \bm{b}_{n-k}^T(t) (\bm{D}^k)^T && \bm{O} \\ &\ddots& \\ \bm{O} && \bm{b}_{n-k}^T(t) (\bm{D}^k)^T \end{pmatrix} \\
+  &=& \begin{pmatrix} \left( \bm{D}^k \bm{b}_{n-k}(t) \right)^T && \bm{O} \\ &\ddots& \\ \bm{O} && \left( \bm{D}^k \bm{b}_{n-k}(t) \right)^T \end{pmatrix} \\
+  \left( \bm{B}_{n-k}(t) \bm{\hat{D}}_k \right)^T \bm{B}_{n-k}(t)
+  &=& \begin{pmatrix} \left( \bm{D}^k \bm{b}_{n-k}(t) \right)^T && \bm{O} \\ &\ddots& \\ \bm{O} && \left( \bm{D}^k \bm{b}_{n-k}(t) \right)^T \end{pmatrix}^T \begin{pmatrix} \left( \bm{D}^k \bm{b}_{n-k}(t) \right)^T && \bm{O} \\ &\ddots& \\ \bm{O} && \left( \bm{D}^k \bm{b}_{n-k}(t) \right)^T \end{pmatrix} \\
+  &=& \begin{pmatrix} \left( \bm{D}^k \bm{b}_{n-k}(t) \right) \left( \bm{D}^k \bm{b}_{n-k}(t) \right)^T && \bm{O} \\ &\ddots& \\ \bm{O} && \left( \bm{D}^k \bm{b}_{n-k}(t) \right) \left( \bm{D}^k \bm{b}_{n-k}(t) \right)^T \end{pmatrix}
+\end{eqnarray}
+これを逐次二次計画問題において，二次形式の正則化項として目的関数に加えることで，滑らかな動作が生成されることが期待される．
+
+%%
+\subsubsection*{動作期間の最小化}
+
+動作期間$(t_f - t_s)$の二乗は次式で表される．
+\begin{eqnarray}
+  F_{\mathit{duration}}(\bm{t})
+  &=& \left| t_1 - t_{N_{\mathit{tm}}} \right|^2 \\
+  &=& \bm{t}^T \begin{pmatrix} 1 & & -1 \\ & & \\ -1 & & 1 \end{pmatrix} \bm{t} \label{eq:bspline-motion-duration}
+\end{eqnarray}
+ただし，初期時刻$t_s = t_1$，終端時刻$t_f = t_{N_{\mathit{tm}}}$がタイミングベクトル$\bm{t}$の最初，最後の要素であるとする．
+これを逐次二次計画問題において，二次形式の正則化項として目的関数に加えることで，短時間でタスクを実現する動作が生成されることが期待される．
+\\
+\\

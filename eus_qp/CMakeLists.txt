@@ -23,6 +23,8 @@ add_library(eus_qp SHARED src/qp_lib.cpp)
 add_rostest(test/test_contact_wrench_opt.test)
 add_rostest(test/test_model_predictive_control.test)
 add_rostest(test/test_cfr_cwc_calculation.test)
+add_rostest(optmotiongen/test/test-sample-inverse-kinematics.test)
+add_rostest(optmotiongen/test/test-sample-inverse-kinematics-statics.test)
 
 install(DIRECTORY euslisp test
   USE_SOURCE_PERMISSIONS
