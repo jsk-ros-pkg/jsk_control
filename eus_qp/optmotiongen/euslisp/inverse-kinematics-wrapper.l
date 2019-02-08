@@ -609,6 +609,8 @@ Initialize instance
    (send-super :init :name (send target-coords :name))
    (let* (rv-ll
           rv-jl
+          (string-name
+           (string-left-trim ":" (format nil "~a" (send self :name))))
           (translation-joint-axis
            (if (atom translation-axis) (ik-arg-axis->axis-list translation-axis) translation-axis))
           (rotation-joint-axis
@@ -622,7 +624,7 @@ Initialize instance
            (instance bodyset-link :init
                      (make-cascoords)
                      :bodies (list (make-cube 1e-3 1e-3 1e-3))
-                     :name (read-from-string (format nil ":~a-root" (send self :name)))
+                     :name (read-from-string (format nil ":~a-root" string-name))
                      :weight 0.0
                      ))
           )
@@ -639,7 +641,7 @@ Initialize instance
                            :bodies (list (make-cube 1e-3 1e-3 1e-3))
                            :name
                            (read-from-string
-                            (format nil ":~a-~a-~a" (send self :name) (send joint-class :name) (symbol-name joint-axis)))
+                            (format nil ":~a-~a-~a" string-name (send joint-class :name) (symbol-name joint-axis)))
                            :weight 0.0
                            ))
              joint-class-list
@@ -660,7 +662,7 @@ Initialize instance
                 (instance joint-class :init
                           :name
                           (read-from-string
-                           (format nil ":~a-~a-~a" (send self :name) (send joint-class :name) (symbol-name joint-axis)))
+                           (format nil ":~a-~a-~a" string-name (send joint-class :name) (symbol-name joint-axis)))
                           :parent-link parent-link :child-link child-link
                           :axis joint-axis :min -1e10 :max 1e10
                           :max-joint-torque 0.0
@@ -732,6 +734,7 @@ Convert translation-axis / rotatoin-axis to axis list.
 (defun generate-contact-ik-arg-from-rect-face
     (&key
      (rect-face)
+     (name (send rect-face :name))
      (margin (or (send rect-face :get :margin) 0))
      )
   "
@@ -756,7 +759,7 @@ Generate contact-ik-arg instance from rectangle face.
          (pos
           (elt (send rect-face :centroid) 1))
          (transform-coords
-          (make-coords :name (send rect-face :name) :pos pos :rot rot))
+          (make-coords :name name :pos pos :rot rot))
          (target-rotation
           (cond ((send rect-face :get :target-rotation)
                  (send rect-face :get :target-rotation)
@@ -768,6 +771,7 @@ Generate contact-ik-arg instance from rectangle face.
          (target-coords
           (cond (target-rotation
                  (make-coords
+                  :name (send transform-coords :name)
                   :pos (send transform-coords :worldpos)
                   :rot target-rotation)
                  )
@@ -815,6 +819,7 @@ Generate contact-ik-arg instance from rectangle face.
 (defun generate-contact-ik-arg-from-line-segment
     (&key
      (line-seg)
+     (name (send line-seg :name))
      (margin (or (send line-seg :get :margin) 0))
      )
   "
@@ -828,7 +833,7 @@ Generate contact-ik-arg instance from line segment.
           (send line-seg :point 0.5))
          (transform-coords
           (orient-coords-to-axis
-           (make-coords :name (send line-seg :name) :pos pos)
+           (make-coords :name name :pos pos)
            x-dir :x))
          (y-dir
           (send transform-coords :rotate-vector (float-vector 0 1 0)))
@@ -871,6 +876,7 @@ Generate contact-ik-arg instance from line segment.
          (target-coords
           (cond (target-rotation
                  (make-coords
+                  :name (send transform-coords :name)
                   :pos (send transform-coords :worldpos)
                   :rot target-rotation)
                  )
