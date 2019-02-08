@@ -127,6 +127,10 @@
      (only-kinematics? nil)
      (output-filename "/tmp/demo-hrp2jsknts-desk-reach-trajectory")
      (keypose-output-file "/tmp/demo-hrp2jsknts-desk-reach-trajectory-keypose.l")
+     (pre-process-func)
+     (visualize-callback-func)
+     (visualize-loop? t)
+     &allow-other-keys
      )
   ;; setup target
   (setq *arrow* (instance arrow-object :init))
@@ -404,6 +408,8 @@
   (setq *sqp-opt*
         (instance sqp-optimization :init
                   :config-task *trajectory-config-task*
+                  :pre-process-func
+                  pre-process-func
                   :post-process-func
                   #'(lambda (sqp)
                       (when (= (mod (send sqp :iteration) 20) 0)
@@ -452,6 +458,10 @@
      ))
 
   (objects (append (list *robot-env*) *env-list*))
-  (send *trajectory-config-task* :play-animation :robot-env *robot-env*)
+  (send *trajectory-config-task* :play-animation
+        :robot-env *robot-env*
+        :loop? visualize-loop?
+        :visualize-callback-func visualize-callback-func
+        )
   )
 (warn "(demo-hrp2jsknts-desk-reach-trajectory)~%")
