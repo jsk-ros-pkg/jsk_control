@@ -9,7 +9,7 @@
 (defclass sqp-optimization
   :super propertied-object
   :slots ((_config-task "instance of configuration-task")
-          (_qp_retval "buffer for QP return value")
+          (_qp-retval "buffer for QP return value")
           (_qp-status "buffer for QP status")
           (_qp-int-status "QP status")
           (_task-value "buffer for task value $\bm{e}(\bm{q})$")
@@ -43,6 +43,7 @@ configuration-taskのタスク関数ノルム二乗$\|\bm{e}(\bm{q})\|^2$を最�
     (post-process-func)
     (no-visualize?)
     (no-print?)
+    &allow-other-keys
     )
    "
 Initialize instance
@@ -158,7 +159,7 @@ Return status of sqp optimization.
    (setq _task-jacobian (send _config-task :task-jacobian))
    ;; solve QP
    (setq _qp-status (float-vector 0))
-   (setq _qp_retval
+   (setq _qp-retval
          (solve-qp-with-transformation-until-no-error
           :status _qp-status
           :initial-state
@@ -183,9 +184,9 @@ Return status of sqp optimization.
           ))
    (setq _qp-int-status (round (elt _qp-status 0)))
    ;; update config
-   (unless (float-vector-p _qp_retval)
+   (unless (float-vector-p _qp-retval)
      (return-from :_optimize-iterate-once nil))
-   (send _config-task :set-config _qp_retval :relative? t)
+   (send _config-task :set-config _qp-retval :relative? t)
    t
    )
   (:_update-viewer-once
