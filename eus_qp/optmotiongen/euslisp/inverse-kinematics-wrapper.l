@@ -601,7 +601,7 @@ inverse-kinematics-optmotiongenの{\it target-coords, translation-axis, rotation
     (target-coords)
     (translation-axis)
     (rotation-axis)
-    (transform-coords)
+    (transform-coords target-coords)
     (name (send target-coords :name))
     )
    "

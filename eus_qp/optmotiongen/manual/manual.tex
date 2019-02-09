@@ -93,6 +93,8 @@
 \newcommand{\bm}[1]{\mbox{\boldmath{$#1$}}}
 \makeatletter
 \newcommand{\footnoteref}[1]{\protected@xdef\@thefnmark{\ref{#1}}\@footnotemark}
+\@addtoreset{equation}{section}
+\def\theequation{\thesection.\arabic{equation}}
 \makeatother
 \newcommand{\eqdef}{\ensuremath{\stackrel{\mathrm{def}}{=}}}
 
@@ -193,8 +195,16 @@ murooka@jsk.t.u-tokyo.ac.jp \\
 \input{trajectory-configuration-task}
 
 %%%%%%%%%%%%%%%%%%%%%%
-\section{逐次二次計画法} \label{chap:sqp}
+\section{勾配を用いた制約付き非線形最適化} \label{chap:sqp}
+%%%%%
+\subsection{逐次二次計画法} \label{sec:sqp}
 \input{sqp-optimization}
+%%%%%
+\subsection{複数解候補を用いた逐次二次計画法} \label{sec:sqp-msc}
+\subsubsection{複数解候補を用いた逐次二次計画法の理論}
+\input{theory-sqp-msc-optimization}
+\subsubsection{複数解候補を用いた逐次二次計画法の実装}
+\input{sqp-msc-optimization}
 
 %%%%%%%%%%%%%%%%%%%%%%
 \section{動作生成の拡張} \label{chap:extended}
@@ -204,8 +214,8 @@ murooka@jsk.t.u-tokyo.ac.jp \\
 \input{instant-manipulation-configuration-task}
 
 \subsection{Bスプラインを用いた関節軌道生成} \label{sec:bspline}
-\subsubsection{Bスプラインを用いた関節軌道生成の基礎}
-\input{fundamental-bspline}
+\subsubsection{Bスプラインを用いた関節軌道生成の理論}
+\input{theory-bspline}
 \subsubsection{Bスプラインを用いた関節軌道生成の実装}
 \input{bspline-configuration-task}
 

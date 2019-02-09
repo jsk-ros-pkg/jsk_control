@@ -634,22 +634,22 @@ return $\bm{v}_{\mathit{adj}} \in \mathbb{R}^{dim(\bm{q})}$
    (&key (update? nil))
    "
 \begin{eqnarray}
-  \bm{\bar{W}}_{\tau} &:=&
+  \bm{\bar{W}}_{trq} &:=&
   \begin{pmatrix}
-    \bm{W}_{\tau}^{(1)} & & & \bm{O} \\
-    & \bm{W}_{\tau}^{(2)} & & \\
+    \bm{W}_{trq}^{(1)} & & & \bm{O} \\
+    & \bm{W}_{trq}^{(2)} & & \\
     & & \ddots & \\
-    \bm{O} & & & \bm{W}_{\tau}^{(L)} \\
+    \bm{O} & & & \bm{W}_{trq}^{(L)} \\
   \end{pmatrix}
   \in \mathbb{R}^{dim(\bm{q}_{\mathit{var}}) \times dim(\bm{q}_{\mathit{var}})} \\
-  \bm{W}_{\tau} &:=&
+  \bm{W}_{trq} &:=&
   \begin{pmatrix}
-    \bm{\bar{W}}_{\tau} & \\
+    \bm{\bar{W}}_{trq} & \\
     & \bm{O}
   \end{pmatrix}
 \end{eqnarray}
 
-return $\bm{W}_{\tau} \in \mathbb{R}^{dim(\bm{q}) \times dim(\bm{q})}$
+return $\bm{W}_{trq} \in \mathbb{R}^{dim(\bm{q}) \times dim(\bm{q})}$
    "
    (when (or update? (not (send self :get :torque-regular-matrix)))
      (send self :put :torque-regular-matrix
@@ -670,22 +670,22 @@ return $\bm{W}_{\tau} \in \mathbb{R}^{dim(\bm{q}) \times dim(\bm{q})}$
    (&key (update? t))
    "
 \begin{eqnarray}
-  \bm{\bar{v}}_{\tau} &:=&
+  \bm{\bar{v}}_{trq} &:=&
   \begin{pmatrix}
-    \bm{v}_{\tau}^{(1)} \\
-    \bm{v}_{\tau}^{(2)} \\
+    \bm{v}_{trq}^{(1)} \\
+    \bm{v}_{trq}^{(2)} \\
     \vdots \\
-    \bm{v}_{\tau}^{(L)}
+    \bm{v}_{trq}^{(L)}
   \end{pmatrix}
   \in \mathbb{R}^{dim(\bm{q}_{\mathit{var}})} \\
-  \bm{v}_{\tau} &:=&
+  \bm{v}_{trq} &:=&
   \begin{pmatrix}
-    \bm{\bar{v}}_{\tau} \\
+    \bm{\bar{v}}_{trq} \\
     \bm{0}
   \end{pmatrix}
 \end{eqnarray}
 
-return $\bm{v}_{\tau} \in \mathbb{R}^{dim(\bm{q})}$
+return $\bm{v}_{trq} \in \mathbb{R}^{dim(\bm{q})}$
    "
    (when (or update? (not (send self :get :torque-regular-vector)))
      (send self :put :torque-regular-vector
@@ -706,7 +706,7 @@ return $\bm{v}_{\tau} \in \mathbb{R}^{dim(\bm{q})}$
    ()
    "
 \begin{eqnarray}
-  \bm{W}_{\mathit{reg}} := \min(k_{\mathit{max}}, \|\bm{e}\|^2+k_{\mathit{off}}) \bm{I} + \bm{W}_{\mathit{adj}} + \bm{W}_{\tau}
+  \bm{W}_{\mathit{reg}} := \min(k_{\mathit{max}}, \|\bm{e}\|^2+k_{\mathit{off}}) \bm{I} + k_{\mathit{adj}} \bm{W}_{\mathit{adj}} + k_{\mathit{trq}} \bm{W}_{trq}
 \end{eqnarray}
 
 return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathit{dim}(\bm{q})}$
@@ -726,7 +726,7 @@ return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathi
    ()
    "
 \begin{eqnarray}
-  \bm{v}_{\mathit{reg}} := \bm{v}_{\mathit{adj}} + \bm{v}_{\tau}
+  \bm{v}_{\mathit{reg}} := k_{\mathit{adj}} \bm{v}_{\mathit{adj}} + k_{\mathit{trq}} \bm{v}_{trq}
 \end{eqnarray}
 
 return $\bm{v}_{\mathit{reg}}\in \mathbb{R}^{\mathit{dim}(\bm{q})}$
