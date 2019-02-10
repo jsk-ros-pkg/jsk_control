@@ -91,6 +91,8 @@
      (apply-external-force? nil)
      (fix-contact? nil)
      (only-kinematics? nil)
+     (pre-process-func)
+     &allow-other-keys
      )
   ;; setup target
   (setq *arrow* (instance arrow-object :init))
@@ -332,6 +334,8 @@
   (setq *sqp-opt*
         (instance sqp-optimization :init
                   :config-task *instant-config-task*
+                  :pre-process-func
+                  pre-process-func
                   :post-process-func
                   #'(lambda (sqp)
                       (when (= (mod (send sqp :iteration) 20) 0)

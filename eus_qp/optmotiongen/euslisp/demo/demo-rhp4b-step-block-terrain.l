@@ -170,6 +170,10 @@
      (optimize-start-end-torque? t)
      (output-filename
       (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/demo-rhp4b-step-block-terrain-trajectory/tmp"))
+     (pre-process-func)
+     (visualize-callback-func)
+     (visualize-loop? t)
+     &allow-other-keys
      )
   ;; setup environment
   (setq *ground-rleg* (make-cube 400 400 20))
@@ -545,6 +549,8 @@
   (setq *sqp-opt*
         (instance sqp-optimization :init
                   :config-task *trajectory-config-task*
+                  :pre-process-func
+                  pre-process-func
                   :post-process-func
                   #'(lambda (sqp)
                       (when (= (mod (send sqp :iteration) 20) 0)
@@ -579,6 +585,10 @@
      ))
 
   (objects (append (list *robot-env*) *env-list*))
-  (send *trajectory-config-task* :play-animation :robot-env *robot-env*)
+  (send *trajectory-config-task* :play-animation
+        :robot-env *robot-env*
+        :loop? visualize-loop?
+        :visualize-callback-func visualize-callback-func
+        )
   )
 (warn "(demo-rhp4b-step-block-terrain-trajectory)~%")
