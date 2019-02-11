@@ -1892,7 +1892,7 @@ Print motion information.
     (visualize-callback-func)
     )
    "
-Print motion animation.
+Play motion animation.
    "
    (do-until-key
     (let* ((tm (if only-motion-duration? (send self :kin-start-time) _start-time))

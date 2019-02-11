@@ -336,6 +336,193 @@
     )
   )
 
+(defun validate-element-jacobian-bspline-dynamic
+    (&key
+     (config-task)
+     )
+  (apply
+   #'warning-message
+   2
+   "kinematics-task-jacobian-with-theta-control-vector~%  ~a  (pos: ~a  rot: ~a)~%"
+   (let* ((jacobi-diff
+           (calc-jacobian-error-with-diff
+            :config-task config-task
+            :config-method :theta-control-vector
+            :set-config-method :set-theta-control-vector
+            :task-value-method :kinematics-task-value
+            :jacobian-method :kinematics-task-jacobian-with-theta-control-vector
+            )
+           )
+          )
+     (list (norm jacobi-diff)
+           (norm (apply #'concatenate float-vector
+                        (divide-vector jacobi-diff :segment-length 3 :interval-length 3)))
+           (norm (apply #'concatenate float-vector
+                        (divide-vector (subseq jacobi-diff 3) :segment-length 3 :interval-length 3)))
+           )
+     ))
+
+  (when (> (send config-task :num-invariant-joint) 0)
+    (apply
+     #'warning-message
+     2
+     "kinematics-task-jacobian-with-phi~%  ~a  (pos: ~a  rot: ~a)~%"
+     (let* ((jacobi-diff
+             (calc-jacobian-error-with-diff
+              :config-task config-task
+              :config-method :phi
+              :set-config-method :set-phi
+              :task-value-method :kinematics-task-value
+              :jacobian-method :kinematics-task-jacobian-with-phi
+              )
+             )
+            )
+       (list (norm jacobi-diff)
+             (norm (apply #'concatenate float-vector
+                          (divide-vector jacobi-diff :segment-length 3 :interval-length 3)))
+             (norm (apply #'concatenate float-vector
+                          (divide-vector (subseq jacobi-diff 3) :segment-length 3 :interval-length 3)))
+             )
+       ))
+    )
+
+  (warning-message
+   2
+   "eom-trans-task-jacobian-with-cog-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :cog-control-vector
+          :set-config-method :set-cog-control-vector
+          :task-value-method :eom-trans-task-value
+          :jacobian-method :eom-trans-task-jacobian-with-cog-control-vector
+          )))
+
+  (warning-message
+   2
+   "eom-trans-task-jacobian-with-wrench-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :wrench-control-vector
+          :set-config-method :set-wrench-control-vector
+          :task-value-method :eom-trans-task-value
+          :jacobian-method :eom-trans-task-jacobian-with-wrench-control-vector
+          )))
+
+  (warning-message
+   2
+   "eom-rot-task-jacobian-with-theta-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :theta-control-vector
+          :set-config-method :set-theta-control-vector
+          :task-value-method :eom-rot-task-value
+          :jacobian-method :eom-rot-task-jacobian-with-theta-control-vector
+          )))
+
+  (warning-message
+   2
+   "eom-rot-task-jacobian-with-cog-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :cog-control-vector
+          :set-config-method :set-cog-control-vector
+          :task-value-method :eom-rot-task-value
+          :jacobian-method :eom-rot-task-jacobian-with-cog-control-vector
+          )))
+
+  (warning-message
+   2
+   "eom-rot-task-jacobian-with-ang-moment-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :ang-moment-control-vector
+          :set-config-method :set-ang-moment-control-vector
+          :task-value-method :eom-rot-task-value
+          :jacobian-method :eom-rot-task-jacobian-with-ang-moment-control-vector
+          )))
+
+  (warning-message
+   2
+   "eom-rot-task-jacobian-with-wrench-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :wrench-control-vector
+          :set-config-method :set-wrench-control-vector
+          :task-value-method :eom-rot-task-value
+          :jacobian-method :eom-rot-task-jacobian-with-wrench-control-vector
+          )))
+
+  (when (> (send config-task :num-invariant-joint) 0)
+    (warning-message
+     2
+     "eom-rot-task-jacobian-with-phi~%  ~a~%"
+     (norm (calc-jacobian-error-with-diff
+            :config-task config-task
+            :config-method :phi
+            :set-config-method :set-phi
+            :task-value-method :eom-rot-task-value
+            :jacobian-method :eom-rot-task-jacobian-with-phi
+            )))
+    )
+
+  (warning-message
+   2
+   "cog-task-jacobian-with-theta-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :theta-control-vector
+          :set-config-method :set-theta-control-vector
+          :task-value-method :cog-task-value
+          :jacobian-method :cog-task-jacobian-with-theta-control-vector
+          )))
+
+  (warning-message
+   2
+   "cog-task-jacobian-with-cog-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :cog-control-vector
+          :set-config-method :set-cog-control-vector
+          :task-value-method :cog-task-value
+          :jacobian-method :cog-task-jacobian-with-cog-control-vector
+          )))
+
+  (when (> (send config-task :num-invariant-joint) 0)
+    (warning-message
+     2
+     "cog-task-jacobian-with-phi~%  ~a~%"
+     (norm (calc-jacobian-error-with-diff
+            :config-task config-task
+            :config-method :phi
+            :set-config-method :set-phi
+            :task-value-method :cog-task-value
+            :jacobian-method :cog-task-jacobian-with-phi
+            )))
+    )
+
+  (warning-message
+   2
+   "ang-moment-task-jacobian-with-ang-moment-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :ang-moment-control-vector
+          :set-config-method :set-ang-moment-control-vector
+          :task-value-method :ang-moment-task-value
+          :jacobian-method :ang-moment-task-jacobian-with-ang-moment-control-vector
+          )))
+
+  (warning-message
+   2
+   "posture-task-jacobian-with-theta-control-vector~%  ~a~%"
+   (norm (calc-jacobian-error-with-diff
+          :config-task config-task
+          :config-method :theta-control-vector
+          :set-config-method :set-theta-control-vector
+          :task-value-method :posture-task-value
+          :jacobian-method :posture-task-jacobian-with-theta-control-vector
+          )))
+  )
+
 (defun validate-jacobian
     (&key
      (config-task)

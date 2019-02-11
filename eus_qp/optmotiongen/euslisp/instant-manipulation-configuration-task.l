@@ -105,6 +105,8 @@ Initialize instance
    (send self :_initialize-number)
    (send self :_initialize-configuration-vector)
    (send self :_initialize-dimension)
+   (send self :_contact-constraint-matrix-list)
+   (send self :_contact-constraint-obj-matrix-list)
    )
   (:_initialize-number
    ()
