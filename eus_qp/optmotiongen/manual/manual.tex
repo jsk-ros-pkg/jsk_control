@@ -175,8 +175,6 @@ murooka@jsk.t.u-tokyo.ac.jp \\
 \maketitle
 \pagenumbering{roman}
 \tableofcontents
-% \listoffigures
-% \listoftables
 
 \newpage
 \pagenumbering{arabic}
@@ -212,12 +210,15 @@ murooka@jsk.t.u-tokyo.ac.jp \\
 \subsection{マニピュレーションの動作生成} \label{sec:manip}
 \input{robot-object-environment}
 \input{instant-manipulation-configuration-task}
-
+%%%%%
 \subsection{Bスプラインを用いた関節軌道生成} \label{sec:bspline}
 \subsubsection{Bスプラインを用いた関節軌道生成の理論}
 \input{theory-bspline}
 \subsubsection{Bスプラインを用いた関節軌道生成の実装}
 \input{bspline-configuration-task}
+%%%%%
+\subsection{Bスプラインを用いた動的動作の生成} \label{sec:dynamic}
+\input{bspline-dynamic-configuration-task}
 
 %%%%%%%%%%%%%%%%%%%%%%
 \section{補足} \label{chap:appendix}
@@ -235,9 +236,5 @@ murooka@jsk.t.u-tokyo.ac.jp \\
 \subsection{関節トルク勾配の計算} \label{sec:torque-jacobian}
 \input{torque-gradient}
 
-\cleardoublepage
-\markboth{Euslisp version \eusversion リファレンスマニュアル}{Index}
-\footnotesize
-\printindex
 \end{document}
 
