@@ -2081,22 +2081,31 @@ Plot graph.
   (:generate-angle-vector-sequence
    (&key
     (divide-num 100)
+    (start-time
+     (send self :kin-start-time))
+    (finish-time
+     (send self :kin-finish-time))
+    (delta-time
+     (/ (float (- finish-time start-time)) divide-num)) ;; [sec]
     )
    "
 Generate angle-vector-sequence.
    "
-   (let* ((kin-start-time
-           (send self :kin-start-time))
-          (kin-finish-time
-           (send self :kin-finish-time))
-          (tm)
+   (let* ((tm start-time)
+          (finish? nil)
           (av-list)
           )
-     (dotimes (i divide-num)
-       (setq tm
-             (+ (* (- 1 (/ (float i) divide-num)) kin-start-time) (* (/ (float i) divide-num) kin-finish-time)))
+     (while t
        (send self :apply-theta-to-robot tm)
        (push-back (send _robot :angle-vector) av-list)
+       ;; update time
+       (when finish?
+         (return-from nil nil))
+       (setq tm (+ tm delta-time))
+       (when (> tm finish-time)
+         (setq finish? t)
+         (setq tm (min tm finish-time))
+         )
        )
      av-list
      ))
