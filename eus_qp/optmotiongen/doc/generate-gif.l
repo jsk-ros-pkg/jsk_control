@@ -149,6 +149,14 @@
          (list "demo-hrp2jsknts-desk-reach-trajectory :use-thumb-contact? t :optimize-torque-only-key-pose? nil" "demo-hrp2jsknts-desk-reach-trajectory-without-torque")
          ))
 
+  (require "package://eus_qp/optmotiongen/euslisp/demo/demo-hrp2jsknts-jump.l")
+  (format t "### demo-hrp2jsknts-jump~%~%")
+  (format t "[demo-hrp2jsknts-jump.l](./euslisp/demo/demo-hrp2jsknts-jump.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list "demo-hrp2jsknts-jump"
+         ))
+
   ;; (require "package://eus_qp/optmotiongen/euslisp/demo/demo-rhp4b-step-block-terrain.l")
   ;; (format t "### demo-rhp4b-step-block-terrain-trajectory~%~%")
   ;; (format t "[demo-rhp4b-step-block-terrain.l](./euslisp/demo/demo-rhp4b-step-block-terrain.l)~%~%")
