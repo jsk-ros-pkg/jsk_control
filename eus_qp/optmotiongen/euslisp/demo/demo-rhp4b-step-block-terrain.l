@@ -214,9 +214,8 @@
   (unless (boundp '*irtviewer*)
     (make-irtviewer)
     (send *irtviewer* :change-background (float-vector 1 1 1))
-    (send *irtviewer* :set-val 'x::draw-floor 500)
-    (when (assoc 'x::floor-color (send *irtviewer* :slots))
-      (send *irtviewer* :set-val 'x::floor-color (float-vector 0 0 0)))
+    (send *irtviewer* :draw-floor 500)
+    (send *irtviewer* :floor-color (float-vector 0 0 0))
     )
 
   (push (copy-object *robot-env*) *robot-env-list*)
