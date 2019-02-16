@@ -33,3 +33,6 @@ install(DIRECTORY euslisp test
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 install(TARGETS eus_qp
   DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+install(DIRECTORY optmotiongen/euslisp optmotiongen/scripts optmotiongen/test
+  USE_SOURCE_PERMISSIONS
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/optmotiongen)
