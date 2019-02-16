@@ -25,6 +25,7 @@ add_rostest(test/test_model_predictive_control.test)
 add_rostest(test/test_cfr_cwc_calculation.test)
 add_rostest(optmotiongen/test/test-sample-inverse-kinematics.test)
 add_rostest(optmotiongen/test/test-sample-inverse-kinematics-statics.test)
+add_rostest(optmotiongen/test/test-samplerobot.test)
 add_rostest(optmotiongen/test/test-load-euslisp-files.test)
 
 install(DIRECTORY euslisp test

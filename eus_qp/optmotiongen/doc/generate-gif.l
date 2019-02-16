@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
 
-(defun generate-gif-all-for-sample
+(defun generate-gif-all-for-sample-ik-iks
     ()
   (require "package://eus_qp/optmotiongen/euslisp/sample/sample-inverse-kinematics.l")
   (require "package://eus_qp/optmotiongen/euslisp/sample/sample-inverse-kinematics-statics.l")
@@ -63,7 +63,34 @@
          (list "sample-robot-reach-trajectory-iks-face :optimize-start-end-torque? t" "sample-robot-reach-trajectory-iks-face")
          ))
   )
-(warn "(generate-gif-all-for-sample)~%")
+(warn "(generate-gif-all-for-sample-ik-iks)~%")
+
+(defun generate-gif-all-for-sample-samplerobot
+    ()
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-samplerobot.l")
+
+  (format t "### sample-robot-sqp-instant-manip-config-task~%~%")
+  (format t "[sample-samplerobot.l](./euslisp/sample/sample-samplerobot.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list (list "sample-robot-sqp-instant-manip-config-task :fix-obj? nil :optimize-torque? nil"
+               "sample-robot-sqp-instant-manip-config-task-without-torque")
+         (list "sample-robot-sqp-instant-manip-config-task :fix-obj? t :optimize-torque? nil"
+               "sample-robot-sqp-instant-manip-config-task-fix-obj-without-torque")
+         (list "sample-robot-sqp-instant-manip-config-task :fix-obj? nil :optimize-torque? t"
+               "sample-robot-sqp-instant-manip-config-task")
+         (list "sample-robot-sqp-instant-manip-config-task :fix-obj? t :optimize-torque? t"
+               "sample-robot-sqp-instant-manip-config-task-fix-obj")
+         ))
+
+  (format t "### sample-arm-sqp-bspline-config-task~%~%")
+  (format t "[sample-samplerobot.l](./euslisp/sample/sample-samplerobot.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list "sample-arm-sqp-bspline-config-task"
+         ))
+  )
+(warn "(generate-gif-all-for-sample-samplerobot)~%")
 
 (defun generate-gif-all-for-sample-hrp2
     ()
