@@ -21,7 +21,7 @@
   )
 
 (deftest test-sample-arm-sqp-bspline-config-task
-  (sample-arm-sqp-bspline-config-task)
+  (sample-arm-sqp-bspline-config-task :graph-filename nil)
   (assert (< (norm (send *bspline-config-task* :task-value :update? nil)) 1.0))
   )
 

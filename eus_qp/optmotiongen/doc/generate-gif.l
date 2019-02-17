@@ -254,6 +254,7 @@
  #'save-image-for-gif-animation
  :visualize-loop? nil
  :output-filename nil
+ :graph-filename nil
  )
 " (if (consp func-name) (elt func-name 0) func-name))))
      (create-gif-animation :save-dir (ros::resolve-ros-path "package://eus_qp/optmotiongen/doc/images"))
