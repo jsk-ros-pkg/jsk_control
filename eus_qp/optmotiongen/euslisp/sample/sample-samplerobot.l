@@ -13,6 +13,7 @@
      (optimize-torque? t)
      (avoid-collision? t)
      (fix-obj? nil)
+     (loop-num 50)
      (pre-process-func)
      &allow-other-keys
      )
@@ -170,7 +171,7 @@
                         ;; (validate-jacobian :config-task (send sqp :config-task))
                         ))
                   ))
-  (send *sqp-opt* :optimize :loop-num 50)
+  (send *sqp-opt* :optimize :loop-num loop-num)
   )
 (warn "(sample-robot-sqp-instant-manip-config-task)~%")
 
@@ -190,6 +191,7 @@
        (list 5.0 t (make-coords :pos (float-vector 400 300 100)) 0.0 0.0)
        )
       )
+     (loop-num 50)
      (graph-filename
       (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/sample-arm-sqp-bspline-config-task-graph.pdf"))
      (pre-process-func)
@@ -255,7 +257,7 @@
                         ;; (validate-jacobian :config-task (send sqp :config-task))
                         ))
                   ))
-  (send *sqp-opt* :optimize :loop-num 50)
+  (send *sqp-opt* :optimize :loop-num loop-num)
   (when graph-filename
     (send *bspline-config-task* :plot-theta-graph :dump-pdf? t :dump-filename graph-filename))
   (send *bspline-config-task* :play-animation
@@ -267,7 +269,7 @@
 (warn "(sample-arm-sqp-bspline-config-task)~%")
 
 
-(defun sample-robot-sqp-bspline-config-task
+(defun sample-robot-sqp-bspline-dynamic-config-task
     (&key
      ;; time
      (start-time 0.0)
@@ -287,13 +289,14 @@
      (bspline-order 4)
      (cog-bspline-order 5)
      ;; other setting
+     (loop-num 10)
      (optimize-torque? nil)
      (avoid-collision? nil)
      (graph-filename
-      (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/sample-robot-sqp-bspline-config-task/graph.pdf"))
+      (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/sample-robot-sqp-bspline-dynamic-config-task/graph.pdf"))
      (pre-process-func)
      (visualize-callback-func)
-     (visualize-loop? t)
+     (visualize-loop? nil)
      &allow-other-keys
      )
   ;; setup arrow
@@ -523,7 +526,7 @@
                         ))
                   ))
   (send *sqp-opt* :optimize
-        :loop-num 10
+        :loop-num loop-num
         :print-status-interval 5
         )
 
@@ -536,4 +539,4 @@
         :visualize-callback-func visualize-callback-func
         )
   )
-(warn "(sample-robot-sqp-bspline-config-task)~%")
+(warn "(sample-robot-sqp-bspline-dynamic-config-task)~%")

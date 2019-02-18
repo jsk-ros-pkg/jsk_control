@@ -21,6 +21,9 @@
          "sample-arm-reach-ik-with-root-virtual-joint"
          "sample-arm-reach-ik-face"
          "sample-arm-reach-ik-line"
+         "sample-robot-reach-ik-raw"
+         (list "sample-robot-reach-ik-raw :set-posture-joint? t :look-at? t"
+               "sample-robot-reach-ik-raw-with-set-posture-look-at")
          "sample-robot-reach-ik"
          "sample-robot-reach-ik-limb"
          "sample-robot-reach-ik-dual-arm"
@@ -89,6 +92,15 @@
    :func-name-list
    (list "sample-arm-sqp-bspline-config-task"
          ))
+
+  (format t "### sample-robot-sqp-bspline-dynamic-config-task~%~%")
+  (format t "[sample-samplerobot.l](./euslisp/sample/sample-samplerobot.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list "sample-robot-sqp-bspline-dynamic-config-task"
+         )
+   :look-all? nil
+   )
   )
 (warn "(generate-gif-all-for-sample-samplerobot)~%")
 
@@ -151,6 +163,14 @@
          (list "sample-sqp-msc-optimization-instant :optimize-torque? nil" "sample-sqp-msc-optimization-instant-without-torque")
          (list "sample-sqp-msc-optimization-instant :only-kinematics? t" "sample-sqp-msc-optimization-instant-only-kinematics")
          ))
+
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-bspline-dynamic.l")
+  (format t "### sample-sqp-optimization-bspline-dynamic~%~%")
+  (format t "[sample-sqp-optimization-bspline-dynamic.l](./euslisp/sample/sample-sqp-optimization-bspline-dynamic.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list "sample-sqp-optimization-bspline-dynamic"
+         ))
   )
 (warn "(generate-gif-all-for-sample-hrp2)~%")
 
@@ -174,14 +194,6 @@
    :func-name-list
    (list (list "demo-hrp2jsknts-desk-reach-trajectory :use-thumb-contact? t :optimize-torque-only-key-pose? t" "demo-hrp2jsknts-desk-reach-trajectory")
          (list "demo-hrp2jsknts-desk-reach-trajectory :use-thumb-contact? t :optimize-torque-only-key-pose? nil" "demo-hrp2jsknts-desk-reach-trajectory-without-torque")
-         ))
-
-  (require "package://eus_qp/optmotiongen/euslisp/demo/demo-hrp2jsknts-jump.l")
-  (format t "### demo-hrp2jsknts-jump~%~%")
-  (format t "[demo-hrp2jsknts-jump.l](./euslisp/demo/demo-hrp2jsknts-jump.l)~%~%")
-  (generate-gif
-   :func-name-list
-   (list "demo-hrp2jsknts-jump"
          ))
 
   ;; (require "package://eus_qp/optmotiongen/euslisp/demo/demo-rhp4b-step-block-terrain.l")
@@ -237,6 +249,7 @@
 (defun generate-gif
     (&key
      (func-name-list)
+     (look-all? t)
      )
   (dolist (func-name func-name-list)
     (null-output
@@ -247,7 +260,7 @@
  :pre-process-func
  #'(lambda (sqp)
      (when (= (send sqp :iteration) 1)
-       (setup-gif-animation))
+       (setup-gif-animation :look-all? ~a))
      (save-image-for-gif-animation)
      )
  :visualize-callback-func
@@ -256,7 +269,9 @@
  :output-filename nil
  :graph-filename nil
  )
-" (if (consp func-name) (elt func-name 0) func-name))))
+" (if (consp func-name) (elt func-name 0) func-name)
+  look-all?
+  )))
      (create-gif-animation :save-dir (ros::resolve-ros-path "package://eus_qp/optmotiongen/doc/images"))
     )
    (format t "###### ~a~%" *gif-name*)

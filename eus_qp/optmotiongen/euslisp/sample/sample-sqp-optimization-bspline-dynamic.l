@@ -1,82 +1,8 @@
-(load "package://eus_qp/optmotiongen/euslisp/instant-configuration-task.l")
-(load "package://eus_qp/optmotiongen/euslisp/sqp-optimization.l")
-(load "package://eus_qp/optmotiongen/euslisp/validate-jacobian.l")
-(load "package://eus_qp/optmotiongen/euslisp/bspline-dynamic-configuration-task.l")
-(require :hrp2jsknts "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l")
-(require "models/arrow-object.l")
+(load "./sample-sqp-optimization-instant.l")
+(load "../bspline-dynamic-configuration-task.l")
 
 
-(defmethod hrp2jsknts-robot
-  (:joint-list
-   ()
-   ;; remove toe joint
-   (set-difference joint-list
-                   (list (send self :rleg :toe-p) (send self :lleg :toe-p)))
-   )
-  (:joint-list-orig
-   ()
-   joint-list
-   )
-  )
-
-(defun setup-robot-for-demo-hrp2jsknts-jump
-    (&key (only-kinematics? nil))
-  (setq *robot* (instance hrp2jsknts-robot :init))
-  ;; assoc contact coords
-  (send *robot* :put :rleg-contact-coords
-        (make-cascoords :name :rleg-contact-coords
-                        :parent (send *robot* :link "RLEG_LINK5")
-                        :coords (send (send *robot* :rleg-end-coords) :copy-worldcoords)
-                        ))
-  (send *robot* :put :lleg-contact-coords
-        (make-cascoords :name :lleg-contact-coords
-                        :parent (send *robot* :link "LLEG_LINK5")
-                        :coords (send (send *robot* :lleg-end-coords) :copy-worldcoords)
-                        ))
-  (send *robot* :put :rarm-contact-coords
-        (make-cascoords :name :rarm-contact-coords
-                        :parent (send *robot* :link "RARM_LINK6")
-                        :coords (send (send (send *robot* :link "RARM_LINK6") :copy-worldcoords)
-                                      :translate (scale 1e3 (float-vector -0.0042 -0.0233 -0.2345)))
-                        ))
-  (send *robot* :put :larm-contact-coords
-        (make-cascoords :name :larm-contact-coords
-                        :parent (send *robot* :link "LARM_LINK6")
-                        :coords (send (send (send *robot* :link "LARM_LINK6") :copy-worldcoords)
-                                      :translate (scale 1e3 (float-vector -0.0042 0.0233 -0.2345)))
-                        ))
-  (send *robot* :init-pose)
-  (send *robot* :fix-leg-to-coords (make-coords))
-  (unless only-kinematics?
-    ;; create support polygon
-    (create-support-polygon *robot* (send *robot* :hand :rarm :link "RARM_LINK6"))
-    (create-support-polygon *robot* (send *robot* :hand :larm :link "LARM_LINK6"))
-    (create-support-polygon *robot* (send *robot* :link "RLEG_LINK5"))
-    (create-support-polygon *robot* (send *robot* :link "LLEG_LINK5"))
-    )
-  ;; disable min-max table
-  (dolist (jnt (send *robot* :joint-list))
-    (send jnt :set-val 'joint-min-max-table nil)
-    (send jnt :set-val 'joint-min-max-target nil)
-    )
-  ;; set narrow limit of min/max angle instead of min-max table
-  (send (send *robot* :joint "RLEG_JOINT0") :min-angle -35)
-  (send (send *robot* :joint "LLEG_JOINT0") :max-angle 35)
-  (send (send *robot* :joint "RLEG_JOINT2") :min-angle -70)
-  (send (send *robot* :joint "LLEG_JOINT2") :min-angle -70)
-  (send (send *robot* :joint "CHEST_JOINT1") :min-angle -1)
-  (send (send *robot* :joint "CHEST_JOINT1") :max-angle 42)
-  (send (send *robot* :joint "RARM_JOINT5") :min-angle -50)
-  (send (send *robot* :joint "RARM_JOINT5") :max-angle 50)
-  (send (send *robot* :joint "RARM_JOINT6") :min-angle -50)
-  (send (send *robot* :joint "RARM_JOINT6") :max-angle 50)
-  (send (send *robot* :joint "LARM_JOINT5") :min-angle -50)
-  (send (send *robot* :joint "LARM_JOINT5") :max-angle 50)
-  (send (send *robot* :joint "LARM_JOINT6") :min-angle -50)
-  (send (send *robot* :joint "LARM_JOINT6") :max-angle 50)
-  )
-
-(defun demo-hrp2jsknts-jump
+(defun sample-sqp-optimization-bspline-dynamic
     (&key
      ;; time
      (start-time 0.0)
@@ -99,9 +25,9 @@
      (optimize-torque? nil)
      (avoid-collision? nil)
      (graph-filename
-      (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/demo-hrp2jsknts-jump/graph.pdf"))
+      (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/sample-sqp-optimization-bspline-dynamic/graph.pdf"))
      (output-filename
-      (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/demo-hrp2jsknts-jump/tmp"))
+      (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/sample-sqp-optimization-bspline-dynamic/tmp"))
      (pre-process-func)
      (visualize-callback-func)
      (visualize-loop? t)
@@ -123,7 +49,7 @@
   (setq *arrow-list*
         (list *arrow-rleg* *arrow-lleg* *arrow-rleg-landing* *arrow-lleg-landing*))
   ;; setup robot
-  (setup-robot-for-demo-hrp2jsknts-jump)
+  (setup-hrp2jsknts-for-sample-sqp-optimization)
   (setq *robot-env*
         (instance robot-environment :init :robot *robot*))
   (send *robot-env* :put :max-angular-moment (float-vector 1.0 1.0 1.0))
@@ -369,4 +295,4 @@
         :visualize-callback-func visualize-callback-func
         )
   )
-(warn "(demo-hrp2jsknts-jump)~%")
+(warn "(sample-sqp-optimization-bspline-dynamic)~%")
