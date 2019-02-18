@@ -21,6 +21,8 @@
   )
 
 (deftest test-sample-robot-ik
+  (assert (null-output (sample-robot-reach-ik-raw)))
+  (assert (null-output (sample-robot-reach-ik-raw :set-posture-joint? t :look-at? t)))
   (assert (null-output (float-vector-p (sample-robot-reach-ik :irteus-ik? nil))))
   (assert (null-output (float-vector-p (sample-robot-reach-ik :irteus-ik? t))))
   (assert (null-output (float-vector-p (sample-robot-reach-ik-limb :irteus-ik? nil))))

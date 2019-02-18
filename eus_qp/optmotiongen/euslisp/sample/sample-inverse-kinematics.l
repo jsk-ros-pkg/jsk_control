@@ -261,6 +261,64 @@
   )
 (warn "(sample-arm-reach-ik-line)~%")
 
+(defun sample-robot-reach-ik-raw
+    (&key
+     (set-posture-joint? nil)
+     (look-at? nil)
+     (pre-process-func)
+     (post-process-func)
+     &allow-other-keys
+     )
+  (setq *robot* (instance sample-robot :init))
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+  (setq *arrow* (instance arrow-object :init))
+  (send *arrow* :newcoords
+        (make-coords :pos (float-vector 300 -300 700) :rpy (list 0 0 0)))
+  (objects (list *robot* *arrow*))
+
+  (setq *look-at-contact*
+        (instance look-at-contact :init
+                  :target-pos (send *arrow* :worldpos)
+                  :camera-axis :z
+                  :angle-of-view 10
+                  ))
+  (setq *robot-env*
+        (instance robot-environment :init
+                  :robot *robot*
+                  :contact-list (if look-at? (list *look-at-contact*))
+                  :root-virtual-mode :fix
+                  ))
+
+  (setq *instant-config-task*
+        (instance instant-configuration-task :init
+                  :robot-env *robot-env*
+                  :drive-joint-list nil
+                  :only-kinematics? t
+                  :posture-joint-list (if set-posture-joint? (send *robot* :joint-list))
+                  :posture-joint-angle-list (if set-posture-joint? (send-all (send *robot* :joint-list) :joint-angle))
+                  :kin-target-coords-list
+                  (remove
+                   nil
+                   (list (send *arrow* :copy-worldcoords)
+                         (if look-at? (send *look-at-contact* :contact-coords))))
+                  :kin-attention-coords-list
+                  (remove
+                   nil
+                   (list (send *robot* :rarm :end-coords)
+                         (if look-at? (send *robot* :head :end-coords))))
+                  ))
+
+  (setq *sqp-opt*
+        (instance sqp-optimization :init
+                  :config-task *instant-config-task*
+                  :pre-process-func pre-process-func
+                  :post-process-func post-process-func
+                  ))
+  (send *sqp-opt* :optimize :loop-num 50)
+  t)
+(warn "(sample-robot-reach-ik-raw)~%")
+
 (defun sample-robot-reach-ik
     (&key
      (irteus-ik? nil)
