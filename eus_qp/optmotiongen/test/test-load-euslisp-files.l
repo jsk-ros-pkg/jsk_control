@@ -6,8 +6,14 @@
 (init-unit-test)
 
 (deftest test-load-euslisp-files
-  (assert (= (unix:system (ros::resolve-ros-path "package://eus_qp/optmotiongen/test/test-load-euslisp-files.bash")) 0))
-  )
+  (let ((base-dir (ros::resolve-ros-path "package://eus_qp/optmotiongen/euslisp"))
+        (full-file-name))
+    (dolist (file (unix::directory base-dir))
+      (setq full-file-name (namestring (make-pathname :directory (list base-dir) :name file)))
+      (when (eq (probe-file full-file-name) :file)
+        (setq *loader-current-directory* nil)
+        (load full-file-name)))
+    ))
 
 
 (eval-when
