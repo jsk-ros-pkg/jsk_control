@@ -1,5 +1,5 @@
-(load "../trajectory-configuration-task.l")
-(load "../sqp-optimization.l")
+(load "./trajectory-configuration-task.l")
+(load "./sqp-optimization.l")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
