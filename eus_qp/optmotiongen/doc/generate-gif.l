@@ -14,6 +14,7 @@
   (generate-gif
    :func-name-list
    (list "sample-arm-reach-ik-raw"
+         "sample-arm-reach-ik-raw-msc"
          "sample-arm-reach-ik"
          "sample-arm-reach-ik-obstacle"
          "sample-arm-reach-ik-posture"
@@ -66,14 +67,9 @@
 
 (defun generate-gif-all-for-sample-hrp2
     ()
-  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-instant.l")
-  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-instant-manip.l")
-  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-trajectory.l")
-  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-trajectory-manip.l")
-  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-bspline.l")
-
   (format t "~%~%## Sample (HRP2)~%~%")
 
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-instant.l")
   (format t "### instant-configuration-task~%~%")
   (format t "[sample-sqp-optimization-instant.l](./euslisp/sample/sample-sqp-optimization-instant.l)~%~%")
   (generate-gif
@@ -83,6 +79,7 @@
          (list "sample-sqp-optimization-instant :only-kinematics? t" "sample-sqp-optimization-instant-only-kinematics")
          ))
 
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-trajectory.l")
   (format t "### trajectory-configuration-task~%~%")
   (format t "[sample-sqp-optimization-trajectory.l](./euslisp/sample/sample-sqp-optimization-trajectory.l)~%~%")
   (generate-gif
@@ -91,6 +88,7 @@
          (list "sample-sqp-optimization-trajectory :optimize-start-end-torque? nil" "sample-sqp-optimization-trajectory-without-torque")
          ))
 
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-instant-manip.l")
   (format t "### instant-manip-configuration-task~%~%")
   (format t "[sample-sqp-optimization-instant-manip.l](./euslisp/sample/sample-sqp-optimization-instant-manip.l)~%~%")
   (generate-gif
@@ -99,6 +97,7 @@
          (list "sample-sqp-optimization-instant-manip :optimize-torque? nil" "sample-sqp-optimization-instant-manip-without-torque")
          ))
 
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-trajectory-manip.l")
   (format t "### trajectory-manip-configuration-task~%~%")
   (format t "[sample-sqp-optimization-trajectory-manip.l](./euslisp/sample/sample-sqp-optimization-trajectory-manip.l)~%~%")
   (generate-gif
@@ -107,12 +106,23 @@
          (list "sample-sqp-optimization-trajectory-manip :optimize-start-end-torque? nil" "sample-sqp-optimization-trajectory-manip-without-torque")
          ))
 
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-bspline.l")
   (format t "### bspline-configuration-task~%~%")
   (format t "[sample-sqp-optimization-bspline.l](./euslisp/sample/sample-sqp-optimization-bspline.l)~%~%")
   (format t "[graph of joint trajectory](./logs/sample-sqp-optimization-bspline.pdf)~%")
   (generate-gif
    :func-name-list
    (list "sample-sqp-optimization-bspline"
+         ))
+
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-msc-optimization-instant.l")
+  (format t "### instant-configuration-task with sqp-msc~%~%")
+  (format t "[sample-sqp-msc-optimization-instant.l](./euslisp/sample/sample-sqp-msc-optimization-instant.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list ;; (list "sample-sqp-msc-optimization-instant :optimize-torque? t" "sample-sqp-msc-optimization-instant")
+         (list "sample-sqp-msc-optimization-instant :optimize-torque? nil" "sample-sqp-msc-optimization-instant-without-torque")
+         (list "sample-sqp-msc-optimization-instant :only-kinematics? t" "sample-sqp-msc-optimization-instant-only-kinematics")
          ))
   )
 (warn "(generate-gif-all-for-sample-hrp2)~%")
@@ -174,6 +184,19 @@
          ))
   )
 (warn "(generate-gif-all-for-demo-fetch)~%")
+
+(defun generate-gif-all-for-demo-others
+    ()
+  (require "package://eus_qp/optmotiongen/euslisp/demo/demo-2d-body-trajectory.l")
+  (format t "### demo-2d-body-trajectory~%~%")
+  (format t "[demo-2d-body-trajectory.l](./euslisp/demo/demo-2d-body-trajectory.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list (list "demo-2d-body-trajectory :num-of-solution-candidates 4" "demo-2d-body-trajectory-with-msc")
+         (list "demo-2d-body-trajectory :num-of-solution-candidates 1" "demo-2d-body-trajectory-without-msc")
+         ))
+  )
+(warn "(generate-gif-all-for-demo-others)~%")
 
 
 (defun generate-gif

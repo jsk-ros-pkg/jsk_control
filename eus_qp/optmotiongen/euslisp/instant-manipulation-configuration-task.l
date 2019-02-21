@@ -936,42 +936,42 @@ return $\bm{b} := \bm{b}_{\mathit{var}} \in \mathbb{R}^{N_{\mathit{eq}}}$
 二次形式の正則化項として次式を考える．
 \begin{eqnarray}
   F_{\mathit{tau}}(\bm{q}) &=& \left\| \frac{\bm{\tau}}{\bm{\tau}_{\mathit{max}}} \right\|^2 \ \ (ベクトルの要素ごとの割り算を表す) \\
-  &=& \bm{\tau}^T \bm{\bar{W}}_{\tau} \bm{\tau}
+  &=& \bm{\tau}^T \bm{\bar{W}}_{trq} \bm{\tau}
 \end{eqnarray}
 ここで，
 \begin{eqnarray}
-  \bm{\bar{W}}_{\tau} := \begin{pmatrix} \frac{1}{\tau_{\mathit{max,1}}^2} & & & \\ & \frac{1}{\tau_{\mathit{max,2}}^2} & & \\ & & \ddots & \\ & & & \frac{1}{\tau_{\mathit{max,N_{\mathit{drive\mathchar`-joint}}}}^2} \end{pmatrix}
+  \bm{\bar{W}}_{trq} := \begin{pmatrix} \frac{1}{\tau_{\mathit{max,1}}^2} & & & \\ & \frac{1}{\tau_{\mathit{max,2}}^2} & & \\ & & \ddots & \\ & & & \frac{1}{\tau_{\mathit{max,N_{\mathit{drive\mathchar`-joint}}}}^2} \end{pmatrix}
   \in \mathbb{R}^{\mathit{dim}(\bm{\tau}) \times \mathit{dim}(\bm{\tau})}
 \end{eqnarray}
 
 \it{only-variant?} is true:
 \begin{eqnarray}
-  \bm{W}_{\tau} :=
+  \bm{W}_{trq} :=
   \bordermatrix{
     & \mathit{dim}(\bm{\theta}) & \mathit{dim}(\bm{\hat{w}}) &\mathit{dim}(\bm{\hat{w}}_{\mathit{obj}}) & \mathit{dim}(\bm{\tau}) \cr
     \mathit{dim}(\bm{\theta}) &&&& \cr
     \mathit{dim}(\bm{\hat{w}}) &&&& \cr
    \mathit{dim}(\bm{\hat{w}}_{\mathit{obj}}) &&&& \cr
-    \mathit{dim}(\bm{\tau}) &&&&\bm{\bar{W}}_{\tau} \cr
+    \mathit{dim}(\bm{\tau}) &&&&\bm{\bar{W}}_{trq} \cr
   }
   \in \mathbb{R}^{\mathit{dim}(\bm{q}_{\mathit{var}}) \times \mathit{dim}(\bm{q}_{\mathit{var}})}
 \end{eqnarray}
 
 otherwise:
 \begin{eqnarray}
-  \bm{W}_{\tau} :=
+  \bm{W}_{trq} :=
   \bordermatrix{
     & \mathit{dim}(\bm{\theta}) & \mathit{dim}(\bm{\hat{w}}) &\mathit{dim}(\bm{\hat{w}}_{\mathit{obj}}) & \mathit{dim}(\bm{\tau}) & \mathit{dim}(\bm{\phi}) \cr
     \mathit{dim}(\bm{\theta}) &&&&& \cr
     \mathit{dim}(\bm{\hat{w}}) &&&&& \cr
    \mathit{dim}(\bm{\hat{w}}_{\mathit{obj}}) &&&&& \cr
-    \mathit{dim}(\bm{\tau}) &&&&\bm{\bar{W}}_{\tau}& \cr
+    \mathit{dim}(\bm{\tau}) &&&&\bm{\bar{W}}_{trq}& \cr
     \mathit{dim}(\bm{\phi}) &&&&& \cr
   }
   \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathit{dim}(\bm{q})}
 \end{eqnarray}
 
-return $\bm{W}_{\tau}$
+return $\bm{W}_{trq}$
    "
    (when (or update? (not (send self :get :torque-regular-matrix)))
      (send self :put :torque-regular-matrix
@@ -991,39 +991,39 @@ return $\bm{W}_{\tau}$
    (&key (update? t) (only-variant? nil))
    "
 \begin{eqnarray}
-  \bm{\bar{v}}_{\tau} &:=& \bm{\bar{W}}_{\tau} \bm{\tau} \\
+  \bm{\bar{v}}_{trq} &:=& \bm{\bar{W}}_{trq} \bm{\tau} \\
   &=& \begin{pmatrix} \frac{\tau_1}{\tau_{\mathit{max,1}}^2} \\ \frac{\tau_2}{\tau_{\mathit{max,2}}^2} \\ \vdots \\ \frac{\tau_{\mathit{dim}(\bm{\tau})}}{\tau_{\mathit{max,\mathit{dim}(\bm{\tau})}}^2} \end{pmatrix}
   \in \mathbb{R}^{\mathit{dim}(\bm{\tau})}
 \end{eqnarray}
 
 \it{only-variant?} is true:
 \begin{eqnarray}
-  \bm{v}_{\tau} :=
+  \bm{v}_{trq} :=
   \bordermatrix{
     & 1 \cr
     \mathit{dim}(\bm{\theta}) & \cr
     \mathit{dim}(\bm{\hat{w}}) & \cr
     \mathit{dim}(\bm{\hat{w}}_{\mathit{obj}}) & \cr
-    \mathit{dim}(\bm{\tau}) & \bm{\bar{v}}_{\tau} \cr
+    \mathit{dim}(\bm{\tau}) & \bm{\bar{v}}_{trq} \cr
   }
   \in \mathbb{R}^{\mathit{dim}(\bm{q}_{\mathit{var}})}
 \end{eqnarray}
 
 otherwise:
 \begin{eqnarray}
-  \bm{v}_{\tau} :=
+  \bm{v}_{trq} :=
   \bordermatrix{
     & 1 \cr
     \mathit{dim}(\bm{\theta}) & \cr
     \mathit{dim}(\bm{\hat{w}}) & \cr
     \mathit{dim}(\bm{\hat{w}}_{\mathit{obj}}) & \cr
-    \mathit{dim}(\bm{\tau}) & \bm{\bar{v}}_{\tau} \cr
+    \mathit{dim}(\bm{\tau}) & \bm{\bar{v}}_{trq} \cr
     \mathit{dim}(\bm{\phi}) & \cr
   }
   \in \mathbb{R}^{\mathit{dim}(\bm{q})}
 \end{eqnarray}
 
-return $\bm{v}_{\tau}$
+return $\bm{v}_{trq}$
    "
    (when (or update? (not (send self :get :torque-regular-vector)))
      (send self :put :torque-regular-vector

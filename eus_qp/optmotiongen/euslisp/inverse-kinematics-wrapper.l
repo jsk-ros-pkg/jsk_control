@@ -601,12 +601,13 @@ inverse-kinematics-optmotiongenの{\it target-coords, translation-axis, rotation
     (target-coords)
     (translation-axis)
     (rotation-axis)
-    (transform-coords)
+    (transform-coords target-coords)
+    (name (send target-coords :name))
     )
    "
 Initialize instance
    "
-   (send-super :init :name (send target-coords :name))
+   (send-super :init :name name)
    (let* (rv-ll
           rv-jl
           (string-name

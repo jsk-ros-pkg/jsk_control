@@ -1,4 +1,5 @@
 (load "../inverse-kinematics-wrapper.l")
+(load "../sqp-msc-optimization.l")
 (require "irteus/demo/sample-arm-model.l")
 (require "irteus/demo/sample-robot-model.l")
 (require "models/arrow-object.l")
@@ -38,6 +39,54 @@
   (send *sqp-opt* :optimize :loop-num 50)
   t)
 (warn "(sample-arm-reach-ik-raw)~%")
+
+(defun sample-arm-reach-ik-raw-msc
+    (&key
+     (pre-process-func)
+     (post-process-func)
+     &allow-other-keys
+     )
+  (setq *arrow* (instance arrow-object :init))
+  (send *arrow* :newcoords
+        (make-coords :pos (float-vector 400 -200 300) :rpy (list (deg2rad 60) 0 0)))
+  (setq *robot* (instance sarmclass :init))
+  (setq *contact-list*
+        (list
+         (instance contact-ik-arg :init
+                   :name "target-coords"
+                   :target-coords (send *arrow* :copy-worldcoords)
+                   :translation-axis t
+                   :rotation-axis nil
+                   )
+         ))
+  (setq *robot-env*
+        (instance robot-environment :init
+                  :robot *robot*
+                  :contact-list *contact-list*
+                  :root-virtual-mode :fix
+                  ))
+
+  (setq *instant-config-task*
+        (instance instant-configuration-task :init
+                  :robot-env *robot-env*
+                  :drive-joint-list nil
+                  :only-kinematics? t
+                  :kin-target-coords-list
+                  (list (send (send *robot-env* :contact "target-coords") :contact-coords))
+                  :kin-attention-coords-list
+                  (list (send *robot-env* :robot :end-coords))
+                  ))
+
+  (setq *sqp-opt*
+        (instance sqp-msc-optimization :init
+                  :config-task *instant-config-task*
+                  :pre-process-func pre-process-func
+                  :post-process-func post-process-func
+                  ))
+  (objects (append (list *arrow*) (send-all (send *sqp-opt* :config-task-list) :robot-env)))
+  (send *sqp-opt* :optimize :loop-num 50)
+  t)
+(warn "(sample-arm-reach-ik-raw-msc)~%")
 
 (defun sample-arm-reach-ik
     (&key

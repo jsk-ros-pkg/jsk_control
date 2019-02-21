@@ -44,10 +44,10 @@
                         :coords (send (send (send *robot* :link "LARM_LINK6") :copy-worldcoords)
                                       :translate (scale 1e3 (float-vector -0.0042 0.0233 -0.2345)))
                         ))
+  (send *robot* :init-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
   (unless only-kinematics?
     ;; create support polygon
-    (send *robot* :init-pose)
-    (send *robot* :fix-leg-to-coords (make-coords))
     (create-support-polygon *robot* (send *robot* :hand :rarm :link "RARM_LINK6"))
     (create-support-polygon *robot* (send *robot* :hand :larm :link "LARM_LINK6"))
     (create-support-polygon *robot* (send *robot* :link "RLEG_LINK5"))

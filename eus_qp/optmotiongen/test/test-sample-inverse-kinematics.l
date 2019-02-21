@@ -8,6 +8,7 @@
 
 (deftest test-sample-arm-ik
   (assert (null-output (sample-arm-reach-ik-raw)))
+  (assert (null-output (sample-arm-reach-ik-raw-msc)))
   (assert (null-output (float-vector-p (sample-arm-reach-ik :irteus-ik? nil))))
   (assert (null-output (float-vector-p (sample-arm-reach-ik :irteus-ik? t))))
   (assert (null-output (null (sample-arm-reach-ik :target-coords (make-coords :pos (float-vector 10000 0 0)) :irteus-ik? nil)))) ;; intentional failure
