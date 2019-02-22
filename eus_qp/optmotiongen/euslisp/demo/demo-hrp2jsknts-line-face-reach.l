@@ -1,7 +1,7 @@
 (load "package://eus_qp/optmotiongen/euslisp/inverse-kinematics-wrapper.l")
 (load "package://hrpsys_ros_bridge_tutorials/euslisp/hrp2jsknts-interface.l")
 
-(defun setup-hrp2-line-environment
+(defun setup-hrp2jsknts-line-environment
   ()
   (setq *robot* (instance hrp2jsknts-robot :init))
   (setq *pipe* (make-cylinder 3 1000))
@@ -11,15 +11,15 @@
   (send *pipe* :set-color (float-vector 1.0 0.6 0.6))
   (objects (list *robot* *pipe*))
   )
-(warn "(setup-hrp2-line-environment)~%")
+(warn "(setup-hrp2jsknts-line-environment)~%")
 
-(defun sample-hrp2-reach-ik-line
+(defun sample-hrp2jsknts-reach-ik-line
   (&key
    (pre-process-func)
    (post-process-func)
    &allow-other-keys
    )
-  (setup-hrp2-line-environment)
+  (setup-hrp2jsknts-line-environment)
   (setq *edge* (elt (send *pipe* :edges) 15))
   (send *edge* :put :margin 20) ;; [mm]
   (send *edge* :put :direction-move-target-axis :z)
@@ -31,9 +31,9 @@
         :post-process-func post-process-func
         )
   )
-(warn "(sample-hrp2-reach-ik-line)~%")
+(warn "(sample-hrp2jsknts-reach-ik-line)~%")
 
-(defun setup-hrp2-face-environment
+(defun setup-hrp2jsknts-face-environment
   ()
   (setq *robot* (instance hrp2jsknts-robot :init))
   (setq *board* (make-cube 300 500 5))
@@ -43,15 +43,15 @@
   (send *board* :set-color (float-vector 1.0 0.6 0.6))
   (objects (list *robot* *board*))
   )
-(warn "(setup-hrp2-face-environment)~%")
+(warn "(setup-hrp2jsknts-face-environment)~%")
 
-(defun sample-hrp2-reach-ik-face
+(defun sample-hrp2jsknts-reach-ik-face
   (&key
    (pre-process-func)
    (post-process-func)
    &allow-other-keys
    )
-  (setup-hrp2-face-environment)
+  (setup-hrp2jsknts-face-environment)
   (setq *face* (elt (send *board* :faces) 1))
   (send *face* :put :margin 20) ;; [mm]
   (send *face* :put :normal-move-target-axis :-x)
@@ -64,4 +64,4 @@
         :post-process-func post-process-func
         )
   )
-(warn "(sample-hrp2-reach-ik-face)~%")
+(warn "(sample-hrp2jsknts-reach-ik-face)~%")

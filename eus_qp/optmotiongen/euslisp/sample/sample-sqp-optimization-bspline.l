@@ -41,14 +41,9 @@
        (list 3.0 t (make-coords :pos (float-vector 600 300 500) :rpy (list 0 0 pi)) 0.05 0.0)
        (list 4.0 t (make-coords :pos (float-vector 600 300 350) :rpy (list 0 0 pi)) 0.0 0.0)
        (list 5.0 t (make-coords :pos (float-vector 600 300 200) :rpy (list 0 0 pi)) 0.0 0.0)
-       )
-      ;; (list
-      ;;  (list 0.0 t (make-coords :pos (float-vector 600 -300 200) :rpy (list 0 0 pi)) 0.0 0.0)
-      ;;  (list 2.0 t (make-coords :pos (float-vector 600 -300 500) :rpy (list 0 0 pi)) 0.05 0.0)
-      ;;  (list 3.0 t (make-coords :pos (float-vector 600 300 500) :rpy (list 0 0 pi)) 0.05 0.0)
-      ;;  (list 5.0 t (make-coords :pos (float-vector 600 300 200) :rpy (list 0 0 pi)) 0.0 0.0)
-      ;;  )
-      )
+       ))
+     (graph-filename
+      (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/sample-sqp-optimization-bspline-graph.pdf"))
      (pre-process-func)
      (visualize-callback-func)
      (visualize-loop? t)
@@ -65,9 +60,8 @@
   (unless (boundp '*irtviewer*)
     (make-irtviewer)
     (send *irtviewer* :change-background (float-vector 1 1 1))
-    (send *irtviewer* :set-val 'x::draw-floor 500)
-    (when (assoc 'x::floor-color (send *irtviewer* :slots))
-      (send *irtviewer* :set-val 'x::floor-color (float-vector 0 0 0)))
+    (send *irtviewer* :draw-floor 500)
+    (send *irtviewer* :floor-color (float-vector 0 0 0))
     )
   (objects (append (list *robot*) *arrow-list*))
 
@@ -112,7 +106,8 @@
                         ))
                   ))
   (send *sqp-opt* :optimize :loop-num 50)
-  (send *bspline-config-task* :plot-theta-graph :dump-pdf? t)
+  (when graph-filename
+    (send *bspline-config-task* :plot-theta-graph :dump-pdf? t :dump-filename graph-filename))
   (send *bspline-config-task* :play-animation
         :robot *robot*
         :loop? visualize-loop?

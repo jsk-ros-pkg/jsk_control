@@ -1,7 +1,7 @@
 #!/usr/bin/env roseus
 
 
-(defun generate-gif-all-for-sample
+(defun generate-gif-all-for-sample-ik-iks
     ()
   (require "package://eus_qp/optmotiongen/euslisp/sample/sample-inverse-kinematics.l")
   (require "package://eus_qp/optmotiongen/euslisp/sample/sample-inverse-kinematics-statics.l")
@@ -21,6 +21,9 @@
          "sample-arm-reach-ik-with-root-virtual-joint"
          "sample-arm-reach-ik-face"
          "sample-arm-reach-ik-line"
+         "sample-robot-reach-ik-raw"
+         (list "sample-robot-reach-ik-raw :set-posture-joint? t :look-at? t"
+               "sample-robot-reach-ik-raw-with-set-posture-look-at")
          "sample-robot-reach-ik"
          "sample-robot-reach-ik-limb"
          "sample-robot-reach-ik-dual-arm"
@@ -63,7 +66,43 @@
          (list "sample-robot-reach-trajectory-iks-face :optimize-start-end-torque? t" "sample-robot-reach-trajectory-iks-face")
          ))
   )
-(warn "(generate-gif-all-for-sample)~%")
+(warn "(generate-gif-all-for-sample-ik-iks)~%")
+
+(defun generate-gif-all-for-sample-samplerobot
+    ()
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-samplerobot.l")
+
+  (format t "### sample-robot-sqp-instant-manip-config-task~%~%")
+  (format t "[sample-samplerobot.l](./euslisp/sample/sample-samplerobot.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list (list "sample-robot-sqp-instant-manip-config-task :fix-obj? nil :optimize-torque? nil"
+               "sample-robot-sqp-instant-manip-config-task-without-torque")
+         (list "sample-robot-sqp-instant-manip-config-task :fix-obj? t :optimize-torque? nil"
+               "sample-robot-sqp-instant-manip-config-task-fix-obj-without-torque")
+         (list "sample-robot-sqp-instant-manip-config-task :fix-obj? nil :optimize-torque? t"
+               "sample-robot-sqp-instant-manip-config-task")
+         (list "sample-robot-sqp-instant-manip-config-task :fix-obj? t :optimize-torque? t"
+               "sample-robot-sqp-instant-manip-config-task-fix-obj")
+         ))
+
+  (format t "### sample-arm-sqp-bspline-config-task~%~%")
+  (format t "[sample-samplerobot.l](./euslisp/sample/sample-samplerobot.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list "sample-arm-sqp-bspline-config-task"
+         ))
+
+  (format t "### sample-robot-sqp-bspline-dynamic-config-task~%~%")
+  (format t "[sample-samplerobot.l](./euslisp/sample/sample-samplerobot.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list "sample-robot-sqp-bspline-dynamic-config-task"
+         )
+   :look-all? nil
+   )
+  )
+(warn "(generate-gif-all-for-sample-samplerobot)~%")
 
 (defun generate-gif-all-for-sample-hrp2
     ()
@@ -123,6 +162,14 @@
    (list ;; (list "sample-sqp-msc-optimization-instant :optimize-torque? t" "sample-sqp-msc-optimization-instant")
          (list "sample-sqp-msc-optimization-instant :optimize-torque? nil" "sample-sqp-msc-optimization-instant-without-torque")
          (list "sample-sqp-msc-optimization-instant :only-kinematics? t" "sample-sqp-msc-optimization-instant-only-kinematics")
+         ))
+
+  (require "package://eus_qp/optmotiongen/euslisp/sample/sample-sqp-optimization-bspline-dynamic.l")
+  (format t "### sample-sqp-optimization-bspline-dynamic~%~%")
+  (format t "[sample-sqp-optimization-bspline-dynamic.l](./euslisp/sample/sample-sqp-optimization-bspline-dynamic.l)~%~%")
+  (generate-gif
+   :func-name-list
+   (list "sample-sqp-optimization-bspline-dynamic"
          ))
   )
 (warn "(generate-gif-all-for-sample-hrp2)~%")
@@ -202,6 +249,7 @@
 (defun generate-gif
     (&key
      (func-name-list)
+     (look-all? t)
      )
   (dolist (func-name func-name-list)
     (null-output
@@ -212,15 +260,18 @@
  :pre-process-func
  #'(lambda (sqp)
      (when (= (send sqp :iteration) 1)
-       (setup-gif-animation))
+       (setup-gif-animation :look-all? ~a))
      (save-image-for-gif-animation)
      )
  :visualize-callback-func
  #'save-image-for-gif-animation
  :visualize-loop? nil
  :output-filename nil
+ :graph-filename nil
  )
-" (if (consp func-name) (elt func-name 0) func-name))))
+" (if (consp func-name) (elt func-name 0) func-name)
+  look-all?
+  )))
      (create-gif-animation :save-dir (ros::resolve-ros-path "package://eus_qp/optmotiongen/doc/images"))
     )
    (format t "###### ~a~%" *gif-name*)

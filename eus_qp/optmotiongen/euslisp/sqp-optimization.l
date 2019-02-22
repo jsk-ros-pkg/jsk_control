@@ -101,9 +101,12 @@ and update configuration:
 \end{eqnarray}
    "
    (setq _status :optimizing)
+   (when (member :print-setting-information (send _config-task :methods))
+     (send _config-task :print-setting-information))
    (when loop-num-min
      (setq loop-num-min (min loop-num loop-num-min)))
    (setq _i 0)
+   (send self :_update-viewer-once)
    (while t
      (incf _i)
      (when (and (or (not loop-num-min) (>= _i loop-num-min))
@@ -117,13 +120,13 @@ and update configuration:
        )
      (when _pre-process-func
        (funcall _pre-process-func self))
-     (when (or (= (mod _i print-status-interval) 0) (= _i loop-num))
-       (send self :_print-status-once :loop-num loop-num))
      (unless (send self :_optimize-iterate-once)
        (warning-message 2 "=== QP result is invalid. status: ~a ===~%" _qp-int-status)
        (setq _status :qp-error)
        (return-from :optimize _status)
        )
+     (when (or (= (mod _i print-status-interval) 0) (= _i loop-num))
+       (send self :_print-status-once :loop-num loop-num))
      (when (or (= (mod _i update-viewer-interval) 0) (= _i loop-num))
        (send self :_update-viewer-once))
      (when _post-process-func

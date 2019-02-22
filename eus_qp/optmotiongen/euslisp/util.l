@@ -273,11 +273,12 @@ Override to support zero row matrix.
     (mapcar
      #'(lambda (f m cc)
          ;; draw cop
-         (let* ((cop (send robot :calc-cop-from-force-moment ;; dummy using of robot
-                           f m cc cc)))
-           (when cop
-             (send cop :draw-on :flush nil :color (float-vector 1 0 0) :width 4 :size 30)
-             )))
+         (when cc
+           (let* ((cop (send robot :calc-cop-from-force-moment ;; dummy using of robot
+                             f m cc cc)))
+             (when cop
+               (send cop :draw-on :flush nil :color (float-vector 1 0 0) :width 4 :size 30)
+               ))))
      force-list
      moment-list
      coords-list
@@ -285,12 +286,13 @@ Override to support zero row matrix.
   (mapcar
    #'(lambda (f m cc)
        ;; draw force
-       (with-set-color-line-width
-        *viewer* force-color force-width
-        (send *irtviewer* :viewer :draw-arrow
-              (send cc :worldpos)
-              (v+ (send cc :worldpos) (scale 1 f))
-              nil)))
+       (when cc
+         (with-set-color-line-width
+          *viewer* force-color force-width
+          (send *irtviewer* :viewer :draw-arrow
+                (send cc :worldpos)
+                (v+ (send cc :worldpos) (scale 1 f))
+                nil))))
    force-list
    moment-list
    coords-list
