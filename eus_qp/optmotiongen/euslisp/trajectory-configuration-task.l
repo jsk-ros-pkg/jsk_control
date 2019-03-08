@@ -44,6 +44,7 @@
   \item[norm-regular-scale-max $k_{\mathit{max}}$] コンフィギュレーション更新量正則化の重み最大値
   \item[norm-regular-scale-offset $k_{\mathit{off}}$] コンフィギュレーション更新量正則化の重みオフセット
   \item[adjacent-regular-scale $k_{\mathit{adj}}$] 隣接コンフィギュレーション正則化の重み
+  \item[adjacent-regular-scale-list $k_{\mathit{adj}}$] 隣接コンフィギュレーション正則化の重み(リストで渡す場合)
   \item[torque-regular-scale $k_{\mathit{trq}}$] トルク正則化の重み
 \end{description}
 \end{itemize}
@@ -74,6 +75,7 @@ $\bm{e}^{(l)}(\bm{q}_{\mathit{var}}^{(l)}, \bm{q}_{\mathit{invar}}) \ (l=1,2,\cd
     (norm-regular-scale-max 1e-4)
     (norm-regular-scale-offset 1e-7)
     (adjacent-regular-scale 5e-3)
+    (adjacent-regular-scale-list nil)
     (torque-regular-scale 1e-3)
     )
    "
@@ -84,6 +86,7 @@ Initialize instance
    (setq _norm-regular-scale-max norm-regular-scale-max)
    (setq _norm-regular-scale-offset norm-regular-scale-offset)
    (setq _adjacent-regular-scale adjacent-regular-scale)
+   (setq _adjacent-regular-scale-list adjacent-regular-scale-list)
    (setq _torque-regular-scale torque-regular-scale)
    ;; sub methods
    (send self :_initialize-number)
@@ -558,11 +561,21 @@ return $\bm{d}_{\mathit{col}} \in \mathbb{R}^{N_{\mathit{col}}}$
 \end{eqnarray}
 ここで，
 \begin{eqnarray}
-  \bm{\bar{I}}_{\mathit{adj}}
+  \bm{I}^{(l)}_{\mathit{adj}}
+  &:=&
+  \begin{pmatrix}
+    k^{(l)}_{adj} & & & & \bm{O} \\
+    & k^{(l)}_{adj} & & &  \\
+    & & \ddots & & \\
+    & & & k^{(l)}_{adj} & \\
+    \bm{O} & & & & k^{(l)}_{adj}
+  \end{pmatrix} \in \mathbb{R}^{\mathit{dim}(\bm{\theta}^{(l)}_{\mathit{var}}) \times \mathit{dim}(\bm{\theta}^{(l)}_{\mathit{var}})}
+  \\
+  \bm{\bar{I}}^{(l)}_{\mathit{adj}}
   &:=&
   \bordermatrix{
     & \mathit{dim}(\bm{\theta}^{(l)}) & \mathit{dim}(\bm{\hat{w}}^{(l)}) & \mathit{dim}(\bm{\tau}^{(l)}) \cr
-    \mathit{dim}(\bm{\theta}^{(l)}) & \bm{I} && \cr
+    \mathit{dim}(\bm{\theta}^{(l)}) & \bm{I}^{(l)}_{adj} && \cr
     \mathit{dim}(\bm{\hat{w}}^{(l)}) &&& \cr
     \mathit{dim}(\bm{\tau}^{(l)}) &&& \cr
   }
@@ -571,11 +584,11 @@ return $\bm{d}_{\mathit{col}} \in \mathbb{R}^{N_{\mathit{col}}}$
   \bm{\bar{W}}_{\mathit{adj}}
   &:=&
   \begin{pmatrix}
-    \bm{\bar{I}}_{\mathit{adj}} & - \bm{\bar{I}}_{\mathit{adj}} & & & & & \\
-    - \bm{\bar{I}}_{\mathit{adj}} & 2 \bm{\bar{I}}_{\mathit{adj}} & - \bm{\bar{I}}_{\mathit{adj}} & & & & \bm{O} \\
-    & & &  \ddots & & & \\
-    & & & & - \bm{\bar{I}}_{\mathit{adj}} & 2 \bm{\bar{I}}_{\mathit{adj}} & - \bm{\bar{I}}_{\mathit{adj}}\\
-    \bm{O} & & & & & - \bm{\bar{I}}_{\mathit{adj}} & \bm{\bar{I}}_{\mathit{adj}}
+    \bm{\bar{I}}^{(1)}_{\mathit{adj}} & - \bm{\bar{I}}^{(1)}_{\mathit{adj}} & & & & \bm{O}\\
+    - \bm{\bar{I}}^{(1)}_{\mathit{adj}} & \bm{\bar{I}}^{(1)}_{\mathit{adj}} + \bm{\bar{I}}^{(2)}_{\mathit{adj}} & - \bm{\bar{I}}^{(2)}_{\mathit{adj}} & & & \\
+    & &  \ddots & & & \\
+    & & & & \bm{\bar{I}}^{(L-2)}_{\mathit{adj}} + \bm{\bar{I}}^{(L-1)}_{\mathit{adj}} & - \bm{\bar{I}}^{(L-1)}_{\mathit{adj}}\\
+    \bm{O} & & & & - \bm{\bar{I}}^{(L-1)}_{\mathit{adj}} & \bm{\bar{I}}^{(L-1)}_{\mathit{adj}}
   \end{pmatrix} \in \mathbb{R}^{dim(\bm{q}_{\mathit{var}}) \times dim(\bm{q}_{\mathit{var}})} \\
   \bm{W}_{\mathit{adj}}
   &:=&
