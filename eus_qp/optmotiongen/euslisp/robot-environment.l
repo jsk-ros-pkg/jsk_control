@@ -47,6 +47,8 @@
     (root-virtual-mode :6dof) ;; :6dof, :planar, :fix are supported
     (root-virtual-joint-class-list)
     (root-virtual-joint-axis-list)
+    (root-virtual-joint-min-angle-list)
+    (root-virtual-joint-max-angle-list)
     )
    "
 Initialize instance
@@ -63,6 +65,8 @@ Initialize instance
                       :mode root-virtual-mode
                       :joint-class-list root-virtual-joint-class-list
                       :joint-axis-list root-virtual-joint-axis-list
+                      :joint-min-angle-list root-virtual-joint-min-angle-list
+                      :joint-max-angle-list root-virtual-joint-max-angle-list
                       ))
           ))
    (setq links (flatten (list (send _robot-with-root-virtual :links) (send-all _contact-list :links))))
@@ -78,6 +82,8 @@ Initialize instance
     (mode)
     (joint-class-list)
     (joint-axis-list)
+    (joint-min-angle-list)
+    (joint-max-angle-list)
     )
    (cond ((equal mode :6dof)
           (setq joint-class-list
@@ -92,6 +98,14 @@ Initialize instance
           (setq joint-axis-list
                 (list :x :y :z))
           ))
+   (unless joint-min-angle-list
+     (setq joint-min-angle-list
+           (make-list (length joint-class-list) :initial-element -1e10))
+     )
+   (unless joint-max-angle-list
+     (setq joint-max-angle-list
+           (make-list (length joint-class-list) :initial-element 1e10))
+     )
    (let ((cl-with-rv (instance cascaded-link :init))
          rv-ll
          )
@@ -122,19 +136,23 @@ Initialize instance
                               joint-axis
                               parent-link
                               child-link
+                              min-angle
+                              max-angle
                               )
                        (instance joint-class :init
                                  :name
                                  (read-from-string
                                   (format nil ":~a-root-virtual-~a-~a" (send target :name) (send joint-class :name) (symbol-name joint-axis)))
                                  :parent-link parent-link :child-link child-link
-                                 :axis joint-axis :min -1e10 :max 1e10
+                                 :axis joint-axis :min min-angle :max max-angle
                                  :max-joint-torque 0.0
                                  ))
                    joint-class-list
                    joint-axis-list
                    (butlast (append rv-ll (list target)))
                    (cdr (append rv-ll (list target)))
+                   joint-min-angle-list
+                   joint-max-angle-list
                    ))
      ;; 3. init-ending
      (mapcar #'(lambda (jnt
