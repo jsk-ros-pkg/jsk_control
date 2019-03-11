@@ -89,9 +89,8 @@ Initialize instance
           )
          (t
           (setq _adjacent-regular-scale-list
-                (make-list (1- (length _instant-config-task-list)) :initial-element adjacent-regular-scale))
+                (make-list (1- (length instant-config-task-list)) :initial-element adjacent-regular-scale))
           ))
-   (setq _adjacent-regular-scale-list adjacent-regular-scale-list)
    (setq _torque-regular-scale torque-regular-scale)
    ;; sub methods
    (send self :_initialize-number)
@@ -615,26 +614,36 @@ Now the length of adjacent regular scale: ~a, the length of instant config task 
      (let* ((idx 0)
             (config-idx 0)
             )
-       (dolist (config-task (butlast _instant-config-task-list))
+       (dolist (config-task _instant-config-task-list)
          (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                            (scale-matrix (if (or (= config-idx 0) (= config-idx (length _adjacent-regular-scale-list)))
-                                              (elt _adjacent-regular-scale-list config-idx)
-                                            (+ (elt _adjacent-regular-scale-list (1- config-idx))
-                                               (elt _adjacent-regular-scale-list config-idx)))
-                                          (unit-matrix (send config-task :num-variant-joint)))
+                            (scale-matrix
+                             (cond
+                              ((= config-idx 0)
+                               (elt _adjacent-regular-scale-list config-idx))
+                              ((= config-idx (length _adjacent-regular-scale-list))
+                               (elt _adjacent-regular-scale-list (1- config-idx)))
+                              (t
+                               (+ (elt _adjacent-regular-scale-list (1- config-idx))
+                                  (elt _adjacent-regular-scale-list config-idx))))
+                             (unit-matrix (send config-task :num-variant-joint)))
                             idx idx
                             )
-         (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                            (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
-                            idx (+ idx (send config-task :dim-variant-config))
-                            )
-         (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                            (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
-                            (+ idx (send config-task :dim-variant-config)) idx
-                            )
+         (if (not (= config-idx (length _adjacent-regular-scale-list)))
+             (progn
+               (copy-block-matrix (send self :get :adjacent-regular-matrix)
+                                  (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
+                                  idx (+ idx (send config-task :dim-variant-config))
+                                  )
+               (copy-block-matrix (send self :get :adjacent-regular-matrix)
+                                  (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
+                                  (+ idx (send config-task :dim-variant-config)) idx
+                                  )
+               ))
          (incf idx (send config-task :dim-variant-config))
          (incf config-idx 1)
-         )))
+         )
+       )
+     )
    (send self :get :adjacent-regular-matrix)
    )
   (:adjacent-regular-vector
@@ -739,9 +748,7 @@ return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathi
     (m+
      (scale-matrix (min _norm-regular-scale-max (+ (norm2 (send self :task-value :update? nil)) _norm-regular-scale-offset))
                    (send self :_dim-config-unit-matrix))
-     (if (consp _adjacent-regular-scale-list)
-         (send self :adjacent-regular-matrix)
-       (scale-matrix _adjacent-regular-scale (send self :adjacent-regular-matrix)))
+     (send self :adjacent-regular-matrix)
      (send self :_dim-config-buf-matrix)
      )
     (scale-matrix _torque-regular-scale (send self :torque-regular-matrix))
@@ -758,9 +765,7 @@ return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathi
 return $\bm{v}_{\mathit{reg}}\in \mathbb{R}^{\mathit{dim}(\bm{q})}$
    "
    (v+
-    (if (consp _adjacent-regular-scale-list)
-        (send self :adjacent-regular-vector)
-      (scale _adjacent-regular-scale (send self :adjacent-regular-vector)))
+    (send self :adjacent-regular-vector)
     (scale _torque-regular-scale (send self :torque-regular-vector)))
    )
   )
