@@ -18,7 +18,6 @@
           ;; scale
           (_norm-regular-scale-max "$k_{\mathit{max}}$")
           (_norm-regular-scale-offset "$k_{\mathit{off}}$")
-          (_adjacent-regular-scale "$k_{\mathit{adj}}$")
           (_adjacent-regular-scale-list "$k^{(1)}_{\mathit{adj}},k^{(1)}_{\mathit{adj}},\cdots,k^{(L-1)}_{\mathit{adj}}$")
           (_torque-regular-scale "$k_{\mathit{trq}}$")
           ;; buffer
@@ -44,8 +43,7 @@
 \begin{description}
   \item[norm-regular-scale-max $k_{\mathit{max}}$] コンフィギュレーション更新量正則化の重み最大値
   \item[norm-regular-scale-offset $k_{\mathit{off}}$] コンフィギュレーション更新量正則化の重みオフセット
-  \item[adjacent-regular-scale $k_{\mathit{adj}}$] 隣接コンフィギュレーション正則化の重み
-  \item[adjacent-regular-scale-list $k_{\mathit{adj}}$] 隣接コンフィギュレーション正則化の重み(リストで渡す場合)
+  \item[adjacent-regular-scale-list $k_{\mathit{adj}}$] 隣接コンフィギュレーション正則化の重みのリスト
   \item[torque-regular-scale $k_{\mathit{trq}}$] トルク正則化の重み
 \end{description}
 \end{itemize}
@@ -76,7 +74,7 @@ $\bm{e}^{(l)}(\bm{q}_{\mathit{var}}^{(l)}, \bm{q}_{\mathit{invar}}) \ (l=1,2,\cd
     (norm-regular-scale-max 1e-4)
     (norm-regular-scale-offset 1e-7)
     (adjacent-regular-scale 5e-3)
-    (adjacent-regular-scale-list nil)
+    (adjacent-regular-scale-list)
     (torque-regular-scale 1e-3)
     )
    "
@@ -86,7 +84,13 @@ Initialize instance
    (setq _instant-config-task-list instant-config-task-list)
    (setq _norm-regular-scale-max norm-regular-scale-max)
    (setq _norm-regular-scale-offset norm-regular-scale-offset)
-   (setq _adjacent-regular-scale adjacent-regular-scale)
+   (cond (adjacent-regular-scale-list
+          (setq _adjacent-regular-scale-list adjacent-regular-scale-list)
+          )
+         (t
+          (setq _adjacent-regular-scale-list
+                (make-list (1- (length _instant-config-task-list)) :initial-element adjacent-regular-scale))
+          ))
    (setq _adjacent-regular-scale-list adjacent-regular-scale-list)
    (setq _torque-regular-scale torque-regular-scale)
    ;; sub methods
@@ -603,58 +607,34 @@ return $\bm{W}_{\mathit{adj}} \in \mathbb{R}^{dim(\bm{q}) \times dim(\bm{q})}$
    (when (or update? (not (send self :get :adjacent-regular-matrix)))
      (send self :put :adjacent-regular-matrix
            (make-matrix _dim-config _dim-config))
-     (if (consp _adjacent-regular-scale-list)
-         (progn
-           (assert
-            (= (length (butlast _instant-config-task-list)) (length _adjacent-regular-scale-list))
-            (format nil "A length of adjacent regular scale should be the same as a length of instant config task list minus 1
+     (assert
+      (= (length (butlast _instant-config-task-list)) (length _adjacent-regular-scale-list))
+      (format nil "A length of adjacent regular scale should be the same as a length of instant config task list minus 1
 Now the length of adjacent regular scale: ~a, the length of instant config task list is ~a ~%"
-                    (length _adjacent-regular-scale-list) (length _instant-config-task-list)))
-           (let* ((idx 0)
-                  (config-idx 0)
-                  )
-             (dolist (config-task (butlast _instant-config-task-list))
-               (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                                  (scale-matrix (if (or (= config-idx 0) (= config-idx (length _adjacent-regular-scale-list)))
-                                                    (elt _adjacent-regular-scale-list config-idx)
-                                                  (+ (elt _adjacent-regular-scale-list (- config-idx 1))
-                                                     (elt _adjacent-regular-scale-list config-idx)))
-                                                (unit-matrix (send config-task :num-variant-joint)))
-                                  idx idx
-                                  )
-               (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                                  (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
-                                  idx (+ idx (send config-task :dim-variant-config))
-                                  )
-               (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                                  (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
-                                  (+ idx (send config-task :dim-variant-config)) idx
-                                  )
-               (incf idx (send config-task :dim-variant-config))
-               (incf config-idx 1)
-               )))
-       (let* ((idx 0)
-              )
-         (dolist (config-task (butlast _instant-config-task-list))
-           (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                              (scale-matrix (if (= idx 0) 1 2) (unit-matrix (send config-task :num-variant-joint)))
-                              idx idx
-                              )
-           (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                              (unit-matrix (send config-task :num-variant-joint))
-                              (+ idx (send config-task :dim-variant-config)) (+ idx (send config-task :dim-variant-config))
-                              )
-           (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                              (scale-matrix -1 (unit-matrix (send config-task :num-variant-joint)))
-                              idx (+ idx (send config-task :dim-variant-config))
-                              )
-           (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                              (scale-matrix -1 (unit-matrix (send config-task :num-variant-joint)))
-                              (+ idx (send config-task :dim-variant-config)) idx
-                              )
-           (incf idx (send config-task :dim-variant-config))
-           )))
-     )
+              (length _adjacent-regular-scale-list) (length _instant-config-task-list)))
+     (let* ((idx 0)
+            (config-idx 0)
+            )
+       (dolist (config-task (butlast _instant-config-task-list))
+         (copy-block-matrix (send self :get :adjacent-regular-matrix)
+                            (scale-matrix (if (or (= config-idx 0) (= config-idx (length _adjacent-regular-scale-list)))
+                                              (elt _adjacent-regular-scale-list config-idx)
+                                            (+ (elt _adjacent-regular-scale-list (1- config-idx))
+                                               (elt _adjacent-regular-scale-list config-idx)))
+                                          (unit-matrix (send config-task :num-variant-joint)))
+                            idx idx
+                            )
+         (copy-block-matrix (send self :get :adjacent-regular-matrix)
+                            (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
+                            idx (+ idx (send config-task :dim-variant-config))
+                            )
+         (copy-block-matrix (send self :get :adjacent-regular-matrix)
+                            (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
+                            (+ idx (send config-task :dim-variant-config)) idx
+                            )
+         (incf idx (send config-task :dim-variant-config))
+         (incf config-idx 1)
+         )))
    (send self :get :adjacent-regular-matrix)
    )
   (:adjacent-regular-vector
