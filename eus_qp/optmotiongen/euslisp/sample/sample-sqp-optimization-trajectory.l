@@ -81,6 +81,7 @@
      (optimize-start-end-torque? t)
      (output-filename
       (ros::resolve-ros-path "package://eus_qp/optmotiongen/logs/sample-sqp-optimization-trajectory/tmp"))
+     (use-adjacent-regular-scale-list? t)
      (pre-process-func)
      (visualize-callback-func)
      (visualize-loop? t)
@@ -432,15 +433,18 @@
   (setq *trajectory-config-task*
         (instance* trajectory-configuration-task :init
                    :instant-config-task-list (reverse *instant-config-task-list*)
-                   (if optimize-torque?
+                   (append
+                    (if optimize-torque?
                        (list
                         :norm-regular-scale-max 1e-4
                         :norm-regular-scale-offset 1e-7
                         :adjacent-regular-scale 5e-4
                         :torque-regular-scale 1e-4
                         ))
-                   ))
-
+                    (if use-adjacent-regular-scale-list?
+                        (list
+                         :adjacent-regular-scale-list (list 5e-4 5e-4 5e-3 5e-3 5e-3 5e-4 5e-4 5e-4 5e-4)))
+                   )))
   (setq *sqp-opt*
         (instance sqp-optimization :init
                   :config-task *trajectory-config-task*

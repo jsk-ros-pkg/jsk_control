@@ -3,7 +3,7 @@
 
 
 (defun setup-contact-constraint-for-sample-sqp-optimization-manip
-    ()
+  ()
   (setq *rleg-contact-constraint*
         (instance* default-contact-constraint
                    :init
@@ -72,16 +72,17 @@
   )
 
 (defun sample-sqp-optimization-trajectory-manip
-    (&key
-     (optimize-torque? nil)
-     (optimize-start-end-torque? t)
-     (avoid-collision? t)
-     (fix-grasp? t)
-     (pre-process-func)
-     (visualize-callback-func)
-     (visualize-loop? t)
-     &allow-other-keys
-     )
+  (&key
+   (optimize-torque? nil)
+   (optimize-start-end-torque? t)
+   (avoid-collision? t)
+   (fix-grasp? t)
+   (pre-process-func)
+   (use-adjacent-regular-scale-list?)
+   (visualize-callback-func)
+   (visualize-loop? t)
+   &allow-other-keys
+   )
   ;; setup environment
   (setq *ground-rleg* (make-cube 400 400 20))
   (send *ground-rleg* :set-color (float-vector 0.5 0.5 0.25))
@@ -684,13 +685,21 @@
   (objects (append *robot-obj-env-list* *env-list*))
 
   (setq *trajectory-manip-config-task*
-        (instance trajectory-configuration-task :init
-                  :instant-config-task-list (reverse *instant-manip-config-task-list*)
-                  :norm-regular-scale-max 5e-4
-                  :norm-regular-scale-offset 1e-7
-                  :adjacent-regular-scale 5e-4
-                  :torque-regular-scale 1e-4
-                  ))
+        (instance* trajectory-configuration-task :init
+                   (append
+                    (list
+                     :instant-config-task-list (reverse *instant-manip-config-task-list*)
+                     :norm-regular-scale-max 5e-4
+                     :norm-regular-scale-offset 1e-7
+                     :torque-regular-scale 1e-4
+                     )
+                    (cond (use-adjacent-regular-scale-list?
+                           (list :adjacent-regular-scale-list (list 5e-4 5e-4 5e-4 5e-4 5e-4 5e-4 5e-4))
+                           (t
+                            (list :adjacent-regular-scale 5e-4))
+                           ))
+                    )
+                   ))
 
   (setq *sqp-opt*
         (instance sqp-optimization :init
