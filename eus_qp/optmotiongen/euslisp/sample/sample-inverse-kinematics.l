@@ -592,6 +592,9 @@
     (&key
      (target-coords
       (make-coords :pos (float-vector 400 -200 300) :rpy (list (deg2rad 60) 0 0)))
+     (rotation-axis-list (list t t t))
+     (root-virtual-joint-min-angle-list)
+     (root-virtual-joint-max-angle-list)
      (pre-process-func)
      (post-process-func)
      &allow-other-keys
@@ -608,9 +611,12 @@
         :inverse-kinematics-trajectory-optmotiongen
         (send-all *arrow-list* :copy-worldcoords)
         :move-target-list (send *robot* :end-coords)
+        :rotation-axis-list rotation-axis-list
         :debug-view (list :additional-draw-objects *arrow-list*)
         :root-virtual-mode :planar
         :root-virtual-joint-invariant? t
+        :root-virtual-joint-min-angle-list root-virtual-joint-min-angle-list
+        :root-virtual-joint-max-angle-list root-virtual-joint-max-angle-list
         :pre-process-func pre-process-func
         :post-process-func post-process-func
         )

@@ -78,6 +78,7 @@
      (avoid-collision? t)
      (fix-grasp? t)
      (pre-process-func)
+     (use-adjacent-regular-scale-list? t)
      (visualize-callback-func)
      (visualize-loop? t)
      &allow-other-keys
@@ -684,13 +685,21 @@
   (objects (append *robot-obj-env-list* *env-list*))
 
   (setq *trajectory-manip-config-task*
-        (instance trajectory-configuration-task :init
-                  :instant-config-task-list (reverse *instant-manip-config-task-list*)
-                  :norm-regular-scale-max 5e-4
-                  :norm-regular-scale-offset 1e-7
-                  :adjacent-regular-scale 5e-4
-                  :torque-regular-scale 1e-4
-                  ))
+        (instance* trajectory-configuration-task :init
+                   (append
+                    (list
+                     :instant-config-task-list (reverse *instant-manip-config-task-list*)
+                     :norm-regular-scale-max 5e-4
+                     :norm-regular-scale-offset 1e-7
+                     :torque-regular-scale 1e-4
+                     )
+                    (cond (use-adjacent-regular-scale-list?
+                           (list :adjacent-regular-scale-list (list 5e-4 5e-4 5e-4 5e-4 5e-4 5e-4 5e-4)))
+                           (t
+                            (list :adjacent-regular-scale 5e-4))
+                           ))
+                    )
+                   )
 
   (setq *sqp-opt*
         (instance sqp-optimization :init
