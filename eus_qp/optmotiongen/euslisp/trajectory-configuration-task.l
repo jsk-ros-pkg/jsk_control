@@ -631,11 +631,15 @@ Now the length of adjacent regular scale: ~a, the length of instant config task 
          (if (not (= config-idx (length _adjacent-regular-scale-list)))
              (progn
                (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                                  (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
+                                  (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx))
+                                                (unit-matrix (min (send (elt _instant-config-task-list (1+ config-idx)) :num-variant-joint)
+                                                                  (send config-task :num-variant-joint))))
                                   idx (+ idx (send config-task :dim-variant-config))
                                   )
                (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                                  (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx)) (unit-matrix (send config-task :num-variant-joint)))
+                                  (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx))
+                                                (unit-matrix (min (send (elt _instant-config-task-list (1+ config-idx)) :num-variant-joint)
+                                                                  (send config-task :num-variant-joint))))
                                   (+ idx (send config-task :dim-variant-config)) idx
                                   )
                ))
