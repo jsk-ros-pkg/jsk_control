@@ -78,7 +78,7 @@
    (avoid-collision? t)
    (fix-grasp? t)
    (pre-process-func)
-   (use-adjacent-regular-scale-list?)
+   (use-adjacent-regular-scale-list? t)
    (visualize-callback-func)
    (visualize-loop? t)
    &allow-other-keys
@@ -694,12 +694,12 @@
                      :torque-regular-scale 1e-4
                      )
                     (cond (use-adjacent-regular-scale-list?
-                           (list :adjacent-regular-scale-list (list 5e-4 5e-4 5e-4 5e-4 5e-4 5e-4 5e-4))
+                           (list :adjacent-regular-scale-list (list 5e-4 5e-4 5e-4 5e-4 5e-4 5e-4 5e-4)))
                            (t
                             (list :adjacent-regular-scale 5e-4))
                            ))
                     )
-                   ))
+                   )
 
   (setq *sqp-opt*
         (instance sqp-optimization :init
