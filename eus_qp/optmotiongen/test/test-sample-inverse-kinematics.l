@@ -39,7 +39,13 @@
   (assert (null-output (sample-arm-reach-trajectory-ik-raw)))
   (assert (null-output (consp (sample-arm-reach-trajectory-ik))))
   (assert (null-output (consp (sample-arm-reach-trajectory-ik-with-root-virtual-joint))))
-  (assert (null-output (null (sample-arm-reach-trajectory-ik-with-root-virtual-joint :target-coords (make-coords :pos (float-vector 10000 0 0)))))) ;; intentional failure
+  (assert (null-output (null (sample-arm-reach-trajectory-ik-with-root-virtual-joint
+                              :target-coords (make-coords :pos (float-vector 10000 0 0)))))) ;; intentional failure
+  (assert (null-output (null (sample-arm-reach-trajectory-ik-with-root-virtual-joint
+                              :root-virtual-joint-min-angle-list (list 0 0 0) :root-virtual-joint-max-angle-list (list 0 0 0))))) ;; intentional failure
+  (assert (null-output (consp (sample-arm-reach-trajectory-ik-with-root-virtual-joint
+                               :rotation-axis-list (list nil nil nil)
+                               :root-virtual-joint-min-angle-list (list -1e10 0 0) :root-virtual-joint-max-angle-list (list 1e10 0 0)))))
   (assert (null-output (consp (sample-arm-reach-trajectory-ik-with-root-virtual-joint-obstacle))))
   )
 
