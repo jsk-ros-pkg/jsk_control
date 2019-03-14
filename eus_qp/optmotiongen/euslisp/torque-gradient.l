@@ -1,4 +1,4 @@
-(load "./util.l")
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6,12 +6,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun get-link-jacobian-for-contact-torque
-    (&key
-     (robot)
-     (drive-joint-list)
-     (contact-coords)
-     (contact-parent-link)
-     )
+  (&key
+   (robot)
+   (drive-joint-list)
+   (contact-coords)
+   (contact-parent-link)
+   )
   "
 \it{contact-coords}に対応する接触部位の番号を$m$とする．
 \it{contact-coords}の位置姿勢を$\bm{r}_{m} \in \mathbb{R}^6$，
@@ -57,13 +57,13 @@ return $\bm{J}_m \in \mathbb{R}^{6 \times N_{\mathit{drive\mathchar`-joint}}}$
     ))
 
 (defun get-contact-torque
-    (&key
-     (robot)
-     (drive-joint-list)
-     (wrench-list)
-     (contact-target-coords-list)
-     (contact-attention-coords-list)
-     )
+  (&key
+   (robot)
+   (drive-joint-list)
+   (wrench-list)
+   (contact-target-coords-list)
+   (contact-attention-coords-list)
+   )
   "
 ロボットの接触部位に加わる接触レンチによって生じる関節トルク$\bm{\tau}^{\mathit{cnt}}$は，以下で得られる．
 \begin{eqnarray}
@@ -94,81 +94,109 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
   )
 
 (defun get-contact-torque-jacobian
-    (&key
-     (robot)
-     (joint-list)
-     (drive-joint-list)
-     (wrench-list)
-     (contact-target-coords-list)
-     (contact-attention-coords-list)
-     )
+  (&key
+   (robot)
+   (joint-list)
+   (drive-joint-list)
+   (wrench-list)
+   (contact-target-coords-list)
+   (contact-attention-coords-list)
+   )
   "
-\eqref{eq:jacobian-for-contact-torque}の$\bm{J}_{m}$を以下のように分解して利用する．
-\begin{eqnarray}
-  \bm{J}_{m}
-  = \begin{pmatrix} \bm{j}_{\mathit{x,m}}^T \\ \bm{j}_{\mathit{y,m}}^T \\ \bm{j}_{\mathit{z,m}}^T \\ \bm{j}_{\mathit{R,m}}^T \\ \bm{j}_{\mathit{P,m}}^T \\ \bm{j}_{\mathit{Y,m}}^T \end{pmatrix}
-  = \begin{pmatrix} \left(\frac{\partial r_{\mathit{x,m}}}{\partial \bm{\psi}}\right)^T \\ \left(\frac{\partial r_{\mathit{y,m}}}{\partial \bm{\psi}}\right)^T \\ \left(\frac{\partial r_{\mathit{z,m}}}{\partial \bm{\psi}}\right)^T \\ \left(\frac{\partial r_{\mathit{R,m}}}{\partial \bm{\psi}}\right)^T \\ \left(\frac{\partial r_{\mathit{P,m}}}{\partial \bm{\psi}}\right)^T \\ \left(\frac{\partial r_{\mathit{Y,m}}}{\partial \bm{\psi}}\right)^T \end{pmatrix}
-\end{eqnarray}
-これを\eqref{eq:contact-torque}に代入すると，
-\begin{eqnarray}
-\bm{\tau}^{\mathit{cnt}} &=& \sum_{m=1}^{N_{\mathit{cnt}}} \bm{J}_m^T \bm{w}_m \\
-  &=&
-  \sum_{m=1}^{N_{\mathit{cnt}}}
-  \begin{pmatrix}
-    \bm{j}_{x,m} & \bm{j}_{y,m} & \bm{j}_{z,m} & \bm{j}_{R,m} & \bm{j}_{P,m} & \bm{j}_{Y,m}
-  \end{pmatrix}
-  \begin{pmatrix}
-    f_{x,m} \\ f_{y,m} \\ f_{z,m} \\ n_{x,m} \\ n_{y,m} \\ n_{z,m}
-  \end{pmatrix} \\
-  &=&
-  \sum_{m=1}^{N_{\mathit{cnt}}}
-  \left(
-  \bm{j}_{x,m} f_{x,m} + \bm{j}_{y,m} f_{y,m} + \bm{j}_{z,m} f_{z,m} + \bm{j}_{R,m} n_{x,m} + \bm{j}_{P,m} n_{y,m} + \bm{j}_{Y,m} n_{z,m}
-  \right) \\
-  &=&
-  \sum_{m=1}^{N_{\mathit{cnt}}}
-  \left(
-  \frac{\partial r_{x,m}}{\partial \bm{\psi}} f_{x,m} + \frac{\partial r_{y,m}}{\partial \bm{\psi}} f_{y,m} + \frac{\partial r_{z,m}}{\partial \bm{\psi}} f_{z,m} +
-  \frac{\partial r_{R,m}}{\partial \bm{\psi}} n_{x,m} + \frac{\partial r_{P,m}}{\partial \bm{\psi}} n_{y,m} + \frac{\partial r_{Y,m}}{\partial \bm{\psi}} n_{z,m}
-  \right)
-\end{eqnarray}
-
-\it{joint-list}の関節角度ベクトルを$\bm{\theta} \in \mathbb{R}^{N_{\mathit{joint}}}$，
-\it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}}}$とする．
-トルク勾配行列$\frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}}$は次式で得られる．
-\begin{eqnarray}
-  \frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}}
-  &=&
-  \sum_{m=1}^{N_{\mathit{cnt}}} \left( \frac{\partial \bm{J}_m}{\partial \bm{\theta}} \right)^T \bm{w}_m \\
-  &=&
-  \sum_{m=1}^{N_{\mathit{cnt}}}
-  \left(
-  f_{x,m} \frac{\partial^2 r_{x,m}}{\partial \bm{\psi} \partial \bm{\theta}} +
-  f_{y,m} \frac{\partial^2 r_{y,m}}{\partial \bm{\psi} \partial \bm{\theta}} +
-  f_{z,m} \frac{\partial^2 r_{z,m}}{\partial \bm{\psi} \partial \bm{\theta}} +
-  n_{x,m} \frac{\partial^2 r_{R,m}}{\partial \bm{\psi} \partial \bm{\theta}} +
-  n_{y,m} \frac{\partial^2 r_{P,m}}{\partial \bm{\psi} \partial \bm{\theta}} +
-  n_{z,m} \frac{\partial^2 r_{Y,m}}{\partial \bm{\psi} \partial \bm{\theta}}
-  \right) \\
-  &=&
-  \left[
-    \sum_{m=1}^{M}
-    \begin{pmatrix}
-      f_{x,m} & f_{y,m} & f_{z,m} & n_{x,m} & n_{y,m} & n_{z,m}
-    \end{pmatrix}
-    \begin{pmatrix}
-      \frac{\partial^2 r_{x,m}}{\partial \psi_i \partial \theta_j} \\
-      \frac{\partial^2 r_{y,m}}{\partial \psi_i \partial \theta_j} \\
-      \frac{\partial^2 r_{z,m}}{\partial \psi_i \partial \theta_j} \\
-      \frac{\partial^2 r_{R,m}}{\partial \psi_i \partial \theta_j} \\
-      \frac{\partial^2 r_{P,m}}{\partial \psi_i \partial \theta_j} \\
-      \frac{\partial^2 r_{Y,m}}{\partial \psi_i \partial \theta_j}
-    \end{pmatrix}
-    \right]_{i=1,\cdots,N_{\mathit{drive\mathchar`-joint}},j=1,\cdots,N_{\mathit{joint}}}
-\end{eqnarray}
-
-return $\frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}} \times N_{\mathit{joint}}}$
-  "
+ 以下$\bm{p}^i_j$はリンク$i$からリンク$j$へと向かう位置ベクトルをワールド座標系で表記したものとする。
+ \begin{eqnarray}
+   \frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}}
+   &=& \frac{\partial}{\partial \bm{\theta}} \sum_{m=1}^{N_{\mathit{cnt}}} \bm{J}_m^T \bm{w}_m \\
+   &=&
+   \frac{\partial}{\partial \bm{\theta}} \sum_{m=1}^{N_{\mathit{cnt}}}
+   \begin{pmatrix}
+     \bm{a}_{\psi_0} \times \bm{p}^{\psi_0}_m & \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}} \times \bm{p}^{\psi_{N_{drive\mathchar`-joint}}}_m \\
+     \bm{a}_{\psi_0} & \bm{a}_{\psi_1} & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}}
+   \end{pmatrix}^T
+   \begin{pmatrix}
+     \bm{f}_m \\ \bm{n}_m
+   \end{pmatrix} \\
+   &=&
+   \sum_{m=1}^{N_{\mathit{cnt}}}
+   \frac{\partial}{\partial \bm{\theta}}
+   \begin{pmatrix}
+     \bm{f}_m^T \left( \bm{a}_{\psi_0} \times \bm{p}^{\psi_0}_m \right) + \bm{n}_m^T \bm{a}_{\psi_0} \\
+     \bm{f}_m^T \left( \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m \right) + \bm{n}_m^T \bm{a}_{\psi_1} \\
+     \vdots \\
+     \bm{f}_m^T \left( \bm{a}_{\psi_{drive\mathchar`-joint}} \times \bm{p}^{\psi_{drive\mathchar`-joint}}_m \right) +
+     \bm{n}_m^T \bm{a}_{\psi_{drive\mathchar`-joint}}
+   \end{pmatrix} \\
+   &=&
+   \sum_{m=1}^{N_{\mathit{cnt}}}
+   \left[
+     \bm{f}_m^T \frac{\partial}{\partial \theta_j} \left( \bm{a}_{\psi_i} \times \bm{p}^{\psi_i}_m \right) + \bm{n}_m^T
+     \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right]_{i,j} \\
+   &=&
+   \sum_{m=1}^{N_{\mathit{cnt}}}
+   \left[
+     \bm{f}_m^T \left\{ \left( \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_m +
+     \bm{a}_{\psi_i} \times \left( \frac{\partial}{\partial \theta_j} \bm{p}_m - \frac{\partial}{\partial \theta_j}
+     \bm{p}_{\psi_i} \right) \right\} + \bm{n}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}
+     \right]_{i,j} \nonumber \\
+   && \hspace{40mm} (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
+ \end{eqnarray}
+ \begin{enumerate}
+ \renewcommand{\labelenumi}{(\alph{enumi})}
+ \item 関節$j$が関節$i$よりもルートリンクに近い関節の時、もしくは関節$j$と関節$i$が同一のルートリンクを持たない時、関節$i$の変化は関節$j$の位置、回転軸のベクトルに影響を与えないため、
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
+   \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{0}
+ \end{eqnarray}
+ \item 関節$i$が関節$j$よりもルートリンクに近い関節、もしくは$i=j$の時、関節$j$が回転関節であれば、回転系での基礎方程式から、
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \\
+   \frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i}
+ \end{eqnarray}
+ \item 関節$i$が関節$j$よりもルートリンクに近い関節の時、関節$j$が直動関節であれば、
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
+   \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j}
+ \end{eqnarray}
+ (a), (b), (c)の時、関節$j$の変位が$\bm{p}_m$に影響を与えないことを想定しているので、
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{0}
+ \end{eqnarray}
+ \item 関節$j$の変位が$\bm{p}_m$に影響を与え(このパターンはtarget coordsに対して仮想リンクが設定されている場合に発生する)、かつ関節$j$が回転関節であれば、
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_m
+ \end{eqnarray}
+ \item 関節$j$の変位が$\bm{p}_m$に影響を与え、かつ関節$j$が直動関節であれば、
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j}
+ \end{eqnarray}
+ (d), (e)の時、関節$j$の変位が関節$i$に影響を与えないことを想定しているので、
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
+   \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{0}
+ \end{eqnarray}
+ \end{enumerate}
+ 以上より
+ \begin{eqnarray}
+   \frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}}
+   &=&
+   \sum_{m=1}^{N_{\mathit{cnt}}}
+   \left[
+     \begin{array}{cc}
+       \bm{0}
+       & (a)の時 \\
+       \bm{f}_m^T \left\{ \left( \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_m -
+       \bm{a}_{\psi_i} \times \left( \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i} \right)
+       \right\} + \bm{n}_m^T \left( \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \right) & (b)の時 \\
+       - \bm{f}_m^T \left( \bm{a}_{\psi_i} \times \bm{a}_{\theta_j} \right)
+       & (c)の時 \\
+       \bm{f}_m^T \left\{ \bm{a}_{\psi_i} \times \left( \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_m \right)
+       \right\} & (d)の時 \\
+       \bm{f}_m^T \left( \bm{a}_{\psi_i} \times \bm{a}_{\theta_j} \right)
+       & (e)の時 \end{array}
+     \right]_{i,j} \nonumber \\
+   && \hspace{40mm} (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
+ \end{eqnarray}
+ "
   (let* ((jacobi
           (make-matrix (length drive-joint-list) (length joint-list)))
          (drive-jnt)
@@ -270,11 +298,11 @@ return $\frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}} \in \math
     ))
 
 (defun get-link-jacobian-for-gravity-torque
-    (&key
-     (robot)
-     (drive-joint-list)
-     (gravity-link)
-     )
+  (&key
+   (robot)
+   (drive-joint-list)
+   (gravity-link)
+   )
   "
 \it{gravity-link}のリンク番号を$k$とする．
 \it{gravity-link}の重心位置を$\bm{p}_{\mathit{cog,k}} \in \mathbb{R}^3$，
@@ -329,11 +357,11 @@ return $\bm{J}_{\mathit{cog,k}} \in \mathbb{R}^{3 \times N_{\mathit{drive\mathch
     ))
 
 (defun get-gravity-torque
-    (&key
-     (robot)
-     (drive-joint-list)
-     (gravity-link-list)
-     )
+  (&key
+   (robot)
+   (drive-joint-list)
+   (gravity-link-list)
+   )
   "
 ロボットのリンク自重によって生じる関節トルク$\bm{\tau}^{\mathit{grav}}$は，ロボットモーションP111式(3.3.22)より以下で得られる．
 \begin{eqnarray}
@@ -362,12 +390,12 @@ return $\bm{\tau}^{\mathit{grav}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joi
     ))
 
 (defun get-gravity-torque-jacobian
-    (&key
-     (robot)
-     (joint-list)
-     (drive-joint-list)
-     (gravity-link-list)
-     )
+  (&key
+   (robot)
+   (joint-list)
+   (drive-joint-list)
+   (gravity-link-list)
+   )
   "
 \eqref{eq:jacobian-for-gravity-torque}の$\bm{J}_{\mathit{cog,k}}$を以下のように分解して利用する．
 \begin{eqnarray}
