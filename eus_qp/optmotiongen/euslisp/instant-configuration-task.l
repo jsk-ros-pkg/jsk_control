@@ -856,7 +856,7 @@ return $\bm{e}^{\mathit{trq}}(\bm{q}) \in \mathbb{R}^{N_{\mathit{drive\mathchar`
                :robot _robot-env
                :drive-joint-list _drive-joint-list
                :wrench-list (send self :wrench-list)
-               :contact-target-coords-list _contact-attention-coords-list ;; this should be _contact-target-coords-list
+               :contact-target-coords-list _contact-target-coords-list
                :contact-attention-coords-list _contact-attention-coords-list
                )
               (scale
@@ -1227,24 +1227,6 @@ return $\frac{\partial \bm{e}^{\mathit{eom\mathchar`-rot}}}{\partial \bm{\phi}} 
   \frac{\partial \bm{e}^{\mathit{trq}}}{\partial \bm{\theta}}
   &=& \sum_{m=1}^{N_{\mathit{cnt}}} \frac{\partial \bm{\tau}^{\mathit{cnt}}_m}{\partial \bm{\theta}} - \frac{\partial \bm{\tau}^{\mathit{grav}}}{\partial \bm{\theta}} + \sum_{m=1}^{N_{\mathit{ex}}} \frac{\partial \bm{\tau}^{\mathit{ex}}_m}{\partial \bm{\theta}}
 \end{eqnarray}
-ここで、
-\begin{eqnarray}
-  \frac{\partial {\bm \tau}_{C_m}}{\partial {\bm \theta}} \nonumber
-  &=&\frac{\partial}{\partial {\bm \theta}} \left(
-  \begin{array}{cccc}
-    {\bm a}_{0} \times {\bm p}_{m}^{0} & {\bm a}_{1} \times {\bm p}_{m}^{1} & \cdots & {\bm a}_{K-1} \times {\bm p}_{m}^{K-1} \\
-    {\bm a}_{0} & {\bm a}_{1} & \cdots & {\bm a}_{K-1}
-  \end{array}
-  \right)^T {\bm w}_m \nonumber \\
-  &=& \left[\begin{array}{cc}
-      0 & (i < j) \\
-      \bm{f}_{m}^T \left( ({\bm a}_{i-1} \times {\bm a}_{j-1} ) \times ^{j-1}_{m}{\bm p}\right) + \bm{n}_{m}^T ( {\bm a}_{i-1} \times {\bm a}_{j-1} ) & (\text{when } i \geq j \text{かつ} \theta_{j} \text{が回転リンク}) \\
-      -\bm{f}_{m}^T
-      \left( {\bm a}_{i-1} \times {\bm a}_{j-1} \right) & (i \geq j \text{かつ} \theta_{j} \text{が直動リンク})
-    \end{array} \right]_{i,j} \nonumber \\
-&& \hspace{30mm} (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
-\end{eqnarray}
-${\bm a}_{k}$はリンクkの回転軸ベクトルを、${\bm p}_{m}^{k}$はリンクkのワールド座標位置からm番めのtarget coordsのワールド座標位置へ向かうベクトルを表している。\\
 return $\frac{\partial \bm{e}^{\mathit{trq}}}{\partial \bm{\theta}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}} \times N_{\mathit{var\mathchar`-joint}}}$
    "
    (reduce
@@ -1255,7 +1237,7 @@ return $\frac{\partial \bm{e}^{\mathit{trq}}}{\partial \bm{\theta}} \in \mathbb{
       :joint-list _variant-joint-list
       :drive-joint-list _drive-joint-list
       :wrench-list (send self :wrench-list)
-      :contact-target-coords-list _contact-attention-coords-list ;; this should be _contact-target-coords-list
+      :contact-target-coords-list _contact-target-coords-list
       :contact-attention-coords-list _contact-attention-coords-list
       )
      (scale-matrix
@@ -1301,7 +1283,7 @@ return $\frac{\partial \bm{e}^{\mathit{trq}}}{\partial \bm{\hat{w}}} \in \mathbb
            :contact-coords trg-coords
            :contact-parent-link (send att-coords :parent)
            )))
-     _contact-attention-coords-list ;; this should be _contact-target-coords-list
+     _contact-target-coords-list
      _contact-attention-coords-list
      ))
    )
@@ -1323,7 +1305,7 @@ return $\frac{\partial \bm{e}^{\mathit{trq}}}{\partial \bm{\phi}} \in \mathbb{R}
       :joint-list _invariant-joint-list
       :drive-joint-list _drive-joint-list
       :wrench-list (send self :wrench-list)
-      :contact-target-coords-list _contact-attention-coords-list ;; this should be _contact-target-coords-list
+      :contact-target-coords-list _contact-target-coords-list
       :contact-attention-coords-list _contact-attention-coords-list
       )
      (scale-matrix

@@ -157,11 +157,11 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
    \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
    \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j}
  \end{eqnarray}
- (a), (b), (c)の時、関節$j$の変位が$\bm{p}_m$に影響を与えないことを想定しているので、
+ (a), (b), (c)の時、関節$j$の変位が$\bm{p}_m$に影響を与えないことを仮定しているので、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{0}
  \end{eqnarray}
- \item 関節$j$の変位が$\bm{p}_m$に影響を与え(このパターンはtarget coordsに対して仮想リンクが設定されている場合に発生する)、かつ関節$j$が回転関節であれば、
+ \item 関節$j$の変位が$\bm{p}_m$に影響を与え(このパターンはtarget coordsに対して仮想リンクが設定されている場合などに発生する)、かつ関節$j$が回転関節であれば、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_m
  \end{eqnarray}
@@ -203,9 +203,11 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
          (jnt)
          (dependency-mode)
          (contact-coords)
-         (contact-parent-link)
+         (contact-attention-parent-link)
+         (contact-target-parent-link)
          (wrench)
-         (link-list-of-contact)
+         (link-list-of-contact-attention)
+         (link-list-of-contact-target)
          )
     (dotimes (i (length drive-joint-list))
       (setq drive-jnt (elt drive-joint-list i))
@@ -223,76 +225,54 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                ))
         (dotimes (k (length contact-attention-coords-list))
           (setq contact-coords (elt contact-target-coords-list k))
-          (setq contact-parent-link (send (elt contact-attention-coords-list k) :parent))
+          (setq contact-attention-parent-link (send (elt contact-attention-coords-list k) :parent))
+          (if (derivedp (elt contact-target-coords-list k) cascaded-coords)
+              (setq contact-target-parent-link (send (elt contact-target-coords-list k) :parent))
+            (setq contact-target-parent-link nil))
           (setq wrench (elt wrench-list k))
-          (setq link-list-of-contact (send robot :link-list contact-parent-link))
-          ;; [root, contact]間にdrive-jntがある and [root, contact]間にjntがある ときだけ処理する
-          (when (and (member (send drive-jnt :child-link) link-list-of-contact)
-                     (member (send jnt :child-link) link-list-of-contact))
-            (let* ((drive-jnt-axis
-                    (send drive-jnt :axis-vector))
-                   (jnt-axis
-                    (send jnt :axis-vector))
+          (setq link-list-of-contact-attention (send robot :link-list contact-attention-parent-link))
+          (setq link-list-of-contact-target (send robot :link-list contact-target-parent-link))
+          ;; [root, contact]間にdrive-jntがある and [root, contact]間にjntがある時の処理
+          (when (and (member (send drive-jnt :child-link) link-list-of-contact-attention)
+                     (member (send jnt :child-link) link-list-of-contact-attention))
+            (let* ((drive-jnt-axis (send drive-jnt :axis-vector))
+                   (jnt-axis (send jnt :axis-vector))
                    (hessian-vec
                     (cond ((and (derivedp drive-jnt rotational-joint)
                                 (derivedp jnt rotational-joint))
                            (cond ((equal dependency-mode :jnt-is-root)
                                   (concatenate float-vector
-                                               (v* jnt-axis (v* drive-jnt-axis
-                                                                (scale 1e-3 (v- (send contact-coords :worldpos) (send drive-jnt :pos)))))
-                                               (v* jnt-axis drive-jnt-axis)
-                                               )
-                                  )
+                                               (v- (v* (v* jnt-axis drive-jnt-axis)
+                                                       (scale 1e-3 (v- (send contact-coords :worldpos) (send drive-jnt :pos))))
+                                                   (v* drive-jnt-axis
+                                                       (v* jnt-axis (scale 1e-3 (v- (send drive-jnt :pos) (send jnt :pos))))))
+                                               (v* jnt-axis drive-jnt-axis)))
                                  (t
-                                  (concatenate float-vector
-                                               (v* drive-jnt-axis (v* jnt-axis
-                                                                      (scale 1e-3 (v- (send contact-coords :worldpos) (send jnt :pos)))))
-                                               (v* drive-jnt-axis jnt-axis)
-                                               )
-                                  ))
-                           )
-                          ((and (derivedp drive-jnt linear-joint)
-                                (derivedp jnt linear-joint))
-                           (float-vector 0 0 0 0 0 0)
-                           )
-                          ((and (derivedp drive-jnt linear-joint)
-                                (derivedp jnt rotational-joint))
-                           (cond ((equal dependency-mode :drive-jnt-is-root)
-                                  (float-vector 0 0 0 0 0 0) ;; linear-jointがルート側いあったら零ベクトル
-                                  )
-                                 (t
-                                  (concatenate float-vector
-                                               (v* jnt-axis drive-jnt-axis)
-                                               (float-vector 0 0 0)
-                                               )
-                                  ))
-                           )
+                                  (float-vector 0 0 0 0 0 0)))) ;; drive-jointがルート側いあったら零ベクトル
                           ((and (derivedp drive-jnt rotational-joint)
                                 (derivedp jnt linear-joint))
                            (cond ((equal dependency-mode :jnt-is-root)
-                                  (float-vector 0 0 0 0 0 0) ;; linear-jointがルート側いあったら零ベクトル
-                                  )
+                                  (concatenate float-vector (scale -1 (v* drive-jnt-axis jnt-axis)) (float-vector 0 0 0)))
                                  (t
-                                  (concatenate float-vector
-                                               (v* drive-jnt-axis jnt-axis)
-                                               (float-vector 0 0 0)
-                                               )
-                                  ))
-                           )
+                                  (float-vector 0 0 0 0 0 0)))) ;; drive-jointがルート側いあったら零ベクトル
                           (t
                            (error "unsupported joint type pair: ~a ~a~%" drive-jnt jnt)
-                           ))
-                    )
-                   )
+                           ))))
               (cond ((equal dependency-mode :jnt-is-root)
-                     (setf (aref jacobi i j)
-                           (+ (aref jacobi i j) (v. wrench hessian-vec)))
-                     )
+                     (setf (aref jacobi i j) (+ (aref jacobi i j) (v. wrench hessian-vec))))
                     (t
-                     (setf (aref jacobi i j)
-                           (+ (aref jacobi i j) (v. (subseq wrench 0 3) (subseq hessian-vec 0 3))))
-                     ))
-              )))
+                     ))))
+          ;; jntの変位がcontact target coordsに影響を与える場合
+          (when (member (send jnt :child-link) link-list-of-contact-target)
+            (let* ((drive-jnt-axis (send drive-jnt :axis-vector))
+                   (jnt-axis (send jnt :axis-vector))
+                   (hessian-vec
+                    (cond ((derivedp jnt rotational-joint)
+                           (v* drive-jnt-axis (v* jnt-axis (v- (send contact-coords :worldpos) (send jnt :pos))))))
+                          ((derivedp jnt linear-joint)
+                           (v* drive-jnt-axis jnt-axis))))
+               (setf (aref jacobi i j) (+ (aref jacobi i j) (v. (subseq wrench 0 3) hessian-vec)))))
+           )
         ))
     jacobi
     ))
