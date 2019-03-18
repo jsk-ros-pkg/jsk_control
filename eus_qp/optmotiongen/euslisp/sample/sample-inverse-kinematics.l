@@ -1,4 +1,5 @@
 (load "../inverse-kinematics-wrapper.l")
+(load "../discrete-kinematics-configuration-task.l")
 (load "../sqp-msc-optimization.l")
 (require "irteus/demo/sample-arm-model.l")
 (require "irteus/demo/sample-robot-model.l")
@@ -87,6 +88,45 @@
   (send *sqp-opt* :optimize :loop-num 50)
   t)
 (warn "(sample-arm-reach-ik-raw-msc)~%")
+
+(defun sample-arm-reach-ik-discrete-raw
+    (&key
+     (pre-process-func)
+     (post-process-func)
+     &allow-other-keys
+     )
+  (setq *robot* (instance sarmclass :init))
+  (setq *robot-env*
+        (instance robot-environment :init :robot *robot* :root-virtual-mode :fix))
+  (setq *arrow-list* (mapcar #'(lambda (x) (instance arrow-object :init)) (make-list 3)))
+  (send (elt *arrow-list* 0) :newcoords
+        (make-coords :pos (float-vector 1000 200 300) :rpy (list (deg2rad 20) 0 0)))
+  (send (elt *arrow-list* 1) :newcoords
+        (make-coords :pos (float-vector 300 -200 0) :rpy (list (deg2rad 20) 0 0)))
+  (send (elt *arrow-list* 2) :newcoords
+        (make-coords :pos (float-vector 0 500 200) :rpy (list (deg2rad 20) 0 0)))
+  (objects (append (list *robot*) *arrow-list*))
+
+  (setq *instant-config-task*
+        (instance discrete-kinematics-configuration-task :init
+                  :robot-env *robot-env*
+                  :drive-joint-list nil
+                  :only-kinematics? t
+                  :kin-target-coords-list
+                  (list (send-all *arrow-list* :copy-worldcoords))
+                  :kin-attention-coords-list
+                  (list (make-list (length *arrow-list*) :initial-element (send *robot-env* :robot :end-coords)))
+                  ))
+
+  (setq *sqp-opt*
+        (instance sqp-optimization :init
+                  :config-task *instant-config-task*
+                  :pre-process-func pre-process-func
+                  :post-process-func post-process-func
+                  ))
+  (send *sqp-opt* :optimize :loop-num 50)
+  t)
+(warn "(sample-arm-reach-ik-discrete-raw)~%")
 
 (defun sample-arm-reach-ik
     (&key
