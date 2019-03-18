@@ -269,7 +269,7 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                    (jnt-axis (send jnt :axis-vector))
                    (hessian-vec
                     (cond ((derivedp jnt rotational-joint)
-                           (v* drive-jnt-axis (v* jnt-axis (v- (send contact-coords :worldpos) (send jnt :pos)))))
+                           (v* drive-jnt-axis (v* jnt-axis (scale 1e-3 (v- (send contact-coords :worldpos) (send jnt :pos))))))
                           ((derivedp jnt linear-joint)
                            (v* drive-jnt-axis jnt-axis))
                           (t
