@@ -263,7 +263,8 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                     (t
                      ))))
           ;; jntの変位がcontact target coordsに影響を与える場合
-          (when (member (send jnt :child-link) link-list-of-contact-target)
+          (when (and (member (send drive-jnt :child-link) link-list-of-contact-attention)
+                     (member (send jnt :child-link) link-list-of-contact-target))
             (let* ((drive-jnt-axis (send drive-jnt :axis-vector))
                    (jnt-axis (send jnt :axis-vector))
                    (hessian-vec
