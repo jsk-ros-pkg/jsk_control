@@ -272,7 +272,7 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                           ((derivedp jnt linear-joint)
                            (v* drive-jnt-axis jnt-axis))
                           (t
-                           (error "unsupported joint type: ~a~% jnt")))))
+                           (error "unsupported joint type: ~a~%" jnt)))))
               (setf (aref jacobi i j) (+ (aref jacobi i j) (v. (subseq wrench 0 3) hessian-vec)))))
           )))
       jacobi
