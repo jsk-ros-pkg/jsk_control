@@ -1,4 +1,4 @@
-
+(load "./util.l")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -6,12 +6,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun get-link-jacobian-for-contact-torque
-  (&key
-   (robot)
-   (drive-joint-list)
-   (contact-coords)
-   (contact-parent-link)
-   )
+    (&key
+     (robot)
+     (drive-joint-list)
+     (contact-coords)
+     (contact-parent-link)
+     )
   "
 \it{contact-coords}に対応する接触部位の番号を$m$とする．
 \it{contact-coords}の位置姿勢を$\bm{r}_{m} \in \mathbb{R}^6$，
@@ -57,13 +57,13 @@ return $\bm{J}_m \in \mathbb{R}^{6 \times N_{\mathit{drive\mathchar`-joint}}}$
     ))
 
 (defun get-contact-torque
-  (&key
-   (robot)
-   (drive-joint-list)
-   (wrench-list)
-   (contact-target-coords-list)
-   (contact-attention-coords-list)
-   )
+    (&key
+     (robot)
+     (drive-joint-list)
+     (wrench-list)
+     (contact-target-coords-list)
+     (contact-attention-coords-list)
+     )
   "
 ロボットの接触部位に加わる接触レンチによって生じる関節トルク$\bm{\tau}^{\mathit{cnt}}$は，以下で得られる．
 \begin{eqnarray}
@@ -94,14 +94,14 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
   )
 
 (defun get-contact-torque-jacobian
-  (&key
-   (robot)
-   (joint-list)
-   (drive-joint-list)
-   (wrench-list)
-   (contact-target-coords-list)
-   (contact-attention-coords-list)
-   )
+    (&key
+     (robot)
+     (joint-list)
+     (drive-joint-list)
+     (wrench-list)
+     (contact-target-coords-list)
+     (contact-attention-coords-list)
+     )
   "
  以下$\bm{p}^i_j$はリンク$i$からリンク$j$へと向かう位置ベクトルをワールド座標系で表記したものとする。
  \begin{eqnarray}
@@ -268,21 +268,22 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                    (jnt-axis (send jnt :axis-vector))
                    (hessian-vec
                     (cond ((derivedp jnt rotational-joint)
-                           (v* drive-jnt-axis (v* jnt-axis (v- (send contact-coords :worldpos) (send jnt :pos))))))
+                           (v* drive-jnt-axis (v* jnt-axis (v- (send contact-coords :worldpos) (send jnt :pos)))))
                           ((derivedp jnt linear-joint)
-                           (v* drive-jnt-axis jnt-axis))))
-               (setf (aref jacobi i j) (+ (aref jacobi i j) (v. (subseq wrench 0 3) hessian-vec)))))
-           )
-        ))
-    jacobi
-    ))
+                           (v* drive-jnt-axis jnt-axis))
+                          (t
+                           (error "unsupported joint type: ~a~% jnt")))))
+              (setf (aref jacobi i j) (+ (aref jacobi i j) (v. (subseq wrench 0 3) hessian-vec)))))
+          )))
+      jacobi
+      ))
 
 (defun get-link-jacobian-for-gravity-torque
-  (&key
-   (robot)
-   (drive-joint-list)
-   (gravity-link)
-   )
+    (&key
+     (robot)
+     (drive-joint-list)
+     (gravity-link)
+     )
   "
 \it{gravity-link}のリンク番号を$k$とする．
 \it{gravity-link}の重心位置を$\bm{p}_{\mathit{cog,k}} \in \mathbb{R}^3$，
@@ -337,11 +338,11 @@ return $\bm{J}_{\mathit{cog,k}} \in \mathbb{R}^{3 \times N_{\mathit{drive\mathch
     ))
 
 (defun get-gravity-torque
-  (&key
-   (robot)
-   (drive-joint-list)
-   (gravity-link-list)
-   )
+    (&key
+     (robot)
+     (drive-joint-list)
+     (gravity-link-list)
+     )
   "
 ロボットのリンク自重によって生じる関節トルク$\bm{\tau}^{\mathit{grav}}$は，ロボットモーションP111式(3.3.22)より以下で得られる．
 \begin{eqnarray}
@@ -370,12 +371,12 @@ return $\bm{\tau}^{\mathit{grav}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joi
     ))
 
 (defun get-gravity-torque-jacobian
-  (&key
-   (robot)
-   (joint-list)
-   (drive-joint-list)
-   (gravity-link-list)
-   )
+    (&key
+     (robot)
+     (joint-list)
+     (drive-joint-list)
+     (gravity-link-list)
+     )
   "
 \eqref{eq:jacobian-for-gravity-torque}の$\bm{J}_{\mathit{cog,k}}$を以下のように分解して利用する．
 \begin{eqnarray}
