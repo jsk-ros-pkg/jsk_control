@@ -3,7 +3,7 @@
 
 
 (defun setup-contact-constraint-for-sample-sqp-optimization-manip
-  ()
+    ()
   (setq *rleg-contact-constraint*
         (instance* default-contact-constraint
                    :init
@@ -72,17 +72,17 @@
   )
 
 (defun sample-sqp-optimization-trajectory-manip
-  (&key
-   (optimize-torque? nil)
-   (optimize-start-end-torque? t)
-   (avoid-collision? t)
-   (fix-grasp? t)
-   (pre-process-func)
-   (use-adjacent-regular-scale-list? t)
-   (visualize-callback-func)
-   (visualize-loop? t)
-   &allow-other-keys
-   )
+    (&key
+     (optimize-torque? nil)
+     (optimize-start-end-torque? t)
+     (avoid-collision? t)
+     (fix-grasp? t)
+     (pre-process-func)
+     (use-adjacent-regular-scale-list? t)
+     (visualize-callback-func)
+     (visualize-loop? t)
+     &allow-other-keys
+     )
   ;; setup environment
   (setq *ground-rleg* (make-cube 400 400 20))
   (send *ground-rleg* :set-color (float-vector 0.5 0.5 0.25))
