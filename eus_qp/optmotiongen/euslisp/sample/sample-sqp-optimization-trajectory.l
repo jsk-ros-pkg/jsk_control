@@ -434,14 +434,14 @@
         (instance* trajectory-configuration-task :init
                    :instant-config-task-list (reverse *instant-config-task-list*)
                    (append
-                    (if (and optimize-torque? (not use-adjacent-regular-scale-list?))
+                    (if optimize-torque?
                         (list
                          :norm-regular-scale-max 1e-4
                          :norm-regular-scale-offset 1e-7
                          :adjacent-regular-scale 5e-4
                          :torque-regular-scale 1e-4
                          ))
-                    (if use-adjacent-regular-scale-list?
+                    (if (and use-adjacent-regular-scale-list? (not optimize-torque?))
                         (list
                          :adjacent-regular-scale-list (list 5e-4 5e-4 5e-3 5e-3 5e-3 5e-4 5e-4 5e-4 5e-4)))
                    )))
