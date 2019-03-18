@@ -1,5 +1,8 @@
 (load "./instant-configuration-task.l")
 
+(unless (boundp 'instant-configuration-task) ;; dummy class definition for document
+  (defclass instant-configuration-task :super object))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; discrete-kinematics-configuration-task
@@ -11,6 +14,14 @@
           )
   :documentation
   "
+離散的な幾何目標を扱えるように拡張された
+瞬時コンフィギュレーション$\bm{q}^{(l)}$と瞬時タスク関数$\bm{e}^{(l)}(\bm{q}^{(l)})$のクラス．
+
+離散的な幾何目標とは，
+kin-target-coords-listやkin-attention-coords-listとして
+目標位置姿勢や着目位置姿勢が複数ペア与えられ，
+それらのいずれかが成り立てば良いという制約のことを指す．
+離散的な幾何目標のタスク関数に含まれるmin関数を微分可能関数で近似することで，タスク関数のヤコビ行列を求める．
   "
   )
 
@@ -22,6 +33,9 @@
     (smooth-alpha 20.0)
     &allow-other-keys
     )
+   "
+Initialize instance
+   "
    (send-super* :init args)
    (setq _smooth-alpha smooth-alpha)
    )
