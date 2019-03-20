@@ -215,52 +215,55 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
         (dotimes (k (length contact-attention-coords-list))
           (setq contact-coords (elt contact-target-coords-list k))
           (setq wrench (elt wrench-list k))
-          ;; calculate drive-jnt-axis-derivative and drive-jnt-pos-derivative
-          (cond (;; case (A) jntがdrive-jntよりもルートリンクに近いとき
-                 (equal dependency-mode :jnt-is-root)
-                 (cond (;; case (A).(I)
-                        (derivedp jnt rotational-joint)
-                        (setq drive-jnt-axis-derivative (v* (send jnt :axis-vector) (send drive-jnt :axis-vector)))
-                        (setq drive-jnt-pos-derivative (v* (send jnt :axis-vector) (scale 1e-3 (v- (send drive-jnt :pos) (send jnt :pos)))))
-                        )
-                       (;; case (A).(II)
-                        t ;; (derivedp jnt linear-joint)
-                        (setq drive-jnt-axis-derivative (float-vector 0 0 0))
-                        (setq drive-jnt-pos-derivative (send jnt :axis-vector))
-                        ))
-                 )
-                (;; case (B) drive-jntがjntよりもルートリンクに近いとき
-                 t
-                 (setq drive-jnt-axis-derivative (float-vector 0 0 0))
-                 (setq drive-jnt-pos-derivative (float-vector 0 0 0))
-                 ))
-          ;; calculate contact-pos-derivative
-          (cond (;; case (a) jntの変位がcontact-target-coordsに影響を与えるとき
-                 (and (derivedp contact-coords cascaded-coords)
-                      (member (send jnt :child-link) (send robot :link-list (send contact-coords :parent))))
-                 (cond (;; case (a).(i)
-                        (derivedp jnt rotational-joint)
-                        (setq contact-pos-derivative (v* (send jnt :axis-vector) (scale 1e-3 (v- (send contact-coords :worldpos) (send jnt :pos)))))
-                        )
-                       (;; case (b).(ii)
-                        t ;; (derivedp jnt linear-joint)
-                        (setq contact-pos-derivative (send jnt :axis-vector))
-                        ))
-                 )
-                (;; case (a) jntの変位がcontact-target-coordsに影響を与えないとき
-                 t
-                 (setq contact-pos-derivative (float-vector 0 0 0))
-                 ))
-          ;; set jacobian element
-          (setf (aref jacobi i j)
-                (+ (aref jacobi i j)
-                   (v. (subseq wrench 0 3)
-                       (v+ (v* drive-jnt-axis-derivative (scale 1e-3 (v- (send contact-coords :worldpos) (send drive-jnt :pos))))
-                           (v* (send drive-jnt :axis-vector) (v- contact-pos-derivative drive-jnt-pos-derivative))
-                           ))
-                   (v. (subseq wrench 3 6)
-                       drive-jnt-axis-derivative
-                       )))
+          (when (member (send drive-jnt :child-link)
+                        (send robot :link-list (send (elt contact-attention-coords-list k) :parent)))
+            ;; calculate drive-jnt-axis-derivative and drive-jnt-pos-derivative
+            (cond (;; case (A) jntがdrive-jntよりもルートリンクに近いとき
+                   (equal dependency-mode :jnt-is-root)
+                   (cond (;; case (A).(I)
+                          (derivedp jnt rotational-joint)
+                          (setq drive-jnt-axis-derivative (v* (send jnt :axis-vector) (send drive-jnt :axis-vector)))
+                          (setq drive-jnt-pos-derivative (v* (send jnt :axis-vector) (scale 1e-3 (v- (send drive-jnt :pos) (send jnt :pos)))))
+                          )
+                         (;; case (A).(II)
+                          t ;; (derivedp jnt linear-joint)
+                          (setq drive-jnt-axis-derivative (float-vector 0 0 0))
+                          (setq drive-jnt-pos-derivative (send jnt :axis-vector))
+                          ))
+                   )
+                  (;; case (B) drive-jntがjntよりもルートリンクに近いとき
+                   t
+                   (setq drive-jnt-axis-derivative (float-vector 0 0 0))
+                   (setq drive-jnt-pos-derivative (float-vector 0 0 0))
+                   ))
+            ;; calculate contact-pos-derivative
+            (cond (;; case (a) jntの変位がcontact-target-coordsに影響を与えるとき
+                   (and (derivedp contact-coords cascaded-coords)
+                        (member (send jnt :child-link) (send robot :link-list (send contact-coords :parent))))
+                   (cond (;; case (a).(i)
+                          (derivedp jnt rotational-joint)
+                          (setq contact-pos-derivative (v* (send jnt :axis-vector) (scale 1e-3 (v- (send contact-coords :worldpos) (send jnt :pos)))))
+                          )
+                         (;; case (b).(ii)
+                          t ;; (derivedp jnt linear-joint)
+                          (setq contact-pos-derivative (send jnt :axis-vector))
+                          ))
+                   )
+                  (;; case (a) jntの変位がcontact-target-coordsに影響を与えないとき
+                   t
+                   (setq contact-pos-derivative (float-vector 0 0 0))
+                   ))
+            ;; set jacobian element
+            (setf (aref jacobi i j)
+                  (+ (aref jacobi i j)
+                     (v. (subseq wrench 0 3)
+                         (v+ (v* drive-jnt-axis-derivative (scale 1e-3 (v- (send contact-coords :worldpos) (send drive-jnt :pos))))
+                             (v* (send drive-jnt :axis-vector) (v- contact-pos-derivative drive-jnt-pos-derivative))
+                             ))
+                     (v. (subseq wrench 3 6)
+                         drive-jnt-axis-derivative
+                         )))
+            )
           )))
     jacobi
     ))
