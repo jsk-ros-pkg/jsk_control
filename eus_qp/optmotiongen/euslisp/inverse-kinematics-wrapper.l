@@ -40,6 +40,8 @@
     (min-loop)
     ;; new arguments
     (root-virtual-mode :fix)
+    (root-virtual-joint-min-angle-list)
+    (root-virtual-joint-max-angle-list)
     (joint-angle-margin 0.0)
     (posture-joint-list)
     (posture-joint-angle-list)
@@ -112,6 +114,8 @@ Solve inverse kinematics problem with sqp optimization.
                      :robot self
                      :contact-list (remove nil contact-list)
                      :root-virtual-mode root-virtual-mode
+                     :root-virtual-joint-min-angle-list root-virtual-joint-min-angle-list
+                     :root-virtual-joint-max-angle-list root-virtual-joint-max-angle-list
                      ))
           (variant-joint-list
            (cond (union-link-list
@@ -250,6 +254,8 @@ Solve inverse kinematics problem with sqp optimization.
     ;; new arguments
     (root-virtual-mode :fix)
     (root-virtual-joint-invariant? nil)
+    (root-virtual-joint-min-angle-list)
+    (root-virtual-joint-max-angle-list)
     (joint-angle-margin 0.0)
     (posture-joint-list
      (make-list (length target-coords-list) :initial-element nil))
@@ -380,6 +386,8 @@ Solve inverse kinematics problem with sqp optimization.
                                     :robot robot
                                     :contact-list (remove nil contact-list)
                                     :root-virtual-mode root-virtual-mode
+                                    :root-virtual-joint-min-angle-list root-virtual-joint-min-angle-list
+                                    :root-virtual-joint-max-angle-list root-virtual-joint-max-angle-list
                                     ))
                          )
                     (send robot-env :invariant-joint-list
