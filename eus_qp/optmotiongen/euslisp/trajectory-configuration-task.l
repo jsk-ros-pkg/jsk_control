@@ -18,7 +18,7 @@
           ;; scale
           (_norm-regular-scale-max "$k_{\mathit{max}}$")
           (_norm-regular-scale-offset "$k_{\mathit{off}}$")
-          (_adjacent-regular-scale "$k_{\mathit{adj}}$")
+          (_adjacent-regular-scale-list "$k^{(1)}_{\mathit{adj}},k^{(2)}_{\mathit{adj}},\cdots,k^{(L-1)}_{\mathit{adj}}$")
           (_torque-regular-scale "$k_{\mathit{trq}}$")
           ;; buffer
           (_task-jacobi "buffer for $\frac{\partial \bm{e}}{\partial \bm{q}}$")
@@ -43,7 +43,7 @@
 \begin{description}
   \item[norm-regular-scale-max $k_{\mathit{max}}$] コンフィギュレーション更新量正則化の重み最大値
   \item[norm-regular-scale-offset $k_{\mathit{off}}$] コンフィギュレーション更新量正則化の重みオフセット
-  \item[adjacent-regular-scale $k_{\mathit{adj}}$] 隣接コンフィギュレーション正則化の重み
+  \item[adjacent-regular-scale-list $k_{\mathit{adj}}^{(l)}$] 隣接コンフィギュレーション正則化の重みのリスト
   \item[torque-regular-scale $k_{\mathit{trq}}$] トルク正則化の重み
 \end{description}
 \end{itemize}
@@ -74,6 +74,7 @@ $\bm{e}^{(l)}(\bm{q}_{\mathit{var}}^{(l)}, \bm{q}_{\mathit{invar}}) \ (l=1,2,\cd
     (norm-regular-scale-max 1e-4)
     (norm-regular-scale-offset 1e-7)
     (adjacent-regular-scale 5e-3)
+    (adjacent-regular-scale-list)
     (torque-regular-scale 1e-3)
     )
    "
@@ -83,7 +84,13 @@ Initialize instance
    (setq _instant-config-task-list instant-config-task-list)
    (setq _norm-regular-scale-max norm-regular-scale-max)
    (setq _norm-regular-scale-offset norm-regular-scale-offset)
-   (setq _adjacent-regular-scale adjacent-regular-scale)
+   (cond (adjacent-regular-scale-list
+          (setq _adjacent-regular-scale-list adjacent-regular-scale-list)
+          )
+         (t
+          (setq _adjacent-regular-scale-list
+                (make-list (1- (length instant-config-task-list)) :initial-element adjacent-regular-scale))
+          ))
    (setq _torque-regular-scale torque-regular-scale)
    ;; sub methods
    (send self :_initialize-number)
@@ -553,16 +560,16 @@ return $\bm{d}_{\mathit{col}} \in \mathbb{R}^{N_{\mathit{col}}}$
    "
 二次形式の正則化項として次式を考える．
 \begin{eqnarray}
-  F_{\mathit{adj}}(\bm{q}) &=& \sum_{l=1}^{L-1} \| \bm{\theta}_{l+1} - \bm{\theta}_l \|^2 \\
+  F_{\mathit{adj}}(\bm{q}) &=& \sum_{l=1}^{L-1} k_{\mathit{adj}}^{(l)} \| \bm{\theta}_{l+1} - \bm{\theta}_l \|^2 \\
   &=& \bm{q}^T \bm{W}_{\mathit{adj}} \bm{q}
 \end{eqnarray}
 ここで，
 \begin{eqnarray}
-  \bm{\bar{I}}_{\mathit{adj}}
+  \bm{\bar{I}}^{(l)}_{\mathit{adj}}
   &:=&
   \bordermatrix{
     & \mathit{dim}(\bm{\theta}^{(l)}) & \mathit{dim}(\bm{\hat{w}}^{(l)}) & \mathit{dim}(\bm{\tau}^{(l)}) \cr
-    \mathit{dim}(\bm{\theta}^{(l)}) & \bm{I} && \cr
+    \mathit{dim}(\bm{\theta}^{(l)}) & k_{\mathit{adj}}^{(l)} \bm{I} && \cr
     \mathit{dim}(\bm{\hat{w}}^{(l)}) &&& \cr
     \mathit{dim}(\bm{\tau}^{(l)}) &&& \cr
   }
@@ -571,11 +578,11 @@ return $\bm{d}_{\mathit{col}} \in \mathbb{R}^{N_{\mathit{col}}}$
   \bm{\bar{W}}_{\mathit{adj}}
   &:=&
   \begin{pmatrix}
-    \bm{\bar{I}}_{\mathit{adj}} & - \bm{\bar{I}}_{\mathit{adj}} & & & & & \\
-    - \bm{\bar{I}}_{\mathit{adj}} & 2 \bm{\bar{I}}_{\mathit{adj}} & - \bm{\bar{I}}_{\mathit{adj}} & & & & \bm{O} \\
-    & & &  \ddots & & & \\
-    & & & & - \bm{\bar{I}}_{\mathit{adj}} & 2 \bm{\bar{I}}_{\mathit{adj}} & - \bm{\bar{I}}_{\mathit{adj}}\\
-    \bm{O} & & & & & - \bm{\bar{I}}_{\mathit{adj}} & \bm{\bar{I}}_{\mathit{adj}}
+    \bm{\bar{I}}^{(1)}_{\mathit{adj}} & - \bm{\bar{I}}^{(1)}_{\mathit{adj}} & & & & \bm{O}\\
+    - \bm{\bar{I}}^{(1)}_{\mathit{adj}} & \bm{\bar{I}}^{(1)}_{\mathit{adj}} + \bm{\bar{I}}^{(2)}_{\mathit{adj}} & - \bm{\bar{I}}^{(2)}_{\mathit{adj}} & & & \\
+    & &  \ddots & & & \\
+    & & & & \bm{\bar{I}}^{(L-2)}_{\mathit{adj}} + \bm{\bar{I}}^{(L-1)}_{\mathit{adj}} & - \bm{\bar{I}}^{(L-1)}_{\mathit{adj}}\\
+    \bm{O} & & & & - \bm{\bar{I}}^{(L-1)}_{\mathit{adj}} & \bm{\bar{I}}^{(L-1)}_{\mathit{adj}}
   \end{pmatrix} \in \mathbb{R}^{dim(\bm{q}_{\mathit{var}}) \times dim(\bm{q}_{\mathit{var}})} \\
   \bm{W}_{\mathit{adj}}
   &:=&
@@ -589,27 +596,46 @@ return $\bm{W}_{\mathit{adj}} \in \mathbb{R}^{dim(\bm{q}) \times dim(\bm{q})}$
    (when (or update? (not (send self :get :adjacent-regular-matrix)))
      (send self :put :adjacent-regular-matrix
            (make-matrix _dim-config _dim-config))
+     (assert
+      (= (1- (length _instant-config-task-list)) (length _adjacent-regular-scale-list))
+      (format nil "A length of adjacent regular scale should be the same as a length of instant config task list minus 1
+Now the length of adjacent-regular-scale-list: ~a, the length of instant-config-task-list is ~a ~%"
+              (length _adjacent-regular-scale-list) (length _instant-config-task-list)))
      (let* ((idx 0)
+            (config-idx 0)
             )
-       (dolist (config-task (butlast _instant-config-task-list))
+       (dolist (config-task _instant-config-task-list)
          (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                            (scale-matrix (if (= idx 0) 1 2) (unit-matrix (send config-task :num-variant-joint)))
+                            (scale-matrix
+                             (cond
+                              ((= config-idx 0)
+                               (elt _adjacent-regular-scale-list config-idx))
+                              ((= config-idx (length _adjacent-regular-scale-list))
+                               (elt _adjacent-regular-scale-list (1- config-idx)))
+                              (t
+                               (+ (elt _adjacent-regular-scale-list (1- config-idx))
+                                  (elt _adjacent-regular-scale-list config-idx))))
+                             (unit-matrix (send config-task :num-variant-joint)))
                             idx idx
                             )
-         (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                            (unit-matrix (send config-task :num-variant-joint))
-                            (+ idx (send config-task :dim-variant-config)) (+ idx (send config-task :dim-variant-config))
-                            )
-         (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                            (scale-matrix -1 (unit-matrix (send config-task :num-variant-joint)))
-                            idx (+ idx (send config-task :dim-variant-config))
-                            )
-         (copy-block-matrix (send self :get :adjacent-regular-matrix)
-                            (scale-matrix -1 (unit-matrix (send config-task :num-variant-joint)))
-                            (+ idx (send config-task :dim-variant-config)) idx
-                            )
+         (unless (= config-idx (1- (length _instant-config-task-list)))
+           (copy-block-matrix (send self :get :adjacent-regular-matrix)
+                              (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx))
+                                            (unit-matrix (min (send (elt _instant-config-task-list (1+ config-idx)) :num-variant-joint)
+                                                              (send config-task :num-variant-joint))))
+                              idx (+ idx (send config-task :dim-variant-config))
+                              )
+           (copy-block-matrix (send self :get :adjacent-regular-matrix)
+                              (scale-matrix (* -1 (elt _adjacent-regular-scale-list config-idx))
+                                            (unit-matrix (min (send (elt _instant-config-task-list (1+ config-idx)) :num-variant-joint)
+                                                              (send config-task :num-variant-joint))))
+                              (+ idx (send config-task :dim-variant-config)) idx
+                              )
+           )
          (incf idx (send config-task :dim-variant-config))
-         ))
+         (incf config-idx 1)
+         )
+       )
      )
    (send self :get :adjacent-regular-matrix)
    )
@@ -706,7 +732,7 @@ return $\bm{v}_{trq} \in \mathbb{R}^{dim(\bm{q})}$
    ()
    "
 \begin{eqnarray}
-  \bm{W}_{\mathit{reg}} := \min(k_{\mathit{max}}, \|\bm{e}\|^2+k_{\mathit{off}}) \bm{I} + k_{\mathit{adj}} \bm{W}_{\mathit{adj}} + k_{\mathit{trq}} \bm{W}_{trq}
+  \bm{W}_{\mathit{reg}} := \min(k_{\mathit{max}}, \|\bm{e}\|^2+k_{\mathit{off}}) \bm{I} + \bm{W}_{\mathit{adj}} + k_{\mathit{trq}} \bm{W}_{trq}
 \end{eqnarray}
 
 return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathit{dim}(\bm{q})}$
@@ -715,7 +741,7 @@ return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathi
     (m+
      (scale-matrix (min _norm-regular-scale-max (+ (norm2 (send self :task-value :update? nil)) _norm-regular-scale-offset))
                    (send self :_dim-config-unit-matrix))
-     (scale-matrix _adjacent-regular-scale (send self :adjacent-regular-matrix))
+     (send self :adjacent-regular-matrix)
      (send self :_dim-config-buf-matrix)
      )
     (scale-matrix _torque-regular-scale (send self :torque-regular-matrix))
@@ -726,13 +752,13 @@ return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathi
    ()
    "
 \begin{eqnarray}
-  \bm{v}_{\mathit{reg}} := k_{\mathit{adj}} \bm{v}_{\mathit{adj}} + k_{\mathit{trq}} \bm{v}_{trq}
+  \bm{v}_{\mathit{reg}} := \bm{v}_{\mathit{adj}} + k_{\mathit{trq}} \bm{v}_{trq}
 \end{eqnarray}
 
 return $\bm{v}_{\mathit{reg}}\in \mathbb{R}^{\mathit{dim}(\bm{q})}$
    "
    (v+
-    (scale _adjacent-regular-scale (send self :adjacent-regular-vector))
+    (send self :adjacent-regular-vector)
     (scale _torque-regular-scale (send self :torque-regular-vector)))
    )
   )
