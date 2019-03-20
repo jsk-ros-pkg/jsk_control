@@ -15,12 +15,20 @@
   "
 \it{contact-coords}に対応する接触部位の番号を$m$とする．
 \it{contact-coords}の位置を$\bm{p}_{m} \in \mathbb{R}^3$，
-\it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}}}$として，
+\it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{(N_{\mathit{drive\mathchar`-joint}})}$として，
 次式を満たすヤコビ行列$\bm{J}_m$を返す．
 \begin{eqnarray}
-  \bm{\dot{r}}_m &=& \bm{J}_m \bm{\dot{\psi}} \\ &=& \sum_{i=1}^{N_{\mathit{drive\mathchar`-joint}}} \bm{j}_m^{(i)} \dot{\psi}_i \\
-  \bm{j}_m^{(i)} &=& \begin{pmatrix} \bm{a}_{\psi_i} \times (\bm{p}_m - \bm{p}_{\psi_i}) \\ \bm{a}_{\psi_i} \end{pmatrix} \\
-  \bm{J}_m &=& \begin{pmatrix}\bm{j}_m^{(1)} & \bm{j}_m^{(2)} & \cdots & \bm{j}_m^{N_{\mathit{drive\mathchar`-joint}}}\end{pmatrix} \label{eq:jacobian-for-contact-torque}
+  \bm{J}_m &=& \begin{pmatrix}\bm{j}_m^{(1)} & \bm{j}_m^{(2)} & \cdots & \bm{j}_m^{N_{\mathit{drive\mathchar`-joint}}}\end{pmatrix} \label{eq:jacobian-for-contact-torque} \\
+  \bm{j}_m^{(i)} &=& \left\{ \begin{array}{ll} \bm{\bar{j}}_m^{(i)} & \ \ 接触リンクがi番目の駆動関節変位に依存している場合 \\ \bm{0} & {\rm otherwise} \ \ \end{array} \right.
+\end{eqnarray}
+$\bm{\bar{j}}_m^{(i)}$は基礎ヤコビ行列の列ベクトルで次式で表される．\\
+$\psi_i$が回転関節の場合
+\begin{eqnarray}
+  \bm{\bar{j}}_m^{(i)} &=& \begin{pmatrix} \bm{a}_{\psi_i} \times (\bm{p}_m - \bm{p}_{\psi_i}) \\ \bm{a}_{\psi_i} \end{pmatrix}
+\end{eqnarray}
+$\psi_i$が直動関節の場合
+\begin{eqnarray}
+  \bm{\bar{j}}_m^{(i)} &=& \begin{pmatrix} \bm{a}_{\psi_i} \\ \bm{0} \end{pmatrix}
 \end{eqnarray}
 $\bm{a}_{\psi_i}, \bm{p}_{\psi_i} \in \mathbb{R}^3$は$i$番目の関節の回転軸ベクトルと位置である．
 
@@ -110,39 +118,47 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
    &=& \frac{\partial}{\partial \bm{\theta}} \sum_{m=1}^{N_{\mathit{cnt}}} \bm{J}_m^T \bm{w}_m \\
    &=&
    \frac{\partial}{\partial \bm{\theta}} \sum_{m=1}^{N_{\mathit{cnt}}}
-   \begin{pmatrix}
-     \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m & \bm{a}_{\psi_2} \times \bm{p}^{\psi_2}_m & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}} \times \bm{p}^{\psi_{N_{drive\mathchar`-joint}}}_m \\
-     \bm{a}_{\psi_1} & \bm{a}_{\psi_2} & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}}
-   \end{pmatrix}^T
-   \begin{pmatrix}
-     \bm{f}_m \\ \bm{n}_m
-   \end{pmatrix} \\
+   \begin{pmatrix}\bm{j}_m^{(1)} & \bm{j}_m^{(2)} & \cdots & \bm{j}_m^{(N_{\mathit{drive\mathchar`-joint}})}\end{pmatrix}^T
+   \bm{w}_m \\
    &=&
    \sum_{m=1}^{N_{\mathit{cnt}}}
    \frac{\partial}{\partial \bm{\theta}}
    \begin{pmatrix}
-     \bm{f}_m^T \left( \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m \right) + \bm{n}_m^T \bm{a}_{\psi_1} \\
-     \bm{f}_m^T \left( \bm{a}_{\psi_2} \times \bm{p}^{\psi_2}_m \right) + \bm{n}_m^T \bm{a}_{\psi_2} \\
+     \bm{w}_m^T \bm{j}_m^{(1)} \\
+     \bm{w}_m^T \bm{j}_m^{(2)} \\
      \vdots \\
-     \bm{f}_m^T \left( \bm{a}_{\psi_{drive\mathchar`-joint}} \times \bm{p}^{\psi_{drive\mathchar`-joint}}_m \right) +
-     \bm{n}_m^T \bm{a}_{\psi_{drive\mathchar`-joint}}
+     \bm{w}_m^T \bm{j}_m^{(N_{\mathit{drive\mathchar`-joint}})}
    \end{pmatrix} \\
    &=&
    \sum_{m=1}^{N_{\mathit{cnt}}}
-   \left[
-     \bm{f}_m^T \frac{\partial}{\partial \theta_j} \left( \bm{a}_{\psi_i} \times \bm{p}^{\psi_i}_m \right) + \bm{n}_m^T
-     \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right]_{i,j} \\
+   \left[ \bm{w}_m^T \frac{\partial}{\partial \theta_j} \bm{j}_m^{(i)} \right]_{i,j} \ \ (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
+ \end{eqnarray}
+ したがって，各接触力によるトルクのヤコビ行列の各要素は次式で得られる．\\
+ $\psi_i$が回転関節の場合
+ \begin{eqnarray}
+   \bm{w}_m^T \frac{\partial}{\partial \theta_j} \bm{j}_m^{(i)}
    &=&
-   \sum_{m=1}^{N_{\mathit{cnt}}}
-   \left[
-     \bm{f}_m^T \left\{ \left( \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_m +
-     \bm{a}_{\psi_i} \times \left( \frac{\partial}{\partial \theta_j} \bm{p}_m - \frac{\partial}{\partial \theta_j}
-     \bm{p}_{\psi_i} \right) \right\} + \bm{n}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}
-     \right]_{i,j} \nonumber \\
-   && \hspace{40mm} (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
+   \begin{pmatrix} \bm{f}_m \\ \bm{n}_m \end{pmatrix}^T \frac{\partial}{\partial \theta_j} \begin{pmatrix} \bm{a}_{\psi_i} \times \bm{p}^{\psi_i}_m \\ \bm{a}_{\psi_i} \end{pmatrix}
+   \\
+   &=&
+   \bm{f}_m^T \frac{\partial}{\partial \theta_j} \left( \bm{a}_{\psi_i} \times \bm{p}^{\psi_i}_m \right)
+   + \bm{n}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \\
+   &=&
+   \bm{f}_m^T \left\{ \left( \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_m +
+   \bm{a}_{\psi_i} \times \left( \frac{\partial}{\partial \theta_j} \bm{p}_m - \frac{\partial}{\partial \theta_j}
+   \bm{p}_{\psi_i} \right) \right\} + \bm{n}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}
+ \end{eqnarray}
+ $\psi_i$が直動関節の場合
+ \begin{eqnarray}
+   \bm{w}_m^T \frac{\partial}{\partial \theta_j} \bm{j}_m^{(i)}
+   &=&
+   \begin{pmatrix} \bm{f}_m \\ \bm{n}_m \end{pmatrix}^T \frac{\partial}{\partial \theta_j} \begin{pmatrix} \bm{a}_{\psi_i} \\ \bm{0} \end{pmatrix}
+   \\
+   &=&
+   \bm{f}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}
  \end{eqnarray}
 
- $\frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}, \frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i}$は以下のように計算される．
+ $\frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}$(\it{drive-jnt-axis-derivative}), $\frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i}$(\it{drive-jnt-pos-derivative})は以下のように計算される．
  \begin{enumerate}
  \renewcommand{\labelenumi}{(\Alph{enumi})}
  \item 関節$\theta_j$が関節$\psi_i$よりもルートリンクに近いとき，もしくは関節$\theta_j$と関節$\psi_i$が同一のとき，
@@ -166,7 +182,7 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
  \end{eqnarray}
  \end{enumerate}
 
- $\frac{\partial}{\partial \theta_j} \bm{p}_m$は以下のように計算される．
+ $\frac{\partial}{\partial \theta_j} \bm{p}_m$(\it{contact-pos-derivative})は以下のように計算される．
  \begin{enumerate}
  \renewcommand{\labelenumi}{(\alph{enumi})}
  \item 関節$\theta_j$の変位が$\bm{p}_m$に影響を与えるとき(このパターンは\it{contact-target-coords}が仮想関節の先にが設置されている場合などに発生する)
@@ -197,6 +213,7 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
          (drive-jnt-axis-derivative)
          (drive-jnt-pos-derivative)
          (contact-pos-derivative)
+         (jacobi-element)
          )
     (dotimes (i (length drive-joint-list))
       (setq drive-jnt (elt drive-joint-list i))
@@ -254,15 +271,21 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                    (setq contact-pos-derivative (float-vector 0 0 0))
                    ))
             ;; set jacobian element
-            (setf (aref jacobi i j)
-                  (+ (aref jacobi i j)
-                     (v. (subseq wrench 0 3)
-                         (v+ (v* drive-jnt-axis-derivative (scale 1e-3 (v- (send contact-coords :worldpos) (send drive-jnt :pos))))
-                             (v* (send drive-jnt :axis-vector) (v- contact-pos-derivative drive-jnt-pos-derivative))
-                             ))
-                     (v. (subseq wrench 3 6)
-                         drive-jnt-axis-derivative
-                         )))
+            (cond ((derivedp drive-jnt rotational-joint)
+                   (setq jacobi-element
+                         (+
+                          (v. (subseq wrench 0 3)
+                              (v+ (v* drive-jnt-axis-derivative (scale 1e-3 (v- (send contact-coords :worldpos) (send drive-jnt :pos))))
+                                  (v* (send drive-jnt :axis-vector) (v- contact-pos-derivative drive-jnt-pos-derivative))
+                                  ))
+                          (v. (subseq wrench 3 6) drive-jnt-axis-derivative)
+                          ))
+                   )
+                  (t ;; (derivedp drive-jnt linear-joint)
+                   (setq jacobi-element
+                         (v. (subseq wrench 0 3) drive-jnt-axis-derivative))
+                   ))
+            (setf (aref jacobi i j) (+ (aref jacobi i j) jacobi-element))
             )
           )))
     jacobi
