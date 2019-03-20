@@ -164,13 +164,19 @@
 (warn "(sample-torque-gradient-sample-arm)~%")
 
 (defun sample-torque-gradient-sample-robot
-    ()
+    (&key (root-virtual-mode nil))
   (setq *robot* (instance sample-robot :init))
+  (when root-virtual-mode
+    (setq *robot-env* (instance robot-environment :init :robot *robot* :root-virtual-mode root-virtual-mode)))
   (send *robot* :reset-pose)
   (setq *config-task*
         (instance torque-validate-config-task :init
-                  :robot *robot*
-                  :joint-list (send *robot* :joint-list)
+                  :robot
+                  (if root-virtual-mode (send *robot-env* :robot-with-root-virtual) *robot*)
+                  :joint-list
+                  (if root-virtual-mode
+                      (send *robot-env* :robot-with-root-virtual :joint-list)
+                    (send *robot* :joint-list))
                   :drive-joint-list (send *robot* :joint-list)
                   :wrench-list (list (float-vector 10 -15 20 1 2 -3))
                   :contact-target-coords-list (list (send *robot* :rarm :end-coords))
@@ -180,3 +186,4 @@
   (sample-torque-gradient-common :config-task *config-task*)
   )
 (warn "(sample-torque-gradient-sample-robot)~%")
+(warn "(sample-torque-gradient-sample-robot :root-virtual-mode :6dof)~%")
