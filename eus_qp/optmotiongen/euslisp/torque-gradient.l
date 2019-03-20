@@ -153,7 +153,7 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
    \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \\
    \frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i}
  \end{eqnarray}
- \item 関節$\psi_i$が関節$\theta_j$よりもルートリンクに近い関節の時，関節$\theta_j$が直動関節であれば，
+ \item 関節$\psi_i$が関節$\theta_j$よりもルートリンクに近い関節，もしくは$i=j$の時，関節$\theta_j$が直動関節であれば，
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
    \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j}
@@ -183,7 +183,7 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
    \sum_{m=1}^{N_{\mathit{cnt}}}
    \left[
      \begin{array}{cc}
-       \bm{0}
+       0
        & (a)の時 \\
        \bm{f}_m^T \left\{ \left( \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_m -
        \bm{a}_{\psi_i} \times \left( \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i} \right)
@@ -249,13 +249,13 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                                                        (v* jnt-axis (scale 1e-3 (v- (send drive-jnt :pos) (send jnt :pos))))))
                                                (v* jnt-axis drive-jnt-axis)))
                                  (t
-                                  (float-vector 0 0 0 0 0 0)))) ;; drive-jointがルート側いあったら零ベクトル
+                                  (float-vector 0 0 0 0 0 0)))) ;; drive-jointがルート側にあったら零ベクトル
                           ((and (derivedp drive-jnt rotational-joint)
                                 (derivedp jnt linear-joint))
                            (cond ((equal dependency-mode :jnt-is-root)
                                   (concatenate float-vector (scale -1 (v* drive-jnt-axis jnt-axis)) (float-vector 0 0 0)))
                                  (t
-                                  (float-vector 0 0 0 0 0 0)))) ;; drive-jointがルート側いあったら零ベクトル
+                                  (float-vector 0 0 0 0 0 0)))) ;; drive-jointがルート側にあったら零ベクトル
                           (t
                            (error "unsupported joint type pair: ~a ~a~%" drive-jnt jnt)
                            ))))
@@ -263,7 +263,7 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                      (setf (aref jacobi i j) (+ (aref jacobi i j) (v. wrench hessian-vec))))
                     (t
                      ))))
-          ;; jntの変位がcontact target coordsに影響を与える場合
+          ;; jntの変位がcontact-target-coordsに影響を与える場合
           (when (and (member (send drive-jnt :child-link) link-list-of-contact-attention)
                      (member (send jnt :child-link) link-list-of-contact-target))
             (let* ((drive-jnt-axis (send drive-jnt :axis-vector))
