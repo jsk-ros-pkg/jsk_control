@@ -14,7 +14,7 @@
      )
   "
 \it{contact-coords}に対応する接触部位の番号を$m$とする．
-\it{contact-coords}の位置姿勢を$\bm{r}_{m} \in \mathbb{R}^6$，
+\it{contact-coords}の位置を$\bm{p}_{m} \in \mathbb{R}^3$，
 \it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}}}$として，
 次式を満たすヤコビ行列$\bm{J}_m$を返す．
 \begin{eqnarray}
@@ -103,15 +103,16 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
      (contact-attention-coords-list)
      )
   "
- 以下$\bm{p}^i_j$はリンク$i$からリンク$j$へと向かう位置ベクトルをワールド座標系で表記したものとする。
+ 以下では，$\bm{p}^A_B$は$A$から$B$へ向かう位置ベクトルをワールド座標系で表記したものとする．
+ $A$,$B$は，\it{drive-joint-list}の関節位置$\psi_i$，\it{joint-list}の関節位置$\theta_i$，\it{contact-coords}の位置$m$のいずれかを指す．
  \begin{eqnarray}
    \frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}}
    &=& \frac{\partial}{\partial \bm{\theta}} \sum_{m=1}^{N_{\mathit{cnt}}} \bm{J}_m^T \bm{w}_m \\
    &=&
    \frac{\partial}{\partial \bm{\theta}} \sum_{m=1}^{N_{\mathit{cnt}}}
    \begin{pmatrix}
-     \bm{a}_{\psi_0} \times \bm{p}^{\psi_0}_m & \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}} \times \bm{p}^{\psi_{N_{drive\mathchar`-joint}}}_m \\
-     \bm{a}_{\psi_0} & \bm{a}_{\psi_1} & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}}
+     \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m & \bm{a}_{\psi_2} \times \bm{p}^{\psi_2}_m & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}} \times \bm{p}^{\psi_{N_{drive\mathchar`-joint}}}_m \\
+     \bm{a}_{\psi_1} & \bm{a}_{\psi_2} & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}}
    \end{pmatrix}^T
    \begin{pmatrix}
      \bm{f}_m \\ \bm{n}_m
@@ -120,8 +121,8 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
    \sum_{m=1}^{N_{\mathit{cnt}}}
    \frac{\partial}{\partial \bm{\theta}}
    \begin{pmatrix}
-     \bm{f}_m^T \left( \bm{a}_{\psi_0} \times \bm{p}^{\psi_0}_m \right) + \bm{n}_m^T \bm{a}_{\psi_0} \\
      \bm{f}_m^T \left( \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m \right) + \bm{n}_m^T \bm{a}_{\psi_1} \\
+     \bm{f}_m^T \left( \bm{a}_{\psi_2} \times \bm{p}^{\psi_2}_m \right) + \bm{n}_m^T \bm{a}_{\psi_2} \\
      \vdots \\
      \bm{f}_m^T \left( \bm{a}_{\psi_{drive\mathchar`-joint}} \times \bm{p}^{\psi_{drive\mathchar`-joint}}_m \right) +
      \bm{n}_m^T \bm{a}_{\psi_{drive\mathchar`-joint}}
@@ -142,34 +143,34 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
  \end{eqnarray}
  \begin{enumerate}
  \renewcommand{\labelenumi}{(\alph{enumi})}
- \item 関節$j$が関節$i$よりもルートリンクに近い関節の時、もしくは関節$j$と関節$i$が同一のルートリンクを持たない時、関節$i$の変化は関節$j$の位置、回転軸のベクトルに影響を与えないため、
+ \item 関節$\theta_j$が関節$\psi_i$よりもルートリンクに近い関節の時、もしくは関節$\theta_j$と関節$\psi_i$が同一のルートリンクを持たない時、関節$\psi_i$の変化は関節$\theta_j$の位置、回転軸のベクトルに影響を与えないため、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
    \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{0}
  \end{eqnarray}
- \item 関節$i$が関節$j$よりもルートリンクに近い関節、もしくは$i=j$の時、関節$j$が回転関節であれば、回転系での基礎方程式から、
+ \item 関節$\psi_i$が関節$\theta_j$よりもルートリンクに近い関節、もしくは$i=j$の時、関節$\theta_j$が回転関節であれば、回転系での基礎方程式から、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \\
    \frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i}
  \end{eqnarray}
- \item 関節$i$が関節$j$よりもルートリンクに近い関節の時、関節$j$が直動関節であれば、
+ \item 関節$\psi_i$が関節$\theta_j$よりもルートリンクに近い関節の時、関節$\theta_j$が直動関節であれば、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
    \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j}
  \end{eqnarray}
- (a), (b), (c)の時、関節$j$の変位が$\bm{p}_m$に影響を与えないことを仮定しているので、
+ (a), (b), (c)の時、関節$\theta_j$の変位が$\bm{p}_m$に影響を与えないことを仮定しているので、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{0}
  \end{eqnarray}
- \item 関節$j$の変位が$\bm{p}_m$に影響を与え(このパターンはtarget coordsに対して仮想リンクが設定されている場合などに発生する)、かつ関節$j$が回転関節であれば、
+ \item 関節$\theta_j$の変位が$\bm{p}_m$に影響を与え(このパターンは\it{contact-target-coords}が仮想関節の先にが設置されている場合などに発生する)、かつ関節$\theta_j$が回転関節であれば、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_m
  \end{eqnarray}
- \item 関節$j$の変位が$\bm{p}_m$に影響を与え、かつ関節$j$が直動関節であれば、
+ \item 関節$\theta_j$の変位が$\bm{p}_m$に影響を与え、かつ関節$\theta_j$が直動関節であれば、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j}
  \end{eqnarray}
- (d), (e)の時、関節$j$の変位が関節$i$に影響を与えないことを想定しているので、
+ (d), (e)の時、関節$\theta_j$の変位が関節$\psi_i$に影響を与えないことを想定しているので、
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
    \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{0}
