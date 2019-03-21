@@ -261,12 +261,12 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                           (derivedp jnt rotational-joint)
                           (setq contact-pos-derivative (v* (send jnt :axis-vector) (scale 1e-3 (v- (send contact-coords :worldpos) (send jnt :pos)))))
                           )
-                         (;; case (b).(ii)
+                         (;; case (a).(ii)
                           t ;; (derivedp jnt linear-joint)
                           (setq contact-pos-derivative (send jnt :axis-vector))
                           ))
                    )
-                  (;; case (a) jntの変位がcontact-target-coordsに影響を与えないとき
+                  (;; case (b) jntの変位がcontact-target-coordsに影響を与えないとき
                    t
                    (setq contact-pos-derivative (float-vector 0 0 0))
                    ))

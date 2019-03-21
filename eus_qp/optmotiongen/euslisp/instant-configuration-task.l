@@ -1227,6 +1227,7 @@ return $\frac{\partial \bm{e}^{\mathit{eom\mathchar`-rot}}}{\partial \bm{\phi}} 
   \frac{\partial \bm{e}^{\mathit{trq}}}{\partial \bm{\theta}}
   &=& \sum_{m=1}^{N_{\mathit{cnt}}} \frac{\partial \bm{\tau}^{\mathit{cnt}}_m}{\partial \bm{\theta}} - \frac{\partial \bm{\tau}^{\mathit{grav}}}{\partial \bm{\theta}} + \sum_{m=1}^{N_{\mathit{ex}}} \frac{\partial \bm{\tau}^{\mathit{ex}}_m}{\partial \bm{\theta}}
 \end{eqnarray}
+
 return $\frac{\partial \bm{e}^{\mathit{trq}}}{\partial \bm{\theta}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}} \times N_{\mathit{var\mathchar`-joint}}}$
    "
    (reduce
