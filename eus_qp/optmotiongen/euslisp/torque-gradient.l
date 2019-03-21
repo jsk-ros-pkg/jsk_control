@@ -14,13 +14,21 @@
      )
   "
 \it{contact-coords}に対応する接触部位の番号を$m$とする．
-\it{contact-coords}の位置姿勢を$\bm{r}_{m} \in \mathbb{R}^6$，
-\it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}}}$として，
+\it{contact-coords}の位置を$\bm{p}_{m} \in \mathbb{R}^3$，
+\it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{(N_{\mathit{drive\mathchar`-joint}})}$として，
 次式を満たすヤコビ行列$\bm{J}_m$を返す．
 \begin{eqnarray}
-  \bm{\dot{r}}_m &=& \bm{J}_m \bm{\dot{\psi}} \\ &=& \sum_{i=1}^{N_{\mathit{drive\mathchar`-joint}}} \bm{j}_m^{(i)} \dot{\psi}_i \\
-  \bm{j}_m^{(i)} &=& \begin{pmatrix} \bm{a}_{\psi_i} \times (\bm{p}_m - \bm{p}_{\psi_i}) \\ \bm{a}_{\psi_i} \end{pmatrix} \\
-  \bm{J}_m &=& \begin{pmatrix}\bm{j}_m^{(1)} & \bm{j}_m^{(2)} & \cdots & \bm{j}_m^{N_{\mathit{drive\mathchar`-joint}}}\end{pmatrix} \label{eq:jacobian-for-contact-torque}
+  \bm{J}_m &=& \begin{pmatrix}\bm{j}_m^{(1)} & \bm{j}_m^{(2)} & \cdots & \bm{j}_m^{N_{\mathit{drive\mathchar`-joint}}}\end{pmatrix} \label{eq:jacobian-for-contact-torque} \\
+  \bm{j}_m^{(i)} &=& \left\{ \begin{array}{ll} \bm{\bar{j}}_m^{(i)} & \ \ 接触リンクがi番目の駆動関節変位に依存している場合 \\ \bm{0} & {\rm otherwise} \ \ \end{array} \right.
+\end{eqnarray}
+$\bm{\bar{j}}_m^{(i)}$は基礎ヤコビ行列の列ベクトルで次式で表される．\\
+$\psi_i$が回転関節の場合
+\begin{eqnarray}
+  \bm{\bar{j}}_m^{(i)} &=& \begin{pmatrix} \bm{a}_{\psi_i} \times (\bm{p}_m - \bm{p}_{\psi_i}) \\ \bm{a}_{\psi_i} \end{pmatrix}
+\end{eqnarray}
+$\psi_i$が直動関節の場合
+\begin{eqnarray}
+  \bm{\bar{j}}_m^{(i)} &=& \begin{pmatrix} \bm{a}_{\psi_i} \\ \bm{0} \end{pmatrix}
 \end{eqnarray}
 $\bm{a}_{\psi_i}, \bm{p}_{\psi_i} \in \mathbb{R}^3$は$i$番目の関節の回転軸ベクトルと位置である．
 
@@ -103,99 +111,97 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
      (contact-attention-coords-list)
      )
   "
- 以下$\bm{p}^i_j$はリンク$i$からリンク$j$へと向かう位置ベクトルをワールド座標系で表記したものとする。
+ 以下では，$\bm{p}^A_B$は$A$から$B$へ向かう位置ベクトルをワールド座標系で表記したものとする．
+ $A$,$B$は，\it{drive-joint-list}の関節位置$\psi_i$，\it{joint-list}の関節位置$\theta_i$，\it{contact-coords}の位置$m$のいずれかを指す．
  \begin{eqnarray}
    \frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}}
    &=& \frac{\partial}{\partial \bm{\theta}} \sum_{m=1}^{N_{\mathit{cnt}}} \bm{J}_m^T \bm{w}_m \\
    &=&
    \frac{\partial}{\partial \bm{\theta}} \sum_{m=1}^{N_{\mathit{cnt}}}
-   \begin{pmatrix}
-     \bm{a}_{\psi_0} \times \bm{p}^{\psi_0}_m & \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}} \times \bm{p}^{\psi_{N_{drive\mathchar`-joint}}}_m \\
-     \bm{a}_{\psi_0} & \bm{a}_{\psi_1} & \cdots & \bm{a}_{\psi_{N_{drive\mathchar`-joint}}}
-   \end{pmatrix}^T
-   \begin{pmatrix}
-     \bm{f}_m \\ \bm{n}_m
-   \end{pmatrix} \\
+   \begin{pmatrix}\bm{j}_m^{(1)} & \bm{j}_m^{(2)} & \cdots & \bm{j}_m^{(N_{\mathit{drive\mathchar`-joint}})}\end{pmatrix}^T
+   \bm{w}_m \\
    &=&
    \sum_{m=1}^{N_{\mathit{cnt}}}
    \frac{\partial}{\partial \bm{\theta}}
    \begin{pmatrix}
-     \bm{f}_m^T \left( \bm{a}_{\psi_0} \times \bm{p}^{\psi_0}_m \right) + \bm{n}_m^T \bm{a}_{\psi_0} \\
-     \bm{f}_m^T \left( \bm{a}_{\psi_1} \times \bm{p}^{\psi_1}_m \right) + \bm{n}_m^T \bm{a}_{\psi_1} \\
+     \bm{w}_m^T \bm{j}_m^{(1)} \\
+     \bm{w}_m^T \bm{j}_m^{(2)} \\
      \vdots \\
-     \bm{f}_m^T \left( \bm{a}_{\psi_{drive\mathchar`-joint}} \times \bm{p}^{\psi_{drive\mathchar`-joint}}_m \right) +
-     \bm{n}_m^T \bm{a}_{\psi_{drive\mathchar`-joint}}
+     \bm{w}_m^T \bm{j}_m^{(N_{\mathit{drive\mathchar`-joint}})}
    \end{pmatrix} \\
    &=&
    \sum_{m=1}^{N_{\mathit{cnt}}}
-   \left[
-     \bm{f}_m^T \frac{\partial}{\partial \theta_j} \left( \bm{a}_{\psi_i} \times \bm{p}^{\psi_i}_m \right) + \bm{n}_m^T
-     \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right]_{i,j} \\
+   \left[ \bm{w}_m^T \frac{\partial}{\partial \theta_j} \bm{j}_m^{(i)} \right]_{i,j} \ \ (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
+ \end{eqnarray}
+ したがって，各接触力によるトルクのヤコビ行列の各要素は次式で得られる．\\
+ $\psi_i$が回転関節の場合
+ \begin{eqnarray}
+   \bm{w}_m^T \frac{\partial}{\partial \theta_j} \bm{j}_m^{(i)}
    &=&
-   \sum_{m=1}^{N_{\mathit{cnt}}}
-   \left[
-     \bm{f}_m^T \left\{ \left( \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_m +
-     \bm{a}_{\psi_i} \times \left( \frac{\partial}{\partial \theta_j} \bm{p}_m - \frac{\partial}{\partial \theta_j}
-     \bm{p}_{\psi_i} \right) \right\} + \bm{n}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}
-     \right]_{i,j} \nonumber \\
-   && \hspace{40mm} (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
+   \begin{pmatrix} \bm{f}_m \\ \bm{n}_m \end{pmatrix}^T \frac{\partial}{\partial \theta_j} \begin{pmatrix} \bm{a}_{\psi_i} \times \bm{p}^{\psi_i}_m \\ \bm{a}_{\psi_i} \end{pmatrix}
+   \\
+   &=&
+   \bm{f}_m^T \frac{\partial}{\partial \theta_j} \left( \bm{a}_{\psi_i} \times \bm{p}^{\psi_i}_m \right)
+   + \bm{n}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \\
+   &=&
+   \bm{f}_m^T \left\{ \left( \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_m +
+   \bm{a}_{\psi_i} \times \left( \frac{\partial}{\partial \theta_j} \bm{p}_m - \frac{\partial}{\partial \theta_j}
+   \bm{p}_{\psi_i} \right) \right\} + \bm{n}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}
  \end{eqnarray}
+ $\psi_i$が直動関節の場合
+ \begin{eqnarray}
+   \bm{w}_m^T \frac{\partial}{\partial \theta_j} \bm{j}_m^{(i)}
+   &=&
+   \begin{pmatrix} \bm{f}_m \\ \bm{n}_m \end{pmatrix}^T \frac{\partial}{\partial \theta_j} \begin{pmatrix} \bm{a}_{\psi_i} \\ \bm{0} \end{pmatrix}
+   \\
+   &=&
+   \bm{f}_m^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}
+ \end{eqnarray}
+
+ $\frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}$(\it{drive-jnt-axis-derivative}), $\frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i}$(\it{drive-jnt-pos-derivative})は以下のように計算される．
  \begin{enumerate}
- \renewcommand{\labelenumi}{(\alph{enumi})}
- \item 関節$j$が関節$i$よりもルートリンクに近い関節の時、もしくは関節$j$と関節$i$が同一のルートリンクを持たない時、関節$i$の変化は関節$j$の位置、回転軸のベクトルに影響を与えないため、
- \begin{eqnarray}
-   \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
-   \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{0}
- \end{eqnarray}
- \item 関節$i$が関節$j$よりもルートリンクに近い関節、もしくは$i=j$の時、関節$j$が回転関節であれば、回転系での基礎方程式から、
- \begin{eqnarray}
-   \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \\
-   \frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i}
- \end{eqnarray}
- \item 関節$i$が関節$j$よりもルートリンクに近い関節の時、関節$j$が直動関節であれば、
- \begin{eqnarray}
-   \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
-   \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j}
- \end{eqnarray}
- (a), (b), (c)の時、関節$j$の変位が$\bm{p}_m$に影響を与えないことを仮定しているので、
- \begin{eqnarray}
-   \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{0}
- \end{eqnarray}
- \item 関節$j$の変位が$\bm{p}_m$に影響を与え(このパターンはtarget coordsに対して仮想リンクが設定されている場合などに発生する)、かつ関節$j$が回転関節であれば、
- \begin{eqnarray}
-   \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_m
- \end{eqnarray}
- \item 関節$j$の変位が$\bm{p}_m$に影響を与え、かつ関節$j$が直動関節であれば、
- \begin{eqnarray}
-   \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j}
- \end{eqnarray}
- (d), (e)の時、関節$j$の変位が関節$i$に影響を与えないことを想定しているので、
+ \renewcommand{\labelenumi}{(\Alph{enumi})}
+ \item 関節$\theta_j$が関節$\psi_i$よりもルートリンクに近いとき，もしくは関節$\theta_j$と関節$\psi_i$が同一のとき，
+   \begin{enumerate}
+   \renewcommand{\labelenumii}{(\Roman{enumii})}
+     \item 関節$\theta_j$が回転関節のとき，回転系での基礎方程式から，
+     \begin{eqnarray}
+       \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \\
+       \frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i}
+     \end{eqnarray}
+     \item 関節$\theta_j$が直動関節のとき
+     \begin{eqnarray}
+       \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
+       \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j}
+     \end{eqnarray}
+   \end{enumerate}
+ \item (A)でないとき，つまり\\ 関節$\psi_i$が関節$\theta_j$よりもルートリンクに近いとき，もしくは，ルートリンクから関節$\theta_j$までの間とルートリンクから関節$\psi_i$までの間に共通の関節が存在しないとき，関節$\theta_j$の変化は関節$\psi_i$の位置，回転軸のベクトルに影響を与えないため，
  \begin{eqnarray}
    \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
    \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{0}
  \end{eqnarray}
  \end{enumerate}
- 以上より
+
+ $\frac{\partial}{\partial \theta_j} \bm{p}_m$(\it{contact-pos-derivative})は以下のように計算される．
+ \begin{enumerate}
+ \renewcommand{\labelenumi}{(\alph{enumi})}
+ \item 関節$\theta_j$の変位が$\bm{p}_m$に影響を与えるとき(このパターンは\it{contact-target-coords}が仮想関節の先にが設置されている場合などに発生する)
+   \begin{enumerate}
+   \renewcommand{\labelenumii}{(\roman{enumii})}
+     \item 関節$\theta_j$が回転関節のとき
+     \begin{eqnarray}
+       \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_m
+     \end{eqnarray}
+     \item 関節$\theta_j$が直動関節のとき
+     \begin{eqnarray}
+       \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{a}_{\theta_j}
+     \end{eqnarray}
+   \end{enumerate}
+ \item  (a)でないとき，つまり\\ 関節$\theta_j$の変位が$\bm{p}_m$に影響を与えないとき
  \begin{eqnarray}
-   \frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}}
-   &=&
-   \sum_{m=1}^{N_{\mathit{cnt}}}
-   \left[
-     \begin{array}{cc}
-       \bm{0}
-       & (a)の時 \\
-       \bm{f}_m^T \left\{ \left( \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_m -
-       \bm{a}_{\psi_i} \times \left( \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i} \right)
-       \right\} + \bm{n}_m^T \left( \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \right) & (b)の時 \\
-       - \bm{f}_m^T \left( \bm{a}_{\psi_i} \times \bm{a}_{\theta_j} \right)
-       & (c)の時 \\
-       \bm{f}_m^T \left\{ \bm{a}_{\psi_i} \times \left( \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_m \right)
-       \right\} & (d)の時 \\
-       \bm{f}_m^T \left( \bm{a}_{\psi_i} \times \bm{a}_{\theta_j} \right)
-       & (e)の時 \end{array}
-     \right]_{i,j} \nonumber \\
-   && \hspace{40mm} (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
+   \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{0}
  \end{eqnarray}
+ \end{enumerate}
  "
   (let* ((jacobi
           (make-matrix (length drive-joint-list) (length joint-list)))
@@ -203,11 +209,11 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
          (jnt)
          (dependency-mode)
          (contact-coords)
-         (contact-attention-parent-link)
-         (contact-target-parent-link)
          (wrench)
-         (link-list-of-contact-attention)
-         (link-list-of-contact-target)
+         (drive-jnt-axis-derivative)
+         (drive-jnt-pos-derivative)
+         (contact-pos-derivative)
+         (jacobi-element)
          )
     (dotimes (i (length drive-joint-list))
       (setq drive-jnt (elt drive-joint-list i))
@@ -221,63 +227,69 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
                (setq dependency-mode :jnt-is-root)
                )
               (t
-               (setq dependency-mode nil)
+               (setq dependency-mode :no-dependency)
                ))
         (dotimes (k (length contact-attention-coords-list))
           (setq contact-coords (elt contact-target-coords-list k))
-          (setq contact-attention-parent-link (send (elt contact-attention-coords-list k) :parent))
-          (if (derivedp (elt contact-target-coords-list k) cascaded-coords)
-              (setq contact-target-parent-link (send (elt contact-target-coords-list k) :parent))
-            (setq contact-target-parent-link nil))
           (setq wrench (elt wrench-list k))
-          (setq link-list-of-contact-attention (send robot :link-list contact-attention-parent-link))
-          (setq link-list-of-contact-target (send robot :link-list contact-target-parent-link))
-          ;; [root, contact]間にdrive-jntがある and [root, contact]間にjntがある時の処理
-          (when (and (member (send drive-jnt :child-link) link-list-of-contact-attention)
-                     (member (send jnt :child-link) link-list-of-contact-attention))
-            (let* ((drive-jnt-axis (send drive-jnt :axis-vector))
-                   (jnt-axis (send jnt :axis-vector))
-                   (hessian-vec
-                    (cond ((and (derivedp drive-jnt rotational-joint)
-                                (derivedp jnt rotational-joint))
-                           (cond ((equal dependency-mode :jnt-is-root)
-                                  (concatenate float-vector
-                                               (v- (v* (v* jnt-axis drive-jnt-axis)
-                                                       (scale 1e-3 (v- (send contact-coords :worldpos) (send drive-jnt :pos))))
-                                                   (v* drive-jnt-axis
-                                                       (v* jnt-axis (scale 1e-3 (v- (send drive-jnt :pos) (send jnt :pos))))))
-                                               (v* jnt-axis drive-jnt-axis)))
-                                 (t
-                                  (float-vector 0 0 0 0 0 0)))) ;; drive-jointがルート側いあったら零ベクトル
-                          ((and (derivedp drive-jnt rotational-joint)
-                                (derivedp jnt linear-joint))
-                           (cond ((equal dependency-mode :jnt-is-root)
-                                  (concatenate float-vector (scale -1 (v* drive-jnt-axis jnt-axis)) (float-vector 0 0 0)))
-                                 (t
-                                  (float-vector 0 0 0 0 0 0)))) ;; drive-jointがルート側いあったら零ベクトル
-                          (t
-                           (error "unsupported joint type pair: ~a ~a~%" drive-jnt jnt)
-                           ))))
-              (cond ((equal dependency-mode :jnt-is-root)
-                     (setf (aref jacobi i j) (+ (aref jacobi i j) (v. wrench hessian-vec))))
-                    (t
-                     ))))
-          ;; jntの変位がcontact target coordsに影響を与える場合
-          (when (and (member (send drive-jnt :child-link) link-list-of-contact-attention)
-                     (member (send jnt :child-link) link-list-of-contact-target))
-            (let* ((drive-jnt-axis (send drive-jnt :axis-vector))
-                   (jnt-axis (send jnt :axis-vector))
-                   (hessian-vec
-                    (cond ((derivedp jnt rotational-joint)
-                           (v* drive-jnt-axis (v* jnt-axis (scale 1e-3 (v- (send contact-coords :worldpos) (send jnt :pos))))))
-                          ((derivedp jnt linear-joint)
-                           (v* drive-jnt-axis jnt-axis))
-                          (t
-                           (error "unsupported joint type: ~a~%" jnt)))))
-              (setf (aref jacobi i j) (+ (aref jacobi i j) (v. (subseq wrench 0 3) hessian-vec)))))
+          (when (member (send drive-jnt :child-link)
+                        (send robot :link-list (send (elt contact-attention-coords-list k) :parent)))
+            ;; calculate drive-jnt-axis-derivative and drive-jnt-pos-derivative
+            (cond (;; case (A) jntがdrive-jntよりもルートリンクに近いとき
+                   (equal dependency-mode :jnt-is-root)
+                   (cond (;; case (A).(I)
+                          (derivedp jnt rotational-joint)
+                          (setq drive-jnt-axis-derivative (v* (send jnt :axis-vector) (send drive-jnt :axis-vector)))
+                          (setq drive-jnt-pos-derivative (v* (send jnt :axis-vector) (scale 1e-3 (v- (send drive-jnt :pos) (send jnt :pos)))))
+                          )
+                         (;; case (A).(II)
+                          t ;; (derivedp jnt linear-joint)
+                          (setq drive-jnt-axis-derivative (float-vector 0 0 0))
+                          (setq drive-jnt-pos-derivative (send jnt :axis-vector))
+                          ))
+                   )
+                  (;; case (B) drive-jntがjntよりもルートリンクに近いとき
+                   t
+                   (setq drive-jnt-axis-derivative (float-vector 0 0 0))
+                   (setq drive-jnt-pos-derivative (float-vector 0 0 0))
+                   ))
+            ;; calculate contact-pos-derivative
+            (cond (;; case (a) jntの変位がcontact-target-coordsに影響を与えるとき
+                   (and (derivedp contact-coords cascaded-coords)
+                        (member (send jnt :child-link) (send robot :link-list (send contact-coords :parent))))
+                   (cond (;; case (a).(i)
+                          (derivedp jnt rotational-joint)
+                          (setq contact-pos-derivative (v* (send jnt :axis-vector) (scale 1e-3 (v- (send contact-coords :worldpos) (send jnt :pos)))))
+                          )
+                         (;; case (b).(ii)
+                          t ;; (derivedp jnt linear-joint)
+                          (setq contact-pos-derivative (send jnt :axis-vector))
+                          ))
+                   )
+                  (;; case (a) jntの変位がcontact-target-coordsに影響を与えないとき
+                   t
+                   (setq contact-pos-derivative (float-vector 0 0 0))
+                   ))
+            ;; set jacobian element
+            (cond ((derivedp drive-jnt rotational-joint)
+                   (setq jacobi-element
+                         (+
+                          (v. (subseq wrench 0 3)
+                              (v+ (v* drive-jnt-axis-derivative (scale 1e-3 (v- (send contact-coords :worldpos) (send drive-jnt :pos))))
+                                  (v* (send drive-jnt :axis-vector) (v- contact-pos-derivative drive-jnt-pos-derivative))
+                                  ))
+                          (v. (subseq wrench 3 6) drive-jnt-axis-derivative)
+                          ))
+                   )
+                  (t ;; (derivedp drive-jnt linear-joint)
+                   (setq jacobi-element
+                         (v. (subseq wrench 0 3) drive-jnt-axis-derivative))
+                   ))
+            (setf (aref jacobi i j) (+ (aref jacobi i j) jacobi-element))
+            )
           )))
-      jacobi
-      ))
+    jacobi
+    ))
 
 (defun get-link-jacobian-for-gravity-torque
     (&key

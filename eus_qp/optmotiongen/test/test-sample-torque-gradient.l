@@ -6,9 +6,9 @@
 
 (init-unit-test)
 
-(deftest test-sample-torque-gradient
-  (let* ((ret (sample-torque-gradient))
-         (contact-torque-jacobian-error (elt ret 0))
+(defun test-sample-torque-gradient-common
+    (ret)
+  (let* ((contact-torque-jacobian-error (elt ret 0))
          (gravity-torque-jacobian-error (elt ret 1))
          (torque-jacobian-error (elt ret 2))
          )
@@ -16,6 +16,26 @@
     (assert (eps= (norm gravity-torque-jacobian-error) 0.0 1e-3))
     (assert (eps= (norm torque-jacobian-error) 0.0 1e-3))
     )
+  )
+
+(deftest test-sample-torque-gradient-sample-arm
+  (test-sample-torque-gradient-common
+   (sample-torque-gradient-sample-arm))
+  )
+
+(deftest test-sample-torque-gradient-sample-robot
+  (test-sample-torque-gradient-common
+   (sample-torque-gradient-sample-robot))
+  )
+
+(deftest test-sample-torque-gradient-sample-robot-with-root-virtual
+  (test-sample-torque-gradient-common
+   (sample-torque-gradient-sample-robot :root-virtual-mode :6dof))
+  )
+
+(deftest test-sample-torque-gradient-sample-robot-with-root-virtual-drive-root-virtual
+  (test-sample-torque-gradient-common
+   (sample-torque-gradient-sample-robot :root-virtual-mode :6dof :drive-root-virtual? t))
   )
 
 
