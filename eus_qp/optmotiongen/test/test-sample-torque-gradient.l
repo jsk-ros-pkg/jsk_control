@@ -8,10 +8,19 @@
 
 (defun test-sample-torque-gradient-common
     (ret)
-  (let* ((contact-torque-jacobian-error (elt ret 0))
-         (gravity-torque-jacobian-error (elt ret 1))
-         (torque-jacobian-error (elt ret 2))
+  (let* ((contact-torque-error
+          (cadr (assoc :contact-torque-error ret)))
+         (gravity-torque-error
+          (cadr (assoc :gravity-torque-error ret)))
+         (contact-torque-jacobian-error
+          (cadr (assoc :contact-torque-jacobian-error ret)))
+         (gravity-torque-jacobian-error
+          (cadr (assoc :gravity-torque-jacobian-error ret)))
+         (torque-jacobian-error
+          (cadr (assoc :torque-jacobian-error ret)))
          )
+    (assert (eps= (norm contact-torque-error) 0.0 1e-3))
+    (assert (eps= (norm gravity-torque-error) 0.0 1e-3))
     (assert (eps= (norm contact-torque-jacobian-error) 0.0 1e-3))
     (assert (eps= (norm gravity-torque-jacobian-error) 0.0 1e-3))
     (assert (eps= (norm torque-jacobian-error) 0.0 1e-3))
