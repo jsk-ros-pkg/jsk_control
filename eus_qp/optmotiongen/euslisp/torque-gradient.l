@@ -1,4 +1,5 @@
 (load "./util.l")
+(load "./extended-joint-link.l")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -18,8 +19,8 @@
 \it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{(N_{\mathit{drive\mathchar`-joint}})}$として，
 次式を満たすヤコビ行列$\bm{J}_m$を返す．
 \begin{eqnarray}
-  \bm{J}_m &=& \begin{pmatrix}\bm{j}_m^{(1)} & \bm{j}_m^{(2)} & \cdots & \bm{j}_m^{N_{\mathit{drive\mathchar`-joint}}}\end{pmatrix} \label{eq:jacobian-for-contact-torque} \\
-  \bm{j}_m^{(i)} &=& \left\{ \begin{array}{ll} \bm{\bar{j}}_m^{(i)} & \ \ 接触リンクがi番目の駆動関節変位に依存している場合 \\ \bm{0} & {\rm otherwise} \ \ \end{array} \right.
+  \bm{J}_m &=& \begin{pmatrix}\bm{j}_m^{(1)} & \bm{j}_m^{(2)} & \cdots & \bm{j}_m^{(N_{\mathit{drive\mathchar`-joint}})}\end{pmatrix} \label{eq:jacobian-for-contact-torque} \\
+  \bm{j}_m^{(i)} &=& \left\{ \begin{array}{ll} \bm{\bar{j}}_m^{(i)} & \ \ 接触リンクがi番目の駆動関節変位\psi_iに依存している場合 \\ \bm{0} & \ \ {\rm otherwise} \ \ \end{array} \right.
 \end{eqnarray}
 $\bm{\bar{j}}_m^{(i)}$は基礎ヤコビ行列の列ベクトルで次式で表される．\\
 $\psi_i$が回転関節の場合
@@ -202,6 +203,8 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
    \frac{\partial}{\partial \theta_j} \bm{p}_m &=& \bm{0}
  \end{eqnarray}
  \end{enumerate}
+
+return $\frac{\partial \bm{\tau}^{\mathit{cnt}}}{\partial \bm{\theta}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}} \times N_{\mathit{joint}}}$
  "
   (let* ((jacobi
           (make-matrix (length drive-joint-list) (length joint-list)))
@@ -303,25 +306,30 @@ return $\bm{\tau}^{\mathit{cnt}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-join
 \it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}}}$として，
 次式を満たすヤコビ行列$\bm{J}_{\mathit{cog,k}}$を返す．
 \begin{eqnarray}
-  \bm{\dot{p}}_{\mathit{cog,k}} &=& \bm{J}_{\mathit{cog,k}} \bm{\dot{\psi}} \\ &=& \sum_{i=1}^{N_k} \bm{j}_{\mathit{cog,k}}^{(i)} \dot{\psi}_i \\
-  \bm{j}_{\mathit{cog,k}}^{(i)} &=& \left\{\begin{array}{ll} \bm{a}_{\psi_i} \times (\bm{p}_{\mathit{cog,k}} - \bm{p}_{\psi_i}) & (1 \leq i \leq N_k) \\ \bm{0}_3 & (N_k+1 \leq i \leq N_{\mathit{drive\mathchar`-joint}}) \end{array}\right.
+  \bm{\dot{p}}_{\mathit{cog,k}} &=& \bm{J}_{\mathit{cog,k}} \bm{\dot{\psi}} = \sum_{i=1}^{N_k} \bm{j}_{\mathit{cog,k}}^{(i)} \dot{\psi}_i
+\end{eqnarray}
+\begin{eqnarray}
+  \bm{J}_{\mathit{cog,k}} &=& \begin{pmatrix}\bm{j}_{\mathit{cog,k}}^{(1)} & \bm{j}_{\mathit{cog,k}}^{(2)} & \cdots & \bm{j}_{\mathit{cog,k}}^{(N_{\mathit{drive\mathchar`-joint}})}\end{pmatrix} \label{eq:jacobian-for-gravity-torque} \\
+  \bm{j}_{\mathit{cog,k}}^{(i)} &=& \left\{ \begin{array}{ll} \bm{\bar{j}}_{\mathit{cog,k}}^{(i)} & \ \ \mathit{gravity\mathchar`-link}がi番目の駆動関節変位\psi_iに依存している場合 \\
+  \bm{0} & \ \ {\rm otherwise} \ \ \end{array} \right.
+\end{eqnarray}
+$\bm{\bar{j}}_{\mathit{cog,k}}^{(i)}$は基礎ヤコビ行列の列ベクトルで次式で表される．\\
+$\psi_i$が回転関節の場合
+\begin{eqnarray}
+  \bm{\bar{j}}_{\mathit{cog,k}}^{(i)} &=& \bm{a}_{\psi_i} \times (\bm{p}_{\mathit{cog,k}} - \bm{p}_{\psi_i})
+\end{eqnarray}
+$\psi_i$が直動関節の場合
+\begin{eqnarray}
+  \bm{\bar{j}}_{\mathit{cog,k}}^{(i)} &=& \bm{a}_{\psi_i}
 \end{eqnarray}
 $\bm{a}_{\psi_i}, \bm{p}_{\psi_i} \in \mathbb{R}^3$は$i$番目の関節の回転軸ベクトルと位置である．
-\it{gravity-link}よりもルート側にある関節の番号を$1,\cdots,N_k$，
-\it{gravity-link}よりも末端側にある関節の番号を$N_k+1,\cdots,N_{\mathit{drive\mathchar`-joint}}$とする．
-リンクの重心位置と関節角度の依存関係から，ヤコビ行列の右には次式のように零ベクトルが並ぶ．
-\begin{eqnarray}
-  \bm{J}_{\mathit{cog,k}}
-  &=& \begin{pmatrix}\bm{j}_{\mathit{cog,k}}^{(1)} & \cdots & \bm{j}_{\mathit{cog,k}}^{(N_k)} & \bm{j}_{\mathit{cog,k}}^{(N_k+1)} & \cdots & \bm{j}_{\mathit{cog,k}}^{N_{\mathit{drive\mathchar`-joint}}}\end{pmatrix} \\
-  &=& \begin{pmatrix}\bm{j}_{\mathit{cog,k}}^{(1)} & \cdots & \bm{j}_{\mathit{cog,k}}^{(N_k)} & \bm{0} & \cdots & \bm{0}\end{pmatrix} \label{eq:jacobian-for-gravity-torque} \label{eq:jacobian-for-gravity-torque}
-\end{eqnarray}
 
 return $\bm{J}_{\mathit{cog,k}} \in \mathbb{R}^{3 \times N_{\mathit{drive\mathchar`-joint}}}$
   "
   (let* ((jacobi
           (make-matrix 3 (length drive-joint-list)))
          (gravity-link-cog-world ;; [m]
-          (scale 1e-3 (send gravity-link :centroid)))
+          (scale 1e-3 (send gravity-link :centroid-with-fixed-child-links)))
          (drive-jnt)
          )
     (dotimes (i (length drive-joint-list))
@@ -337,11 +345,8 @@ return $\bm{J}_{\mathit{cog,k}} \in \mathbb{R}^{3 \times N_{\mathit{drive\mathch
                 (cond ((derivedp drive-jnt linear-joint)
                        jnt-axis
                        )
-                      ((derivedp drive-jnt rotational-joint)
+                      (t ;; (derivedp drive-jnt rotational-joint)
                        (v* jnt-axis gravity-link-cog-local)
-                       )
-                      (t
-                       (error "unsupported joint type: ~a~%" drive-jnt)
                        ))
                 )
                )
@@ -365,6 +370,7 @@ $m_k$は$k$番目のリンクの質量である．
 
 return $\bm{\tau}^{\mathit{grav}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}}}$
   "
+  (set-mass-property-with-fixed-child-links robot)
   (let* ((torque
           (make-array (length drive-joint-list) :element-type :float :initial-element 0))
          )
@@ -391,42 +397,95 @@ return $\bm{\tau}^{\mathit{grav}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joi
      (gravity-link-list)
      )
   "
-\eqref{eq:jacobian-for-gravity-torque}の$\bm{J}_{\mathit{cog,k}}$を以下のように分解して利用する．
-\begin{eqnarray}
-  \bm{J}_{\mathit{cog,k}}
-  = \begin{pmatrix} \bm{j}_{\mathit{cog,x,k}}^T \\ \bm{j}_{\mathit{cog,y,k}}^T \\ \bm{j}_{\mathit{cog,z,k}}^T \end{pmatrix}
-  = \begin{pmatrix} \left(\frac{\partial p_{\mathit{cog,x,k}}}{\partial \bm{\psi}}\right)^T \\ \left(\frac{\partial p_{\mathit{cog,y,k}}}{\partial \bm{\psi}}\right)^T \\ \left(\frac{\partial p_{\mathit{cog,z,k}}}{\partial \bm{\psi}}\right)^T \end{pmatrix}
-\end{eqnarray}
-これを\eqref{eq:gravity-torque}に代入すると，
-\begin{eqnarray}
-  \bm{\tau}^{\mathit{grav}} &=& \left( \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} m_k \bm{J}_{\mathit{cog,k}}^T \right) \bm{g} \\
-  &=& \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} m_k \begin{pmatrix} \bm{j}_{\mathit{cog,x,k}} & \bm{j}_{\mathit{cog,y,k}} & \bm{j}_{\mathit{cog,z,k}} \end{pmatrix} \begin{pmatrix} 0 \\ 0 \\ g \end{pmatrix} \\
-  &=& \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} m_k g \bm{j}_{\mathit{cog,z,k}} \\
-  &=& \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} m_k g \frac{\partial p_{\mathit{cog,z,k}}}{\partial \bm{\psi}}
-\end{eqnarray}
-
-\it{joint-list}の関節角度ベクトルを$\bm{\theta} \in \mathbb{R}^{N_{\mathit{joint}}}$，
-\it{drive-joint-list}の関節角度ベクトルを$\bm{\psi} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}}}$とする．
-トルク勾配行列$\frac{\partial \bm{\tau}^{\mathit{grav}}}{\partial \bm{\theta}}$は次式で得られる．これは対称行列である．
-\begin{eqnarray}
-  \frac{\partial \bm{\tau}^{\mathit{grav}}}{\partial \bm{\theta}} &=& \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} m_k g \frac{\partial^2 p_{\mathit{cog,z,k}}}{\partial \bm{\psi} \partial \bm{\theta}} \\
-  \frac{\partial^2 p_{\mathit{cog,z,k}}}{\partial \bm{\psi} \partial \bm{\theta}} &=& \left[ \frac{\partial^2 p_{\mathit{cog,z,k}}}{\partial \psi_i \partial \theta_j} \right]_{i=1,\cdots,N_{\mathit{drive\mathchar`-joint}},j=1,\cdots,N_{\mathit{joint}}}
-\end{eqnarray}
-つまり
 \begin{eqnarray}
   \frac{\partial \bm{\tau}^{\mathit{grav}}}{\partial \bm{\theta}}
-  &=&
-  \left[ \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} m_k g \frac{\partial^2 p_{\mathit{cog,z,k}}}{\partial \psi_i \partial \theta_j} \right]_{i=1,\cdots,N_{\mathit{drive\mathchar`-joint}},j=1,\cdots,N_{\mathit{joint}}}
+  &=& \frac{\partial}{\partial \theta_j} \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} \bm{J}_{\mathit{cog,k}}^T m_k \bm{g} \\
+  &=& \frac{\partial}{\partial \theta_j} \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} \begin{pmatrix}\bm{j}_{\mathit{cog,k}}^{(1)} & \bm{j}_{\mathit{cog,k}}^{(2)} & \cdots & \bm{j}_{\mathit{cog,k}}^{(N_{\mathit{drive\mathchar`-joint}})}\end{pmatrix}^T m_k \bm{g} \\
+  &=& \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}} \frac{\partial}{\partial \theta_j} \begin{pmatrix}m_k \bm{g}^T \bm{j}_{\mathit{cog,k}}^{(1)} \\ m_k \bm{g}^T \bm{j}_{\mathit{cog,k}}^{(2)} \\ \vdots \\ m_k \bm{g}^T\bm{j}_{\mathit{cog,k}}^{(N_{\mathit{drive\mathchar`-joint}})}\end{pmatrix} \\
+   &=&
+   \sum_{k=1}^{N_{\mathit{gravity\mathchar`-link}}}
+   \left[ m_k \bm{g}^T \frac{\partial}{\partial \theta_j} \bm{j}_{\mathit{cog,k}}^{(i)} \right]_{i,j} \ \ (i=1,2,\cdots,N_{drive\mathchar`-joint}, \ \ j=1,2,\cdots,N_{joint})
 \end{eqnarray}
+ したがって，各リンクの重力によるトルクのヤコビ行列の各要素は次式で得られる．\\
+ $k$番目の\it{gravity-link-list}が$i$番目の駆動関節変位$\psi_i$に依存していない場合
+ \begin{eqnarray}
+   m_k \bm{g}^T \frac{\partial}{\partial \theta_j} \bm{j}_{\mathit{cog,k}}^{(i)} &=& 0
+ \end{eqnarray}
+ $k$番目の\it{gravity-link-list}が$i$番目の駆動関節変位$\psi_i$に依存していて，$\psi_i$が回転関節の場合
+ \begin{eqnarray}
+   m_k \bm{g}^T \frac{\partial}{\partial \theta_j} \bm{j}_{\mathit{cog,k}}^{(i)}
+   &=&
+   m_k \bm{g}^T \frac{\partial}{\partial \theta_j} \left( \bm{a}_{\psi_i} \times \bm{p}^{\psi_i}_{\mathit{cog,k}} \right) \\
+   &=&
+   m_k \bm{g}^T \left\{ \left( \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} \right) \times \bm{p}^{\psi_i}_{\mathit{cog,k}} +
+   \bm{a}_{\psi_i} \times \left( \frac{\partial}{\partial \theta_j} \bm{p}_{\mathit{cog,k}} - \frac{\partial}{\partial \theta_j}
+   \bm{p}_{\psi_i} \right) \right\}
+ \end{eqnarray}
+ $k$番目の\it{gravity-link-list}が$i$番目の駆動関節変位$\psi_i$に依存していて，$\psi_i$が直動関節の場合
+ \begin{eqnarray}
+   m_k \bm{g}^T \frac{\partial}{\partial \theta_j} \bm{j}_{\mathit{cog,k}}^{(i)}
+   &=&
+   m_k \bm{g}^T \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}
+ \end{eqnarray}
+
+ $\frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i}$(\it{drive-jnt-axis-derivative}), $\frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i}$(\it{drive-jnt-pos-derivative})は以下のように計算される．
+ \begin{enumerate}
+ \renewcommand{\labelenumi}{(\Alph{enumi})}
+ \item 関節$\theta_j$が関節$\psi_i$よりもルートリンクに近いとき，もしくは関節$\theta_j$と関節$\psi_i$が同一のとき，
+   \begin{enumerate}
+   \renewcommand{\labelenumii}{(\Roman{enumii})}
+     \item 関節$\theta_j$が回転関節のとき，回転系での基礎方程式から，
+     \begin{eqnarray}
+       \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{a}_{\psi_i} \\
+       \frac{\partial}{\partial \theta_j} \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\psi_i}
+     \end{eqnarray}
+     \item 関節$\theta_j$が直動関節のとき
+     \begin{eqnarray}
+       \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
+       \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{a}_{\theta_j}
+     \end{eqnarray}
+   \end{enumerate}
+ \item (A)でないとき，つまり\\ 関節$\psi_i$が関節$\theta_j$よりもルートリンクに近いとき，もしくは，ルートリンクから関節$\theta_j$までの間とルートリンクから関節$\psi_i$までの間に共通の関節が存在しないとき，関節$\theta_j$の変化は関節$\psi_i$の位置，回転軸のベクトルに影響を与えないため，
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{a}_{\psi_i} &=& \bm{0} \\
+   \frac{\partial}{\partial \theta_j}  \bm{p}_{\psi_i} &=& \bm{0}
+ \end{eqnarray}
+ \end{enumerate}
+
+ $\frac{\partial}{\partial \theta_j} \bm{p}_{\mathit{cog,k}}$(\it{centroid-derivative})は以下のように計算される．
+ \begin{enumerate}
+ \renewcommand{\labelenumi}{(\alph{enumi})}
+ \item $k$番目の\it{gravity-link-list}が$j$番目の関節変位$\theta_j$に依存しているとき
+   \begin{enumerate}
+   \renewcommand{\labelenumii}{(\roman{enumii})}
+     \item 関節$\theta_j$が回転関節のとき
+     \begin{eqnarray}
+       \frac{\partial}{\partial \theta_j} \bm{p}_{\mathit{cog,k}} &=& \bm{a}_{\theta_j} \times \bm{p}^{\theta_j}_{\mathit{cog,k}}
+     \end{eqnarray}
+     \item 関節$\theta_j$が直動関節のとき
+     \begin{eqnarray}
+       \frac{\partial}{\partial \theta_j} \bm{p}_{\mathit{cog,k}} &=& \bm{a}_{\theta_j}
+     \end{eqnarray}
+   \end{enumerate}
+ \item  (a)でないとき，つまり\\ $k$番目の\it{gravity-link-list}が$j$番目の関節変位$\theta_j$に依存していないとき
+ \begin{eqnarray}
+   \frac{\partial}{\partial \theta_j} \bm{p}_{\mathit{cog,k}} &=& \bm{0}
+ \end{eqnarray}
+ \end{enumerate}
 
 return $\frac{\partial \bm{\tau}^{\mathit{grav}}}{\partial \bm{\theta}} \in \mathbb{R}^{N_{\mathit{drive\mathchar`-joint}} \times N_{\mathit{joint}}}$
   "
+  (set-mass-property-with-fixed-child-links robot)
   (let* ((jacobi
           (make-matrix (length drive-joint-list) (length joint-list)))
          (link-list-of-gravity-link)
          (drive-jnt)
          (jnt)
          (dependency-mode)
+         (drive-jnt-axis-derivative)
+         (drive-jnt-pos-derivative)
+         (centroid-derivative)
+         (jacobi-element)
          )
     (dotimes (i (length drive-joint-list))
       (setq drive-jnt (elt drive-joint-list i))
@@ -440,59 +499,64 @@ return $\frac{\partial \bm{\tau}^{\mathit{grav}}}{\partial \bm{\theta}} \in \mat
                (setq dependency-mode :jnt-is-root)
                )
               (t
-               (setq dependency-mode nil)
+               (setq dependency-mode :no-dependency)
                ))
-        ;; [root, jnt]間にdrive-jntがある or [root, drive-jnt]間にjntがある ときだけ処理する
-        (when dependency-mode
-          (dolist (gravity-link gravity-link-list)
-            ;; gravity-linkがdrive-jntよりも末端側にある and gravity-linkがjntよりも末端側にある ときだけ処理する
-            (setq link-list-of-gravity-link (send robot :link-list gravity-link))
-            (when (and (member (send drive-jnt :child-link) link-list-of-gravity-link)
-                       (member (send jnt :child-link) link-list-of-gravity-link))
-              (let* ((drive-jnt-axis
-                      (send drive-jnt :axis-vector))
-                     (jnt-axis
-                      (send jnt :axis-vector))
-                     (hessian-vec
-                      (cond ((and (derivedp drive-jnt rotational-joint)
-                                  (derivedp jnt rotational-joint))
-                             (cond ((equal dependency-mode :jnt-is-root)
-                                    (v* jnt-axis (v* drive-jnt-axis (scale 1e-3 (v- (send gravity-link :centroid) (send drive-jnt :pos)))))
-                                    )
-                                   (t
-                                    (v* drive-jnt-axis (v* jnt-axis (scale 1e-3 (v- (send gravity-link :centroid) (send jnt :pos)))))
-                                    ))
-                             )
-                            ((and (derivedp drive-jnt linear-joint)
-                                  (derivedp jnt linear-joint))
-                             (float-vector 0 0 0)
-                             )
-                            ((and (derivedp drive-jnt linear-joint)
-                                  (derivedp jnt rotational-joint))
-                             (cond ((equal dependency-mode :drive-jnt-is-root)
-                                    (float-vector 0 0 0) ;; linear-jointがルート側いあったら零ベクトル
-                                    )
-                                   (t
-                                    (v* jnt-axis drive-jnt-axis)
-                                    ))
-                             )
-                            ((and (derivedp drive-jnt rotational-joint)
-                                  (derivedp jnt linear-joint))
-                             (cond ((equal dependency-mode :jnt-is-root)
-                                    (float-vector 0 0 0) ;; linear-jointがルート側いあったら零ベクトル
-                                    )
-                                   (t
-                                    (v* drive-jnt-axis jnt-axis)
-                                    ))
-                             )
-                            (t
-                             (error "unsupported joint type pair: ~a ~a~%" drive-jnt jnt)
-                             ))
-                      )
-                     )
-                (setf (aref jacobi i j)
-                      (+ (aref jacobi i j) (* (send gravity-link :mg) (elt hessian-vec 2))))
-                ))))
+        (dolist (gravity-link gravity-link-list)
+          (setq link-list-of-gravity-link (send robot :link-list gravity-link))
+          ;; k番目のgravity-link-listがi番目の駆動関節に依存しているとき
+          (when (member (send drive-jnt :child-link) link-list-of-gravity-link)
+            ;; calculate drive-jnt-axis-derivative and drive-jnt-pos-derivative
+            (cond (;; case (A) jntがdrive-jntよりもルートリンクに近いとき
+                   (equal dependency-mode :jnt-is-root)
+                   (cond (;; case (A).(I)
+                          (derivedp jnt rotational-joint)
+                          (setq drive-jnt-axis-derivative (v* (send jnt :axis-vector) (send drive-jnt :axis-vector)))
+                          (setq drive-jnt-pos-derivative (v* (send jnt :axis-vector) (scale 1e-3 (v- (send drive-jnt :pos) (send jnt :pos)))))
+                          )
+                         (;; case (A).(II)
+                          t ;; (derivedp jnt linear-joint)
+                          (setq drive-jnt-axis-derivative (float-vector 0 0 0))
+                          (setq drive-jnt-pos-derivative (send jnt :axis-vector))
+                          ))
+                   )
+                  (;; case (B) drive-jntがjntよりもルートリンクに近いとき
+                   t
+                   (setq drive-jnt-axis-derivative (float-vector 0 0 0))
+                   (setq drive-jnt-pos-derivative (float-vector 0 0 0))
+                   ))
+            ;; calculate centroid-derivative
+            (cond (;; case (a) gravity-linkがjntに依存しているとき
+                   (member (send jnt :child-link) link-list-of-gravity-link)
+                   (cond (;; case (a).(i)
+                          (derivedp jnt rotational-joint)
+                          (setq centroid-derivative
+                                (v* (send jnt :axis-vector)
+                                    (scale 1e-3 (v- (send gravity-link :centroid-with-fixed-child-links) (send jnt :pos)))))
+                          )
+                         (;; case (a).(ii)
+                          t ;; (derivedp jnt linear-joint)
+                          (setq centroid-derivative (send jnt :axis-vector))
+                          ))
+                   )
+                  (;; case (b) gravity-linkがjntに依存していないとき
+                   t
+                   (setq centroid-derivative (float-vector 0 0 0))
+                   ))
+            ;; set jacobian element
+            (cond ((derivedp drive-jnt rotational-joint)
+                   (setq jacobi-element
+                         (v. (send gravity-link :mg-vec)
+                             (v+ (v* drive-jnt-axis-derivative
+                                     (scale 1e-3 (v- (send gravity-link :centroid-with-fixed-child-links) (send drive-jnt :pos))))
+                                 (v* (send drive-jnt :axis-vector) (v- centroid-derivative drive-jnt-pos-derivative))
+                                 )))
+                   )
+                  (t ;; (derivedp drive-jnt linear-joint)
+                   (setq jacobi-element
+                         (v. (send gravity-link :mg-vec) drive-jnt-axis-derivative))
+                   ))
+            (setf (aref jacobi i j) (+ (aref jacobi i j) jacobi-element))
+            ))
         ))
     jacobi
     ))
