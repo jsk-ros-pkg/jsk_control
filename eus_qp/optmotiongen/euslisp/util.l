@@ -133,6 +133,21 @@ Override to support zero row matrix.
        (setf ,lst (list ,el))
      (nconc ,lst (list ,el))))
 
+(defun midvec-list
+  (ratio vec-1-list vec-2-list)
+   (mapcar #'(lambda (vec-1 vec-2)
+               (v+ (scale (- 1 ratio) vec-1)
+                   (scale ratio vec-2)))
+           vec-1-list
+           vec-2-list))
+
+(defun midcoords-list
+  (ratio cds-1-list cds-2-list)
+  (mapcar #'(lambda (cds-1 cds-2)
+              (midcoords
+               ratio cds-1 cds-2))
+          cds-1-list
+          cds-2-list))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; geometry

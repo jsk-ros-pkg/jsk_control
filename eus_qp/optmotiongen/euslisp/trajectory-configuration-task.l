@@ -1,4 +1,4 @@
-(load "./instant-configuration-task.l")
+(load "./instant-manipulation-configuration-task.l")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -787,6 +787,7 @@ Print status.
     (robot-env)
     (loop? t)
     (visualize-callback-func)
+    (visualize-force? nil)
     )
    "
 Play motion.
@@ -801,17 +802,66 @@ Play motion.
           )
      (do-until-key
       (dotimes (i (1- (length _instant-config-task-list)))
-        (let* ((av-current
-                (send (send (elt (if reverse? (reverse _instant-config-task-list) _instant-config-task-list) i)
-                            :robot-env) :angle-vector))
-               (av-next
-                (send (send (elt (if reverse? (reverse _instant-config-task-list) _instant-config-task-list) (1+ i))
-                            :robot-env) :angle-vector))
+        (let* ((instant-config-task-current
+                (elt (if reverse? (reverse _instant-config-task-list) _instant-config-task-list) i))
+               (instant-config-task-next
+                (elt (if reverse? (reverse _instant-config-task-list) _instant-config-task-list) (1+ i)))
+               (tmp-short-len)
                )
           (dotimes (j 10)
-            (send robot-env :angle-vector (midpoint (/ (float (1+ j)) 10) av-current av-next))
-            (x::window-main-one)
+            (send robot-env :angle-vector
+                  (midpoint (/ (float (1+ j)) 10)
+                            (send (send instant-config-task-current :robot-env) :angle-vector)
+                            (send (send instant-config-task-next :robot-env) :angle-vector)))
             (send *irtviewer* :draw-objects :flush nil)
+            (if visualize-force?
+                (progn
+                  ;; draw force and moment of the robot
+                  (setq tmp-short-len
+                        (min (length (send instant-config-task-current :force-list))
+                             (length (send instant-config-task-next :force-list))))
+                  (draw-force-value
+                   :force-list
+                   (midvec-list
+                    (/ (float (1+ j)) 10)
+                    (subseq (send instant-config-task-current :force-list) 0 tmp-short-len)
+                    (subseq (send instant-config-task-next :force-list) 0 tmp-short-len))
+                   :moment-list
+                   (midvec-list
+                    (/ (float (1+ j)) 10)
+                    (subseq (send instant-config-task-current :moment-list) 0 tmp-short-len)
+                    (subseq (send instant-config-task-next :moment-list) 0 tmp-short-len))
+                   :coords-list
+                   (midcoords-list
+                    (/ (float (1+ j)) 10)
+                    (subseq (send instant-config-task-current :contact-target-coords-list) 0 tmp-short-len)
+                    (subseq (send instant-config-task-next :contact-target-coords-list) 0 tmp-short-len))
+                   :force-color #f(0.8 0.2 0.2)
+                   :draw-cop? nil
+                   )
+                  ;; draw force and moment of the object
+                  (if (and (derivedp instant-config-task-current instant-manipulation-configuration-task)
+                           (derivedp instant-config-task-next instant-manipulation-configuration-task))
+                      (draw-force-value
+                       :force-list
+                       (midvec-list
+                        (/ (float (1+ j)) 10)
+                        (subseq (send instant-config-task-current :force-obj-list) 0 tmp-short-len)
+                        (subseq (send instant-config-task-next :force-obj-list) 0 tmp-short-len))
+                       :moment-list
+                       (midvec-list
+                        (/ (float (1+ j)) 10)
+                        (subseq (send instant-config-task-current :moment-obj-list) 0 tmp-short-len)
+                        (subseq (send instant-config-task-next :moment-obj-list) 0 tmp-short-len))
+                       :coords-list
+                       (midcoords-list
+                        (/ (float (1+ j)) 10)
+                        (subseq (send instant-config-task-current :contact-target-coords-obj-list) 0 tmp-short-len)
+                        (subseq (send instant-config-task-next :contact-target-coords-obj-list) 0 tmp-short-len))
+                       :force-color #f(0.8 0.2 0.2)
+                       :draw-cop? nil
+                       ))))
+            (x::window-main-one)
             (send *irtviewer* :viewer :flush)
             (unix::usleep (* 40 1000))
             (when visualize-callback-func
