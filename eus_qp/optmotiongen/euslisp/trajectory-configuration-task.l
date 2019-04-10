@@ -842,25 +842,29 @@ Play motion.
                   ;; draw force and moment of the object
                   (if (and (derivedp instant-config-task-current instant-manipulation-configuration-task)
                            (derivedp instant-config-task-next instant-manipulation-configuration-task))
-                      (draw-force-value
-                       :force-list
-                       (midvec-list
-                        (/ (float (1+ j)) 10)
-                        (subseq (send instant-config-task-current :force-obj-list) 0 tmp-short-len)
-                        (subseq (send instant-config-task-next :force-obj-list) 0 tmp-short-len))
-                       :moment-list
-                       (midvec-list
-                        (/ (float (1+ j)) 10)
-                        (subseq (send instant-config-task-current :moment-obj-list) 0 tmp-short-len)
-                        (subseq (send instant-config-task-next :moment-obj-list) 0 tmp-short-len))
-                       :coords-list
-                       (midcoords-list
-                        (/ (float (1+ j)) 10)
-                        (subseq (send instant-config-task-current :contact-target-coords-obj-list) 0 tmp-short-len)
-                        (subseq (send instant-config-task-next :contact-target-coords-obj-list) 0 tmp-short-len))
-                       :force-color #f(0.8 0.2 0.2)
-                       :draw-cop? nil
-                       ))))
+                      (progn
+                        (setq tmp-short-len
+                              (min (length (send instant-config-task-current :force-obj-list))
+                                   (length (send instant-config-task-next :force-obj-list))))
+                        (draw-force-value
+                         :force-list
+                         (midvec-list
+                          (/ (float (1+ j)) 10)
+                          (subseq (send instant-config-task-current :force-obj-list) 0 tmp-short-len)
+                          (subseq (send instant-config-task-next :force-obj-list) 0 tmp-short-len))
+                         :moment-list
+                         (midvec-list
+                          (/ (float (1+ j)) 10)
+                          (subseq (send instant-config-task-current :moment-obj-list) 0 tmp-short-len)
+                          (subseq (send instant-config-task-next :moment-obj-list) 0 tmp-short-len))
+                         :coords-list
+                         (midcoords-list
+                          (/ (float (1+ j)) 10)
+                          (subseq (send instant-config-task-current :contact-target-coords-obj-list) 0 tmp-short-len)
+                          (subseq (send instant-config-task-next :contact-target-coords-obj-list) 0 tmp-short-len))
+                         :force-color #f(0.8 0.2 0.2)
+                         :draw-cop? nil
+                         )))))
             (x::window-main-one)
             (send *irtviewer* :viewer :flush)
             (unix::usleep (* 40 1000))
