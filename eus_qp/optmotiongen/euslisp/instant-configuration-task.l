@@ -37,7 +37,7 @@
           (_dim-task "$\mathit{dim}(\bm{e})$")
           ;; scale
           (_kin-scale-mat-list "$K_{\mathit{kin}}$")
-          (_target-posture-scale "$k_{\mathit{posture}}$")
+          (_target-posture-scale-list "$k_{\mathit{posture}}$")
           (_norm-regular-scale-max "$k_{\mathit{max}}$")
           (_norm-regular-scale-offset "$k_{\mathit{off}}$")
           (_torque-regular-scale "$k_{\mathit{trq}}$")
@@ -188,6 +188,7 @@ $\bm{\hat{w}}$は次式のように，全接触部位でのワールド座標系
     (kin-scale-list)
     (kin-scale-mat-list)
     (target-posture-scale 1e-3)
+    (target-posture-scale-list)
     (norm-regular-scale-max (if only-kinematics? 1e-3 1e-5))
     (norm-regular-scale-offset 1e-7)
     (torque-regular-scale 1e-4)
@@ -238,7 +239,13 @@ Initialize instance
           (setq _kin-scale-mat-list
                 (make-list (length kin-target-coords-list) :initial-element (scale-matrix kin-scale (unit-matrix 6))))
           ))
-   (setq _target-posture-scale target-posture-scale)
+   (cond (target-posture-scale-list
+          (setq _target-posture-scale-list target-posture-scale-list)
+          )
+         (t
+          (setq _target-posture-scale-list
+                (make-list (length posture-joint-list) :initial-element target-posture-scale))
+          ))
    (setq _norm-regular-scale-max norm-regular-scale-max)
    (setq _norm-regular-scale-offset norm-regular-scale-offset)
    (setq _torque-regular-scale torque-regular-scale)
@@ -891,10 +898,12 @@ $\bm{\bar{\theta}}^{\mathit{trg}}, \bm{\bar{\theta}}$は着目関節リスト$\m
 return $\bm{e}^{\mathit{posture}}(\bm{q}) \in \mathbb{R}^{N_{\mathit{posture\mathchar`-joint}}}$
    "
    (map float-vector
-        #'(lambda (j a)
-            (* _target-posture-scale (send j :angle-to-speed (- a (send j :joint-angle)))))
+        #'(lambda (j a sc)
+            (* sc (send j :angle-to-speed (- a (send j :joint-angle)))))
         _posture-joint-list
-        _posture-joint-angle-list)
+        _posture-joint-angle-list
+        _target-posture-scale-list
+        )
    )
   (:task-value
    (&key (update? t))
@@ -1360,7 +1369,7 @@ return $\frac{\partial \bm{e}^{\mathit{posture}}}{\partial \bm{\theta}} \in \mat
        (setf
         (aref (send self :get :posture-task-jacobian-with-theta)
               i (position (elt _posture-joint-list i) _variant-joint-list))
-        (- _target-posture-scale)))
+        (- (elt _target-posture-scale-list i))))
      )
    (send self :get :posture-task-jacobian-with-theta)
    )
