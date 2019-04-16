@@ -191,8 +191,8 @@ class IpegaStatus(JoyStatus):
             self.R2 = False
         self.left_analog_x = msg.axes[0]
         self.left_analog_y = msg.axes[1]
-        self.right_analog_x = msg.axes[3]
-        self.right_analog_y = msg.axes[4]
+        self.right_analog_x = msg.axes[2]
+        self.right_analog_y = msg.axes[3]
         self.checkAnalogStick()
         self.orig_msg = msg
 

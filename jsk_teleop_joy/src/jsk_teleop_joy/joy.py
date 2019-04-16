@@ -96,6 +96,8 @@ class JoyManager():
       self.JoyStatus = PS3Status
     elif self.controller_type == 'ps3wired':
       self.JoyStatus = PS3WiredStatus
+    elif self.controller_type == 'ipega':
+      self.JoyStatus = IpegaStatus
     elif self.controller_type == 'auto':
       s = rospy.Subscriber('/joy', Joy, autoJoyDetect)
       self.state = self.STATE_WAIT_FOR_JOY
