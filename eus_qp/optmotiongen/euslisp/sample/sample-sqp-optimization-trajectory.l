@@ -8,71 +8,76 @@
      (mu-rot 0.01)
      (max-fz 500)
      (support-polygon-margin 20)
+     (coords-name-list (list :rleg-contact-coords :lleg-contact-coords :rarm-contact-coords :larm-contact-coords))
      )
-  (send (send *robot-env* :robot :get :rleg-contact-coords)
-        :put :contact-constraint
-        (instance* default-contact-constraint
-                   :init
-                   :mu-trans mu-trans
-                   :mu-rot mu-rot
-                   :max-fz max-fz
-                   (let* ((poly
-                           (send *robot-env* :robot :get :rleg_link5-support-polygon))
-                          (vs
-                           (mapcar #'(lambda (v)
-                                       (send (send (send *robot-env* :robot :get :rleg-contact-coords) :worldcoords)
-                                             :inverse-transform-vector v))
-                                   (send poly :vertices)
-                                   ))
-                          )
-                     (list :l-min-x (+ (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0) support-polygon-margin)
-                           :l-max-x (- (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0) support-polygon-margin)
-                           :l-min-y (+ (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1) support-polygon-margin)
-                           :l-max-y (- (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1) support-polygon-margin)
-                           ))
-                   ))
-  (send (send *robot-env* :robot :get :lleg-contact-coords)
-        :put :contact-constraint
-        (instance* default-contact-constraint
-                   :init
-                   :mu-trans mu-trans
-                   :mu-rot mu-rot
-                   :max-fz max-fz
-                   (let* ((poly
-                           (send *robot-env* :robot :get :lleg_link5-support-polygon))
-                          (vs
-                           (mapcar #'(lambda (v)
-                                       (send (send (send *robot-env* :robot :get :lleg-contact-coords) :worldcoords)
-                                             :inverse-transform-vector v))
-                                   (send poly :vertices)
-                                   ))
-                          )
-                     (list :l-min-x (+ (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0) support-polygon-margin)
-                           :l-max-x (- (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0) support-polygon-margin)
-                           :l-min-y (+ (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1) support-polygon-margin)
-                           :l-max-y (- (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1) support-polygon-margin)
-                           ))
-                   ))
-  (send (send *robot-env* :robot :get :rarm-contact-coords)
-        :put :contact-constraint
-        (instance default-contact-constraint
-                  :init
-                  :mu-trans mu-trans
-                  :mu-rot mu-rot
-                  :max-fz max-fz
-                  ;; :contact-face (send *robot-env* :robot :get :rarm_link6-support-polygon)
-                  :l-min-x -1 :l-max-x -1 :l-min-y 1 :l-max-y 1
-                  ))
-  (send (send *robot-env* :robot :get :larm-contact-coords)
-        :put :contact-constraint
-        (instance default-contact-constraint
-                  :init
-                  :mu-trans mu-trans
-                  :mu-rot mu-rot
-                  :max-fz max-fz
-                  ;; :contact-face (send *robot-env* :robot :get :larm_link6-support-polygon)
-                  :l-min-x -1 :l-max-x -1 :l-min-y 1 :l-max-y 1
-                  ))
+  (if (member :rleg-contact-coords coords-name-list)
+      (send (send *robot-env* :robot :get :rleg-contact-coords)
+            :put :contact-constraint
+            (instance* default-contact-constraint
+                       :init
+                       :mu-trans mu-trans
+                       :mu-rot mu-rot
+                       :max-fz max-fz
+                       (let* ((poly
+                               (send *robot-env* :robot :get :rleg_link5-support-polygon))
+                              (vs
+                               (mapcar #'(lambda (v)
+                                           (send (send (send *robot-env* :robot :get :rleg-contact-coords) :worldcoords)
+                                                 :inverse-transform-vector v))
+                                       (send poly :vertices)
+                                       ))
+                              )
+                         (list :l-min-x (+ (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0) support-polygon-margin)
+                               :l-max-x (- (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0) support-polygon-margin)
+                               :l-min-y (+ (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1) support-polygon-margin)
+                               :l-max-y (- (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1) support-polygon-margin)
+                               ))
+                       )))
+  (if (member :lleg-contact-coords coords-name-list)
+      (send (send *robot-env* :robot :get :lleg-contact-coords)
+            :put :contact-constraint
+            (instance* default-contact-constraint
+                       :init
+                       :mu-trans mu-trans
+                       :mu-rot mu-rot
+                       :max-fz max-fz
+                       (let* ((poly
+                               (send *robot-env* :robot :get :lleg_link5-support-polygon))
+                              (vs
+                               (mapcar #'(lambda (v)
+                                           (send (send (send *robot-env* :robot :get :lleg-contact-coords) :worldcoords)
+                                                 :inverse-transform-vector v))
+                                       (send poly :vertices)
+                                       ))
+                              )
+                         (list :l-min-x (+ (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0) support-polygon-margin)
+                               :l-max-x (- (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0) support-polygon-margin)
+                               :l-min-y (+ (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1) support-polygon-margin)
+                               :l-max-y (- (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1) support-polygon-margin)
+                               ))
+                       )))
+  (if (member :rarm-contact-coords coords-name-list)
+      (send (send *robot-env* :robot :get :rarm-contact-coords)
+            :put :contact-constraint
+            (instance default-contact-constraint
+                      :init
+                      :mu-trans mu-trans
+                      :mu-rot mu-rot
+                      :max-fz max-fz
+                      ;; :contact-face (send *robot-env* :robot :get :rarm_link6-support-polygon)
+                      :l-min-x -1 :l-max-x -1 :l-min-y 1 :l-max-y 1
+                      )))
+  (if (member :larm-contact-coords coords-name-list)
+      (send (send *robot-env* :robot :get :larm-contact-coords)
+            :put :contact-constraint
+            (instance default-contact-constraint
+                      :init
+                      :mu-trans mu-trans
+                      :mu-rot mu-rot
+                      :max-fz max-fz
+                      ;; :contact-face (send *robot-env* :robot :get :larm_link6-support-polygon)
+                      :l-min-x -1 :l-max-x -1 :l-min-y 1 :l-max-y 1
+                      )))
   )
 
 (defun sample-sqp-optimization-trajectory
@@ -168,6 +173,7 @@
    *instant-config-task-list*
    )
 
+  (setup-contact-constraint-for-sample-sqp-optimization :max-fz 0 :coords-name-list (list :lleg-contact-coords))
   (push (copy-object *robot-env*) *robot-env-list*)
   (push
    (instance instant-configuration-task :init
@@ -188,11 +194,13 @@
                    )
              :contact-target-coords-list
              (list (send (car *robot-env-list*) :contact "rleg" :contact-coords)
+                   (make-coords :pos (float-vector 300 200 0))
                    (send (car *robot-env-list*) :contact "rarm" :contact-coords)
                    (send (car *robot-env-list*) :contact "larm" :contact-coords)
                    )
              :contact-attention-coords-list
              (list (send (car *robot-env-list*) :robot :get :rleg-contact-coords)
+                   (send (car *robot-env-list*) :robot :get :lleg-contact-coords)
                    (send (car *robot-env-list*) :robot :get :rarm-contact-coords)
                    (send (car *robot-env-list*) :robot :get :larm-contact-coords)
                    )
@@ -200,6 +208,7 @@
    *instant-config-task-list*
    )
 
+  (setup-contact-constraint-for-sample-sqp-optimization)
   (push (copy-object *robot-env*) *robot-env-list*)
   (push
    (instance instant-configuration-task :init
@@ -298,6 +307,7 @@
    *instant-config-task-list*
    )
 
+  (setup-contact-constraint-for-sample-sqp-optimization :max-fz 0 :coords-name-list (list :lleg-contact-coords))
   (push (copy-object *robot-env*) *robot-env-list*)
   (push
    (instance instant-configuration-task :init
@@ -318,11 +328,13 @@
                    )
              :contact-target-coords-list
              (list (send (car *robot-env-list*) :contact "rleg" :contact-coords)
+                   (send (car *robot-env-list*) :contact "lleg" :contact-coords)
                    (send (car *robot-env-list*) :contact "rarm" :contact-coords)
                    (send (car *robot-env-list*) :contact "larm" :contact-coords)
                    )
              :contact-attention-coords-list
              (list (send (car *robot-env-list*) :robot :get :rleg-contact-coords)
+                   (send (car *robot-env-list*) :robot :get :lleg-contact-coords)
                    (send (car *robot-env-list*) :robot :get :rarm-contact-coords)
                    (send (car *robot-env-list*) :robot :get :larm-contact-coords)
                    )
@@ -330,6 +342,7 @@
    *instant-config-task-list*
    )
 
+  (setup-contact-constraint-for-sample-sqp-optimization)
   (push (copy-object *robot-env*) *robot-env-list*)
   (push
    (instance instant-configuration-task :init
@@ -364,6 +377,7 @@
    *instant-config-task-list*
    )
 
+  (setup-contact-constraint-for-sample-sqp-optimization :max-fz 0 :coords-name-list (list :rleg-contact-coords))
   (push (copy-object *robot-env*) *robot-env-list*)
   (push
    (instance instant-configuration-task :init
@@ -383,12 +397,14 @@
                    (send (car *robot-env-list*) :robot :get :larm-contact-coords)
                    )
              :contact-target-coords-list
-             (list (send (car *robot-env-list*) :contact "lleg" :contact-coords)
+             (list (send (car *robot-env-list*) :contact "rleg" :contact-coords)
+                   (send (car *robot-env-list*) :contact "lleg" :contact-coords)
                    (send (car *robot-env-list*) :contact "rarm" :contact-coords)
                    (send (car *robot-env-list*) :contact "larm" :contact-coords)
                    )
              :contact-attention-coords-list
-             (list (send (car *robot-env-list*) :robot :get :lleg-contact-coords)
+             (list (send (car *robot-env-list*) :robot :get :rleg-contact-coords)
+                   (send (car *robot-env-list*) :robot :get :lleg-contact-coords)
                    (send (car *robot-env-list*) :robot :get :rarm-contact-coords)
                    (send (car *robot-env-list*) :robot :get :larm-contact-coords)
                    )
@@ -396,6 +412,7 @@
    *instant-config-task-list*
    )
 
+  (setup-contact-constraint-for-sample-sqp-optimization)
   (push (copy-object *robot-env*) *robot-env-list*)
   (push
    (instance instant-configuration-task :init
