@@ -13,7 +13,6 @@ try:
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 
-
 from sensor_msgs.msg import Joy
 from diagnostic_msgs.msg import DiagnosticStatus, DiagnosticArray
 import tf.transformations
@@ -43,7 +42,7 @@ def autoJoyDetect(msg):
     AUTO_DETECTED_CLASS = IpegaStatus
   else:
     AUTO_DETECTED_CLASS = "UNKNOWN"
-    
+
 class JoyManager():
   STATE_INITIALIZATION = 1
   STATE_RUNNING = 2
@@ -52,7 +51,7 @@ class JoyManager():
   MODE_PLUGIN = 0
   MODE_MENU = 1
   mode = 0
-  
+
   plugin_instances = []
   def stateDiagnostic(self, stat):
     if self.state == self.STATE_INITIALIZATION:
@@ -190,7 +189,7 @@ class JoyManager():
     self.pre_status = status
     self.history.add(status)
     self.diagnostic_updater.update()
-    
+
 def main():
   global g_manager
   rospy.sleep(1)
@@ -202,7 +201,6 @@ def main():
     return False
   else:
     rospy.spin()
-  
+
 if __name__ == '__main__':
   main()
-  
