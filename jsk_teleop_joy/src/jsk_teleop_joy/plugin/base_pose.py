@@ -12,8 +12,6 @@ import tf
 import rospy
 import numpy
 import math
-import tf
-import numpy
 import time
 
 def signedSquare(val):
@@ -50,6 +48,8 @@ z [float, default: 0.0]: initial value for z, overwritten by arg set_base
     self.prev_time = rospy.Time.from_sec(time.time())
     self.publish_pose = self.getArg('publish_pose', True)
     self.frame_id = self.getArg('frame_id', 'map')
+    self.goal_pub = rospy.Publisher(self.getArg('goal', 'goal'),
+                                    PoseStamped, queue_size=1)
     if self.publish_pose:
       self.pose_pub = rospy.Publisher(self.getArg('pose', 'base'),
                                       PoseStamped, queue_size=10)
@@ -130,6 +130,8 @@ z [float, default: 0.0]: initial value for z, overwritten by arg set_base
     new_pose.pose.orientation.y = new_q[1]
     new_pose.pose.orientation.z = new_q[2]
     new_pose.pose.orientation.w = new_q[3]
+    if status.triangle and not latest.triangle:
+      self.goal_pub.publish(new_pose)
 
     # publish at 10hz
     if self.publish_pose:
