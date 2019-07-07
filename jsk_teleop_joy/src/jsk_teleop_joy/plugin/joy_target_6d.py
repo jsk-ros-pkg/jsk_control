@@ -41,12 +41,16 @@ R3(Right Analog button): suppressing buttons/sticks for controlling pose
 L3+circle: save current pose
 L3+square: load saved pose
 
-circle: publish current pose to target_pose
+circle: publish a PREVIEW message to command.
+triangle: publish an EXCUTE message to command.
+cross: publish a CANCEL message to command.
+
 
 Args:
 publish_pose [Boolean, default: True]: Publish or not pose
 frame_id [String, default: map]: frame_id of publishing pose, this is overwritten by parameter, ~frame_id
 pose [String, default: pose]: topic name for publishing pose
+command [String, default: command]: topic name for publishing the command
 set_pose [String, default: set_pose]: topic name for setting pose by topic
 target_pose [String, default: target_pose]: topic name to pubish current pose when circle is pressed
   '''
