@@ -34,4 +34,6 @@
   </class>
   <class name="JoyCmdVel" type="jsk_teleop_joy.plugin.joy_cmd_vel.JoyCmdVel">
   </class>
+  <class name="JoyBoundingBoxSelector" type="jsk_teleop_joy.plugin.joy_bounding_box_selector.JoyBoundingBoxSelector">
+  </class>
 </library>
