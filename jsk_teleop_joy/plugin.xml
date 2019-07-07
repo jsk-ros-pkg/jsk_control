@@ -12,6 +12,8 @@
   </class>
   <class name="JoyPose6D" type="jsk_teleop_joy.plugin.joy_pose_6d.JoyPose6D">
   </class>
+  <class name="JoyTarget6D" type="jsk_teleop_joy.plugin.joy_target_6d.JoyTarget6D">
+  </class>
   <class name="BasePose" type="jsk_teleop_joy.plugin.base_pose.BasePose">
   </class>
   <class name="JoyFootstep" type="jsk_teleop_joy.plugin.joy_footstep.JoyFootstep">
