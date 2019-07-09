@@ -37,7 +37,7 @@ def autoJoyDetect(msg):
   elif len(msg.axes) == 20 and len(msg.buttons) == 17:
     rospy.loginfo("auto detected as ps3")
     AUTO_DETECTED_CLASS = PS3Status
-  elif len(msg.axes) == 8 and len(msg.buttons) == 19:
+  elif len(msg.axes) == 8 and (len(msg.buttons) == 16 or len(msg.buttons) == 19):
     rospy.loginfo("auto detected as ipega")
     AUTO_DETECTED_CLASS = IpegaStatus
   else:

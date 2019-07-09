@@ -6,7 +6,7 @@ try:
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 
-
+from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 import tf
 import rospy
@@ -35,6 +35,7 @@ frame_id [String, default: map]: frame_id of publishing pose, overwritten by par
   def __init__(self, name, args):
     RVizViewController.__init__(self, name, args)
     self.pre_pose = PoseStamped()
+    self.bbox = None
     self.pre_pose.pose.orientation.w = 1
     self.prev_time = rospy.Time.from_sec(time.time())
     self.bb_topic = self.getArg('input_boxes', 'cluster_point_indices/boxes')
@@ -43,6 +44,8 @@ frame_id [String, default: map]: frame_id of publishing pose, overwritten by par
     bb = rospy.Subscriber(self.bb_topic, BoundingBoxArray, self.bboxSB)
     self.bbox_pub = rospy.Publisher(self.getArg('output', 'selected_bbox'),
                                     BoundingBox, queue_size=1)
+    self.command_pub = rospy.Publisher(self.getArg('command', 'command'),
+                                    String, queue_size=1)
     self.supportFollowView(True)
 
     if rospy.has_param('~frame_id'):
@@ -61,21 +64,28 @@ frame_id [String, default: map]: frame_id of publishing pose, overwritten by par
         self.index -= 1
       elif (status.left_analog_y < -0.5 and latest.left_analog_y > -0.5) or (status.left_analog_x < -0.5 and latest.left_analog_x > -0.5):
         self.index += 1
+      if status.circle and not latest.circle:
+        self.command_pub.publish("SELECT")
+      if status.triangle and not latest.triangle:
+        self.command_pub.publish("ADJUST")
 
     # publish at 10hz
     now = rospy.Time.from_sec(time.time())
     # placement.time_from_start = now - self.prev_time
     if (now - self.prev_time).to_sec() > 1 / 30.0:
-      self.bbox_pub.publish(self.bbox)
+      if self.bbox is not None:
+        self.bbox_pub.publish(self.bbox)
       self.prev_time = now
 
   def bboxSB(self, msg):
     bboxes = msg.boxes
-    if self.index < bboxes.__len__():
-      if self.index < 0:
-        self.index = bboxes.__len__() - 1
+    if bboxes.__len__() > 0:
+      if self.index < bboxes.__len__():
+        if self.index < 0:
+          self.index = bboxes.__len__() - 1
+      else:
+        self.index = 0
+      # rospy.set_param('~index', self.index)
+      self.bbox = bboxes[self.index]
     else:
-      self.index = 0
-    # rospy.set_param('~index', self.index)
-    self.bbox = bboxes[self.index]
-    
+      self.bbox = None
