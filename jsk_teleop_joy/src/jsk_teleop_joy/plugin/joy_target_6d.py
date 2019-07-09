@@ -67,10 +67,10 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
     if self.publish_pose:
       self.pose_pub = rospy.Publisher(self.getArg('pose', 'pose'),
                                       PoseStamped, queue_size=10)
-      self.target_pub = rospy.Publisher(self.getArg('target_pose', 'target_pose'),
-                                      PoseStamped, queue_size=1)
-      self.command_pub = rospy.Publisher(self.getArg('command', 'command'),
-                                      String, queue_size=1)
+    self.target_pub = rospy.Publisher(self.getArg('target_pose', 'target_pose'),
+                                    PoseStamped, queue_size=1)
+    self.command_pub = rospy.Publisher(self.getArg('command', 'command'),
+                                    String, queue_size=1)
     self.supportFollowView(True)
 
     self.puse_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'), PoseStamped, self.setPoseCB)
@@ -188,6 +188,10 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
           roll = roll - DTHETA * 2
         else:
           roll = roll - DTHETA
+      if status.triangle and not latest.triangle:
+        self.publish_pose_command(new_pose, "EXECUTE")
+      if status.cross and not latest.cross:
+        self.publish_pose_command(new_pose, "CANCEL")
     diff_q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
     new_q = tf.transformations.quaternion_multiply(q, diff_q)
     new_pose.pose.orientation.x = new_q[0]
@@ -206,10 +210,6 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
       pose_list.append(new_pose)
       pose_list.append(saved_pose)
       self.publishAll(pose_list)
-    if status.triangle and not latest.triangle:
-      self.publish_pose_command(new_pose, "EXECUTE")
-    if status.cross and not latest.cross:
-      self.publish_pose_command(new_pose, "CANCEL")
 
     # publish at 10hz
     if self.publish_pose:
