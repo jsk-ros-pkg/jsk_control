@@ -7,21 +7,18 @@
 (init-unit-test)
 
 (deftest test-sample-robot-sqp-instant-manip-config-task
-  (null-output (sample-robot-sqp-instant-manip-config-task :loop-num 20 :fix-obj? nil :optimize-torque? nil))
+  (null-output (sample-robot-sqp-instant-manip-config-task :loop-num 5 :fix-obj? nil :optimize-torque? nil))
   (assert (< (norm (send *instant-manip-config-task* :task-value :update? nil)) 10.0))
 
-  (null-output (sample-robot-sqp-instant-manip-config-task :loop-num 20 :fix-obj? t :optimize-torque? nil))
+  (null-output (sample-robot-sqp-instant-manip-config-task :loop-num 5 :fix-obj? t :optimize-torque? nil))
   (assert (< (norm (send *instant-manip-config-task* :task-value :update? nil)) 10.0))
 
-  (null-output (sample-robot-sqp-instant-manip-config-task :loop-num 20 :fix-obj? nil :optimize-torque? t))
-  (assert (< (norm (send *instant-manip-config-task* :task-value :update? nil)) 10.0))
-
-  (null-output (sample-robot-sqp-instant-manip-config-task :loop-num 20 :fix-obj? t :optimize-torque? t))
+  (null-output (sample-robot-sqp-instant-manip-config-task :loop-num 5 :fix-obj? t :optimize-torque? t))
   (assert (< (norm (send *instant-manip-config-task* :task-value :update? nil)) 10.0))
   )
 
 (deftest test-sample-arm-sqp-bspline-config-task
-  (null-output (sample-arm-sqp-bspline-config-task :loop-num 20 :graph-filename nil))
+  (null-output (sample-arm-sqp-bspline-config-task :loop-num 5 :graph-filename nil))
   (assert (< (norm (send *bspline-config-task* :task-value :update? nil)) 1.0))
   )
 
