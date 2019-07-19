@@ -9,6 +9,11 @@
      (max-fz 500)
      (support-polygon-margin 20)
      )
+  (send *robot-env* :robot
+        :put :zero-wrench-contact-constraint
+        (instance 6d-min-max-contact-constraint
+                  :init (float-vector 0 0 0 0 0 0))
+        )
   (send (send *robot-env* :robot :get :rleg-contact-coords)
         :put :contact-constraint
         (instance* default-contact-constraint
@@ -188,13 +193,21 @@
                    )
              :contact-target-coords-list
              (list (send (car *robot-env-list*) :contact "rleg" :contact-coords)
+                   (make-coords :pos (float-vector 300 200 0))
                    (send (car *robot-env-list*) :contact "rarm" :contact-coords)
                    (send (car *robot-env-list*) :contact "larm" :contact-coords)
                    )
              :contact-attention-coords-list
              (list (send (car *robot-env-list*) :robot :get :rleg-contact-coords)
+                   (send (car *robot-env-list*) :robot :get :lleg-contact-coords)
                    (send (car *robot-env-list*) :robot :get :rarm-contact-coords)
                    (send (car *robot-env-list*) :robot :get :larm-contact-coords)
+                   )
+             :contact-constraint-list
+             (list (send (send (car *robot-env-list*) :robot :get :rleg-contact-coords) :get :contact-constraint)
+                   (send (car *robot-env-list*) :robot :get :zero-wrench-contact-constraint)
+                   (send (send (car *robot-env-list*) :robot :get :rarm-contact-coords) :get :contact-constraint)
+                   (send (send (car *robot-env-list*) :robot :get :larm-contact-coords) :get :contact-constraint)
                    )
              )
    *instant-config-task-list*
@@ -318,13 +331,21 @@
                    )
              :contact-target-coords-list
              (list (send (car *robot-env-list*) :contact "rleg" :contact-coords)
+                   (send (car *robot-env-list*) :contact "lleg" :contact-coords)
                    (send (car *robot-env-list*) :contact "rarm" :contact-coords)
                    (send (car *robot-env-list*) :contact "larm" :contact-coords)
                    )
              :contact-attention-coords-list
              (list (send (car *robot-env-list*) :robot :get :rleg-contact-coords)
+                   (send (car *robot-env-list*) :robot :get :lleg-contact-coords)
                    (send (car *robot-env-list*) :robot :get :rarm-contact-coords)
                    (send (car *robot-env-list*) :robot :get :larm-contact-coords)
+                   )
+             :contact-constraint-list
+             (list (send (send (car *robot-env-list*) :robot :get :rleg-contact-coords) :get :contact-constraint)
+                   (send (car *robot-env-list*) :robot :get :zero-wrench-contact-constraint)
+                   (send (send (car *robot-env-list*) :robot :get :rarm-contact-coords) :get :contact-constraint)
+                   (send (send (car *robot-env-list*) :robot :get :larm-contact-coords) :get :contact-constraint)
                    )
              )
    *instant-config-task-list*
@@ -383,14 +404,22 @@
                    (send (car *robot-env-list*) :robot :get :larm-contact-coords)
                    )
              :contact-target-coords-list
-             (list (send (car *robot-env-list*) :contact "lleg" :contact-coords)
+             (list (send (car *robot-env-list*) :contact "rleg" :contact-coords)
+                   (send (car *robot-env-list*) :contact "lleg" :contact-coords)
                    (send (car *robot-env-list*) :contact "rarm" :contact-coords)
                    (send (car *robot-env-list*) :contact "larm" :contact-coords)
                    )
              :contact-attention-coords-list
-             (list (send (car *robot-env-list*) :robot :get :lleg-contact-coords)
+             (list (send (car *robot-env-list*) :robot :get :rleg-contact-coords)
+                   (send (car *robot-env-list*) :robot :get :lleg-contact-coords)
                    (send (car *robot-env-list*) :robot :get :rarm-contact-coords)
                    (send (car *robot-env-list*) :robot :get :larm-contact-coords)
+                   )
+             :contact-constraint-list
+             (list (send (car *robot-env-list*) :robot :get :zero-wrench-contact-constraint)
+                   (send (send (car *robot-env-list*) :robot :get :lleg-contact-coords) :get :contact-constraint)
+                   (send (send (car *robot-env-list*) :robot :get :rarm-contact-coords) :get :contact-constraint)
+                   (send (send (car *robot-env-list*) :robot :get :larm-contact-coords) :get :contact-constraint)
                    )
              )
    *instant-config-task-list*
@@ -502,6 +531,7 @@
   (send *trajectory-config-task* :play-animation
         :robot-env *robot-env*
         :loop? visualize-loop?
+        :visualize-force? t
         :visualize-callback-func visualize-callback-func
         )
   )
