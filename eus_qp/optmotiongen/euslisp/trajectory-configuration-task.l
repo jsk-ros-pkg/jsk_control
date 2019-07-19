@@ -787,6 +787,8 @@ Print status.
     (robot-env)
     (loop? t)
     (visualize-callback-func)
+    (visualize-force? nil)
+    (force-color #f(0.8 0.2 0.2))
     )
    "
 Play motion.
@@ -801,17 +803,63 @@ Play motion.
           )
      (do-until-key
       (dotimes (i (1- (length _instant-config-task-list)))
-        (let* ((av-current
-                (send (send (elt (if reverse? (reverse _instant-config-task-list) _instant-config-task-list) i)
-                            :robot-env) :angle-vector))
-               (av-next
-                (send (send (elt (if reverse? (reverse _instant-config-task-list) _instant-config-task-list) (1+ i))
-                            :robot-env) :angle-vector))
+        (let* ((instant-config-task-current
+                (elt (if reverse? (reverse _instant-config-task-list) _instant-config-task-list) i))
+               (instant-config-task-next
+                (elt (if reverse? (reverse _instant-config-task-list) _instant-config-task-list) (1+ i)))
+               (name-set)
+               (current-name-list)
+               (next-name-list)
+               (current-coords-idx)
+               (next-coords-idx)
                )
           (dotimes (j 10)
-            (send robot-env :angle-vector (midpoint (/ (float (1+ j)) 10) av-current av-next))
-            (x::window-main-one)
+            (send robot-env :angle-vector
+                  (midpoint (/ (float (1+ j)) 10)
+                            (send (send instant-config-task-current :robot-env) :angle-vector)
+                            (send (send instant-config-task-next :robot-env) :angle-vector)))
             (send *irtviewer* :draw-objects :flush nil)
+            (when visualize-force?
+              ;; draw force and moment of the robot
+              (setq name-set
+                    (intersection
+                     (setq current-name-list (send-all (send instant-config-task-current :contact-attention-coords-list) :name))
+                     (setq next-name-list (send-all (send instant-config-task-next :contact-attention-coords-list) :name))))
+              (dolist (name name-set)
+                (setq current-coords-idx
+                      (concatenate cons current-coords-idx
+                                   (list (position-if #'(lambda (nm) (string= nm name)) current-name-list))))
+                (setq next-coords-idx
+                      (concatenate cons next-coords-idx
+                                   (list (position-if #'(lambda (nm) (string= nm name)) next-name-list)))))
+              (draw-force-value
+               :force-list
+               (mapcar
+                #'(lambda (vec1 vec2) (midpoint (/ (float (1+ j)) 10) vec1 vec2))
+                (mapcar #'(lambda (idx) (elt (send instant-config-task-current :force-list) idx))
+                        current-coords-idx)
+                (mapcar #'(lambda (idx) (elt (send instant-config-task-next :force-list) idx))
+                        next-coords-idx)
+                )
+               :moment-list
+               (mapcar
+                #'(lambda (vec1 vec2) (midpoint (/ (float (1+ j)) 10) vec1 vec2))
+                (mapcar #'(lambda (idx) (elt (send instant-config-task-current :moment-list) idx))
+                        current-coords-idx)
+                (mapcar #'(lambda (idx) (elt (send instant-config-task-next :moment-list) idx))
+                        next-coords-idx)
+                )
+               :coords-list
+               (mapcar
+                #'(lambda (coords1 coords2) (midcoords (/ (float (1+ j)) 10) coords1 coords2))
+                (mapcar #'(lambda (idx) (elt (send instant-config-task-current :contact-target-coords-list) idx))
+                        current-coords-idx)
+                (mapcar #'(lambda (idx) (elt (send instant-config-task-next :contact-target-coords-list) idx))
+                        next-coords-idx))
+               :force-color force-color
+               :draw-cop? nil
+               ))
+            (x::window-main-one)
             (send *irtviewer* :viewer :flush)
             (unix::usleep (* 40 1000))
             (when visualize-callback-func
