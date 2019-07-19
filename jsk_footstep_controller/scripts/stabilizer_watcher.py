@@ -48,6 +48,7 @@ def trig():
     sound = SoundRequest()
     sound.sound = SoundRequest.SAY
     sound.command = SoundRequest.PLAY_ONCE
+    sound.volume = 1.0
     sound.arg = "Robot stands on the ground."
     g_robotsound_pub.publish(sound)
     
