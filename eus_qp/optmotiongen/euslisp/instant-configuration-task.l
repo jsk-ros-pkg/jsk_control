@@ -42,6 +42,7 @@
           (_norm-regular-scale-coeff "$k_{\mathit{coeff}}$")
           (_norm-regular-scale-offset "$k_{\mathit{off}}$")
           (_torque-regular-scale "$k_{\mathit{trq}}$")
+          (_wrench-maximize-scale "$k_{\mathit{w\mathchar`-max}}$")
           ;; variables
           (_variant-joint-list "$\mathcal{J}_{\mathit{var}}$")
           (_invariant-joint-list "$\mathcal{J}_{\mathit{invar}}$")
@@ -59,6 +60,7 @@
           (_posture-joint-angle-list "$\bm{\bar{\theta}}^{\mathit{trg}}$")
           (_external-wrench-list "$\{ \bm{w}_1^{\mathit{ex}}, \bm{w}_2^{\mathit{ex}}, \cdots, \bm{w}_{N_{ex}}^{\mathit{ex}} \}$")
           (_external-coords-list "$\{T_1^{\mathit{ex}}, T_2^{\mathit{ex}}, \cdots, T_{N_{\mathit{ex}}}^{\mathit{ex}} \}$")
+          (_wrench-maximize-direction-list "$\{ \bm{d}_1^{\mathit{w\mathchar`-max}}, \bm{d}_2^{\mathit{w\mathchar`-max}}, \cdots, \bm{d}_{N_{\mathit{cnt}}}^{\mathit{w\mathchar`-max}} \}$")
           (_collision-pair-list "list of bodyset-link or body pair")
           (_collision-distance-margin-list "list of collision distance margin")
           (_only-kinematics? "whether to consider only kinematics or not")
@@ -119,12 +121,17 @@
   \item[external-wrench-list] 外レンチのリスト(ワールド座標系で表す)
   \item[external-coords-list] 外レンチの作用点座標のリスト(位置のみを使用)
 \end{description}
+\item 接触力最大化(必要な場合のみ)
+\begin{description}
+  \item[wrench-maximize-direction-list] 接触レンチ最大化方向(ワールド座標系で表す)
+\end{description}
 \item 目的関数の重み
 \begin{description}
   \item[norm-regular-scale-max $k_{\mathit{max}}$] コンフィギュレーション更新量正則化の重み最大値
   \item[norm-regular-scale-coeff $k_{\mathit{coeff}}$] コンフィギュレーション更新量正則化の係数
   \item[norm-regular-scale-offset $k_{\mathit{off}}$] コンフィギュレーション更新量正則化の重みオフセット
   \item[torque-regular-scale $k_{\mathit{trq}}$] トルク正則化の重み
+  \item[wrench-maximize-scale $k_{\mathit{w\mathchar`-max}}$] 接触レンチ最大化の重み
 \end{description}
 \end{itemize}
 
@@ -183,6 +190,7 @@ $\bm{\hat{w}}$は次式のように，全接触部位でのワールド座標系
     (posture-joint-angle-list) ;; [deg] [mm]
     (external-wrench-list)
     (external-coords-list)
+    (wrench-maximize-direction-list)
     (collision-pair-list)
     (collision-distance-margin 0.01) ;; [m]
     (collision-distance-margin-list) ;; [m]
@@ -195,6 +203,7 @@ $\bm{\hat{w}}$は次式のように，全接触部位でのワールド座標系
     (norm-regular-scale-coeff 1.0)
     (norm-regular-scale-offset 1e-7)
     (torque-regular-scale 1e-4)
+    (wrench-maximize-scale 0)
     &allow-other-keys
     )
    "
@@ -219,6 +228,7 @@ Initialize instance
    (setq _posture-joint-angle-list posture-joint-angle-list)
    (setq _external-wrench-list external-wrench-list)
    (setq _external-coords-list external-coords-list)
+   (setq _wrench-maximize-direction-list wrench-maximize-direction-list)
    (setq _collision-pair-list collision-pair-list)
    (setq _collision-distance-margin-list
          (or collision-distance-margin-list
@@ -253,6 +263,7 @@ Initialize instance
    (setq _norm-regular-scale-coeff norm-regular-scale-coeff)
    (setq _norm-regular-scale-offset norm-regular-scale-offset)
    (setq _torque-regular-scale torque-regular-scale)
+   (setq _wrench-maximize-scale wrench-maximize-scale)
    ;; sub methods
    (send self :_initialize-number)
    (send self :_initialize-configuration-vector)
@@ -2166,6 +2177,58 @@ return $\frac{\bm{\tau}}{\bm{\tau}_{\mathit{max}}} := \begin{pmatrix} \frac{\tau
         _torque-vector
         (send self :torque-max-vector))
    )
+  (:wrench-maximize-regular-vector
+   (&key
+    (update? nil)
+    (only-variant? nil)
+    )
+   "
+\begin{eqnarray}
+  \bm{\bar{v}}_{\mathit{w\mathchar`-max}} &:=&
+  \begin{pmatrix} \bm{d}_1^{\mathit{w\mathchar`-max}} \\ \bm{d}_2^{\mathit{w\mathchar`-max}} \\ \vdots \\ \bm{d}_{N_{\mathit{cnt}}}^{\mathit{w\mathchar`-max}} \end{pmatrix}
+  \in \mathbb{R}^{\mathit{dim}(\bm{\hat{w}})}
+\end{eqnarray}
+
+\it{only-variant?} is true:
+\begin{eqnarray}
+  \bm{v}_{\mathit{w\mathchar`-max}} :=
+  \bordermatrix{
+    & 1 \cr
+    \mathit{dim}(\bm{\theta}) & \cr
+    \mathit{dim}(\bm{\hat{w}}) & \bm{\bar{v}}_{\mathit{w\mathchar`-max}} \cr
+    \mathit{dim}(\bm{\tau}) & \cr
+  }
+  \in \mathbb{R}^{\mathit{dim}(\bm{q}_{\mathit{var}})}
+\end{eqnarray}
+
+otherwise:
+\begin{eqnarray}
+  \bm{v}_{\mathit{w\mathchar`-max}} :=
+  \bordermatrix{
+    & 1 \cr
+    \mathit{dim}(\bm{\theta}) & \cr
+    \mathit{dim}(\bm{\hat{w}}) & \bm{\bar{v}}_{\mathit{w\mathchar`-max}} \cr
+    \mathit{dim}(\bm{\tau}) & \cr
+    \mathit{dim}(\bm{\phi}) & \cr
+  }
+  \in \mathbb{R}^{\mathit{dim}(\bm{q})}
+\end{eqnarray}
+
+return $\bm{v}_{\mathit{w\mathchar`-max}}$
+   "
+   (when (or update? (not (send self :get :wrench-maximize-regular-vector)))
+     (send self :put :wrench-maximize-regular-vector
+           (if only-variant?
+               (make-array _dim-variant-config :element-type :float :initial-element 0)
+             (make-array _dim-config :element-type :float :initial-element 0)))
+
+     (copy-block-vec
+      (send self :get :wrench-maximize-regular-vector)
+      (scale -1 (apply #'concatenate float-vector _wrench-maximize-direction-list))
+      _dim-theta)
+     )
+   (send self :get :wrench-maximize-regular-vector)
+   )
   (:regular-matrix
    ()
    "
@@ -2188,12 +2251,19 @@ return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathi
    ()
    "
 \begin{eqnarray}
-  \bm{v}_{\mathit{reg}} := k_{\mathit{trq}} \bm{v}_{trq}
+  \bm{v}_{\mathit{reg}} := k_{\mathit{trq}} \bm{v}_{trq} + k_{\mathit{w\mathchar`-max}} \bm{v}_{\mathit{w\mathchar`-max}}
 \end{eqnarray}
 
 return $\bm{v}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q})}$
    "
-   (scale _torque-regular-scale (send self :torque-regular-vector))
+   (reduce
+    #'v+
+    (remove
+     nil
+     (list
+      (scale _torque-regular-scale (send self :torque-regular-vector))
+      (if (> _wrench-maximize-scale 0) (scale _wrench-maximize-scale (send self :wrench-maximize-regular-vector)))
+      )))
    )
   )
 
