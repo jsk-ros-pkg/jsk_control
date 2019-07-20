@@ -692,11 +692,16 @@ return $\{ \bm{n}_1, \bm{n}_2, \cdots, \bm{n}_{N_{\mathit{cnt}}} \}$
    (divide-vector (subseq _wrench-vector 3) :segment-length 3 :interval-length 3)
    )
   (:external-wrench-list
-   ()
+   (&optional (new-external-wrench-list :nil))
+   "
+set / get $\{ \bm{w}_1^{\mathit{ex}}, \bm{w}_2^{\mathit{ex}}, \cdots, \bm{w}_{N_{\mathit{ex}}}^{\mathit{ex}} \}$
 "
-return $\{ \bm{w}_1^{\mathit{ex}}, \bm{w}_2^{\mathit{ex}}, \cdots, \bm{w}_{N_{\mathit{ex}}}^{\mathit{ex}} \}$
-"
-   _external-wrench-list
+   (cond ((equal new-external-wrench-list :nil)
+          _external-wrench-list
+          )
+         (t
+          (setq _external-wrench-list new-external-wrench-list)
+          ))
    )
   (:external-force-list
    ()
