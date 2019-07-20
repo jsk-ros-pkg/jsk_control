@@ -39,6 +39,7 @@
           (_kin-scale-mat-list "$K_{\mathit{kin}}$")
           (_target-posture-scale-list "$k_{\mathit{posture}}$")
           (_norm-regular-scale-max "$k_{\mathit{max}}$")
+          (_norm-regular-scale-coeff "$k_{\mathit{coeff}}$")
           (_norm-regular-scale-offset "$k_{\mathit{off}}$")
           (_torque-regular-scale "$k_{\mathit{trq}}$")
           ;; variables
@@ -121,6 +122,7 @@
 \item 目的関数の重み
 \begin{description}
   \item[norm-regular-scale-max $k_{\mathit{max}}$] コンフィギュレーション更新量正則化の重み最大値
+  \item[norm-regular-scale-coeff $k_{\mathit{coeff}}$] コンフィギュレーション更新量正則化の係数
   \item[norm-regular-scale-offset $k_{\mathit{off}}$] コンフィギュレーション更新量正則化の重みオフセット
   \item[torque-regular-scale $k_{\mathit{trq}}$] トルク正則化の重み
 \end{description}
@@ -190,6 +192,7 @@ $\bm{\hat{w}}$は次式のように，全接触部位でのワールド座標系
     (target-posture-scale 1e-3)
     (target-posture-scale-list)
     (norm-regular-scale-max (if only-kinematics? 1e-3 1e-5))
+    (norm-regular-scale-coeff 1.0)
     (norm-regular-scale-offset 1e-7)
     (torque-regular-scale 1e-4)
     &allow-other-keys
@@ -247,6 +250,7 @@ Initialize instance
                 (make-list (length posture-joint-list) :initial-element target-posture-scale))
           ))
    (setq _norm-regular-scale-max norm-regular-scale-max)
+   (setq _norm-regular-scale-coeff norm-regular-scale-coeff)
    (setq _norm-regular-scale-offset norm-regular-scale-offset)
    (setq _torque-regular-scale torque-regular-scale)
    ;; sub methods
@@ -2166,14 +2170,17 @@ return $\frac{\bm{\tau}}{\bm{\tau}_{\mathit{max}}} := \begin{pmatrix} \frac{\tau
    ()
    "
 \begin{eqnarray}
-  \bm{W}_{\mathit{reg}} := \min(k_{\mathit{max}}, \|\bm{e}\|^2+k_{\mathit{off}}) \bm{I} + k_{\mathit{trq}} \bm{W}_{trq}
+  \bm{W}_{\mathit{reg}} := \min(k_{\mathit{max}}, k_{\mathit{coeff}} \|\bm{e}\|^2+k_{\mathit{off}}) \bm{I} + k_{\mathit{trq}} \bm{W}_{trq}
 \end{eqnarray}
 
 return $\bm{W}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q}) \times \mathit{dim}(\bm{q})}$
    "
    (m+
-    (scale-matrix (min _norm-regular-scale-max (+ (norm2 (send self :task-value :update? nil)) _norm-regular-scale-offset))
-                  (send self :_dim-config-unit-matrix))
+    (scale-matrix
+     (min _norm-regular-scale-max
+          (+ (* _norm-regular-scale-coeff (norm2 (send self :task-value :update? nil)))
+             _norm-regular-scale-offset))
+     (send self :_dim-config-unit-matrix))
     (scale-matrix _torque-regular-scale (send self :torque-regular-matrix))
     (send self :_dim-config-buf-matrix)
     ))
