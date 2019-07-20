@@ -491,6 +491,101 @@ Override to support zero row matrix.
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SQP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun sqp-convergence-check
+    (sqp)
+  (let* ((config-task
+          (send sqp :config-task))
+         (kin-task-value
+          (send config-task :kinematics-task-value :update? nil))
+         (pos-diff-list
+          (divide-vector kin-task-value :segment-length 3 :interval-length 3))
+         (rot-diff-list
+          (divide-vector (subseq kin-task-value 3) :segment-length 3 :interval-length 3))
+         (thre
+          (send config-task :get :thre))
+         (rthre
+          (send config-task :get :rthre))
+         (eom-trans-diff
+          (send config-task :eom-trans-task-value :update? nil))
+         (eom-rot-diff
+          (send config-task :eom-rot-task-value :update? nil))
+         (torque-diff
+          (send config-task :torque-task-value :update? nil))
+         (eom-trans-thre
+          (send config-task :get :eom-trans-thre))
+         (eom-rot-thre
+          (send config-task :get :eom-rot-thre))
+         (torque-thre
+          (send config-task :get :torque-thre))
+         )
+    (and (every #'(lambda (pos-diff pos-th) (< (* 1e3 (norm pos-diff)) pos-th)) pos-diff-list thre) ;; [mm]
+         (every #'(lambda (rot-diff rot-th) (< (rad2deg (norm rot-diff)) rot-th)) rot-diff-list rthre) ;; [deg]
+         (< (norm eom-trans-diff) eom-trans-thre) ;; [N]
+         (< (norm eom-rot-diff) eom-rot-thre) ;; [Nm]
+         (< (norm torque-diff) torque-thre) ;; [Nm] [N]
+         )
+    ))
+
+(defun sqp-failure-callback
+    (sqp)
+  (let* ((config-task
+          (send sqp :config-task))
+         (kin-task-value
+          (send config-task :kinematics-task-value :update? nil))
+         (pos-diff-list
+          (divide-vector kin-task-value :segment-length 3 :interval-length 3))
+         (rot-diff-list
+          (divide-vector (subseq kin-task-value 3) :segment-length 3 :interval-length 3))
+         (thre
+          (send config-task :get :thre))
+         (rthre
+          (send config-task :get :rthre))
+         (eom-trans-diff
+          (send config-task :eom-trans-task-value :update? nil))
+         (eom-rot-diff
+          (send config-task :eom-rot-task-value :update? nil))
+         (torque-diff
+          (send config-task :torque-task-value :update? nil))
+         (eom-trans-thre
+          (send config-task :get :eom-trans-thre))
+         (eom-rot-thre
+          (send config-task :get :eom-rot-thre))
+         (torque-thre
+          (send config-task :get :torque-thre))
+         )
+    (warning-message 3 "inverse-kinematics-optmotiongen failed.~%")
+    (map
+     nil
+     #'(lambda (i pos-diff rot-diff pos-th rot-th)
+         (warning-message
+          (if (>= (* 1e3 (norm pos-diff)) pos-th) 1 3)
+          "pos[~1d]  ~5,3f / ~5,3f  ~a~%" i (* 1e3 (norm pos-diff)) pos-th pos-diff) ;; [mm]
+         (warning-message
+          (if (>= (rad2deg (norm rot-diff)) rot-th) 1 3)
+          "rot[~1d]  ~5,3f / ~5,3f  ~a~%" i (rad2deg (norm rot-diff)) rot-th rot-diff) ;; [deg]
+         )
+     (range (length pos-diff-list))
+     pos-diff-list
+     rot-diff-list
+     thre
+     rthre
+     )
+    (warning-message
+     (if (>= (norm eom-trans-diff) eom-trans-thre) 1 3)
+     "eom-trans  ~5,3f / ~5,3f  ~a~%" (norm eom-trans-diff) eom-trans-thre eom-trans-diff) ;; [N]
+    (warning-message
+     (if (>= (norm eom-rot-diff) eom-rot-thre) 1 3)
+     "eom-rot  ~5,3f / ~5,3f  ~a~%" (norm eom-rot-diff) eom-rot-thre eom-rot-diff) ;; [Nm]
+    (warning-message
+     (if (>= (norm torque-diff) torque-thre) 1 3)
+     "torque  ~5,3f / ~5,3f  ~a~%" (norm torque-diff) torque-thre torque-diff) ;; [Nm] [N]
+    ))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; eus_qp/contact-optimization
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
