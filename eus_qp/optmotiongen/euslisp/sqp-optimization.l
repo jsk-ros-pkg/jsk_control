@@ -125,9 +125,9 @@ and update configuration:
        (setq _status :qp-error)
        (return-from :optimize _status)
        )
-     (when (or (= (mod _i print-status-interval) 0) (= _i loop-num))
+     (when (or (and print-status-interval (= (mod _i print-status-interval) 0)) (= _i loop-num))
        (send self :_print-status-once :loop-num loop-num))
-     (when (or (= (mod _i update-viewer-interval) 0) (= _i loop-num))
+     (when (or (and update-viewer-interval (= (mod _i update-viewer-interval) 0)) (= _i loop-num))
        (send self :_update-viewer-once))
      (when _post-process-func
        (funcall _post-process-func self))
