@@ -2444,8 +2444,8 @@ return $\bm{d}_{\mathit{col}} \in \mathbb{R}^{N_{\mathit{col}}}$
    "
 Update viewer.
    "
-   (send-all _kin-target-coords-list :draw-on :flush nil :color #f(0 1 0) :size 50 :width 10)
-   (dolist (att-coords _kin-attention-coords-list)
+   (send-all (flatten _kin-target-coords-list) :draw-on :flush nil :color #f(0 1 0) :size 50 :width 10)
+   (dolist (att-coords (flatten _kin-attention-coords-list))
      (cond ((equal att-coords :cog)
             (send (scale 1e3 (send self :cog)) :draw-on :flush nil :color #f(1 0 0) :size 100 :width 2)
             )
