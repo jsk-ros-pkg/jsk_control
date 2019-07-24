@@ -97,6 +97,8 @@
 \def\theequation{\thesection.\arabic{equation}}
 \makeatother
 \newcommand{\eqdef}{\ensuremath{\stackrel{\mathrm{def}}{=}}}
+\newcommand{\argmax}{\mathop{\rm arg~max}\limits}
+\newcommand{\argmin}{\mathop{\rm arg~min}\limits}
 
 
 \begin{document}
@@ -180,7 +182,7 @@ murooka@jsk.t.u-tokyo.ac.jp \\
 \pagenumbering{arabic}
 
 %%%%%%%%%%%%%%%%%%%%%%
-\section{軌道最適化による動作生成の基礎}
+\section{軌道最適化による動作生成の基礎} \label{chap:fundamental}
 \input{fundamental}
 
 %%%%%%%%%%%%%%%%%%%%%%
@@ -219,6 +221,12 @@ murooka@jsk.t.u-tokyo.ac.jp \\
 %%%%%
 \subsection{Bスプラインを用いた動的動作の生成} \label{sec:dynamic}
 \input{bspline-dynamic-configuration-task}
+%%%%%
+\subsection{離散的な幾何目標に対する逆運動学計算} \label{sec:discrete-ik}
+\subsubsection{離散的な幾何目標に対する逆運動学計算の理論}
+\input{theory-discrete-ik}
+\subsubsection{離散的な幾何目標に対する逆運動学計算の実装}
+\input{discrete-kinematics-configuration-task}
 
 %%%%%%%%%%%%%%%%%%%%%%
 \section{補足} \label{chap:appendix}

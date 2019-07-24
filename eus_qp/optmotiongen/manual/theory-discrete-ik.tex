@@ -1,0 +1,112 @@
+%%
+\subsubsection*{min/max関数の微分可能関数近似}
+
+minimum/maximum関数
+\begin{eqnarray}
+  F_{min}(\bm{x}; f_1, \cdots, f_K) &\eqdef& \min (f_1(\bm{x}), \cdots, f_K(\bm{x})) \label{eq:original-min} \\
+  F_{max}(\bm{x}; f_1, \cdots, f_K) &\eqdef& \max (f_1(\bm{x}), \cdots, f_K(\bm{x})) \label{eq:original-max}
+\end{eqnarray}
+を連続かつ微分可能な関数で近似したsmooth minimum/maximum関数として，次式を用いることができる\footnote{\url{https://en.wikipedia.org/wiki/Smooth_maximum}}．
+\begin{eqnarray}
+  \mathcal{S}_{\alpha}(\bm{x}; f_1, \cdots, f_K) \eqdef \frac{\sum_{k=1}^{K} f_k(\bm{x}) e^{\alpha f_k(\bm{x})}}{\sum_{k=1}^{K} e^{\alpha f_k(\bm{x})}} \label{eq:smooth-max}
+\end{eqnarray}
+この関数は以下の性質をもつ．
+\begin{eqnarray}
+  \alpha \to - \inf &のとき& \mathcal{S}_{\alpha} \to F_{min} \\
+  \alpha \to \inf &のとき& \mathcal{S}_{\alpha} \to F_{max}
+\end{eqnarray}
+
+%%
+\subsubsection*{離散的な目標に対するタスク関数の微分可能関数近似}
+
+タスク関数として
+$\bm{e}_1(\bm{q}), \cdots, \bm{e}_K(\bm{q}) \in \mathbb{R}^{N_e}$が与えられているときに，
+これらのタスク関数のいずれかをゼロにするコンフィギュレーション$\bm{q} \in \mathbb{R}^{N_q}$を求める問題を考える．
+複数個の目標位置のいずれかにリーチングする逆運動学問題などがこの問題に含まれる．
+
+この問題は次式で表される．
+\begin{eqnarray}
+  \bm{e}_k(\bm{q}) = \bm{0} \ \ (kは1,\cdots,Kのいずれか)
+\end{eqnarray}
+これは次式と同値である．
+\begin{eqnarray}
+  &&\bm{e}_{min}(\bm{q}) = \bm{0} \\
+  &&{\rm where \ \ } \bm{e}_{min}(\bm{q}) \eqdef \argmin_{\bm{e}_k \in \mathcal{E}} \| \bm{e}_k(\bm{q}) \|^2 \in \mathbb{R}^{N_e} \\
+  &&\phantom{\rm where \ \ }\mathcal{E} \eqdef \{ \bm{e}_1,\cdots,\bm{e}_K \}
+\end{eqnarray}
+タスク関数$\bm{e}_{min}(\bm{q})$のヤコビ行列$\frac{\partial \bm{e}_{min}(\bm{q})}{\partial \bm{q}}$が導出できれば，
+\chapref{chap:fundamental}の定式化により最適化計算を行うことで
+コンフィギュレーション$\bm{q}$を求めることができる．
+しかし，$\bm{e}_{min}(\bm{q})$は一般に，最小の$\bm{e}_k$が切り替わる点において微分不可能であり，
+ヤコビ行列を求めることができない．
+
+\eqref{eq:smooth-max}では，
+$f_k(\bm{x}) \in \mathbb{R} \ (k=1,\cdots,K)$
+の
+$\dfrac{e^{\alpha f_k(\bm{x})}}{\sum_{k=1}^{K} e^{\alpha f_k(\bm{x})}}$
+による重み付けした和をとることで，
+min/maxの微分可能関数近似を得ている．
+この近似をスカラ値関数からベクトル値関数へと拡張して，
+$\bm{e}_{min}(\bm{q})$を次式の微分可能関数で近似する．
+\begin{eqnarray}
+  &&\bm{\hat{e}}_{min}(\bm{q}) \eqdef
+  \dfrac{1}{ \sum_{\bm{e}_k \in \mathcal{E}} \exp(-\alpha \| \bm{e}_k(\bm{q}) \|^2) }
+  \sum_{\bm{e}_k \in \mathcal{E}} \exp(-\alpha \| \bm{e}_k(\bm{q}) \|^2) \bm{e}_k(\bm{q}) \in \mathbb{R}^{N_e} \label{eq:smooth-task-func}
+\end{eqnarray}
+$\alpha$は正の定数で大きいほど近似精度が増す．
+タスク関数$\bm{\hat{e}}_{min}(\bm{q})$のヤコビ行列$\frac{\partial \bm{\hat{e}}_{min}(\bm{q})}{\partial \bm{q}}$は，
+解析的に導出可能である．
+
+%%
+\subsubsection*{contact-invariant-optimizationにおける微分可能関数近似 (参考)}
+contact-invariant-optimizationの論文
+\footnote{
+  Discovery of complex behaviors through contact-invariant optimization,
+  I. Mordatch, et. al.,
+  ACM Transactions on Graphics 31.4, 43, 2012.
+}
+の4.1節では，minimum関数を含むタスク関数が以下のように近似されている．
+\begin{eqnarray}
+  &&\bm{\hat{e}}_{min}(\bm{q}) \eqdef
+  \dfrac{1}{ \sum_{\bm{e}_k \in \mathcal{E}} \eta(\bm{e}_k(\bm{q})) }
+  \sum_{\bm{e}_k \in \mathcal{E}} \eta(\bm{e}_k(\bm{q})) \bm{e}_k(\bm{q}) \in \mathbb{R}^{N_e} \\
+  &&{\rm where \ \ } \eta(\bm{e}_k(\bm{q})) = \frac{1}{1 + \beta \| \bm{e}_k(\bm{q}) \|^2} \in \mathbb{R}
+\end{eqnarray}
+$\beta$は正の定数で，論文では$10^4$としている．
+これは，\eqref{eq:smooth-task-func}における
+$\exp(-\alpha \| \bm{e}_k(\bm{q}) \|^2)$を$\eta(\bm{e}_k(\bm{q}))$で置き換えたものである．
+
+%%
+\subsubsection*{LogSumExpによる微分可能関数近似 (参考)}
+
+\eqref{eq:original-min},\eqref{eq:original-max}のminimum/maximum関数
+を連続かつ微分可能な関数で近似したsmooth minimum/maximum関数として，
+LogSumExp関数を用いることができる\footnote{\url{https://en.wikipedia.org/wiki/Smooth_maximum}}．
+\begin{eqnarray}
+  LSE_{\varepsilon}(\bm{x}; f_1, \cdots, f_K) \eqdef \frac{\log \left( \sum_{k=1}^{K} \exp( \varepsilon f_k(\bm{x})) \right) }{\varepsilon} \label{eq:lse-smooth-max}
+\end{eqnarray}
+$\varepsilon$が負のときminimum関数，正のときmaximum関数の近似となり，絶対値が大きいほど近似精度が増す．
+
+この関数は，重み付け和の形式ではないため，
+\eqref{eq:smooth-task-func}のようにスカラ値関数からベクトル値関数へ拡張することができない．
+
+タスク関数のノルム二乗として表される最適化の目的関数
+\begin{eqnarray}
+  F(\bm{q}) \eqdef \min_{\bm{e}_k \in \mathcal{E}} \| \bm{e}_k(\bm{q}) \|^2 \in \mathbb{R}
+\end{eqnarray}
+は，次の$\hat{F}(\bm{q})$として近似できる．
+\begin{eqnarray}
+  && \hat{F}(\bm{q}) \approx
+  \frac{\log\left(\sum_{\bm{e}_k \in \mathcal{E}} \exp(- \varepsilon \| \bm{e}_k(\bm{q}) \|^2)\right)}{- \varepsilon}
+\end{eqnarray}
+\eqref{eq:lse-smooth-max}の$\varepsilon$を改めて$- \varepsilon$と置き直した．$\varepsilon$が大きいほど近似精度が増す．
+
+近似目的関数$\hat{F}(\bm{q})$の勾配は次式で表される．
+\begin{eqnarray}
+  \frac{\partial \hat{F}(\bm{q})}{\partial \bm{q}} =
+  \frac{\sum_{\bm{e}_k \in \mathcal{E}} 2 \varepsilon \exp(- \varepsilon \| \bm{e}_k(\bm{q}) \|^2) \left(\frac{\partial \bm{e}_k(\bm{q})}{\partial \bm{q}}\right)^T \bm{e}_k(\bm{q})}
+       {\varepsilon \sum_{\bm{e}_k \in \mathcal{E}} \exp(- \varepsilon \| \bm{e}_k(\bm{q}) \|^2)}
+\end{eqnarray}
+
+近似目的関数$\hat{F}(\bm{q})$のヘッセ行列も解析的に導出可能である．
+(タスク関数を考える場合，そのヤコビ行列が求まれば，\chapref{chap:fundamental}のように目的関数のヘッセ行列は導出可能である．しかし，今回のように目的関数を直接扱う場合は，そのヘッセ行列を陽に導出する必要がある．)
