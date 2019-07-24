@@ -48,7 +48,8 @@ def trig():
     sound = SoundRequest()
     sound.sound = SoundRequest.SAY
     sound.command = SoundRequest.PLAY_ONCE
-    sound.volume = 1.0
+    if hasattr(SoundRequest, 'volume'): # volume is added from 0.3.0 https://github.com/ros-drivers/audio_common/commit/da9623414f381642e52f59701c09928c72a54be7#diff-fe2d85580f1ccfed4e23a608df44a7f7
+        sound.volume = 1.0
     sound.arg = "Robot stands on the ground."
     g_robotsound_pub.publish(sound)
     
