@@ -30,6 +30,9 @@ class JoyReverseAxis(JSKJoyPlugin):
                                     Joy, queue_size = 20)
     self.command_pub = rospy.Publisher(self.getArg('command', 'command'),
                                     String, queue_size=1)
+    self.triangle_cmd = self.getArg('triangle_cmd', 'TRIANGLE_CMD')
+    self.cross_cmd = self.getArg('cross_cmd', 'CROSS_CMD')
+    self.circle_cmd = self.getArg('circle_cmd', 'CIRCLE_CMD')
     
   def joyCB(self, status, history):
     if history.length() > 0:
@@ -59,9 +62,11 @@ class JoyReverseAxis(JSKJoyPlugin):
     elif not status.R3:
       self.new_joy.buttons[10] = 0
       if status.circle and not latest.circle:
-        self.command_pub.publish("MANIP")
+        self.command_pub.publish(self.circle_cmd)
       if status.triangle and not latest.triangle:
-        self.command_pub.publish("RELEASE")
+        self.command_pub.publish(self.triangle_cmd)
+      if status.cross and not latest.cross:
+        self.command_pub.publish(self.cross_cmd)
 
     # publish at 10hz
     now = rospy.Time.from_sec(time.time())

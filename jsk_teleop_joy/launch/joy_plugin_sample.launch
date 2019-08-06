@@ -21,6 +21,9 @@
              pose: $(arg POSE_REMAP)
              frame_id: $(arg FRAME_ID)
              follow_view: true
+             triangle_cmd: "PREVIEW"
+             circle_cmd: "EXCUTE"
+             cross_cmd: "CANCEL"
         'Verbose':
            class: 'VerboseStatus'
            args:

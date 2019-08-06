@@ -10,6 +10,7 @@ except:
 
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
+
 import tf
 import rospy
 import numpy
@@ -71,9 +72,12 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
                                     PoseStamped, queue_size=1)
     self.command_pub = rospy.Publisher(self.getArg('command', 'command'),
                                     String, queue_size=1)
+    self.triangle_cmd = self.getArg('triangle_cmd', 'TRIANGLE_CMD')
+    self.cross_cmd = self.getArg('cross_cmd', 'CROSS_CMD')
+    self.circle_cmd = self.getArg('circle_cmd', 'CIRCLE_CMD')
     self.supportFollowView(True)
 
-    self.puse_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'), PoseStamped, self.setPoseCB)
+    self.pose_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'), PoseStamped, self.setPoseCB)
     if rospy.has_param('~frame_id'):
       self.frame_id = rospy.get_param('~frame_id')
     self.tf_listener = tf.TransformListener()
@@ -105,13 +109,13 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
     if not status.R3:
       # xy
       if status.square:
-        scale = 10.0
+        scale = 20.0
       else:
         dist = status.left_analog_y * status.left_analog_y + status.left_analog_x * status.left_analog_x
         if dist > 0.9:
-          scale = 20.0
+          scale = 50.0
         else:
-          scale = 60.0
+          scale = 80.0
       x_diff = signedSquare(status.left_analog_y) / scale
       y_diff = signedSquare(status.left_analog_x) / scale
       # z
@@ -122,11 +126,11 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
       else:
         z_diff = 0.0
       if status.square:
-        z_scale = 10.0
+        z_scale = 5.0
       elif history.all(lambda s: s.L2) or history.all(lambda s: s.R2):
-        z_scale = 4.0
-      else:
         z_scale = 2.0
+      else:
+        z_scale = 1.0
       local_move = numpy.array((x_diff, y_diff,
                                 z_diff * z_scale, 
                                 1.0))
@@ -189,9 +193,9 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
         else:
           roll = roll - DTHETA
       if status.triangle and not latest.triangle:
-        self.publish_pose_command(new_pose, "EXECUTE")
+        self.publish_pose_command(new_pose, self.triangle_cmd)
       if status.cross and not latest.cross:
-        self.publish_pose_command(new_pose, "CANCEL")
+        self.publish_pose_command(new_pose, self.cross_cmd)
     diff_q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
     new_q = tf.transformations.quaternion_multiply(q, diff_q)
     new_pose.pose.orientation.x = new_q[0]
@@ -199,7 +203,7 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
     new_pose.pose.orientation.z = new_q[2]
     new_pose.pose.orientation.w = new_q[3]
     if not (status.R3 and status.L3 and status.R2 and status.L2) and status.circle and not latest.circle and self.publish_pose:
-      self.publish_pose_command(new_pose, "PREVIEW")
+      self.publish_pose_command(new_pose, self.circle_cmd)
     if status.L3:
       if status.circle and not latest.circle:
         self.saved_pose = copy.deepcopy(pre_pose)
