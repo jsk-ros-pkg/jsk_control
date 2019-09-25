@@ -51,9 +51,9 @@ Args:
 publish_pose [Boolean, default: True]: Publish or not pose
 frame_id [String, default: map]: frame_id of publishing pose, this is overwritten by parameter, ~frame_id
 pose [String, default: pose]: topic name for publishing pose
+target_pose [String, default: target_pose]: topic name to pubish current pose when button is pressed
 command [String, default: command]: topic name for publishing the command
 set_pose [String, default: set_pose]: topic name for setting pose by topic
-target_pose [String, default: target_pose]: topic name to pubish current pose when circle is pressed
   '''
   def __init__(self, name, args):
     RVizViewController.__init__(self, name, args)
@@ -202,18 +202,8 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
     new_pose.pose.orientation.y = new_q[1]
     new_pose.pose.orientation.z = new_q[2]
     new_pose.pose.orientation.w = new_q[3]
-    if not (status.R3 and status.L3 and status.R2 and status.L2) and status.circle and not latest.circle and self.publish_pose:
+    if not (status.R3 and status.R2 and status.L2) and status.circle and not latest.circle and self.publish_pose:
       self.publish_pose_command(new_pose, self.circle_cmd)
-    if status.L3:
-      if status.circle and not latest.circle:
-        self.saved_pose = copy.deepcopy(pre_pose)
-      elif status.square and not latest.square:
-        new_pose = copy.deepcopy(saved_pose)
-      pose_list = []
-      pose_list.append(pre_pose)
-      pose_list.append(new_pose)
-      pose_list.append(saved_pose)
-      self.publishAll(pose_list)
 
     # publish at 10hz
     if self.publish_pose:

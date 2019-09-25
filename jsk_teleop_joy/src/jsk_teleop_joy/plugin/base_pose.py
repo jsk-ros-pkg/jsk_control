@@ -36,6 +36,8 @@ Args:
 publish_pose [Boolean, default: True]: publish pose or not
 frame_id [String, default: map]: frame_id of publishing pose, overwritten by parameter ~frame_id
 pose [String, default: pose]: topic name for publishing pose
+target_pose [String, default: target_pose]: topic name to pubish current pose when button is pressed
+command [String, default: command]: topic name for publishing the command
 set_base [String, default: set_base]: topic name for setting initial pose by topic
 z [float, default: 0.0]: initial value for z, overwritten by arg set_base
   '''
@@ -50,9 +52,14 @@ z [float, default: 0.0]: initial value for z, overwritten by arg set_base
     self.frame_id = self.getArg('frame_id', 'map')
     self.goal_pub = rospy.Publisher(self.getArg('goal', 'goal'),
                                     PoseStamped, queue_size=1)
+    self.command_pub = rospy.Publisher(self.getArg('command', 'command'),
+                                    String, queue_size=1)
     if self.publish_pose:
       self.pose_pub = rospy.Publisher(self.getArg('pose', 'base'),
                                       PoseStamped, queue_size=10)
+    self.triangle_cmd = self.getArg('triangle_cmd', 'TRIANGLE_CMD')
+    self.cross_cmd = self.getArg('cross_cmd', 'CROSS_CMD')
+    self.circle_cmd = self.getArg('circle_cmd', 'CIRCLE_CMD')
     self.supportFollowView(True)
 
     self.pose_sub = rospy.Subscriber(self.getArg('set_base', 'set_base'), PoseStamped, self.setPoseCB)
@@ -66,6 +73,10 @@ z [float, default: 0.0]: initial value for z, overwritten by arg set_base
 
     if self.publish_pose:
       self.pose_pub.publish(self.pre_pose)
+
+  def publish_goal_command(self, pose, command):
+    self.goal_pub.publish(pose)
+    self.command_pub.publish(command)
 
   def joyCB(self, status, history):
     pre_pose = self.pre_pose
@@ -123,15 +134,19 @@ z [float, default: 0.0]: initial value for z, overwritten by arg set_base
           yaw = yaw - DTHETA * 2
         else:
           yaw = yaw - DTHETA
-    # No rotation in pitch and roll
+      # No rotation in pitch and roll
+      if status.triangle and not latest.triangle:
+        self.publish_pose_command(new_pose, self.triangle_cmd)
+      if status.cross and not latest.cross:
+        self.publish_pose_command(new_pose, self.cross_cmd)
     diff_q = tf.transformations.quaternion_from_euler(0.0, 0.0, yaw)
     new_q = tf.transformations.quaternion_multiply(q, diff_q)
     new_pose.pose.orientation.x = new_q[0]
     new_pose.pose.orientation.y = new_q[1]
     new_pose.pose.orientation.z = new_q[2]
     new_pose.pose.orientation.w = new_q[3]
-    if status.triangle and not latest.triangle:
-      self.goal_pub.publish(new_pose)
+    if not (status.R3 and status.R2 and status.L2) and status.circle and not latest.circle and self.publish_pose:
+      self.publish_goal_command(new_pose, self.circle_cmd)
 
     # publish at 10hz
     if self.publish_pose:
