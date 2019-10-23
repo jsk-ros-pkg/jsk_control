@@ -32,14 +32,19 @@ Right Analog x/y: yaw/pitch of camera position (see parent class, RVizViewContro
 R3(Right Analog button): suppressing buttons/sticks for controlling pose
    R3 + L2 + R2: enable follow view mode
 
+circle/cross/triangle: publish cooperating command
+
 Args:
 publish_pose [Boolean, default: True]: publish pose or not
 frame_id [String, default: map]: frame_id of publishing pose, overwritten by parameter ~frame_id
-pose [String, default: pose]: topic name for publishing pose
+pose [String, default: base]: topic name for publishing base pose
 target_pose [String, default: target_pose]: topic name to pubish current pose when button is pressed
-command [String, default: command]: topic name for publishing the command
-set_base [String, default: set_base]: topic name for setting initial pose by topic
+set_base [String, default: set_base]: topic name for setting base pose by topic
 z [float, default: 0.0]: initial value for z, overwritten by arg set_base
+command [String, default: command]: topic name for publishing the command
+triangle_cmd'　[String, default: TRIANGLE_CMD]: command text when triangle button is pressed
+circle_cmd'　[String, default: CIRCLE_CMD]: command text when triangle button is pressed
+cross_cmd'　[String, default: CROSS_CMD]: command text when triangle button is pressed
   '''
   #def __init__(self, name='JoyPose6D', publish_pose=True):
   def __init__(self, name, args):
@@ -62,7 +67,8 @@ z [float, default: 0.0]: initial value for z, overwritten by arg set_base
     self.circle_cmd = self.getArg('circle_cmd', 'CIRCLE_CMD')
     self.supportFollowView(True)
 
-    self.pose_sub = rospy.Subscriber(self.getArg('set_base', 'set_base'), PoseStamped, self.setPoseCB)
+    self.pose_sub = rospy.Subscriber(self.getArg('set_base', 'set_base'),
+                                     PoseStamped, self.setPoseCB)
     if rospy.has_param('~frame_id'):
       self.frame_id = rospy.get_param('~frame_id')
     self.tf_listener = tf.TransformListener()
@@ -145,7 +151,7 @@ z [float, default: 0.0]: initial value for z, overwritten by arg set_base
     new_pose.pose.orientation.y = new_q[1]
     new_pose.pose.orientation.z = new_q[2]
     new_pose.pose.orientation.w = new_q[3]
-    if not (status.R3 and status.R2 and status.L2) and status.circle and not latest.circle and self.publish_pose:
+    if not (status.R3 and status.R2 and status.L2) and status.circle and not latest.circle:
       self.publish_goal_command(new_pose, self.circle_cmd)
 
     # publish at 10hz

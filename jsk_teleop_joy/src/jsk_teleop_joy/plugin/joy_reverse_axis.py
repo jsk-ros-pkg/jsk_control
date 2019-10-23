@@ -15,17 +15,35 @@ import math
 import time
 
 class JoyReverseAxis(JSKJoyPlugin):
+  '''
+Usage:
+This plugin reads in the analog axis value and reverses the selected ones.
+It is supposed to be used together with the default joy teleop controls.
+
+circle/cross/triangle: publish cooperating command
+
+Args:
+namespace [String, default: demojoy]: namespace for the new joy topic
+reverse_lx_axis_mode [Boolean, default: True]: reverse left analog x value or not
+reverse_ly_axis_mode [Boolean, default: True]: reverse left analog y value or not
+reverse_rx_axis_mode [Boolean, default: False]: reverse right analog x value or not
+reverse_ry_axis_mode [Boolean, default: False]: reverse right analog y value or not
+command [String, default: command]: topic name for publishing the command
+triangle_cmd'　[String, default: TRIANGLE_CMD]: command text when triangle button is pressed
+circle_cmd'　[String, default: CIRCLE_CMD]: command text when triangle button is pressed
+cross_cmd'　[String, default: CROSS_CMD]: command text when triangle button is pressed
+  '''
   #def __init__(self, name='JoyPose6D', publish_pose=True):
   def __init__(self, name, args):
     JSKJoyPlugin.__init__(self, name, args)
     self.new_joy = Joy()
     self.new_joy.axes = [0]*20
     self.new_joy.buttons = [0]*17
-    self.reverse_x_axis_mode = self.getArg('reverse_x_axis_mode', True)
-    self.reverse_y_axis_mode = self.getArg('reverse_y_axis_mode', True)
-    self.reverse_r_axis_mode = self.getArg('reverse_r_axis_mode', False)
+    self.reverse_lx_axis_mode = self.getArg('reverse_lx_axis_mode', True)
+    self.reverse_ly_axis_mode = self.getArg('reverse_ly_axis_mode', True)
+    self.reverse_rx_axis_mode = self.getArg('reverse_rx_axis_mode', False)
+    self.reverse_ry_axis_mode = self.getArg('reverse_ry_axis_mode', False)
     self.prev_time = rospy.Time.now()
-    self.frame_id = self.getArg('frame_id', 'BODY')
     self.joy_pub = rospy.Publisher(self.getArg('namespace', 'demo_joy')+"/joy",
                                     Joy, queue_size = 20)
     self.command_pub = rospy.Publisher(self.getArg('command', 'command'),
@@ -47,18 +65,22 @@ class JoyReverseAxis(JSKJoyPlugin):
       self.check_button(status.circle, 13)
       self.check_button(status.cross, 14)
       self.check_button(status.square, 15)
-      if self.reverse_x_axis_mode:
+      if self.reverse_lx_axis_mode:
         self.new_joy.axes[0] = - status.left_analog_x
       else:
         self.new_joy.axes[0] = status.left_analog_x
-      if self.reverse_y_axis_mode:
+      if self.reverse_ly_axis_mode:
         self.new_joy.axes[1] = - status.left_analog_y
       else:
         self.new_joy.axes[1] = status.left_analog_y
-      if self.reverse_r_axis_mode:
+      if self.reverse_rx_axis_mode:
         self.new_joy.axes[2] = - status.right_analog_x
       else:
         self.new_joy.axes[2] = status.right_analog_x
+      if self.reverse_ry_axis_mode:
+        self.new_joy.axes[3] = - status.right_analog_y
+      else:
+        self.new_joy.axes[3] = status.right_analog_y
     elif not status.R3:
       self.new_joy.buttons[10] = 0
       if status.circle and not latest.circle:

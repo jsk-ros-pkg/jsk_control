@@ -42,18 +42,18 @@ R3(Right Analog button): suppressing buttons/sticks for controlling pose
 L3+circle: save current pose
 L3+square: load saved pose
 
-circle: publish a PREVIEW message to command.
-triangle: publish an EXCUTE message to command.
-cross: publish a CANCEL message to command.
-
+circle/cross/triangle: publish cooperating command
 
 Args:
 publish_pose [Boolean, default: True]: Publish or not pose
 frame_id [String, default: map]: frame_id of publishing pose, this is overwritten by parameter, ~frame_id
 pose [String, default: pose]: topic name for publishing pose
 target_pose [String, default: target_pose]: topic name to pubish current pose when button is pressed
-command [String, default: command]: topic name for publishing the command
 set_pose [String, default: set_pose]: topic name for setting pose by topic
+command [String, default: command]: topic name for publishing the command
+triangle_cmd'　[String, default: TRIANGLE_CMD]: command text when triangle button is pressed
+circle_cmd'　[String, default: CIRCLE_CMD]: command text when triangle button is pressed
+cross_cmd'　[String, default: CROSS_CMD]: command text when triangle button is pressed
   '''
   def __init__(self, name, args):
     RVizViewController.__init__(self, name, args)
@@ -77,7 +77,8 @@ set_pose [String, default: set_pose]: topic name for setting pose by topic
     self.circle_cmd = self.getArg('circle_cmd', 'CIRCLE_CMD')
     self.supportFollowView(True)
 
-    self.pose_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'), PoseStamped, self.setPoseCB)
+    self.pose_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'),
+                                     PoseStamped, self.setPoseCB)
     if rospy.has_param('~frame_id'):
       self.frame_id = rospy.get_param('~frame_id')
     self.tf_listener = tf.TransformListener()
@@ -202,7 +203,7 @@ set_pose [String, default: set_pose]: topic name for setting pose by topic
     new_pose.pose.orientation.y = new_q[1]
     new_pose.pose.orientation.z = new_q[2]
     new_pose.pose.orientation.w = new_q[3]
-    if not (status.R3 and status.R2 and status.L2) and status.circle and not latest.circle and self.publish_pose:
+    if not (status.R3 and status.R2 and status.L2) and status.circle and not latest.circle:
       self.publish_pose_command(new_pose, self.circle_cmd)
 
     # publish at 10hz
