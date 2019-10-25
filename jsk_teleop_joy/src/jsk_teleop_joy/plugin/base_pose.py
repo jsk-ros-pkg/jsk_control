@@ -6,8 +6,9 @@ try:
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 
-
 from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import String
+
 import tf
 import rospy
 import numpy
@@ -42,9 +43,9 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
 set_base [String, default: set_base]: topic name for setting base pose by topic
 z [float, default: 0.0]: initial value for z, overwritten by arg set_base
 command [String, default: command]: topic name for publishing the command
-triangle_cmd'　[String, default: TRIANGLE_CMD]: command text when triangle button is pressed
-circle_cmd'　[String, default: CIRCLE_CMD]: command text when triangle button is pressed
-cross_cmd'　[String, default: CROSS_CMD]: command text when triangle button is pressed
+triangle_cmd [String, default: TRIANGLE_CMD]: command text when triangle button is pressed
+circle_cmd [String, default: CIRCLE_CMD]: command text when triangle button is pressed
+cross_cmd [String, default: CROSS_CMD]: command text when triangle button is pressed
   '''
   #def __init__(self, name='JoyPose6D', publish_pose=True):
   def __init__(self, name, args):

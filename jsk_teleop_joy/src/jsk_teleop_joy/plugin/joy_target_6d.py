@@ -51,9 +51,9 @@ pose [String, default: pose]: topic name for publishing pose
 target_pose [String, default: target_pose]: topic name to pubish current pose when button is pressed
 set_pose [String, default: set_pose]: topic name for setting pose by topic
 command [String, default: command]: topic name for publishing the command
-triangle_cmd'　[String, default: TRIANGLE_CMD]: command text when triangle button is pressed
-circle_cmd'　[String, default: CIRCLE_CMD]: command text when triangle button is pressed
-cross_cmd'　[String, default: CROSS_CMD]: command text when triangle button is pressed
+triangle_cmd [String, default: TRIANGLE_CMD]: command text when triangle button is pressed
+circle_cmd [String, default: CIRCLE_CMD]: command text when triangle button is pressed
+cross_cmd [String, default: CROSS_CMD]: command text when triangle button is pressed
   '''
   def __init__(self, name, args):
     RVizViewController.__init__(self, name, args)
@@ -78,7 +78,7 @@ cross_cmd'　[String, default: CROSS_CMD]: command text when triangle button is 
     self.supportFollowView(True)
 
     self.pose_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'),
-                                     PoseStamped, self.setPoseCB)
+                                    PoseStamped, self.setPoseCB)
     if rospy.has_param('~frame_id'):
       self.frame_id = rospy.get_param('~frame_id')
     self.tf_listener = tf.TransformListener()

@@ -27,10 +27,23 @@ def signedSquare(val):
 class JoyBoundingBoxSelector(RVizViewController):
   '''
 Usage:
-Left Analog x/y: 
+up/left: go to the previous bounding box
+down/right: go to the next bounding box
+
+Right Analog x/y: yaw/pitch of camera position (see parent class, RVizViewController)
+R3(Right Analog button): suppressing buttons/sticks for controlling pose
+   R3 + L2 + R2: enable follow view mode
+
+circle/cross/triangle: publish cooperating command
 
 Args:
 frame_id [String, default: map]: frame_id of publishing pose, overwritten by parameter ~frame_id
+input_boxes [String, default: cluster_point_indices/boxes]: topic name of the bounding box array
+output [String, default: selected_bbox]: topic name to pubish the selected bounding box
+command [String, default: command]: topic name to publish commands
+triangle_cmd [String, default: TRIANGLE_CMD]: command text when triangle button is pressed
+circle_cmd [String, default: CIRCLE_CMD]: command text when triangle button is pressed
+cross_cmd [String, default: CROSS_CMD]: command text when triangle button is pressed
   '''
   def __init__(self, name, args):
     RVizViewController.__init__(self, name, args)

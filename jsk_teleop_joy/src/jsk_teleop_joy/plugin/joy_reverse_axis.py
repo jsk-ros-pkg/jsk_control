@@ -29,9 +29,9 @@ reverse_ly_axis_mode [Boolean, default: True]: reverse left analog y value or no
 reverse_rx_axis_mode [Boolean, default: False]: reverse right analog x value or not
 reverse_ry_axis_mode [Boolean, default: False]: reverse right analog y value or not
 command [String, default: command]: topic name for publishing the command
-triangle_cmd'　[String, default: TRIANGLE_CMD]: command text when triangle button is pressed
-circle_cmd'　[String, default: CIRCLE_CMD]: command text when triangle button is pressed
-cross_cmd'　[String, default: CROSS_CMD]: command text when triangle button is pressed
+triangle_cmd' [String, default: TRIANGLE_CMD]: command text when triangle button is pressed
+circle_cmd' [String, default: CIRCLE_CMD]: command text when triangle button is pressed
+cross_cmd' [String, default: CROSS_CMD]: command text when triangle button is pressed
   '''
   #def __init__(self, name='JoyPose6D', publish_pose=True):
   def __init__(self, name, args):
