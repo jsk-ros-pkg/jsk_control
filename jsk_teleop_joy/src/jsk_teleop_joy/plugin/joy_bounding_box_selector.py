@@ -77,9 +77,15 @@ cross_cmd [String, default: CROSS_CMD]: command text when triangle button is pre
     # renew index
     # self.index = rospy.get_param('~index', self.index)
     if not status.R3:
-      if (status.left_analog_y > 0.5 and latest.left_analog_y < 0.5) or (status.left_analog_x > 0.5 and latest.left_analog_x < 0.5):
+      if (history.new(status, "up")
+          or history.new(status, "left")
+          or history.new(status, "left_analog_up")
+          or history.new(status, "left_analog_left")):
         self.index -= 1
-      elif (status.left_analog_y < -0.5 and latest.left_analog_y > -0.5) or (status.left_analog_x < -0.5 and latest.left_analog_x > -0.5):
+      elif (history.new(status, "down")
+            or history.new(status, "right")
+            or history.new(status, "left_analog_down")
+            or history.new(status, "left_analog_right")):
         self.index += 1
       if status.circle and not latest.circle:
         self.command_pub.publish(self.circle_cmd)

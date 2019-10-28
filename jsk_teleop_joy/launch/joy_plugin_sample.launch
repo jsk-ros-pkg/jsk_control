@@ -22,7 +22,7 @@
              frame_id: $(arg FRAME_ID)
              follow_view: true
              triangle_cmd: "PREVIEW"
-             circle_cmd: "EXCUTE"
+             circle_cmd: "EXECUTE"
              cross_cmd: "CANCEL"
         'Verbose':
            class: 'VerboseStatus'
