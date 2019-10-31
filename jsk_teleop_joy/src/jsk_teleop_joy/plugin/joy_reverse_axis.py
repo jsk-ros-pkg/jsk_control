@@ -37,8 +37,6 @@ cross_cmd' [String, default: CROSS_CMD]: command text when triangle button is pr
   def __init__(self, name, args):
     JSKJoyPlugin.__init__(self, name, args)
     self.new_joy = Joy()
-    self.new_joy.axes = [0]*20
-    self.new_joy.buttons = [0]*17
     self.reverse_lx_axis_mode = self.getArg('reverse_lx_axis_mode', True)
     self.reverse_ly_axis_mode = self.getArg('reverse_ly_axis_mode', True)
     self.reverse_rx_axis_mode = self.getArg('reverse_rx_axis_mode', False)
@@ -53,6 +51,7 @@ cross_cmd' [String, default: CROSS_CMD]: command text when triangle button is pr
     self.circle_cmd = self.getArg('circle_cmd', 'CIRCLE_CMD')
     
   def joyCB(self, status, history):
+    self.new_joy = status.toPS3Msg()
     if history.length() > 0:
       latest = history.latest()
       if status.R3 and status.L2 and status.R2 and not (latest.R3 and latest.L2 and latest.R2):
@@ -60,29 +59,15 @@ cross_cmd' [String, default: CROSS_CMD]: command text when triangle button is pr
     # currently only support 2D plane movement
     if status.L1 and not status.R3:
       #L1 [10] [2]start/stop-grasp
-      self.new_joy.buttons[10] = 1
-      self.check_button(status.triangle, 12)
-      self.check_button(status.circle, 13)
-      self.check_button(status.cross, 14)
-      self.check_button(status.square, 15)
       if self.reverse_lx_axis_mode:
         self.new_joy.axes[0] = - status.left_analog_x
-      else:
-        self.new_joy.axes[0] = status.left_analog_x
       if self.reverse_ly_axis_mode:
         self.new_joy.axes[1] = - status.left_analog_y
-      else:
-        self.new_joy.axes[1] = status.left_analog_y
       if self.reverse_rx_axis_mode:
         self.new_joy.axes[2] = - status.right_analog_x
-      else:
-        self.new_joy.axes[2] = status.right_analog_x
       if self.reverse_ry_axis_mode:
         self.new_joy.axes[3] = - status.right_analog_y
-      else:
-        self.new_joy.axes[3] = status.right_analog_y
     elif not status.R3:
-      self.new_joy.buttons[10] = 0
       if status.circle and not latest.circle:
         self.command_pub.publish(self.circle_cmd)
       if status.triangle and not latest.triangle:
@@ -96,11 +81,3 @@ cross_cmd' [String, default: CROSS_CMD]: command text when triangle button is pr
     if (now - self.prev_time).to_sec() > 1 / 30.0:
       self.joy_pub.publish(self.new_joy)
       self.prev_time = now
-
-  def check_button(self, state, index):
-    if state:
-      self.new_joy.axes[index] = -1.0
-      self.new_joy.buttons[index] = 1
-    else:
-      self.new_joy.axes[index] = 0.0
-      self.new_joy.buttons[index] = 0
