@@ -98,7 +98,7 @@ class JoyManager():
     elif self.controller_type == 'ipega':
       self.JoyStatus = IpegaStatus
     elif self.controller_type == 'auto':
-      s = rospy.Subscriber('/joy', Joy, autoJoyDetect)
+      s = rospy.Subscriber('/joy', Joy, autoJoyDetect, queue_size=1)
       self.state = self.STATE_WAIT_FOR_JOY
       error_message_published = False
       r = rospy.Rate(1)
