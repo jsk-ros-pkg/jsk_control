@@ -4,7 +4,7 @@ jsk_footstep_planner
 
 ## How to execute examples
 
-![](images/footstep_planner_gazebo_perception_sample.gif)
+![](images/footstep_planner_perception_sample.gif)
 * execute cpp version of footstep planner with Rviz visualization
 ```
 $ roslaunch jsk_footstep_planner footstep_planner_perception_sample.launch
