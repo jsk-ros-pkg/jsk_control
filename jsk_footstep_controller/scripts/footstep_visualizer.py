@@ -271,7 +271,7 @@ def config_callback(config, level):
 
 if __name__ == "__main__":
     rospy.init_node("footstep_visualizer")
-    pub = rospy.Publisher("~output", Image)
+    pub = rospy.Publisher("~output", Image, queue_size=1)
     srv = Server(FootstepVisualizerConfig, config_callback)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)
