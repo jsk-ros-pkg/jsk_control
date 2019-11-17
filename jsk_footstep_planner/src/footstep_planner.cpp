@@ -407,13 +407,34 @@ namespace jsk_footstep_planner
     pub.publish(msg);
   }
 
+  /*
+   * 目標のfootstep を受け取って,そこまでのfootstepをプランする action server
+   *
+   */
   void FootstepPlanner::planCB(
     const jsk_footstep_msgs::PlanFootstepsGoal::ConstPtr& goal)
   {
+    // TODO: このmutexは何のデータ構造へのアクセスの制御のためのもの?
     boost::mutex::scoped_lock lock(mutex_);
+    // goal の footstep のheader
     latest_header_ = goal->goal_footstep.header;
     ROS_INFO("planCB");
-    // check message sanity
+
+
+    /*
+     * Verifying whether a requested message meets requirements below or not
+     *   - FootstepArray in the "initial_footstep" record of a goal is set.
+     *   - The size of FootstepArray in the "initial_footstep" record of a goal is 2.
+     *   - The frame_id of the "initial_footstep" record of a goal is equal to
+     *         the frame_id of pointcloud
+     *   - The frame_id of the "initial_footstep" record of a goal is equal to
+     *         the frame_id of obstacle pointcloudif obstacle_mode is used.
+     *   - The size of FootstepArray in the "goal_footstep" record of a goal is 2.
+     *
+     * And verifying if settings below is correct.
+     *   - pointcloud options are correctly set.
+     */
+    // check messgae sanity
     if (goal->initial_footstep.footsteps.size() == 0) {
       ROS_ERROR("no initial footstep is specified");
       as_.setPreempted();
@@ -449,15 +470,19 @@ namespace jsk_footstep_planner
         return;
       }
     }
+    // Initialize footstep_size and search_resolution
     Eigen::Vector3f footstep_size(footstep_size_x_, footstep_size_y_, 0.000001);
     Eigen::Vector3f search_resolution(resolution_x_, resolution_y_, resolution_theta_);
-    // check goal is whether collision free
-    // conevrt goal footstep into FootstepState::Ptr instance.
     if (goal->goal_footstep.footsteps.size() != 2) {
       ROS_ERROR("goal footstep should be a pair of footsteps");
       as_.setPreempted();
       return;
     }
+
+
+    /*
+     * Convert goal footstep (Footstep message instance) into FootstepState::Ptr instance.
+     */
     std::vector<jsk_footstep_msgs::Footstep > goal_ros;
     goal_ros.push_back(goal->goal_footstep.footsteps[0]);
     goal_ros.push_back(goal->goal_footstep.footsteps[1]);
@@ -483,18 +508,24 @@ namespace jsk_footstep_planner
         goal_ros[i].dimensions.z = 0.000001;
       }
     }
-
     FootstepState::Ptr first_goal = FootstepState::fromROSMsg(goal_ros[0],
                                                               footstep_size,
                                                               search_resolution);
     FootstepState::Ptr second_goal = FootstepState::fromROSMsg(goal_ros[1],
                                                                footstep_size,
                                                                search_resolution);
+    // TODO: Footstep messege と FootstepState の違いはどこにある?
+    // TODO: footstep_size と search_resolution とは?
+
+    // check goal is whether collision free
+    // check where goal_footstep is successable or not
     if (!graph_->isSuccessable(second_goal, first_goal)) {
       ROS_ERROR("goal is non-realistic");
       as_.setPreempted();
       return;
     }
+    // TODO: ros::WallDuration って何?
+    // タイムアウトの設定
     ros::WallDuration timeout;
     if(goal->timeout.toSec() == 0.0) {
       timeout = ros::WallDuration(planning_timeout_);
@@ -503,9 +534,13 @@ namespace jsk_footstep_planner
     }
 
 
+    /*
+     * Initialize search tree with start footstep state and goal footstep state
+     */
     ////////////////////////////////////////////////////////////////////
     // set start state
     // 0 is always start
+    // TODO: initial_footstep のうち,indexが0の方がかならずスタートになる?
     jsk_footstep_msgs::Footstep start_ros = goal->initial_footstep.footsteps[0];
     if (start_ros.offset.x == 0.0 &&
         start_ros.offset.y == 0.0 &&
@@ -536,9 +571,10 @@ namespace jsk_footstep_planner
         return;
       }
     }
-
     ////////////////////////////////////////////////////////////////////
     // set goal state
+    // TODO: goal_state のコンストラクタ生成時に,なぜsearch_resolution を使用しない?
+    // TODO: なぜすでに生成している first_goal と second_goal を使用しない?
     jsk_footstep_msgs::Footstep left_goal, right_goal;
     for (size_t i = 0; i < goal_ros.size(); i++) {
       FootstepState::Ptr goal_state(FootstepState::fromROSMsg(
@@ -561,6 +597,7 @@ namespace jsk_footstep_planner
         return;
       }
     }
+    // TODO: project_goal_state_ とは?
     if (project_goal_state_) {
       if (!graph_->projectGoal()) {
         ROS_ERROR("Failed to project goal");
@@ -571,6 +608,7 @@ namespace jsk_footstep_planner
         return;
       }
     }
+    ////////////////////////////////////////////////////////////////////
     // set parameters
     if (parameters_.use_transition_limit) {
       graph_->setTransitionLimit(
@@ -594,17 +632,19 @@ namespace jsk_footstep_planner
         TransitionLimitRP::Ptr(new TransitionLimitRP(
                                      parameters_.global_transition_limit_roll,
                                      parameters_.global_transition_limit_pitch)));
-
     }
     else {
       graph_->setGlobalTransitionLimit(TransitionLimitRP::Ptr());
     }
     graph_->setParameters(parameters_);
-
     graph_->setSuccessorFunction(boost::bind(&FootstepGraph::successors_original, graph_, _1, _2));
     graph_->setPathCostFunction(boost::bind(&FootstepGraph::path_cost_original, graph_, _1, _2, _3));
-
     //ROS_INFO_STREAM(graph_->infoString());
+
+
+    /*
+     * Setting up a solver for footstep graph
+     */
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
                                               close_list_x_num_,
@@ -635,6 +675,12 @@ namespace jsk_footstep_planner
     }
     graph_->clearPerceptionDuration();
     solver.setProfileFunction(boost::bind(&FootstepPlanner::profile, this, _1, _2));
+
+
+    /*
+     * Plan footsteps using the solver
+     */
+    // TODO: solver.solve 処理の中身の確認
     ROS_INFO("start_solver timeout: %f", timeout.toSec());
     ros::WallTime start_time = ros::WallTime::now();
     std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(timeout);
@@ -642,6 +688,12 @@ namespace jsk_footstep_planner
     double planning_duration = (end_time - start_time).toSec();
     //ROS_INFO_STREAM("took " << planning_duration << " sec");
     //ROS_INFO_STREAM("path: " << path.size());
+
+
+    /*
+     * Finalize footstep path
+     */
+    // when solver failed
     if (path.size() == 0) {
       pcl::PointCloud<pcl::PointNormal> close_list_cloud, open_list_cloud;
       solver.openListToPointCloud(open_list_cloud);
@@ -666,6 +718,10 @@ namespace jsk_footstep_planner
       as_.setPreempted();
       return;
     }
+    // when solver succeeded
+    // TODO: finalize 処理って何?
+    // TODO: 最後の2歩を付け加える処理のよう.
+    // TODO: なぜ path に直接付け加えていないの?
     // finalize in graph
     std::vector <FootstepState::Ptr> finalizeSteps;
     if (! (graph_->finalizeSteps((path.size() >1 ? path[path.size()-2]->getState() : FootstepState::Ptr()),
@@ -697,9 +753,14 @@ namespace jsk_footstep_planner
         ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
       }
     }
+    // return result of action server
     result_.result = ros_path;
     as_.setSucceeded(result_);
 
+
+    /*
+     *  Publish the result of planning
+     */
     pcl::PointCloud<pcl::PointNormal> close_list_cloud, open_list_cloud;
     solver.openListToPointCloud(open_list_cloud);
     solver.closeListToPointCloud(close_list_cloud);
