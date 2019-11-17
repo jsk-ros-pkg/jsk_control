@@ -470,14 +470,18 @@ namespace jsk_footstep_planner
         return;
       }
     }
-    // Initialize footstep_size and search_resolution
-    Eigen::Vector3f footstep_size(footstep_size_x_, footstep_size_y_, 0.000001);
-    Eigen::Vector3f search_resolution(resolution_x_, resolution_y_, resolution_theta_);
     if (goal->goal_footstep.footsteps.size() != 2) {
       ROS_ERROR("goal footstep should be a pair of footsteps");
       as_.setPreempted();
       return;
     }
+
+
+    /*
+     * Initialize footstep_size and search_resolution
+     */
+    Eigen::Vector3f footstep_size(footstep_size_x_, footstep_size_y_, 0.000001);
+    Eigen::Vector3f search_resolution(resolution_x_, resolution_y_, resolution_theta_);
 
 
     /*
