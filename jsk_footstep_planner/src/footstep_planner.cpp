@@ -408,15 +408,14 @@ namespace jsk_footstep_planner
   }
 
   /*
-   * 目標のfootstep を受け取って,そこまでのfootstepをプランする action server
-   *
+   * Callback function of actionlib server to plan footsteps to a given goal
    */
   void FootstepPlanner::planCB(
     const jsk_footstep_msgs::PlanFootstepsGoal::ConstPtr& goal)
   {
-    // TODO: このmutexは何のデータ構造へのアクセスの制御のためのもの?
     boost::mutex::scoped_lock lock(mutex_);
-    // goal の footstep のheader
+
+    // Store header of latest action goal footstep
     latest_header_ = goal->goal_footstep.header;
     ROS_INFO("planCB");
 
@@ -518,18 +517,20 @@ namespace jsk_footstep_planner
     FootstepState::Ptr second_goal = FootstepState::fromROSMsg(goal_ros[1],
                                                                footstep_size,
                                                                search_resolution);
-    // TODO: Footstep messege と FootstepState の違いはどこにある?
-    // TODO: footstep_size と search_resolution とは?
 
+    /*
+     *  Check whether a given goal is reachable or not
+     */
     // check goal is whether collision free
-    // check where goal_footstep is successable or not
     if (!graph_->isSuccessable(second_goal, first_goal)) {
       ROS_ERROR("goal is non-realistic");
       as_.setPreempted();
       return;
     }
-    // TODO: ros::WallDuration って何?
-    // タイムアウトの設定
+
+    /*
+     * Set Timeout
+     */
     ros::WallDuration timeout;
     if(goal->timeout.toSec() == 0.0) {
       timeout = ros::WallDuration(planning_timeout_);
@@ -544,7 +545,6 @@ namespace jsk_footstep_planner
     ////////////////////////////////////////////////////////////////////
     // set start state
     // 0 is always start
-    // TODO: initial_footstep のうち,indexが0の方がかならずスタートになる?
     jsk_footstep_msgs::Footstep start_ros = goal->initial_footstep.footsteps[0];
     if (start_ros.offset.x == 0.0 &&
         start_ros.offset.y == 0.0 &&
@@ -577,8 +577,6 @@ namespace jsk_footstep_planner
     }
     ////////////////////////////////////////////////////////////////////
     // set goal state
-    // TODO: goal_state のコンストラクタ生成時に,なぜsearch_resolution を使用しない?
-    // TODO: なぜすでに生成している first_goal と second_goal を使用しない?
     jsk_footstep_msgs::Footstep left_goal, right_goal;
     for (size_t i = 0; i < goal_ros.size(); i++) {
       FootstepState::Ptr goal_state(FootstepState::fromROSMsg(
@@ -601,7 +599,6 @@ namespace jsk_footstep_planner
         return;
       }
     }
-    // TODO: project_goal_state_ とは?
     if (project_goal_state_) {
       if (!graph_->projectGoal()) {
         ROS_ERROR("Failed to project goal");
@@ -684,7 +681,6 @@ namespace jsk_footstep_planner
     /*
      * Plan footsteps using the solver
      */
-    // TODO: solver.solve 処理の中身の確認
     ROS_INFO("start_solver timeout: %f", timeout.toSec());
     ros::WallTime start_time = ros::WallTime::now();
     std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(timeout);
@@ -723,10 +719,7 @@ namespace jsk_footstep_planner
       return;
     }
     // when solver succeeded
-    // TODO: finalize 処理って何?
-    // TODO: 最後の2歩を付け加える処理のよう.
-    // TODO: なぜ path に直接付け加えていないの?
-    // finalize in graph
+    // finalize in graph (add exact final footsteps to result footstep
     std::vector <FootstepState::Ptr> finalizeSteps;
     if (! (graph_->finalizeSteps((path.size() >1 ? path[path.size()-2]->getState() : FootstepState::Ptr()),
                                  path[path.size()-1]->getState(),
