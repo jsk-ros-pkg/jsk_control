@@ -137,7 +137,7 @@ namespace jsk_footstep_controller
     sub_zmp_.subscribe(nh, "zmp", 50);
     floor_coeffs_sub_ = pnh.subscribe("/floor_coeffs", 1,
                                       &Footcoords::floorCoeffsCallback, this);
-    floor_coeffs_ = boost::assign::list_of(0)(0)(1)(0);
+    floor_coeffs_ = boost::assign::list_of(0)(0)(1)(0).convert_to_container<std::vector<float>>();
     sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(100);
     sync_->connectInput(sub_lfoot_force_, sub_rfoot_force_, sub_joint_states_, sub_zmp_);
     sync_->registerCallback(boost::bind(&Footcoords::synchronizeForces, this, _1, _2, _3, _4));
