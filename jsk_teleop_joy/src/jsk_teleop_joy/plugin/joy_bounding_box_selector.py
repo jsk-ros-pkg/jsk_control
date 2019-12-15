@@ -28,7 +28,7 @@ Right Analog x/y: yaw/pitch of camera position (see parent class, RVizViewContro
 R3(Right Analog button): suppressing buttons/sticks for controlling pose
    R3 + L2 + R2: enable follow view mode
 
-circle/cross/triangle: publish cooperating command
+circle/cross/triangle: publish corresponding command
 
 Args:
 frame_id [String, default: map]: frame_id of publishing pose, overwritten by parameter ~frame_id

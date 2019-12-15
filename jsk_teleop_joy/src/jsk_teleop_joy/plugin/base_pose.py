@@ -27,7 +27,7 @@ Right Analog x/y: yaw/pitch of camera position (see parent class, RVizViewContro
 R3(Right Analog button): suppressing buttons/sticks for controlling pose
    R3 + L2 + R2: enable follow view mode
 
-circle/cross/triangle: publish cooperating command
+circle/cross/triangle: publish corresponding command
 
 Args:
 publish_pose [Boolean, default: True]: publish pose or not

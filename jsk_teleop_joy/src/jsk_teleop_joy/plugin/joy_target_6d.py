@@ -32,7 +32,7 @@ R3(Right Analog button): suppressing buttons/sticks for controlling pose
 L3+circle: save current pose
 L3+square: load saved pose
 
-circle/cross/triangle: publish cooperating command
+circle/cross/triangle: publish corresponding command
 
 Args:
 publish_pose [Boolean, default: True]: Publish or not pose

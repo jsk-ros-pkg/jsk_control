@@ -14,7 +14,7 @@ Usage:
 This plugin reads in the analog axis value and reverses the selected ones.
 It is supposed to be used together with the default joy teleop controls.
 
-circle/cross/triangle: publish cooperating command
+circle/cross/triangle: publish corresponding command
 
 Args:
 namespace [String, default: demojoy]: namespace for the new joy topic
