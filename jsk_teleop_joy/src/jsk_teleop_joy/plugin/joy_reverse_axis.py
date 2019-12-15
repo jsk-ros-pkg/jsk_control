@@ -1,11 +1,5 @@
 from jsk_teleop_joy.joy_plugin import JSKJoyPlugin
 
-import imp
-try:
-  imp.find_module("geometry_msgs")
-except:
-  import roslib; roslib.load_manifest('jsk_teleop_joy')
-
 from std_msgs.msg import String
 from sensor_msgs.msg import Joy
 import tf
