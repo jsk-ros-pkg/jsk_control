@@ -42,8 +42,8 @@ target_pose [String, default: target_pose]: topic name to pubish current pose wh
 set_pose [String, default: set_pose]: topic name for setting pose by topic
 command [String, default: command]: topic name for publishing the command
 triangle_cmd [String, default: TRIANGLE_CMD]: command text when triangle button is pressed
-circle_cmd [String, default: CIRCLE_CMD]: command text when triangle button is pressed
-cross_cmd [String, default: CROSS_CMD]: command text when triangle button is pressed
+circle_cmd [String, default: CIRCLE_CMD]: command text when circle button is pressed
+cross_cmd [String, default: CROSS_CMD]: command text when cross button is pressed
   '''
   def __init__(self, name, args):
     RVizViewController.__init__(self, name, args)

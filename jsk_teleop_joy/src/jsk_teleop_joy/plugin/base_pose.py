@@ -39,8 +39,8 @@ set_base [String, default: set_base]: topic name for setting base pose by topic
 z [float, default: 0.0]: initial value for z, overwritten by arg set_base
 command [String, default: command]: topic name for publishing the command
 triangle_cmd [String, default: TRIANGLE_CMD]: command text when triangle button is pressed
-circle_cmd [String, default: CIRCLE_CMD]: command text when triangle button is pressed
-cross_cmd [String, default: CROSS_CMD]: command text when triangle button is pressed
+circle_cmd [String, default: CIRCLE_CMD]: command text when circle button is pressed
+cross_cmd [String, default: CROSS_CMD]: command text when cross button is pressed
   '''
   #def __init__(self, name='JoyPose6D', publish_pose=True):
   def __init__(self, name, args):

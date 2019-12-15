@@ -2,6 +2,7 @@ from joy_rviz_view_controller import RVizViewController
 
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
+
 import tf
 import rospy
 import numpy
@@ -36,8 +37,8 @@ input_boxes [String, default: cluster_point_indices/boxes]: topic name of the bo
 output [String, default: selected_bbox]: topic name to pubish the selected bounding box
 command [String, default: command]: topic name to publish commands
 triangle_cmd [String, default: TRIANGLE_CMD]: command text when triangle button is pressed
-circle_cmd [String, default: CIRCLE_CMD]: command text when triangle button is pressed
-cross_cmd [String, default: CROSS_CMD]: command text when triangle button is pressed
+circle_cmd [String, default: CIRCLE_CMD]: command text when circle button is pressed
+cross_cmd [String, default: CROSS_CMD]: command text when cross button is pressed
   '''
   def __init__(self, name, args):
     RVizViewController.__init__(self, name, args)
