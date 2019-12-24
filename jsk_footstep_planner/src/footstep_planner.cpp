@@ -38,6 +38,7 @@
 #include <jsk_topic_tools/rosparam_utils.h>
 #include <jsk_recognition_utils/pcl_conversion_util.h>
 #include <pcl/common/angles.h>
+#include <algorithm>
 #include <boost/format.hpp>
 
 namespace jsk_footstep_planner
@@ -689,7 +690,7 @@ namespace jsk_footstep_planner
         ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
       }
     }
-    for (size_t i = 0; i < finalizeSteps.size(); i++) {
+    for (size_t i = 0; i < std::min(num_finalize_steps_, finalizeSteps.size()); i++) {
       const FootstepState::Ptr st = finalizeSteps[i];
       if (st->getLeg() == jsk_footstep_msgs::Footstep::LEFT) {
         ros_path.footsteps.push_back(*(st->toROSMsg(inv_lleg_footstep_offset_)));
@@ -965,6 +966,7 @@ namespace jsk_footstep_planner
       need_to_rebuild_graph = true;
     }
     parameters_.obstacle_resolution = config.obstacle_resolution;
+    num_finalize_steps_ = config.num_finalize_steps;
     if (need_to_rebuild_graph) {
       if (graph_) {             // In order to skip first initialization
         ROS_INFO("re-building graph");
