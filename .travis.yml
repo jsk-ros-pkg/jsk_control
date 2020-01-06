@@ -21,6 +21,7 @@ env:
     - ROS_DISTRO=indigo  USE_DEB=true
     - ROS_DISTRO=jade    USE_DEB=true
     - ROS_DISTRO=kinetic USE_DEB=true
+    - ROS_DISTRO=melodic USE_DEB=true
 matrix:
   fast_finish: true
   allow_failures:
