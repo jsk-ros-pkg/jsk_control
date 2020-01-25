@@ -80,9 +80,11 @@
   (&key (solve-qp-mode :qp))
   "Demo for simply-bounded QP with equality constraint."
   (let* ((X0 (float-vector 10 10))
-         (H (make-matrix
-             2 2
-             (list (list 4 1) (list 1 2))))
+         (H (scale-matrix
+             2
+             (make-matrix
+              2 2
+              (list (list 4 1) (list 1 2)))))
          (q (float-vector -3 -4))
          (A (make-matrix
              1 2
@@ -100,7 +102,7 @@
                )))
     (warn ";; solution ~A => ~A~%"
           ret
-          (setq ret (eps-v= (float-vector (/ 2.0 7.0) (/ 5.0 14.0)) ret)))
+          (setq ret (eps-v= (float-vector (/ 1.0 7.0) (/ 3.0 7.0)) ret)))
     ;; correct solution
     ret
     ))
