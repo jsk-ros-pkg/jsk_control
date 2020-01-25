@@ -59,9 +59,9 @@
         (status (float-vector 0))
         (check-status t)
         (solve-qp-mode :qp)
-        (eval-weight-matrix-sparce)
-        (equality-matrix-sparce)
-        (inequality-matrix-sparce)
+        (eval-weight-matrix-sparce eval-weight-matrix);;elements with 0 are considered sparse
+        (equality-matrix-sparce equality-matrix);;elements with 0 are considered sparse
+        (inequality-matrix-sparce inequality-matrix);;elements with 0 are considered sparse
         )
   (if (and inequality-matrix (= (length inequality-min-vector) 0))
       (setq inequality-min-vector (fill (instantiate float-vector inequality-dim) (- inf-var))))

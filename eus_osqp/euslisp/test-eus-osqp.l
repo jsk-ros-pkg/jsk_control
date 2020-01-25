@@ -224,6 +224,9 @@
                :state-min-vector LB
                :solve-qp-mode solve-qp-mode
                :status status
+               :eval-weight-matrix-sparce nil
+               :equality-matrix-sparce nil
+               :inequality-matrix-sparce nil
                ))))
     (if (= (round (elt status 0)) 1)
         (warn ";; solution ~A => ~A~%"
