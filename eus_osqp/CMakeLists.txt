@@ -23,7 +23,7 @@ catkin_package(
   INCLUDE_DIRS include
 )
 
-include_directories(include)
+include_directories(include ${Boost_INCLUDE_DIRS})
 link_directories(lib)
 
 add_library(eus_osqp SHARED src/eus_osqp.cpp)

@@ -16,6 +16,22 @@
    )
   :string)
 
+(defforeign _solve-osqp-sqp-with-hotstart
+  *libeusosqp*
+  "solve_osqp_sqp_with_hotstart"
+  (:string ;; ret
+   :string ;; eval-weight-matrix
+   :string ;; eval-coeff-vector
+   :string ;; inequality-matrix
+   :string ;; inequality-min-vector
+   :string ;; inequality-max-vector
+   :integer ;; state_len
+   :integer ;; inequality_len
+   :integer ;; verbose
+   :string ;; return status
+   )
+  :string)
+
 (defun solve-osqp-qp
   (&key (inf-var 1e35)
         (initial-state)
@@ -34,7 +50,7 @@
         (debug t)
         (status (float-vector 0))
         (check-status t)
-        (solve-qp-mode) ;; unused. just for compatibility with solve-qpoases-qp.
+        (solve-qp-mode :qp)
         )
   (if (and inequality-matrix (= (length inequality-min-vector) 0))
       (setq inequality-min-vector (fill (instantiate float-vector inequality-dim) (- inf-var))))
@@ -85,7 +101,11 @@
       (setq inequality-max-vector (fill (instantiate float-vector 1) inf-var)))
     (unless eval-weight-matrix
       (setq eval-weight-matrix (make-matrix state-dim state-dim)))
-    (_solve-osqp-qp
+    (funcall
+     (case
+      solve-qp-mode
+      (:qp #'_solve-osqp-qp)
+      (:sqp-with-hotstart #'_solve-osqp-sqp-with-hotstart))
      ret
      (array-entity eval-weight-matrix)
      eval-coeff-vector

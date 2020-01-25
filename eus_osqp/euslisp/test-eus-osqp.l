@@ -11,7 +11,7 @@
 ;;     =>X=|x1 x2|, H=2*|1 1/2;1/2 2|
 ;; =>2.85714 2.28571
 (defun demo-eus-osqp1
-  ()
+  (&key (solve-qp-mode :qp))
   "Demo for unbounded QP."
   (let* ((X0 (float-vector 0 0))
          (H (scale-matrix
@@ -24,6 +24,7 @@
                :initial-state x0
                :eval-weight-matrix H
                :eval-coeff-vector q
+               :solve-qp-mode solve-qp-mode
                )))
     (warn ";; solution ~A => ~A~%"
           ret
@@ -40,7 +41,7 @@
 ;; s.t. |2 1|X = 2
 ;; =>-0.142857 2.28571
 (defun demo-eus-osqp2
-  ()
+  (&key (solve-qp-mode :qp))
   "Demo for QP with equality constraint."
   (let* ((X0 (float-vector 10 10))
          (H (scale-matrix
@@ -59,6 +60,7 @@
                :eval-coeff-vector q
                :equality-matrix A
                :equality-vector B
+               :solve-qp-mode solve-qp-mode
                )))
     (warn ";; solution ~A => ~A~%"
           ret
@@ -75,7 +77,7 @@
 ;;      X>=0
 ;; =>0.285714 0.357143
 (defun demo-eus-osqp3
-  ()
+  (&key (solve-qp-mode :qp))
   "Demo for simply-bounded QP with equality constraint."
   (let* ((X0 (float-vector 10 10))
          (H (make-matrix
@@ -94,6 +96,7 @@
                :equality-matrix A
                :equality-vector B
                :state-min-vector LB
+               :solve-qp-mode solve-qp-mode
                )))
     (warn ";; solution ~A => ~A~%"
           ret
@@ -104,7 +107,7 @@
 
 ;; In feasible
 (defun demo-eus-osqp4
-  ()
+  (&key (solve-qp-mode :qp))
   "Demo for infeasible QP."
   (let* ((X0 (float-vector 0 0))
          (H (scale-matrix
@@ -123,6 +126,7 @@
                 :eval-coeff-vector q
                 :state-min-vector LB
                 :state-max-vector UB
+                :solve-qp-mode solve-qp-mode
                 ))
          ;; check-status = nil => something is returned.
          (ret1 (solve-osqp-qp
@@ -132,6 +136,7 @@
                 :state-min-vector LB
                 :state-max-vector UB
                 :check-status nil
+                :solve-qp-mode solve-qp-mode
                 )))
     (warn ";; solution => ~A, ~A~%" ret0 ret1)
     ;; correct solution
@@ -140,12 +145,12 @@
 
 ;;
 (defun demo-eus-osqp-all
-    ()
+    (&key (qp-mode :qp))
   "Demo for all QP and LP."
-  (and (demo-eus-osqp1)
-       (demo-eus-osqp2)
-       (demo-eus-osqp3)
-       (demo-eus-osqp4)
+  (and (demo-eus-osqp1 :solve-qp-mode qp-mode)
+       (demo-eus-osqp2 :solve-qp-mode qp-mode)
+       (demo-eus-osqp3 :solve-qp-mode qp-mode)
+       (demo-eus-osqp4 :solve-qp-mode qp-mode)
        ))
 
 (warn ";; (demo-eus-osqp1) ;; ~A~%" (documentation 'demo-eus-osqp1))
