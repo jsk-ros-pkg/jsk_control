@@ -9,7 +9,7 @@ ExternalProject_Add(osqpproj
   GIT_REPOSITORY https://github.com/oxfordcontrol/osqp.git
   GIT_TAG v0.6.0
   TIMEOUT 30
-  CMAKE_ARGS -DDFLOAT=ON
+  CMAKE_ARGS -DDFLOAT=OFF
   BUILD_COMMAND make -j
   BUILD_IN_SOURCE 1
   INSTALL_COMMAND sh -c "cp -r include/* ${PROJECT_SOURCE_DIR}/include/" && sh -c "rm -fr ${PROJECT_SOURCE_DIR}/include/osqp/.gitignore" && cp out/libosqp.so ${PROJECT_SOURCE_DIR}/lib/
