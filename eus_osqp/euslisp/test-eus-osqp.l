@@ -226,7 +226,6 @@
                :status status
                :eval-weight-matrix-sparce nil
                :equality-matrix-sparce nil
-               :inequality-matrix-sparce nil
                ))))
     (if (= (round (elt status 0)) 1)
         (warn ";; solution ~A => ~A~%"
@@ -277,17 +276,6 @@
                  (setf (aref _H (+ (* i 2) 1) (+ (* i 2) 0)) 1)
                  )
                _H)))
-         (Hsparce (let ((_Hsparce (make-array
-                             (list 300 300)
-                             :element-type float-vector
-                             :initial-element 0)))
-                    (dotimes (i 150)
-                      (setf (aref _Hsparce (* i 2) (* i 2)) 1)
-                      (setf (aref _Hsparce (+ (* i 2) 1) (+ (* i 2) 1)) 1)
-                      (setf (aref _Hsparce (+ (* i 2) 0) (+ (* i 2) 1)) 1)
-                      (setf (aref _Hsparce (+ (* i 2) 1) (+ (* i 2) 0)) 1)
-                      )
-                    _Hsparce))
          (q (let ((_q (make-array 300 :element-type :float :initial-element 0.0)))
               (dotimes (i 150)
                 (setelt _q (* i 2) -3)
@@ -303,15 +291,6 @@
                 (setf (aref _A i (+ (* i 2) 1)) 2)
                 )
               _A))
-         (Asparce (let ((_Asparce (make-array
-                       (list 150 300)
-                       :element-type float-vector
-                       :initial-element 0)))
-              (dotimes (i 150)
-                (setf (aref _Asparce i (* i 2)) 1)
-                (setf (aref _Asparce i (+ (* i 2) 1)) 1)
-                )
-              _Asparce))
          (B (make-array 150 :element-type :float :initial-element 1.0))
          (LB (make-array 300 :element-type :float :initial-element 0.0))
          (status #F(0))
@@ -324,8 +303,6 @@
                :state-min-vector LB
                :solve-qp-mode solve-qp-mode
                :status status
-               :eval-weight-matrix-sparce Hsparce
-               :equality-matrix-sparce Asparce
                ))))
     (if (= (round (elt status 0)) 1)
         (warn ";; solution ~A => ~A~%"
