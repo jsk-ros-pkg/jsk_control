@@ -9,54 +9,118 @@
 // https://github.com/oxfordcontrol/osqp/blob/master/examples/osqp_demo.c
 // https://osqp.org/docs/examples/setup-and-solve.html
 double* solve_osqp_common (double* ret,
-                                 double* eval_weight_matrix, double* eval_coeff_vector,
-                                 double* inequality_matrix, double* inequality_min_vector, double* inequality_max_vector,
-                                 int state_len, int inequality_len, int verbose, double* ret_status) {
+                           double* eval_weight_matrix, double* eval_coeff_vector,
+                           double* inequality_matrix, double* inequality_min_vector, double* inequality_max_vector,
+                           int state_len, int inequality_len, int verbose, double* ret_status,
+                           int eval_weight_matrix_sparce_given, double* eval_weight_matrix_sparce,
+                           int inequality_matrix_sparce_given, double* inequality_matrix_sparce) {
   // Load problem data
-  c_float *P_x = new c_float[state_len*state_len];
-  c_int P_nnz = state_len*state_len;
-  c_int *P_i = new c_int[state_len*state_len];
-  c_int *P_p = new c_int[state_len+1];
+  c_float *P_x;
+  c_int P_nnz;
+  c_int *P_i;
+  c_int *P_p;
   c_float *q = new c_float[state_len];
-  c_float *A_x = new c_float[state_len*inequality_len];
-  c_int A_nnz = state_len*inequality_len;
-  c_int *A_i = new c_int[state_len*inequality_len];
-  c_int *A_p = new c_int[state_len+1];
+  c_float *A_x;
+  c_int A_nnz;
+  c_int *A_i;
+  c_int *A_p;
   c_float *l = new c_float[inequality_len];
   c_float *u = new c_float[inequality_len];
 
-  // for文のindexのi,jは，i行j列を表す
-  // ref. document of sparse matrix:
-  // https://people.sc.fsu.edu/~jburkardt/data/cc/cc.html
-  for (c_int i = 0; i < state_len; i++) {
-    for (c_int j = 0; j < state_len; j++) {
-      // make P_x symmetric
-      P_x[state_len*j+i] = (eval_weight_matrix[state_len*i+j] + eval_weight_matrix[state_len*j+i]) / 2.0;
+  if(!eval_weight_matrix_sparce_given){
+    P_x = new c_float[state_len*state_len];
+    P_nnz = state_len*state_len;
+    P_i = new c_int[state_len*state_len];
+    P_p = new c_int[state_len+1];
+
+    // for文のindexのi,jは，i行j列を表す
+    // ref. document of sparse matrix:
+    // https://people.sc.fsu.edu/~jburkardt/data/cc/cc.html
+    for (c_int i = 0; i < state_len; i++) {
+      for (c_int j = 0; j < state_len; j++) {
+        // make P_x symmetric
+        P_x[state_len*j+i] = (eval_weight_matrix[state_len*i+j] + eval_weight_matrix[state_len*j+i]) / 2.0;
+      }
     }
-  }
-  for (c_int i = 0; i < state_len; i++) {
-    for (c_int j = 0; j < state_len; j++) {
-      P_i[state_len*j+i] = i;
+    for (c_int i = 0; i < state_len; i++) {
+      for (c_int j = 0; j < state_len; j++) {
+        P_i[state_len*j+i] = i;
+      }
     }
-  }
-  for (c_int j = 0; j < state_len+1; j++) {
-    P_p[j] = state_len*j;
+    for (c_int j = 0; j < state_len+1; j++) {
+      P_p[j] = state_len*j;
+    }
+  }else{
+    std::vector<double> Psparse(state_len*state_len,0);
+    for(size_t i = 0; i < state_len; i++){
+        for(size_t j = 0; j < state_len; j++){
+          // make Psparse symmetric
+          Psparse[i*state_len+j] = (eval_weight_matrix_sparce[i*state_len+j]==0 || eval_weight_matrix_sparce[j*state_len+i]==0)? 0.0 : 1.0;
+        }
+    }
+    P_nnz = Psparse.size() - std::count(Psparse.begin(), Psparse.end(), 0);
+    P_x = new c_float[P_nnz];
+    P_i = new c_int[P_nnz];
+    P_p = new c_int[state_len+1];
+    P_p[0] = 0;
+    for (size_t j = 0; j < state_len; j++) {
+      size_t num=0;
+      for(size_t i = 0; i < state_len; i++){
+        if(eval_weight_matrix_sparce[i*state_len+j]!=0){
+          P_i[P_p[j]+num] = i;
+          // make P_x symmetric
+          P_x[P_p[j]+num] = (eval_weight_matrix[i*state_len+j] + eval_weight_matrix[j*state_len+i]) / 2.0;
+          num++;
+        }
+      }
+      P_p[j+1] = P_p[j] + num;
+    }
   }
   for (c_int i = 0; i < state_len; i++) {
     q[i] = eval_coeff_vector[i];
   }
-  for (c_int i = 0; i < inequality_len; i++) {
-    for (c_int j = 0; j < state_len; j++) {
-      A_x[inequality_len*j+i] = inequality_matrix[state_len*i+j];
+  if (!inequality_matrix_sparce_given){
+    A_x = new c_float[state_len*inequality_len];
+    A_nnz = state_len*inequality_len;
+    A_i = new c_int[state_len*inequality_len];
+    A_p = new c_int[state_len+1];
+
+    for (c_int i = 0; i < inequality_len; i++) {
+      for (c_int j = 0; j < state_len; j++) {
+        A_x[inequality_len*j+i] = inequality_matrix[state_len*i+j];
+      }
     }
-  }
-  for (c_int i = 0; i < inequality_len; i++) {
-    for (c_int j = 0; j < state_len; j++) {
-      A_i[inequality_len*j+i] = i;
+    for (c_int i = 0; i < inequality_len; i++) {
+      for (c_int j = 0; j < state_len; j++) {
+        A_i[inequality_len*j+i] = i;
+      }
     }
-  }
-  for (c_int j = 0; j < state_len+1; j++) {
-    A_p[j] = inequality_len*j;
+    for (c_int j = 0; j < state_len+1; j++) {
+      A_p[j] = inequality_len*j;
+    }
+  }else{
+    std::vector<double> Asparse(state_len*inequality_len,0);
+    for(size_t i = 0; i < inequality_len; i++){
+      for(size_t j = 0; j < state_len; j++){
+        Asparse[i*state_len+j] = (inequality_matrix_sparce[i*state_len+j]==0)? 0.0 : 1.0;
+      }
+    }
+    A_nnz = Asparse.size() - std::count(Asparse.begin(), Asparse.end(), 0);
+    A_x = new c_float[A_nnz];
+    A_i = new c_int[A_nnz];
+    A_p = new c_int[state_len+1];
+    A_p[0] = 0;
+    for (size_t j = 0; j < state_len; j++) {
+      size_t num=0;
+      for(size_t i = 0; i < inequality_len; i++){
+        if(Asparse[i*state_len+j]!=0){
+          A_i[A_p[j]+num] = i;
+          A_x[A_p[j]+num] = inequality_matrix[i*state_len+j];
+          num++;
+        }
+      }
+      A_p[j+1] = A_p[j] + num;
+    }
   }
   for (c_int i = 0; i < inequality_len; i++) {
     l[i] = inequality_min_vector[i];
@@ -85,10 +149,16 @@ double* solve_osqp_common (double* ret,
 
   // Define Solver settings as default
   osqp_set_default_settings(settings);
-  settings->rho = 1e-6;
-  settings->alpha = 0.1;
-  settings->max_iter = 100000;
+  //settings->rho = 1e-6;
+  //settings->alpha = 0.1;
   settings->verbose = verbose;
+  settings->max_iter = 4000;
+  //settings->max_iter = 100000;
+  settings->eps_abs = 1e-05; // improve accuracy
+  settings->eps_rel = 1e-05; // improve accuracy
+  settings->scaled_termination = true; // avoid too severe termination check
+  //settings->polish = true; // improve accuracy. but cause oscillatory solution when convex error
+  //settings->delta = 1e-4; // in polish, too small delta causes non-convex error, too large delta causes failure(unsuccessful)
 
   // Setup workspace
   int setup_ret = osqp_setup(&work, data, settings);
@@ -123,8 +193,9 @@ class osqp_solver {
 public:
   osqp_solver(size_t _state_len,
               size_t _inequality_len,
-              const std::vector<int>& _Psparse,// have to be symmetric
-              const std::vector<int>& _Asparse)// have to be symmetric
+              const std::vector<double>& _Psparse,// have to be symmetric
+              const std::vector<double>& _Asparse,// have to be symmetric
+              int verbose)
     : state_len(_state_len),
       inequality_len(_inequality_len),
       Psparse(_Psparse),
@@ -192,7 +263,7 @@ public:
     osqp_set_default_settings(settings);
     //settings->rho = 1e-6;
     //settings->alpha = 0.1;
-    settings->verbose = false;
+    settings->verbose = verbose;
     settings->max_iter = 4000;
     //settings->max_iter = 100000;
     settings->eps_abs = 1e-05; // improve accuracy
@@ -288,8 +359,8 @@ private:
   size_t state_len;
   size_t inequality_len;
 
-  std::vector<int> Psparse;
-  std::vector<int> Asparse;
+  std::vector<double> Psparse;
+  std::vector<double> Asparse;
 
   c_int P_nnz;
   c_float *P_x;
@@ -312,38 +383,66 @@ private:
 
 };
 
-std::vector<std::pair<std::pair<int, int>, std::vector<std::pair<std::pair<std::vector<int>, std::vector<int> >, boost::shared_ptr<osqp_solver> > > > > sqp_map;
+std::vector<std::pair<std::pair<int, int>, std::vector<std::pair<std::pair<std::vector<double>, std::vector<double> >, boost::shared_ptr<osqp_solver> > > > > sqp_map;
 
 // Solve SQP
 double* solve_osqp_hotstart (double* ret,
                              double* eval_weight_matrix, double* eval_coeff_vector,
                              double* inequality_matrix, double* inequality_min_vector, double* inequality_max_vector,
-                             int state_len, int inequality_len, int verbose, double* ret_status) {
+                             int state_len, int inequality_len, int verbose, double* ret_status,
+                             int eval_weight_matrix_sparce_given, double* eval_weight_matrix_sparce,
+                             int inequality_matrix_sparce_given, double* inequality_matrix_sparce) {
   boost::shared_ptr<osqp_solver> solver;
   std::pair<int, int> tmp_pair(state_len, inequality_len);
-  std::vector<std::pair<std::pair<int, int>, std::vector<std::pair<std::pair<std::vector<int>, std::vector<int> >, boost::shared_ptr<osqp_solver> > > > >::iterator it;
+  std::vector<std::pair<std::pair<int, int>, std::vector<std::pair<std::pair<std::vector<double>, std::vector<double> >, boost::shared_ptr<osqp_solver> > > > >::iterator it;
   for(it = sqp_map.begin();it != sqp_map.end();it++){
     if (it->first == tmp_pair) break;
   }
   if (it != sqp_map.end()) {
-    std::vector<std::pair<std::pair<std::vector<int>, std::vector<int> >, boost::shared_ptr<osqp_solver> > >::iterator it2;
+    std::vector<std::pair<std::pair<std::vector<double>, std::vector<double> >, boost::shared_ptr<osqp_solver> > >::iterator it2;
     for(it2 = it->second.begin();it2 != it->second.end();it2++){
       bool match = true;
-      if(true){
-        for(size_t i = 0; i < it2->first.first.size(); i++){
-          if(it2->first.first[i] == 0){
-            match = false;
-            break;
-          }
-        }
-      }
-      if(match){
-        if(true){
-          for(size_t i = 0; i < it2->first.second.size(); i++){
-            if(it2->first.second[i] == 0){
+      if(!eval_weight_matrix_sparce_given){
+        for(size_t i = 0; i < state_len; i++){
+          for(size_t j = 0; j < state_len; j++){
+            if(it2->first.first[i*state_len+j] == 0){
               match = false;
               break;
             }
+          }
+          if(!match) break;
+        }
+      }else{
+        for(size_t i = 0; i < state_len; i++){
+          for(size_t j = 0; j < state_len; j++){
+            if((it2->first.first[i*state_len+j] == 0 && eval_weight_matrix_sparce[i*state_len+j] != 0) || (it2->first.first[i*state_len+j] == 0 && eval_weight_matrix_sparce[j*state_len+i] != 0) || (it2->first.first[i*state_len+j] != 0 && eval_weight_matrix_sparce[i*state_len+j] == 0 && eval_weight_matrix_sparce[j*state_len+i] == 0)){
+              match = false;
+              break;
+            }
+          }
+          if(!match) break;
+        }
+      }
+      if(match){
+        if(!inequality_matrix_sparce_given){
+          for(size_t i = 0; i < inequality_len; i++){
+            for(size_t j = 0; j < state_len; j++){
+              if(it2->first.second[i*state_len+j] == 0){
+                match = false;
+                break;
+              }
+            }
+            if(!match) break;
+          }
+        }else{
+          for(size_t i = 0; i < inequality_len; i++){
+            for(size_t j = 0; j < state_len; j++){
+              if((it2->first.second[i*state_len+j] == 0 && inequality_matrix_sparce[i*state_len+j]!=0) || (it2->first.second[i*state_len+j] != 0 && inequality_matrix_sparce[i*state_len+j]==0)){
+                match = false;
+                break;
+              }
+            }
+            if(!match) break;
           }
         }
       }
@@ -353,23 +452,36 @@ double* solve_osqp_hotstart (double* ret,
   }
 
   if (!solver){
-    std::vector<int> Psparse(state_len*state_len,0);
-    std::vector<int> Asparse(state_len*inequality_len,0);
-    if(true){
+    std::vector<double> Psparse(state_len*state_len,0);
+    std::vector<double> Asparse(state_len*inequality_len,0);
+    if(!eval_weight_matrix_sparce_given){
       for(size_t i = 0; i < state_len; i++){
         for(size_t j = 0; j < state_len; j++){
           Psparse[i*state_len+j] = 1.0;
         }
       }
+    }else{
+      for(size_t i = 0; i < state_len; i++){
+        for(size_t j = 0; j < state_len; j++){
+          // make Psparse symmetric
+          Psparse[i*state_len+j] = (eval_weight_matrix_sparce[i*state_len+j]==0 || eval_weight_matrix_sparce[j*state_len+i]==0)? 0.0 : 1.0;
+        }
+      }
     }
-    if(true){
+    if(!inequality_matrix_sparce_given){
       for(size_t i = 0; i < inequality_len; i++){
         for(size_t j = 0; j < state_len; j++){
           Asparse[i*state_len+j] = 1.0;
         }
       }
+    }else{
+      for(size_t i = 0; i < inequality_len; i++){
+        for(size_t j = 0; j < state_len; j++){
+          Asparse[i*state_len+j] = (inequality_matrix_sparce[i*state_len+j]==0)? 0.0 : 1.0;
+        }
+      }
     }
-    solver = boost::shared_ptr<osqp_solver>(new osqp_solver(state_len,inequality_len,Psparse,Asparse));
+    solver = boost::shared_ptr<osqp_solver>(new osqp_solver(state_len,inequality_len,Psparse,Asparse,verbose));
     if(!solver->initialized){
       *ret_status = -100.0;
       return ret;
@@ -377,7 +489,7 @@ double* solve_osqp_hotstart (double* ret,
     if (it != sqp_map.end()) {
       it->second.push_back(std::make_pair(std::make_pair(Psparse, Asparse), solver));
     }else{
-      std::vector<std::pair<std::pair<std::vector<int>, std::vector<int> >, boost::shared_ptr<osqp_solver> > > vec(1, std::make_pair(std::make_pair(Psparse, Asparse), solver));
+      std::vector<std::pair<std::pair<std::vector<double>, std::vector<double> >, boost::shared_ptr<osqp_solver> > > vec(1, std::make_pair(std::make_pair(Psparse, Asparse), solver));
       sqp_map.push_back(std::make_pair(tmp_pair, vec));
     }
   }
@@ -397,21 +509,29 @@ extern "C" {
   double* solve_osqp_qp (double* ret,
                          double* eval_weight_matrix, double* eval_coeff_vector,
                          double* inequality_matrix, double* inequality_min_vector, double* inequality_max_vector,
-                         int state_len, int inequality_len, int verbose, double* ret_status) {
+                         int state_len, int inequality_len, int verbose, double* ret_status,
+                         int eval_weight_matrix_sparce_given, double* eval_weight_matrix_sparce,
+                         int inequality_matrix_sparce_given, double* inequality_matrix_sparce) {
     solve_osqp_common(ret,
                       eval_weight_matrix, eval_coeff_vector,
                       inequality_matrix, inequality_min_vector, inequality_max_vector,
-                      state_len, inequality_len, verbose, ret_status);
+                      state_len, inequality_len, verbose, ret_status,
+                      eval_weight_matrix_sparce_given, eval_weight_matrix_sparce,
+                      inequality_matrix_sparce_given, inequality_matrix_sparce);
   };
 
   double* solve_osqp_sqp_with_hotstart (double* ret,
                                         double* eval_weight_matrix, double* eval_coeff_vector,
                                         double* inequality_matrix, double* inequality_min_vector, double* inequality_max_vector,
-                                        int state_len, int inequality_len, int verbose, double* ret_status) {
+                                        int state_len, int inequality_len, int verbose, double* ret_status,
+                                        int eval_weight_matrix_sparce_given, double* eval_weight_matrix_sparce,
+                                        int inequality_matrix_sparce_given, double* inequality_matrix_sparce) {
     solve_osqp_hotstart(ret,
                       eval_weight_matrix, eval_coeff_vector,
                       inequality_matrix, inequality_min_vector, inequality_max_vector,
-                      state_len, inequality_len, verbose, ret_status);
+                        state_len, inequality_len, verbose, ret_status,
+                        eval_weight_matrix_sparce_given, eval_weight_matrix_sparce,
+                        inequality_matrix_sparce_given, inequality_matrix_sparce);
   };
 
 }

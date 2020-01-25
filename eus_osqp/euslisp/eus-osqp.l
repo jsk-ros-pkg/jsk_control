@@ -13,6 +13,10 @@
    :integer ;; inequality_len
    :integer ;; verbose
    :string ;; return status
+   :integer ;; eval_weight_matrix_sparce_given
+   :string ;; eval_weight_matrix_sparce
+   :integer ;; inequality_matrix_sparce_given
+   :string ;; inequality_matrix_sparce
    )
   :string)
 
@@ -29,6 +33,10 @@
    :integer ;; inequality_len
    :integer ;; verbose
    :string ;; return status
+   :integer ;; eval_weight_matrix_sparce_given
+   :string ;; eval_weight_matrix_sparce
+   :integer ;; inequality_matrix_sparce_given
+   :string ;; inequality_matrix_sparce
    )
   :string)
 
@@ -40,8 +48,8 @@
         (state-dim (length eval-coeff-vector))
         (equality-matrix)
         (equality-vector)
-        (state-min-vector) ;; not recommended. use inequality-matrix and inequality-min-vector.
-        (state-max-vector) ;; not recommended. use inequality-matrix and inequality-min-vector.
+        (state-min-vector)
+        (state-max-vector)
         (inequality-matrix)
         (inequality-min-vector)
         (inequality-max-vector)
@@ -51,6 +59,9 @@
         (status (float-vector 0))
         (check-status t)
         (solve-qp-mode :qp)
+        (eval-weight-matrix-sparce)
+        (equality-matrix-sparce)
+        (inequality-matrix-sparce)
         )
   (if (and inequality-matrix (= (length inequality-min-vector) 0))
       (setq inequality-min-vector (fill (instantiate float-vector inequality-dim) (- inf-var))))
@@ -63,6 +74,25 @@
            (concatenate-matrix-column equality-matrix inequality-matrix))
           (equality-matrix equality-matrix)
           (t inequality-matrix)))
+        (inequality-matrix-sparce
+         (cond
+          ((and equality-vector inequality-matrix)
+           (cond
+            ((and equality-matrix-sparce inequality-matrix-sparce)
+             (concatenate-matrix-column equality-matrix-sparce inequality-matrix-sparce))
+            ((and equality-matrix-sparce (null inequality-matrix-sparce))
+             (concatenate-matrix-column equality-matrix-sparce (make-array (array-dimensions inequality-matrix) :element-type float-vector :initial-element 1.0)))
+            ((and (null equality-matrix-sparce) inequality-matrix-sparce)
+             (concatenate-matrix-column (make-array (array-dimensions equality-matrix) :element-type float-vector :initial-element 1.0) inequality-matrix-sparce))
+            (t nil)))
+          (equality-matrix
+           (cond
+            (equality-matrix-sparce equality-matrix-sparce)
+            (t nil)))
+          (t
+           (cond
+            (inequality-matrix-sparce inequality-matrix-sparce)
+            (t nil)))))
         (inequality-max-vector
          (cond
           ((and equality-vector inequality-max-vector)
@@ -82,6 +112,12 @@
         (setq state-max-vector (fill (instantiate float-vector state-dim) inf-var)))
       (cond
        (inequality-matrix
+        (cond
+         (inequality-matrix-sparce
+          (setq inequality-matrix-sparce
+                (concatenate-matrix-column inequality-matrix-sparce (unit-matrix state-dim))))
+         (t (setq inequality-matrix-sparce
+                  (concatenate-matrix-column (make-array (array-dimensions inequality-matrix) :element-type float-vector :initial-element 1.0) (unit-matrix state-dim)))))
         (setq inequality-matrix
               (concatenate-matrix-column inequality-matrix (unit-matrix state-dim)))
         (setq inequality-min-vector
@@ -91,16 +127,19 @@
         )
        (t
         (setq inequality-matrix (unit-matrix state-dim))
+        (setq inequality-matrix-sparce (unit-matrix state-dim))
         (setq inequality-min-vector state-min-vector)
         (setq inequality-max-vector state-max-vector)
         ))
       )
     (when (and (= (length inequality-min-vector) 0) (= (length inequality-max-vector) 0))
       (setq inequality-matrix (make-matrix 1 state-dim))
+      (setq inequality-matrix-sparce nil)
       (setq inequality-min-vector (fill (instantiate float-vector 1) (- inf-var)))
       (setq inequality-max-vector (fill (instantiate float-vector 1) inf-var)))
     (unless eval-weight-matrix
-      (setq eval-weight-matrix (make-matrix state-dim state-dim)))
+      (setq eval-weight-matrix (make-matrix state-dim state-dim))
+      (setq eval-weight-matrix-sparce nil))
     (funcall
      (case
       solve-qp-mode
@@ -115,7 +154,11 @@
      state-dim
      (array-dimension inequality-matrix 0)
      print-level
-     status)
+     status
+     (if eval-weight-matrix-sparce 1 0)
+     (if eval-weight-matrix-sparce (array-entity eval-weight-matrix-sparce) #F())
+     (if inequality-matrix-sparce 1 0)
+     (if inequality-matrix-sparce (array-entity inequality-matrix-sparce) #F()))
     ;; Check status and return value
     (let ((int-status (round (elt status 0))))
       ;; Check and print
