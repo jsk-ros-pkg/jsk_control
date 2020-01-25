@@ -1,4 +1,4 @@
-(load "package://eus_osqp/euslisp/eus-osqp.l")
+(load "package://eus_osqp/euslisp/eus-osqp-compiled.l")
 
 ;; QP example are obtained from http://www.me.titech.ac.jp/~mizu_lab/text/PDF-NLP/NLP1-QP-problem.pdf
 
