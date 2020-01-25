@@ -26,7 +26,8 @@ double* solve_osqp_common (double* ret,
   // https://people.sc.fsu.edu/~jburkardt/data/cc/cc.html
   for (c_int i = 0; i < state_len; i++) {
     for (c_int j = 0; j < state_len; j++) {
-      P_x[state_len*j+i] = eval_weight_matrix[state_len*i+j];
+      // make P_x symmetric
+      P_x[state_len*j+i] = (eval_weight_matrix[state_len*i+j] + eval_weight_matrix[state_len*j+i]) / 2.0;
     }
   }
   for (c_int i = 0; i < state_len; i++) {
@@ -64,14 +65,15 @@ double* solve_osqp_common (double* ret,
   OSQPSettings * settings = (OSQPSettings *)c_malloc(sizeof(OSQPSettings));
 
   // Structures
-  OSQPWorkspace * work;  // Workspace
-  OSQPData * data;  // OSQPData
+  OSQPWorkspace * work = NULL;  // Workspace
+  OSQPData * data = NULL;  // OSQPData
 
   // Populate data
   data = (OSQPData *)c_malloc(sizeof(OSQPData));
   data->n = state_len;
   data->m = inequality_len;
-  data->P = csc_matrix(data->n, data->n, P_nnz, P_x, P_i, P_p);
+  csc* csc_P = csc_matrix(data->n, data->n, P_nnz, P_x, P_i, P_p);
+  data->P = csc_to_triu(csc_P);
   data->q = q;
   data->A = csc_matrix(data->m, data->n, A_nnz, A_x, A_i, A_p);
   data->l = l;
@@ -85,10 +87,10 @@ double* solve_osqp_common (double* ret,
   settings->verbose = verbose;
 
   // Setup workspace
-  work = osqp_setup(data, settings);
+  int setup_ret = osqp_setup(&work, data, settings);
 
   // Solve Problem
-  if (work) {
+  if (setup_ret==0) {
     osqp_solve(work);
     for (c_int i = 0; i < state_len; i++) {
       ret[i] = work->solution->x[i];
@@ -100,8 +102,12 @@ double* solve_osqp_common (double* ret,
 
   // Cleanup
   osqp_cleanup(work);
-  c_free(data->A);
-  c_free(data->P);
+  csc_spfree(data->A); // free A_x, A_i, A_p
+  csc_spfree(csc_P); // free P_x, P_i, P_p
+  csc_spfree(data->P);
+  c_free(data->q); // free q
+  c_free(data->l); // free l
+  c_free(data->u); // free u
   c_free(data);
   c_free(settings);
 

@@ -7,7 +7,7 @@ include(ExternalProject)
 
 ExternalProject_Add(osqpproj
   GIT_REPOSITORY https://github.com/oxfordcontrol/osqp.git
-  GIT_TAG v0.5.0
+  GIT_TAG v0.6.0
   TIMEOUT 30
   CMAKE_ARGS -DDFLOAT=ON
   BUILD_COMMAND make -j
