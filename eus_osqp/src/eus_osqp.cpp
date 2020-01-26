@@ -3,7 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <boost/shared_ptr.hpp>
-
+#include <iostream>
 // Solve QP
 // ref. example of OSQP:
 // https://github.com/oxfordcontrol/osqp/blob/master/examples/osqp_demo.c
@@ -154,10 +154,10 @@ double* solve_osqp_common (double* ret,
   settings->verbose = verbose;
   settings->max_iter = 4000;
   //settings->max_iter = 100000;
-  settings->eps_abs = 1e-05; // improve accuracy
-  settings->eps_rel = 1e-05; // improve accuracy
+  settings->eps_abs = 1e-06; // improve accuracy
+  settings->eps_rel = 1e-06; // improve accuracy
   settings->scaled_termination = true; // avoid too severe termination check
-  //settings->polish = true; // improve accuracy. but cause oscillatory solution when convex error
+  settings->polish = true; // improve accuracy. but cause oscillatory solution when convex error
   //settings->delta = 1e-4; // in polish, too small delta causes non-convex error, too large delta causes failure(unsuccessful)
 
   // Setup workspace
@@ -230,10 +230,10 @@ public:
     settings->verbose = verbose;
     settings->max_iter = 4000;
     //settings->max_iter = 100000;
-    settings->eps_abs = 1e-05; // improve accuracy
-    settings->eps_rel = 1e-05; // improve accuracy
+    settings->eps_abs = 1e-06; // improve accuracy
+    settings->eps_rel = 1e-06; // improve accuracy
     settings->scaled_termination = true; // avoid too severe termination check
-    //settings->polish = true; // improve accuracy. but cause oscillatory solution when convex error
+    settings->polish = true; // improve accuracy. but cause oscillatory solution when convex error
     //settings->delta = 1e-4; // in polish, too small delta causes non-convex error, too large delta causes failure(unsuccessful)
 
     if(osqp_setup(&work, data, settings) == 0) initialized = true;
@@ -314,7 +314,6 @@ public:
       ret[i] = work->solution->x[i];
     }
     *ret_status = (double)(work->info->status_val);
-
     return ret;
   }
 
@@ -381,9 +380,13 @@ double* solve_osqp_hotstart (double* ret,
   }
 
   c_int A_nnz(0);
-  for(size_t i = 0; i < inequality_len; i++){
-    for(size_t j = 0; j < state_len; j++){
-      if(inequality_matrix_sparce[i*state_len+j]!=0) A_nnz++;
+  if(!inequality_matrix_sparce_given){
+    A_nnz = inequality_len * state_len;
+  }else{
+    for(size_t i = 0; i < inequality_len; i++){
+      for(size_t j = 0; j < state_len; j++){
+        if(inequality_matrix_sparce[i*state_len+j]!=0) A_nnz++;
+      }
     }
   }
   c_float *A_x(new c_float[A_nnz]);
