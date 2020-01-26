@@ -1,0 +1,6 @@
+(defun a ()
+  "
+  document
+  "
+  nil
+  )
