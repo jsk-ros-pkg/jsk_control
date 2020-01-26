@@ -1,0 +1,157 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; inverse-kinematics-variable
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass inverse-kinematics-variable
+  :super propertied-object
+  :slots ((dim ", dimension of variable")
+          (index ", indexからindex + dim - 1]番目の$\bm{x}$の要素が対応する")
+          (initial-state ", prioritized-inverse-kinematicsの初期状態")
+          )
+  :documentation
+  "
+探索変数を表現するクラス
+  "
+  )
+
+(defmethod inverse-kinematics-variable
+  (:init
+   ()
+   "
+Initialize instance
+   "
+   (setq dim 0)
+   t
+   )
+  (:index (idx) "update or return index" (if idx (setq index idx) index)
+   )
+  (:apply-x
+   (x)
+   "
+計算された$\bm{x}$の対応する要素を実際に適用する
+   "
+   t
+   )
+  (:revert
+   ()
+   "
+\it{prioritized-inverse-kinematics}の初期状態に戻す
+   "
+   t
+   )
+  (:init-form
+   ()
+   "
+\it{prioritized-inverse-kinematics}の開始時に一回呼ばれる.\it{inverse-kinematics-task}の\it{:initialize}より前に呼ばれる
+   "
+   t)
+  (:cleanup-form
+   ()
+   "
+\it{prioritized-inverse-kinematics}の終了時に\it{unwind-protect}を用いて一回呼ばれる.
+   "
+   t)
+  (:dim () "return dim" dim)
+  )
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; joint-variable
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass joint-variable
+  :super inverse-kinematics-variable
+  :slots ((j ", joint")
+          )
+  :documentation
+  "
+jointのクラス．
+  "
+  )
+
+(defmethod joint-variable
+  (:init
+   (_joint)
+   "
+\it{joint}のjoint-angleに相当する探索変数．\bm{x}は\it{joint}の変位に相当する．\bm{x}の単位はdegree, rad．
+   "
+   (setq j _joint)
+   (setq dim (send j :joint-dof))
+   (setq initial-state (copy-object (send j :joint-angle)))
+   t
+   )
+  (:apply-x
+   (x)
+   "
+$\bm{x}$の値だけjoint-angleを相対的に更新する．
+   "
+   (send j :joint-angle (send j :speed-to-angle (subseq x index (+ index dim))) :relative t)
+   t
+   )
+  (:revert
+   ()
+   "
+prioritized-inverse-kinematicsの初期状態に戻す
+   "
+   (send j :joint-angle initial-state)
+   t
+   )
+  (:joint () "return joint" j)
+  )
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; virtual-joint
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass virtual-joint-variable
+  :super joint-variable
+  :slots ((child ", virtual jointの子リンク")
+          (parent ", virtual jointの親リンク")
+          )
+  :documentation
+  "
+仮想関節のjoint-angleに相当する探索変数．\bm{x}は仮想関節の変位に相当する．\bm{x}の単位はdegree, rad．
+  "
+  )
+
+(defmethod virtual-joint-variable
+  (:init
+   (_child
+    &key
+    (joint-type 6dof-joint)
+    ((:parent _parent) (instance bodyset-link
+                                 :init (make-cascoords :pos (copy-object (send child :worldpos)))
+                                 :bodies (list (make-cube 10 10 10))
+                                 :name (format nil "virtual-link-~A" (send _child :name))
+                                 :weight 0 :centroid (float-vector 0 0 0)
+                                 :inertia-tensor (make-matrix 3 3)))
+    joint-args
+    )
+   "
+Initialize instance
+   "
+   (setq child _child)
+   (setq parent _parent)
+   (send-super :init (instance joint-type :init :child-link child :parent-link parent))
+   nil
+   )
+  (:init-form
+   ()
+   "
+仮想関節を取り付ける
+   "
+   (send-message child bodyset-link :add-joint j)
+   (send child :add-parent-link parent)
+   (send parent :add-child-links child)
+   t)
+  (:cleanup-form
+   ()
+   "
+仮想関節を除去する
+   "
+   (send child :del-joint)
+   (send child :del-parent-link)
+   (send parent :del-child-link child)
+   )
+  )

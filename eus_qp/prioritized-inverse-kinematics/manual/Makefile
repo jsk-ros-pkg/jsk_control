@@ -1,6 +1,6 @@
 TMPDIR := $(shell mktemp -d)
 FIGDIR := ${TMPDIR}/fig
-EUSFILES = prioritized-inverse-kinematics
+EUSFILES = prioritized-inverse-kinematics inverse-kinematics-task inverse-kinematics-variable
 EUSFILESDIR = "../euslisp"
 
 # IMAGE_FILES := $(shell find ${FIGDIR} -name "*.(jpg|png)" | sed s/jpg/bb/g)
