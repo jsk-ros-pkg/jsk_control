@@ -75,7 +75,10 @@
 (defun test-wrench-distribute-by-pseudo-inverse
   (&key (limbs '(:rleg :lleg))
         (equality-error-weight) ;; dummy
-        (contact-coords-list (mapcar #'(lambda (l) (send *robot* l :end-coords)) limbs)))
+        (contact-coords-list (mapcar #'(lambda (l) (send *robot* l :end-coords)) limbs))
+        qp-solver ;; dummy
+        solve-qp-mode ;; dummy
+        )
   (let ((ret
          (list :wrench-list
                (send *robot* :calc-contact-wrenches-from-total-wrench
@@ -93,7 +96,9 @@
         (contact-coords-list (mapcar #'(lambda (l) (send *robot* l :end-coords)) limbs))
         (contact-constraint-matrix-list)
         (min-inequality-violation-weight)
-        (equality-error-weight))
+        (equality-error-weight)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   (unless contact-constraint-matrix-list
     (setq contact-constraint-matrix-list
           (mapcar #'(lambda (c-constraint c-coords)
@@ -104,6 +109,7 @@
          (wrench-distribute-from-total-wrench
           contact-coords-list contact-constraint-matrix-list
           :robot *robot*
+          :qp-solver qp-solver :solve-qp-mode solve-qp-mode
           :min-inequality-violation-weight min-inequality-violation-weight
           :equality-error-weight equality-error-weight
           :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector))))
@@ -117,7 +123,9 @@
         (contact-constraint-matrix-list)
         (min-inequality-violation-weight)
         (equality-error-weight)
-        (func #'wrench-torque-distribute-from-total-wrench-inertial-torque))
+        (func #'wrench-torque-distribute-from-total-wrench-inertial-torque)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   (unless contact-constraint-matrix-list
     (setq contact-constraint-matrix-list
           (mapcar #'(lambda (c-constraint c-coords)
@@ -131,6 +139,7 @@
          (ret (funcall func
                        contact-coords-list contact-constraint-matrix-list
                        :robot *robot*
+                       :qp-solver qp-solver :solve-qp-mode solve-qp-mode
                        :contact-constraint-vector-list (send-all (send *robot* :get :contact-constraint-list) :get-constraint-vector)
                        :min-inequality-violation-weight min-inequality-violation-weight
                        :equality-error-weight equality-error-weight
@@ -143,7 +152,9 @@
   (&key (func #'test-wrench-distribute-by-qp) (press-enter-p t) (mu-trans 0.5) (ret-list nil)
         (mu-margin-ratio 1.0) (cop-margin-ratio 1.0)
         (equality-error-weight (if (boundp '*force-use-equality-error-weight*) 1e8))
-        (use-no-contact nil) (use-hand))
+        (use-no-contact nil) (use-hand)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   (let ((ret) (limbs))
     (send *robot* :put :contact-constraint-list
           (append
@@ -177,7 +188,7 @@
     (if use-hand (send *robot* :arms :shoulder-p :joint-angle -40))
     (send *robot* :fix-leg-to-coords (make-coords))
     (send *irtviewer* :draw-objects)
-    (push (funcall func :limbs limbs :equality-error-weight equality-error-weight) ret)
+    (push (funcall func :limbs limbs :equality-error-weight equality-error-weight :qp-solver qp-solver :solve-qp-mode solve-qp-mode) ret)
     (when press-enter-p (format t ";; press enter~%") (read-line))
     (send *robot* :reset-pose)
     (send *robot* :fix-leg-to-coords (make-coords))
@@ -214,60 +225,78 @@
       (every #'identity (reverse ret)))))
 
 (defun demo-robot-contact-wrench-distribution-1
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for robot contact wrench distribution by pseudo-inverse."
-  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-pseudo-inverse :press-enter-p press-enter-p))
+  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-pseudo-inverse :press-enter-p press-enter-p :qp-solver qp-solver :solve-qp-mode solve-qp-mode))
 
 (defun demo-robot-contact-wrench-distribution-2
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for robot contact wrench distribution by QP."
-  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-qp :press-enter-p press-enter-p))
+  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-qp :press-enter-p press-enter-p :qp-solver qp-solver :solve-qp-mode solve-qp-mode))
 
 (defun demo-robot-contact-wrench-distribution-3
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for robot contact wrench and joint torque distribution by QP."
-  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :press-enter-p press-enter-p))
+  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :press-enter-p press-enter-p :qp-solver qp-solver :solve-qp-mode solve-qp-mode))
 
 (defun demo-robot-contact-wrench-distribution-4
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for robot contact wrench and joint torque distribution by QP. Infeasible solution."
-  (not (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :mu-trans 0.01 :press-enter-p press-enter-p)))
+  (not (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :mu-trans 0.01 :press-enter-p press-enter-p :qp-solver qp-solver :solve-qp-mode solve-qp-mode)))
 
 (defun demo-robot-contact-wrench-distribution-5
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for robot contact wrench and joint torque distribution by QP. Originally infeasible solution, but obtain solution by allowing min inequality boundary violation."
   (demo-robot-contact-wrench-distribution-common :func #'(lambda (&rest args) (apply #'test-wrench-torque-distribute-by-qp :min-inequality-violation-weight 1 args))
-                                                 :mu-trans 0.01 :press-enter-p press-enter-p))
+                                                 :mu-trans 0.01 :press-enter-p press-enter-p :qp-solver qp-solver :solve-qp-mode solve-qp-mode))
 
 (defun demo-robot-contact-wrench-distribution-6
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for robot contact wrench distribution with no-contact constraint. Only the second example successes."
-  (let ((ret (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-qp :press-enter-p press-enter-p :use-no-contact t :ret-list t)))
+  (let ((ret (demo-robot-contact-wrench-distribution-common :func #'test-wrench-distribute-by-qp :press-enter-p press-enter-p :use-no-contact t :ret-list t :qp-solver qp-solver :solve-qp-mode solve-qp-mode)))
     (and (not (elt ret 0)) (elt ret 1) (not (elt ret 2)) (not (elt ret 3)))
     ))
 
 (defun demo-robot-contact-wrench-distribution-7
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for robot contact wrench distribution with mu/cop-margin-ratio."
   (let ((ret (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :press-enter-p press-enter-p :ret-list t
-                                                            :mu-margin-ratio 0.5 :cop-margin-ratio 0.5)))
+                                                            :mu-margin-ratio 0.5 :cop-margin-ratio 0.5 :qp-solver qp-solver :solve-qp-mode solve-qp-mode)))
     (and (elt ret 0) (not (elt ret 1)) (elt ret 2) (not (elt ret 3)))
     ))
 
 (defun demo-robot-contact-wrench-distribution-8
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for robot contact wrench distribution with hand gripper contacts."
-  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :press-enter-p press-enter-p :ret-list t :use-hand t))
+  (demo-robot-contact-wrench-distribution-common :func #'test-wrench-torque-distribute-by-qp :press-enter-p press-enter-p :ret-list t :use-hand t :qp-solver qp-solver :solve-qp-mode solve-qp-mode))
 
 (defun demo-robot-contact-wrench-distribution-all
-  (&key (press-enter-p t) (force-use-equality-error-weight))
+  (&key (press-enter-p t) (force-use-equality-error-weight)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "for all test"
   (let ((ret))
     (makunbound '*force-use-equality-error-weight*)
     (if force-use-equality-error-weight (setq *force-use-equality-error-weight* t))
     (dotimes (i (apply #'max (remove-if-not #'numberp (mapcar #'(lambda (x) (let ((str (string-left-trim "DEMO-ROBOT-CONTACT-WRENCH-DISTRIBUTION-" (string x)))) (unless (string= "" str) (read-from-string str)))) (apropos-list 'demo-robot-contact-wrench-distribution)))))  ;; Get max number of demo function
       (format t ";; demo-robot-contact-wrench-distribution-~d~%" (1+ i))
-      (push (funcall (eval (read-from-string (format nil "#'demo-robot-contact-wrench-distribution-~d" (1+ i)))) :press-enter-p press-enter-p) ret)
+      (push (funcall (eval (read-from-string (format nil "#'demo-robot-contact-wrench-distribution-~d" (1+ i)))) :press-enter-p press-enter-p :qp-solver qp-solver :solve-qp-mode solve-qp-mode) ret)
       (when press-enter-p (format t ";; press enter~%") (read-line)))
     (print (mapcar #'(lambda (x) (not (not x))) ret))
     (every #'identity ret)
@@ -282,7 +311,8 @@
 (warn ";; (test-compare-wrench-torque-calc)~%")
 
 (defun demo-robot-wrench-distribute-from-total-wrench-and-given-wrench
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   ;; Currently calculation with contact constraints does not work.
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -292,7 +322,9 @@
    (send *robot* :legs :end-coords)
    (list (float-vector 0 0 (* (send *robot* :weight) 1e-3 9.8 0.45) 0 0 0)
          (float-vector 0 0 (* (send *robot* :weight) 1e-3 9.8 0.45) 0 0 0))
-   :robot *robot*)
+   :robot *robot*
+   :qp-solver qp-solver
+   :solve-qp-mode solve-qp-mode)
    )
 (warn ";; (demo-robot-wrench-distribute-from-total-wrench-and-given-wrench)~%")
 
@@ -348,7 +380,9 @@
 (defun demo-cbox-wrench-calc-comon
   (contact-constraint-list
    contact-coords-list
-   &key (min-inequality-violation-weight))
+   &key (min-inequality-violation-weight)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   (send *cbox* :put :contact-constraint-list contact-constraint-list)
   ;; calc total static wrench
   (send *cbox* :calc-torque :calc-statics-p t)
@@ -359,6 +393,7 @@
                       (send c-constraint :calc-constraint-matrix c-coords))
                   contact-constraint-list contact-coords-list)
           :robot *cbox*
+          :qp-solver qp-solver :solve-qp-mode solve-qp-mode
           :min-inequality-violation-weight min-inequality-violation-weight
           :contact-constraint-vector-list (send-all contact-constraint-list :get-constraint-vector))))
     (draw-force-value
@@ -382,7 +417,8 @@
   )
 
 (defun demo-cbox-wrench-calc-1
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by default-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
@@ -394,46 +430,57 @@
                    :l-min-x -190 :l-max-x 190
                    :l-min-y -215 :l-max-y 215))
    (list (send *cbox* :worldcoords))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-2
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by norm-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
    (list (instance norm-contact-constraint :init :fz))
    (list (send *cbox* :worldcoords))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-3
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by 2D-translational-friction-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
    (list (instance 2D-translational-friction-contact-constraint :init 0.5))
    (list (send *cbox* :worldcoords))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-4
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by rotational-friction-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
    (list (instance rotational-friction-contact-constraint :init 0.05 :fz))
    (list (send *cbox* :worldcoords))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-5
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by 2D-cop-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
    (list (instance 2D-cop-contact-constraint :init 190 -190 215 -215))
    (list (send *cbox* :worldcoords))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-6
-  (&key (mu-trans 0.5) (l-min-x -190) (l-max-x 190))
+  (&key (mu-trans 0.5) (l-min-x -190) (l-max-x 190)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by default-contact-constraint. cbox is tilting."
   (set-cbox-pose-tilting)
   (demo-cbox-wrench-calc-comon
@@ -451,37 +498,45 @@
                    :l-min-y -185 :l-max-y 185)
          )
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-7
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by norm-contact-constraint. cbox is tilting."
   (set-cbox-pose-tilting)
   (demo-cbox-wrench-calc-comon
    (list (instance norm-contact-constraint :init :fz) (instance norm-contact-constraint :init :fz))
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-8
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by 2D-translational-friction-contact-constraint. cbox is tilting."
   (set-cbox-pose-tilting)
   (demo-cbox-wrench-calc-comon
    (list (instance 2D-translational-friction-contact-constraint :init 0.5) (instance 2D-translational-friction-contact-constraint :init 0.5))
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-9
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by rotational-friction-contact-constraint. cbox is tilting."
   (set-cbox-pose-tilting)
   (demo-cbox-wrench-calc-comon
    (list (instance rotational-friction-contact-constraint :init 0.05 :fz) (instance rotational-friction-contact-constraint :init 0.05 :fz))
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-10
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by 2D-cop-contact-constraint. cbox is tilting."
   (set-cbox-pose-tilting)
   (demo-cbox-wrench-calc-comon
@@ -490,10 +545,13 @@
    (list (instance 2D-cop-contact-constraint :init 190 -190 215 -215)
          (instance 2D-cop-contact-constraint :init 190 -190 185 -185))
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-11
-  (&key (min-inequality-violation-weight))
+  (&key (min-inequality-violation-weight)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by default-contact-constraint. cbox is tilting. Infeasible solution."
   (set-cbox-pose-tilting)
   (let ((ret
@@ -513,6 +571,7 @@
                 )
           (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
           :min-inequality-violation-weight min-inequality-violation-weight
+          :qp-solver qp-solver :solve-qp-mode solve-qp-mode
           )))
     (if min-inequality-violation-weight
         ret
@@ -520,13 +579,15 @@
     ))
 
 (defun demo-cbox-wrench-calc-12
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by default-contact-constraint. cbox is tilting. Originally infeasible solution, but obtain solution by allowing min inequality boundary violation."
   (demo-cbox-wrench-calc-11 :min-inequality-violation-weight 1e5)
   )
 
 (defun demo-cbox-wrench-calc-13
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by min-max-contact-constraint. cbox is tilting."
   (set-cbox-pose-tilting)
   (demo-cbox-wrench-calc-comon
@@ -535,10 +596,13 @@
          (instance min-max-contact-constraint
                    :init :nz 5.0 :min/max :min))
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-14
-  (&key (min-inequality-violation-weight))
+  (&key (min-inequality-violation-weight)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by 2D-translational-sliding-contact-constraint. cbox is neutral pos rot. This sample is infeasible but it's correct."
   (set-cbox-pose-neutral)
   (let ((ret
@@ -546,6 +610,7 @@
           (list (instance 2D-translational-sliding-contact-constraint :init 0.5 :slide-axis :fx))
           (list (send *cbox* :worldcoords))
           :min-inequality-violation-weight min-inequality-violation-weight
+          :qp-solver qp-solver :solve-qp-mode solve-qp-mode
           )))
     (if min-inequality-violation-weight
         ret
@@ -553,12 +618,14 @@
     ))
 
 (defun demo-cbox-wrench-calc-15
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by 2D-translational-sliding-contact-constraint. cbox is neutral pos rot. This sample is originally infeasible, but obtain solution by allowing min inequality boundary violation."
   (demo-cbox-wrench-calc-14 :min-inequality-violation-weight 1e5))
 
 (defun demo-cbox-wrench-calc-16
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by default-contact-constraint. cbox is neutral pos rot. cbox is sliding in the -y direction."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
@@ -574,48 +641,58 @@
                    :l-min-x -50 :l-max-x 50
                    :l-min-y -50 :l-max-y 50))
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-17
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by 6d-min-max-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
    (list (instance 6d-min-max-contact-constraint :init (float-vector 1000 1000 1000 100 100 100)))
    (list (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-18
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by polygon-cop-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
    (list (instance polygon-cop-contact-constraint :init (elt (send *cbox* :faces) 1))) ;; bottom face
    (list (send *cbox* :worldcoords))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-19
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by symmetric-friction-polycone-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
    (list (instance symmetric-friction-polycone-contact-constraint :init 0.5 :div 16))
    (list (send *cbox* :worldcoords))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-20
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by rotational-sliding-contact-constraint. cbox is neutral pos rot."
   (set-cbox-pose-neutral)
   (let ((ret (demo-cbox-wrench-calc-comon
               (list (instance rotational-sliding-contact-constraint :init 0.5 :fz :slide-axis :nz))
               (list (send *cbox* :worldcoords))
+              :qp-solver qp-solver :solve-qp-mode solve-qp-mode
               )))
     (not ret))
   )
 
 (defun demo-cbox-wrench-calc-21
-  ()
+  (&key (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   "Demo for cbox wrench calculation by default-contact-constraint. cbox is neutral pos rot. cbox is sliding in the -y direction."
   (set-cbox-pose-neutral)
   (demo-cbox-wrench-calc-comon
@@ -629,14 +706,17 @@
                    :init
                    (float-vector 100 100 100 100 100 100)))
    (list (send *cbox* :worldcoords) (send *cbox* :get :face-coords-2))
+   :qp-solver qp-solver :solve-qp-mode solve-qp-mode
    ))
 
 (defun demo-cbox-wrench-calc-all
-  (&key (press-enter-p t))
+  (&key (press-enter-p t)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   (let ((ret))
     (dotimes (i (apply #'max (remove-if-not #'numberp (mapcar #'(lambda (x) (let ((str (string-left-trim "DEMO-CBOX-WRENCH-CALC-" (string x)))) (unless (string= "" str) (read-from-string str)))) (apropos-list 'demo-cbox-wrench-calc))))) ;; Get max number of demo function
       (format t ";; demo-cbox-wrench-calc-~d~%" (1+ i))
-      (push (funcall (eval (read-from-string (format nil "#'demo-cbox-wrench-calc-~d" (1+ i))))) ret)
+      (push (funcall (eval (read-from-string (format nil "#'demo-cbox-wrench-calc-~d" (1+ i)))) :qp-solver qp-solver :solve-qp-mode solve-qp-mode) ret)
       (when press-enter-p (format t ";; press enter~%") (read-line)))
     (every #'identity ret)
     ))

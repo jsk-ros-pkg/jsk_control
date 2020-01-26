@@ -32,6 +32,8 @@ add_dependencies(eus_osqp osqpproj)
 target_link_libraries(eus_osqp osqp)
 
 add_rostest(test/eus_osqp.test)
+add_rostest(test/eus_osqp_contact_wrench_opt.test)
+add_rostest(test/eus_osqp_model_predictive_control.test)
 
 install(DIRECTORY lib/
   USE_SOURCE_PERMISSIONS

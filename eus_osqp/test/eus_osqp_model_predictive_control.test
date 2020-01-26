@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="eus_osqp_model_predictive_control" pkg="eus_osqp" type="eus-osqp-model-predictive-control.test.l" time-limit="300">
+  </test>
+</launch>

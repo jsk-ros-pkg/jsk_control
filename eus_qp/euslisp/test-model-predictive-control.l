@@ -30,7 +30,9 @@
   (&key (limbs '(:rleg :lleg))
         (foot-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
         (foot-rot-diff (list (list 0 0 0) (list 0 0 0)))
-        ((:receding-horizon-proc-count rhpc) 1))
+        ((:receding-horizon-proc-count rhpc) 1)
+        (solve-qp-mode :qp)
+        (qp-solver #'solve-qpoases-qp))
   "COG XY MPC test. Move COG in X and Y axes."
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -90,7 +92,7 @@
         (when r
           (format t ";; initial state~%")
           (format t ";;   state = ~A~%" (mpc . current-state))
-          (send mpc :proc-model-predictive-control)
+          (send mpc :proc-model-predictive-control :solve-qp-mode solve-qp-mode :qp-solver qp-solver)
           (push (list :cog (send mpc :get-cog-from-preview-index) :refcog (send mpc :get-ref-cog-from-preview-index)
                       :end-coords (send mpc :get-all-end-coords-from-preview-index)
                       :wrench-list (send mpc :calc-wrench-list-from-result-input-value)
@@ -114,7 +116,9 @@
     cog-ret))
 
 (defun demo-MPC-gen-motion-2
-  (&key ((:receding-horizon-proc-count rhpc) 1))
+  (&key ((:receding-horizon-proc-count rhpc) 1)
+        (solve-qp-mode :qp)
+        (qp-solver #'solve-qpoases-qp))
   "COG-Z MPC test. Vertical jumping."
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -191,7 +195,7 @@
         (when r
           (format t ";; initial state~%")
           (format t ";;   state = ~A~%" (mpc . current-state))
-          (send mpc :proc-model-predictive-control)
+          (send mpc :proc-model-predictive-control :solve-qp-mode solve-qp-mode :qp-solver qp-solver)
           (push (list :cog (float-vector (elt (send *robot* :centroid nil) 0) (elt (send *robot* :centroid nil) 1) (send mpc :get-cog-z-from-preview-index))
                       :refcog (float-vector (elt (send *robot* :centroid nil) 0) (elt (send *robot* :centroid nil) 1) (send mpc :get-ref-cog-z-from-preview-index))
                       :end-coords (send mpc :get-all-end-coords-from-preview-index)
@@ -219,7 +223,9 @@
   (&key (limbs '(:rleg :lleg))
         (foot-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
         (foot-rot-diff (list (list 0 0 0) (list 0 0 0)))
-        ((:receding-horizon-proc-count rhpc) 1))
+        ((:receding-horizon-proc-count rhpc) 1)
+        (solve-qp-mode :qp)
+        (qp-solver #'solve-qpoases-qp))
   "COG XY MPC test. Walking by changing contact constraints"
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -307,7 +313,7 @@
         (when r
           (format t ";; initial state~%")
           (format t ";;   state = ~A~%" (mpc . current-state))
-          (send mpc :proc-model-predictive-control)
+          (send mpc :proc-model-predictive-control :solve-qp-mode solve-qp-mode :qp-solver qp-solver)
           (format t ";;   input = ~A~%" (elt (send mpc :input-value-list) 0))
           (push (list :cog (send mpc :get-cog-from-preview-index) :refcog (send mpc :get-ref-cog-from-preview-index)
                       :end-coords (send mpc :get-all-end-coords-from-preview-index)
@@ -335,7 +341,9 @@
   (&key (limbs '(:rleg :lleg :rarm :larm))
         (ee-pos-diff (list (float-vector 0 0 0) (float-vector 0 0 0)))
         (ee-rot-diff (list (list 0 0 0) (list 0 0 0)))
-        ((:receding-horizon-proc-count rhpc) 1))
+        ((:receding-horizon-proc-count rhpc) 1)
+        (solve-qp-mode :qp)
+        (qp-solver #'solve-qpoases-qp))
   "COG XY MPC test. Walking by changing contact constraints trot 4leg."
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
@@ -444,7 +452,7 @@
         (when r
           (format t ";; initial state~%")
           (format t ";;   state = ~A~%" (mpc . current-state))
-          (send mpc :proc-model-predictive-control)
+          (send mpc :proc-model-predictive-control :solve-qp-mode solve-qp-mode :qp-solver qp-solver)
           (format t ";;   input = ~A~%" (elt (send mpc :input-value-list) 0))
           (push (list :cog (send mpc :get-cog-from-preview-index) :refcog (send mpc :get-ref-cog-from-preview-index)
                       :end-coords (send mpc :get-all-end-coords-from-preview-index)
@@ -479,7 +487,9 @@
         (double-support-ratio 0.2) ;; [0, 1]
         (mu-trans 0.2) (cop-margin-ratio 1.0)
         (fs-list)
-        ((:receding-horizon-proc-count rhpc) 1))
+        ((:receding-horizon-proc-count rhpc) 1)
+        (solve-qp-mode :qp)
+        (qp-solver #'solve-qpoases-qp))
   "COG XY MPC test. Walking by footstep list. Please set :fs-list argument."
   ;; Set initial pose
   (send *robot* :reset-pose)
@@ -619,7 +629,7 @@
             (when r
               (format t ";; initial state~%")
               (format t ";;   state = ~A~%" (mpc . current-state))
-              (send mpc :proc-model-predictive-control)
+              (send mpc :proc-model-predictive-control :solve-qp-mode solve-qp-mode :qp-solver qp-solver)
               (format t ";;   input = ~A~%" (elt (send mpc :input-value-list) 0))
               (setq tm (+ tm ((elt (mpc . param-list) 0) . dt)))
               (let ((wr-list (send mpc :calc-wrench-list-from-result-input-value))
@@ -698,11 +708,13 @@
         (documentation (read-from-string (format nil "demo-mpc-gen-motion-~d" (1+ i))))))
 
 (defun demo-mpc-gen-motion-all
-  (&key ((:receding-horizon-proc-count rhpc) 1))
+  (&key ((:receding-horizon-proc-count rhpc) 1)
+        (solve-qp-mode :qp)
+        (qp-solver #'solve-qpoases-qp))
   (let ((ret))
     (dotimes (i (get-max-id-for-demo-functions 'demo-mpc-gen-motion-))  ;; Get max number of demo function
       (format t ";; demo-mpc-gen-motion-~d~%" (1+ i))
-      (push (funcall (eval (read-from-string (format nil "#'demo-mpc-gen-motion-~d" (1+ i)))) :receding-horizon-proc-count rhpc) ret)
+      (push (funcall (eval (read-from-string (format nil "#'demo-mpc-gen-motion-~d" (1+ i)))) :receding-horizon-proc-count rhpc :solve-qp-mode solve-qp-mode :qp-solver qp-solver) ret)
       )
     ret))
 (warn ";;   (demo-mpc-gen-motion-all)~%")

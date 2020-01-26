@@ -154,8 +154,8 @@ double* solve_osqp_common (double* ret,
   settings->verbose = verbose;
   settings->max_iter = 4000;
   //settings->max_iter = 100000;
-  settings->eps_abs = 1e-06; // improve accuracy
-  settings->eps_rel = 1e-06; // improve accuracy
+  settings->eps_abs = 1e-05; // improve accuracy
+  settings->eps_rel = 1e-05; // improve accuracy
   settings->scaled_termination = true; // avoid too severe termination check
   settings->polish = true; // improve accuracy. but cause oscillatory solution when convex error
   //settings->delta = 1e-4; // in polish, too small delta causes non-convex error, too large delta causes failure(unsuccessful)
@@ -230,8 +230,8 @@ public:
     settings->verbose = verbose;
     settings->max_iter = 4000;
     //settings->max_iter = 100000;
-    settings->eps_abs = 1e-06; // improve accuracy
-    settings->eps_rel = 1e-06; // improve accuracy
+    settings->eps_abs = 1e-05; // improve accuracy
+    settings->eps_rel = 1e-05; // improve accuracy
     settings->scaled_termination = true; // avoid too severe termination check
     settings->polish = true; // improve accuracy. but cause oscillatory solution when convex error
     //settings->delta = 1e-4; // in polish, too small delta causes non-convex error, too large delta causes failure(unsuccessful)
