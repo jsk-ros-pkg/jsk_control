@@ -134,7 +134,7 @@ prioritized-inverse-kinematicsの初期状態に戻す
     joint-args
     )
    "
-Initialize instance
+\it{child}は仮想関節の子リンクとなる．\it{child}は\it{cascaded-link}クラスか\it{bodyset-link}であり，\it{cascaded-link}クラスのオブジェクトであるなら(car (send *robot* :links))を与えるのではなくそのまま*robot*を与えること．
    "
    (setq child (if (derivedp _child cascaded-link)
                    (car (send _child :links))

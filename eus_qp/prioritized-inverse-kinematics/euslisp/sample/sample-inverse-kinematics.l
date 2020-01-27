@@ -12,19 +12,20 @@
 
 ;;左手を目標に伸ばす
 (defun test-inverse-kinematics
- (&key
-    (debug-view :no-message)
+ (&rest
+    args
     )
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
 
-  (prioritized-inverse-kinematics
+  (apply
+   #'prioritized-inverse-kinematics
    (list (list (instance move-target-task :init
                          (send *robot* :larm :end-coords)
                          (make-coords :pos #F(300 100 600)))))
    (mapcar #'(lambda (j) (instance joint-variable :init j))
            (send *robot* :larm :joint-list))
-   :debug-view debug-view
+   args
    )
   )
 (print "(test-inverse-kinematics)")
@@ -32,13 +33,14 @@
 ;;左手を目標に伸ばす
 ;;関節上下限を考慮する
 (defun test-inverse-kinematics-minmax
- (&key
-    (debug-view :no-message)
+ (&rest
+    args
     )
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
 
-  (prioritized-inverse-kinematics
+  (apply
+   #'prioritized-inverse-kinematics
    (list (list (instance move-target-task :init
                          (send *robot* :larm :end-coords)
                          (make-coords :pos #F(300 100 600)))))
@@ -46,7 +48,7 @@
            (send *robot* :larm :joint-list))
    :task0 (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
                   (send *robot* :larm :joint-list))
-   :debug-view debug-view
+   args
    )
   )
 (print "(test-inverse-kinematics-minmax)")
@@ -55,13 +57,14 @@
 ;;両手を目標に伸ばす
 ;;関節上下限を考慮する
 (defun test-inverse-kinematics-dual
- (&key
-    (debug-view :no-message)
+ (&rest
+    args
     )
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
 
-  (prioritized-inverse-kinematics
+  (apply
+   #'prioritized-inverse-kinematics
    (list (list (instance move-target-task :init
                          (send *robot* :rarm :end-coords)
                          (make-coords :pos #F(350 -200 700)))
@@ -72,7 +75,7 @@
            (append (send *robot* :torso :joint-list) (send *robot* :rarm :joint-list) (send *robot* :larm :joint-list)))
    :task0 (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
                   (append (send *robot* :torso :joint-list) (send *robot* :rarm :joint-list) (send *robot* :larm :joint-list)))
-   :debug-view debug-view
+   args
    )
   )
 (print "(test-inverse-kinematics-dual)")
@@ -81,13 +84,14 @@
 ;;浮遊リンク系で両手両足を目標に伸ばす
 ;;関節上下限を考慮する
 (defun test-inverse-kinematics-fullbody
- (&key
-    (debug-view :no-message)
+ (&rest
+    args
     )
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
 
-  (prioritized-inverse-kinematics
+  (apply
+   #'prioritized-inverse-kinematics
    (list (list (instance move-target-task :init
                          (send *robot* :rarm :end-coords)
                          (make-coords :pos #F(350 -200 700)))
@@ -107,7 +111,7 @@
             (send *robot* :joint-list)))
    :task0 (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
                   (send *robot* :joint-list))
-   :debug-view debug-view
+   args
    )
   )
 (print "(test-inverse-kinematics-fullbody)")
@@ -117,13 +121,13 @@
 ;;関節上下限を考慮する
 ;;腕は届かない位置を指定し，脚を優先に解く．
 (defun test-inverse-kinematics-fullbody-priority
- (&key
-    (debug-view :no-message)
+ (&rest
+    args
     )
   (send *robot* :reset-pose)
   (send *robot* :fix-leg-to-coords (make-coords))
 
-  (prioritized-inverse-kinematics
+  (apply #'prioritized-inverse-kinematics
    (list (list (instance move-target-task :init
                          (send *robot* :rleg :end-coords)
                          (make-coords :pos #F(50 -100 50)))
@@ -145,8 +149,8 @@
             (send *robot* :joint-list)))
    :task0 (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
                   (send *robot* :joint-list))
-   :debug-view debug-view
    :min-loop 30
+   args
    )
   )
 (print "(test-inverse-kinematics-fullbody-priority)")
