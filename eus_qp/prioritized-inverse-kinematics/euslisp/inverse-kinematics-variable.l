@@ -126,7 +126,7 @@ prioritized-inverse-kinematicsの初期状態に戻す
     &key
     (joint-type 6dof-joint)
     ((:parent _parent) (instance bodyset-link
-                                 :init (make-cascoords :pos (copy-object (send child :worldpos)))
+                                 :init (make-cascoords :pos (copy-object (send _child :worldpos)))
                                  :bodies (list (make-cube 10 10 10))
                                  :name (format nil "virtual-link-~A" (send _child :name))
                                  :weight 0 :centroid (float-vector 0 0 0)
@@ -136,9 +136,11 @@ prioritized-inverse-kinematicsの初期状態に戻す
    "
 Initialize instance
    "
-   (setq child _child)
+   (setq child (if (derivedp _child cascaded-link)
+                   (car (send _child :links))
+                   _child))
    (setq parent _parent)
-   (send-super :init (instance joint-type :init :child-link child :parent-link parent))
+   (send-super :init (instance joint-type :init :child-link _child :parent-link parent))
    nil
    )
   (:init-form

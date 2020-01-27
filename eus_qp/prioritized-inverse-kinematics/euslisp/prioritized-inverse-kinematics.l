@@ -1,14 +1,16 @@
 (require (format nil "~A/euslisp/eus-osqp-compiled.l" (ros::resolve-ros-path "package://eus_osqp")))
-(require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-variable.l" (ros::resolve-ros-path "package://eus_qp")))
-(require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-task.l" (ros::resolve-ros-path "package://eus_qp")))
-(require (format nil "~A/prioritized-inverse-kinematics/euslisp/util.l" (ros::resolve-ros-path "package://eus_qp")))
+(require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-variable" (ros::resolve-ros-path "package://eus_qp")))
+(require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-task" (ros::resolve-ros-path "package://eus_qp")))
+(require (format nil "~A/prioritized-inverse-kinematics/euslisp/util" (ros::resolve-ros-path "package://eus_qp")))
 
 (defun prioritized-inverse-kinematics
     (tasks variables
      &key
-       (regular 1e-8)
+       (regular 1e-6)
+       (regular-rel 1e-0)
+       (regular-max 1e-1)
        (task0 nil)
-       (stop 10)
+       (stop 50)
        (min-loop 0)
        (revert-if-fail t)
        (debug-view :no-message)
@@ -32,8 +34,8 @@
 \item variables : (list variable1 variable2 ...)\\
 \ \ 探索変数のリストである．各\it{variable}は\it{joint}クラスまたは\it{inverse-kinematics-variable}クラスである．\it{joint}クラスが与えられた場合，そのjoint-angleが探索変数となる．同一の探索変数を意味する\it{variable}を2回以上与えてはならない．
 
-\item regular : weight or (list weight1 weight2 weight3 ...)\\
-\ \ 各\rm{priority}のQPにおいて解を一意に定めるための正則化重みの大きさである．各\it{weight}は\it{float}クラスである．\it{regular}として\it{float}が与えられた場合は全\rm{priority}共通でその重みを用い，\it{list}が与えられた場合は各\rm{priority}ごとに指定された重みを用いる．\textcolor{red}{適応的重みTODO}
+\item regular, regular-rel, regular-max : weight or (list weight1 weight2 weight3 ...)\\
+\ \ 各\rm{priority}のQPにおいて解を一意に定めるための正則化重みの大きさである．各\it{weight}は\it{float}クラスである．\it{regular}として\it{float}が与えられた場合は全\rm{priority}共通でその重みを用い，\it{list}が与えられた場合は各\rm{priority}ごとに指定された重みを用いる．$w=\rm{regular}$，$w_r=\rm{regular\mathchar`-rel}$，$w_{max}=\rm{regular\mathchar`-max}$とし，各\rm{priority}の現在のエラーの2乗和を$e$とおくと，重みは$\min(w+w_r e, w_{max})$となる．
 
 \item task0 : (list task0-1 task0-2 ... )\\
 \ \ 各\it{task}は\it{inverse-kinematics-task}クラスである．\it{task0}が与えられた場合，\it{prioritized-inverse-kinematics}は次の問題を解く．
@@ -71,6 +73,10 @@
          x)
      (when (numberp regular)
        (setq regular (make-list (length tasks) :initial-element regular)))
+     (when (numberp regular-rel)
+       (setq regular-rel (make-list (length tasks) :initial-element regular-rel)))
+     (when (numberp regular-max)
+       (setq regular-max (make-list (length tasks) :initial-element regular-max)))
      (dolist (variable variables)
        (send variable :init-form)
        (send variable :index variable-length)
@@ -88,16 +94,19 @@
          (send *viewer* :viewsurface :flush)
          )
        (when (eq debug-view t)
-         (let ((priority 0))
-           (format t "~%Iteration: ~A~%" i)
-           (dolist (task-p (append (list task0) tasks))
-             (format t "  Priority: ~A~%" priority)
-             (dolist (task task-p) (send task :debug))
-             (incf priority))))
+         (format t "~%Iteration: ~A~%" i)
+         (format t "  Priority: 0~%")
+         (dolist (task task0) (send task :debug)))
        ;;終了判定
        (when (and
               (>= i min-loop)
               (every #'(lambda (task-p) (every #'identity (send-all task-p :is-satisfied))) tasks))
+         (when (eq debug-view t)
+           (let ((priority 1))
+             (dolist (task-p tasks)
+               (format t "  Priority: ~A~%" priority)
+               (dolist (task task-p) (send task :debug))
+               (incf priority))))
          (return-from prioritized-inverse-kinematics t))
        ;;QP
        ;;task0
@@ -145,13 +154,23 @@
                  (this-Wc (apply #'concatenate-matrix-diagonal
                                  (send-all task-p :Wc)))
                  )
+             (when (eq debug-view t)
+               (format t "  Priority: ~A~%" (1+ priority))
+               (dolist (task task-p) (send task :debug)))
              (let* ((omega-length (array-dimension this-C 0))
+                    (this-error (+ (norm2 this-b)
+                                   (norm2 (remove-if #'(lambda (v) (< v 0)) this-dl))
+                                   (norm2 (remove-if #'(lambda (v) (> v 0)) this-du))))
+                    (this-regular (min (+ (elt regular priority)
+                                          (* (elt regular-rel priority)
+                                             this-error))
+                                       (elt regular-max priority)))
                     (status (float-vector 0))
                     (this-x (apply
                              qp-solver
                              :eval-weight-matrix (concatenate-matrix-diagonal
                                                   (m+ (m* (m* (transpose this-A) this-Wa) this-A)
-                                                      (scale-matrix (elt regular priority) (unit-matrix variable-length)))
+                                                      (scale-matrix this-regular (unit-matrix variable-length)))
                                                   this-Wc)
                              :eval-coeff-vector (concatenate float-vector
                                                              (v- (transform (m* (transpose this-A) this-Wa) this-b))
@@ -162,26 +181,27 @@
                                                (make-matrix (array-dimension A 0) omega-length))
                              :equality-vector b
                              :inequality-matrix (concatenate-matrix-column
-                                                 (concatenate-matrix-row C (make-matrix omega-length omega-length))
+                                                 (concatenate-matrix-row C (make-matrix (array-dimension C 0) omega-length))
                                                  (concatenate-matrix-row this-C (unit-matrix omega-length)))
                              :inequality-min-vector (concatenate float-vector dl this-dl)
                              :inequality-max-vector (concatenate float-vector du this-du)
                              :inequality-dim (+ (array-dimension C 0) (array-dimension this-C 0))
-                             :print-level (if (eq debug-view t) 1 0)
                              :status status
                              :eval-weight-matrix-sparce (concatenate-matrix-diagonal
                                                          (m+ (m* (m* (transpose this-Asparce) this-Wa) this-Asparce)
-                                                             (scale-matrix (elt regular priority) (unit-matrix variable-length)))
+                                                             (scale-matrix this-regular (unit-matrix variable-length)))
                                                          this-Wc)
                              :equality-matrix-sparce (concatenate-matrix-row
                                                       Asparce
                                                       (make-matrix (array-dimension Asparce 0) omega-length))
                              :inequality-matrix-sparce (concatenate-matrix-column
-                                                        (concatenate-matrix-row Csparce (make-matrix omega-length omega-length))
+                                                        (concatenate-matrix-row Csparce (make-matrix (array-dimension Csparce 0) omega-length))
                                                         (concatenate-matrix-row this-Csparce (unit-matrix omega-length)))
                              qp-args
                              ))
                     )
+               (when (eq debug-view t)
+                 (format t "    e: ~A~%" this-error))
                ;;QPfail判定
                (unless this-x
                  (warn "priority ~A: QP could not be colved (status ~A)~%" (1+ priority) (round (elt status 0)))
@@ -192,8 +212,8 @@
                (let ((tmp-b (transform this-A x))
                      (tmp-d (transform this-C x)))
                  (dotimes (i (length tmp-d))
-                   (if (> (elt tmp-d i) (elt this-du i)) (setelf this-du i (elt tmp-d i)))
-                   (if (< (elt tmp-d i) (elt this-dl i)) (setelf this-dl i (elt tmp-d i)))
+                   (if (> (elt tmp-d i) (elt this-du i)) (setelt this-du i (elt tmp-d i)))
+                   (if (< (elt tmp-d i) (elt this-dl i)) (setelt this-dl i (elt tmp-d i)))
                    )
                  (setq A (concatenate-matrix-column A this-A))
                  (setq Asparce (concatenate-matrix-column Asparce this-Asparce))
@@ -205,17 +225,25 @@
                  )
                )
              )
-           ;;xを適用
-           (dolist (variable variables) (send variable :apply-x x))
            (incf priority 1)
            ) ;;dolist (task-p tasks)
+         ;;xを適用
+         (dolist (variable variables) (send variable :apply-x x))
+         (when (eq debug-view t)
+           (format t "  x:~%")
+           (format-array x))
          ) ;;let ((A
        ) ;;dotimes (i stop)
-     (if nil ;;revert-if-fail判定
-         (progn
-           (dolist (variable variables) (send variable :revert))
-           nil)
-         t)
+     ;;revert-if-fail判定
+     (if revert-if-fail
+         (if (every #'(lambda (task-p) (every #'identity (send-all task-p :is-satisfied))) tasks)
+             t
+             (progn
+               (dolist (variable variables) (send variable :revert))
+               nil))
+         (if (every #'(lambda (task-p) (every #'identity (send-all task-p :is-satisfied))) tasks)
+             t
+             nil))
      )
     ;;cleanup-form
     (dolist (variable variables) (send variable :cleanup-form)))

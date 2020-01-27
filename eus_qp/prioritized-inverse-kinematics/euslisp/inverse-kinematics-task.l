@@ -1,6 +1,5 @@
 (require (format nil "~A/prioritized-inverse-kinematics/euslisp/util" (ros::resolve-ros-path "package://eus_qp")))
-(require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-variable.l" (ros::resolve-ros-path "package://eus_qp")))
-(require (format nil "~A/prioritized-inverse-kinematics/euslisp/util.l" (ros::resolve-ros-path "package://eus_qp")))
+(require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-variable" (ros::resolve-ros-path "package://eus_qp")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; inverse-kinematics-task
@@ -153,10 +152,10 @@ $\bm{\theta}$の単位は\rm{m}，\rm{rad}である．
    (setq min-angle _min-angle)
    (setq check _check)
    (setq check-margin _check-margin)
-   (unless (= (length max-angle) inequality-rows)
-     (error "length of max-angle (~A) should be ~A" (length max-angle) inequality-rows))
-   (unless (= (length min-angle) inequality-rows)
-     (error "length of min-angle (~A) should be ~A" (length min-angle) inequality-rows))
+   (unless (or (and (numberp max-angle) (= 1 inequality-rows)) (= (length max-angle) inequality-rows))
+     (error "length of max-angle (~A) should be ~A" (if (numberp max-angle) 1 (length max-angle)) inequality-rows))
+   (unless (or (and (numberp min-angle) (= 1 inequality-rows)) (= (length min-angle) inequality-rows))
+     (error "length of min-angle (~A) should be ~A" (if (numberp min-angle) 1 (length min-angle)) inequality-rows))
    (cond
      ((numberp _W) (setq Wc (scale-matrix _W (unit-matrix inequality-rows))))
      ((vectorp _W) (if (= (length _W) inequality-rows)
@@ -182,8 +181,8 @@ $\bm{\theta}$の単位は\rm{m}，\rm{rad}である．
        )
      )
    (when target-variable
-     (copy-block-matrix C (unit-matrix (send target-variable :dim)) :i 0 :j (send target-variable :index))
-     (copy-block-matrix Csparce (unit-matrix (send target-variable :dim)) :i 0 :j (send target-variable :index))
+     (copy-block-matrix C (unit-matrix (send target-variable :dim)) 0 (send target-variable :index))
+     (copy-block-matrix Csparce (unit-matrix (send target-variable :dim)) 0 (send target-variable :index))
      )
    t
    )
@@ -216,6 +215,13 @@ $\bm{\theta}$の単位は\rm{m}，\rm{rad}である．
                      (< (elt dl i) check-margin))))
        t)
    )
+  (:debug
+   ()
+   "
+現在の関節角度と上下限を表示
+   "
+   (format t "    minmax-angle-task ~A ~A < ~A < ~A~%" (send j :name) min-angle (send j :joint-angle) max-angle)
+   t)
   )
 
 
@@ -250,7 +256,7 @@ $\bm{\theta}$の単位は\rm{m}，\rm{rad}である．
           (tmp-v3)
           (tmp-v3a)
           (tmp-v3b)
-          (tmp-m61)
+          (tmp-m66)
           (tmp-m33)
           )
   :documentation
@@ -366,7 +372,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
     tmp-v3 (instantiate float-vector 3)
     tmp-v3a (instantiate float-vector 3)
     tmp-v3b (instantiate float-vector 3)
-    tmp-m61 (make-matrix 6 1)
+    tmp-m66 (make-matrix 6 6)
     tmp-m33 (make-matrix 3 3))
    t
    )
@@ -434,7 +440,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
                                         :transform default-coords)))
        ;;translation
        (send j :calc-jacobian
-             tmp-m61 ;;fik
+             tmp-m66 ;;fik
              0 ;;row
              0 ;;column
              j ;;joint
@@ -449,10 +455,10 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
              tmp-v0 tmp-v1 tmp-v2 tmp-v3 tmp-v3a tmp-v3b tmp-m33)
        (dotimes (i rows-trans)
          (dotimes (j (send variable :dim))
-           (incf (aref A i (+ (send variable :index) j)) (aref tmp-m61 i j))))
+           (incf (aref A i (+ (send variable :index) j)) (aref tmp-m66 i j))))
        ;;rotation
        (send j :calc-jacobian
-             tmp-m61 ;;fik
+             tmp-m66 ;;fik
              0 ;;row
              0 ;;column
              j ;;joint
@@ -467,7 +473,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
              tmp-v0 tmp-v1 tmp-v2 tmp-v3 tmp-v3a tmp-v3b tmp-m33)
        (dotimes (i rows-rot)
          (dotimes (j (send variable :dim))
-           (incf (aref A (+ rows-trans i) (+ (send variable :index) j)) (aref tmp-m61 (+ rows-trans i) j))))
+           (incf (aref A (+ rows-trans i) (+ (send variable :index) j)) (aref tmp-m66 (+ rows-trans i) j))))
        ))
    ;;calc jacobian of target-coords
    (dolist (variable target-coords-variables)
@@ -484,7 +490,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
                                         :transform default-coords)))
        ;;translation
        (send j :calc-jacobian
-             tmp-m61 ;;fik
+             tmp-m66 ;;fik
              0 ;;row
              0 ;;column
              j ;;joint
@@ -499,10 +505,10 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
              tmp-v0 tmp-v1 tmp-v2 tmp-v3 tmp-v3a tmp-v3b tmp-m33)
        (dotimes (i rows-trans)
          (dotimes (j (send variable :dim))
-           (decf (aref A i (+ (send variable :index) j)) (aref tmp-m61 i j))))
+           (decf (aref A i (+ (send variable :index) j)) (aref tmp-m66 i j))))
        ;;rotation
        (send j :calc-jacobian
-             tmp-m61 ;;fik
+             tmp-m66 ;;fik
              0 ;;row
              0 ;;column
              j ;;joint
@@ -517,7 +523,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
              tmp-v0 tmp-v1 tmp-v2 tmp-v3 tmp-v3a tmp-v3b tmp-m33)
        (dotimes (i rows-rot)
          (dotimes (j (send variable :dim))
-           (decf (aref A (+ rows-trans i) (+ (send variable :index) j)) (aref tmp-m61 (+ rows-trans i) j))))
+           (decf (aref A (+ rows-trans i) (+ (send variable :index) j)) (aref tmp-m66 (+ rows-trans i) j))))
        ))
    t
    )
@@ -563,7 +569,7 @@ move-targetとtarget-coordsを描画
    "
 現在のエラーを表示する
    "
-   (format t "    move-target-task~%")
+   (format t "    move-target-task ~A - ~A~%" (send target-coords :name) (send move-target :name))
    (format-array b-raw)
    t)
   )
