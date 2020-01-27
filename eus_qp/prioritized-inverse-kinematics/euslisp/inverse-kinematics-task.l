@@ -1,5 +1,6 @@
 (require (format nil "~A/prioritized-inverse-kinematics/euslisp/util" (ros::resolve-ros-path "package://eus_qp")))
-(require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-variable" (ros::resolve-ros-path "package://eus_qp")))
+(require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-variable.l" (ros::resolve-ros-path "package://eus_qp")))
+(require (format nil "~A/prioritized-inverse-kinematics/euslisp/util.l" (ros::resolve-ros-path "package://eus_qp")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; inverse-kinematics-task
@@ -7,29 +8,27 @@
 
 (defclass inverse-kinematics-task
   :super propertied-object
-  :slots ((type ",type of task")
-          (A "$\mathbf{A}$")
+  :slots ((A "$\mathbf{A}$")
           (b "$\bm{b}$")
-          (W "$\mathbf{W}$")
+          (C "$\mathbf{C}$")
+          (dl "$\mathbf{d}_l$")
+          (du "$\mathbf{d}_u$")
+          (Wa "$\mathbf{W}_A$")
+          (Wc "$\mathbf{W}_C$")
           (Asparce "$\mathbf{A}_{sparce}$, used for sparce matrix calculation")
-          (rows "size of row of $\mathbf{A}$")
+          (Csparce "$\mathbf{C}_{sparce}$, used for sparce matrix calculation")
+          (equality-rows "size of row of $\mathbf{A}$")
+          (inequality-rows "size of row of $\mathbf{C}$")
           (cols "size of column of $\mathbf{A}$ (constant)")
           )
   :documentation
   "
 \ \ 各タスクを表すクラス．\\
-\it{type}の値に応じて\it{prioritized-inverse-kinematics}中で次の問題に変換される．
-\begin{itemize}
-\item type = :equality-constraint\\
-  \begin{eqnarray}
-    \min_{\bm{x}} &\ & (\mathbf{A}\bm{x} - \bm{b})^\mathrm{T} \mathbf{W} (\mathbf{A}\bm{x} - \bm{b}) \nonumber
-  \end{eqnarray}
-\item type = :inequality-constraint\\
-  \begin{eqnarray}
-    \min_{\bm{x},\bm{\omega}} &\ & \bm{\omega}^\mathrm{T} \mathbf{W} \bm{\omega} \nonumber\\
-    \rm{subject\ to} &\ & \mathbf{A}\bm{x} - \bm{b} \geqq \bm{\omega} \nonumber
-  \end{eqnarray}
-\end{itemize}
+\it{prioritized-inverse-kinematics}中で次の問題に変換される．
+\begin{eqnarray}
+  \min_{\bm{x},\bm{\omega}} &\ & (\mathbf{A}\bm{x} - \bm{b})^\mathrm{T} \mathbf{W}_A (\mathbf{A}\bm{x} - \bm{b}) + \bm{\omega}^\mathrm{T} \mathbf{W}_C \bm{\omega} \nonumber\\
+  \rm{subject\ to} &\ & \bm{d}_l \leqq \mathbf{C}\bm{x} + \bm{\omega} \leqq \bm{d}_u \nonumber
+\end{eqnarray}
   "
   )
 
@@ -39,8 +38,10 @@
    "
 Initialize instance
    "
-   (setq type :equality-constraint)
-   (setq rows 0)
+   (setq equality-rows 0)
+   (setq inequality-rows 0)
+   (setq Wa (make-matrix equality-rows equality-rows))
+   (setq Wc (make-matrix inequality-rows inequality-rows))
    t
    )
   (:initialize
@@ -49,38 +50,174 @@ Initialize instance
 called at the start of prioritized-inverse-kinematics
    "
    (setq cols variable-length)
-   (setq A (make-matrix rows cols))
-   (setq Asparce (make-matrix rows cols))
-   (setq b (instantiate float-vector rows))
-   (setq W (make-matrix rows rows))
+   (setq A (make-matrix equality-rows cols))
+   (setq Asparce (make-matrix equality-rows cols))
+   (setq b (instantiate float-vector equality-rows))
+   (setq C (make-matrix inequality-rows cols))
+   (setq Csparce (make-matrix inequality-rows cols))
+   (setq du (instantiate float-vector inequality-rows))
+   (setq dl (instantiate float-vector inequality-rows))
    t)
   (:update
    ()
    "
-called at the start of each iteration.\\
-update A, b , W, Asparce, rows
+ called at the start of each iteration.\\
+update A, b , Wa, Asparce, equality-rows, C, dl, du , Wc, Csparce, inequality-rows
    "
-   (setq rows 0)
-   (if (and (equal (array-dimension A 0) rows) (equal (array-dimension Asparce 0) rows))
-       (progn
-         (fill A 0)
-         (fill Asparce 0))
-       (progn
-         (setq A (make-matrix rows cols))
-         (setq Asparce (make-matrix rows cols))))
-   (if (equal (length b) rows)
-       (fill b 0)
-       (setq b (instantiate float-vector rows)))
-   (if (equal (array-dimensions W) (list rows rows))
-       (fill W 0)
-       (setq W (make-matrix rows rows)))
    t)
-  (:type () "return type" type)
+  (:is-satisfied
+   ()
+   "
+終了判定に用いる．
+   "
+   t)
+  (:draw
+   ()
+   "
+debug view
+   "
+   t)
+  (:debug
+   ()
+   "
+debug message
+   "
+   t)
   (:A () "return $\mathbf{A}$" A)
   (:b () "return $\bm{b}$" b)
-  (:W () "return $\mathbf{W}$" W)
+  (:Wa () "return $\mathbf{W}_A$" Wa)
   (:Asparce () "return $\mathbf{A}_{sparce}$" Asparce)
+  (:C () "return $\mathbf{C}$" C)
+  (:dl () "return $\bm{d}_l$" dl)
+  (:du () "return $\bm{d}_u$" du)
+  (:Wc () "return $\mathbf{W}_C$" Wc)
+  (:Csparce () "return $\mathbf{C}_{sparce}$" Csparce)
   )
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; move-target-task
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass minmax-angle-task
+  :super inverse-kinematics-task
+  :slots ((j ", target joint")
+          (max-angle)
+          (min-angle)
+          (target-variable ", list of inverse-kinematics-variable corresponding to target joint")
+          (check "終了判定を行うか否か")
+          (check-margin "終了判定時のマージン")
+          )
+  :documentation
+  "
+\ \ \it{joint}の角度上下限制約を表現するクラス．\\
+\it{joint}の角度上下限を$\bm{\theta}_{max}$，$\bm{\theta}_{min}$，現在の角度を$\bm{\theta}$とすると，\it{prioritized-inverse-kinematics}中で次の問題に変換される．
+\begin{eqnarray}
+  \min_{\bm{x},\bm{\omega}} &\ & \bm{\omega}^\mathrm{T} W \bm{\omega} \nonumber\\
+  \rm{subject\ to} &\ & \bm{\theta}_{min} \leqq \bm{\theta} + \bm{x} + \bm{\omega} \leqq \bm{\theta}_{max}
+\end{eqnarray}
+$\bm{\theta}$の単位は\rm{m}，\rm{rad}である．
+"
+  )
+
+(defmethod minmax-angle-task
+  (:init
+   (_joint
+    &key
+    ((:W _W) 1.0)
+    ((:max-angle _max-angle) (send _joint :max-angle))
+    ((:min-angle _min-angle) (send _joint :min-angle))
+    ((:check _check) t)
+    ((:check-margin _check-margin) 0.0)
+    )
+   "
+\begin{itemize}
+  \item joint\\
+\it{joint}クラス.上下限を考える対象の関節である．
+  \item W\\
+\it{float}クラスの場合$\mathbf{W}$はその値を対角成分に並べた行列になる\\
+\it{vector}クラスの場合$\mathbf{W}$は各値を対角成分に並べた行列になる\\
+\it{matrix}クラスの場合$\mathbf{W}$としてそのまま使用される．
+  \item max-angle, min-angle\\
+\it{float}または\it{float-vector}クラス．関節上下限を表す．
+  \item check : t or nil\\
+終了判定を行うか否か
+  \item check-margin
+\it{float}クラス．終了判定時にこの値以下の侵犯を許容する．単位は\rm{m},\rm{rad}
+\end{itemize}
+   "
+   (setq j _joint)
+   (setq equality-rows 0)
+   (setq inequality-rows (send j :joint-dof))
+   (setq max-angle _max-angle)
+   (setq min-angle _min-angle)
+   (setq check _check)
+   (setq check-margin _check-margin)
+   (unless (= (length max-angle) inequality-rows)
+     (error "length of max-angle (~A) should be ~A" (length max-angle) inequality-rows))
+   (unless (= (length min-angle) inequality-rows)
+     (error "length of min-angle (~A) should be ~A" (length min-angle) inequality-rows))
+   (cond
+     ((numberp _W) (setq Wc (scale-matrix _W (unit-matrix inequality-rows))))
+     ((vectorp _W) (if (= (length _W) inequality-rows)
+                       (setq Wc (diagonal _W))
+                       (error "length of W (~A) should be ~A~%" (length _W) inequality-rows)))
+     ((matrixp _W) (if (and (= (array-dimension _W 0) inequality-rows) (= (array-dimension _W 1) inequality-rows))
+                            (setq Wc _W)
+                            (error "size of W ~A should be ~A" (array-dimensions _W) inequality-rows)))
+     )
+   (setq Wa (make-matrix equality-rows equality-rows))
+   t
+   )
+  (:initialize
+   (variable-length variables)
+   "
+探索変数\it{variables}のうち，該当\it{joint}に影響を与える成分を調べ，記録する．0または1個の\it{variables}が発見されなければならない．
+   "
+   (send-super :initialize variable-length variables)
+   (dolist (variable variables)
+     (when (and (derivedp variable joint-variable)
+                (eq (send variable :joint) j))
+       (setq target-variable variable)
+       )
+     )
+   (when target-variable
+     (copy-block-matrix C (unit-matrix (send target-variable :dim)) :i 0 :j (send target-variable :index))
+     (copy-block-matrix Csparce (unit-matrix (send target-variable :dim)) :i 0 :j (send target-variable :index))
+     )
+   t
+   )
+  (:update
+   ()
+   "
+現在の関節角度に応じて$\bm{d}_l$，$\bm{d}_u$を更新する
+   "
+   (when target-variable
+     (cond
+       ((numberp (send j :joint-angle))
+        (setelt dl 0 (- min-angle (send j :joint-angle)))
+        (setelt du 0 (- max-angle (send j :joint-angle))))
+       (t
+        (v- min-angle (send j :joint-angle) dl)
+        (v- max-angle (send j :joint-angle) du))
+       )
+     )
+   t
+   )
+  (:is-satisfied
+   ()
+   "
+関節角度上下限を満足しているかどうかを判定
+   "
+   (if check
+       (every #'identity
+              (dotimes (i inequality-rows)
+                (and (> (elt du i) (- check-margin))
+                     (< (elt dl i) check-margin))))
+       t)
+   )
+  )
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -99,13 +236,29 @@ update A, b , W, Asparce, rows
           (rotation-coords)
           (Wrot "$\mathbf{W}_{rot}$, represented in rotation-coords")
           (rows-rot "size of row of $\bm{e}_{rot}$")
+          (target-coords-variables ", target-coordsに影響を与えるvariableのリスト")
+          (move-target-variables ", move-targetに影響を与えるvariableのリスト")
+          (check "終了判定を行うか否か")
+          (thre "終了判定時の並進許容誤差")
+          (rthre "終了判定時の回転許容誤差")
+          (b-raw ", min-max適用前の$\bm{b}$")
+          (p-limit "一回の反復計算で動く並進ノルムの大きさの上限[m]")
+          (r-limit "一回の反復計算で動く回転ノルムの大きさの上限[rad]")
+          (tmp-v0)
+          (tmp-v1)
+          (tmp-v2)
+          (tmp-v3)
+          (tmp-v3a)
+          (tmp-v3b)
+          (tmp-m61)
+          (tmp-m33)
           )
   :documentation
   "
 \ \ 2つの\it{coordinates}を一致させるタスクを表すクラス．\it{move-target}と\it{target-coords}を一致させる．\it{move-target}と\it{target-coords}はどちらも動いてよい．\\
 \it{move-target}と\it{target-coords}の並進誤差を\it{translation-coords}の座標系で表現し，\it{translation-axis}によって抽出された成分を$\bm{e}_{trans}$と表す．\it{move-target}と\it{target-coords}の回転誤差を\it{rotation-coords}の座標系で表現し，\it{rotation-axis}によって抽出された成分を$\bm{e}_{rot}$と表す．$\bm{e}_{trans}$，$\bm{e}_{rot}$のヤコビアンをそれぞれ$\mathbf{J}_{trans}$，$\mathbf{J}_{rot}$とすると，\it{prioritized-inverse-kinematics}中で次の問題に変換される．
 \begin{eqnarray}
-  \min_x &\ & (\mathbf{J}_{trans} \bm{x} - \bm{e}_{trans})^\mathrm{T} \mathbf{W}_{trans} (\mathbf{J}_{trans} \bm{x} - \bm{e}_{trans}) + (\mathbf{J}_{rot} \bm{x} - \bm{e}_{rot})^\mathrm{T} \mathbf{W}_{rot} (\mathbf{J}_{rot} \bm{x} - \bm{e}_{rot}) \nonumber
+  \min_{\bm{x}} &\ & (\mathbf{J}_{trans} \bm{x} - \bm{e}_{trans})^\mathrm{T} \mathbf{W}_{trans} (\mathbf{J}_{trans} \bm{x} - \bm{e}_{trans}) + (\mathbf{J}_{rot} \bm{x} - \bm{e}_{rot})^\mathrm{T} \mathbf{W}_{rot} (\mathbf{J}_{rot} \bm{x} - \bm{e}_{rot}) \nonumber
 \end{eqnarray}
 $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である．
 "
@@ -122,11 +275,16 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
     ((:rotation-coords _rotation-coords) (make-coords))
     ((:Wtrans _Wtrans) 1.0)
     ((:Wrot _Wrot) 1.0)
+    ((:check _check) t)
+    ((:thre _thre) 0.001)
+    ((:rthre _rthre) (deg2rad 1))
+    ((:p-limit _p-limit) 0.1)
+    ((:r-limit _r-limit) 0.5)
     )
    "
 \begin{itemize}
   \item target-coords, move-target\\
-\it{coordinate}クラスまたは\it{coordinate}クラスを返す\it{function}クラス.\it{cascaded-coords}を返す\it{function}クラスの場合，途中でそれまでと別のparent座標系をもつ\it{cascaded-coords}を返すように変わってはならない．
+\it{coordinate}クラス.どちらも動いて良い
   \item translation-axis : t :x :y :z :xy :yx :yz :zy :zx :xz nil
   \item rotation-axis : t :x :y :z nil
   \item translation-coords\\
@@ -141,6 +299,12 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
 \it{float}クラスの場合$\mathbf{W}_{rot}$はその値を対角成分に並べた行列になる\\
 \it{vector}クラスの場合$\mathbf{W}_{rot}$は各値を対角成分に並べた行列になる\\
 \it{matrix}クラスの場合$\mathbf{W}_{rot}$としてそのまま使用される．
+  \item check : t or nil\\
+終了判定を行うか否か
+  \item thre, rthre\\
+\it{float}クラスまたは\it{float-vector}クラス．終了判定時にこの値以下の侵犯を許容する．単位は\rm{m},\rm{rad}
+  \item p-limit, r-limit\\
+一回の反復計算で動く並進ノルム・回転ノルムの上限．単位は\rm{m},\rm{rad}.特に回転については変位が大き過ぎると線形近似誤差の影響によって計算が収束しない．
 \end{itemize}
    "
    (setq target-coords _target-coords)
@@ -165,7 +329,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
                             (error "length of Wtrans (~A) should be ~A~%" (length _Wtrans) rows-trans)))
      ((matrixp _Wtrans) (if (and (= (array-dimension _Wtrans 0) rows-trans) (= (array-dimension _Wtrans 1) rows-trans))
                             (setq Wtrans _Wtrans)
-                            (error "size of Wtrans ~A should be ~A" (array-dimensions _Wtrans) rows-trans)))
+                            (error "size of Wtrans ~A should be ~A~%" (array-dimensions _Wtrans) rows-trans)))
      )
    (cond
      ((numberp _Wrot) (setq Wrot (scale-matrix _Wrot (unit-matrix rows-rot))))
@@ -174,10 +338,36 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
                             (error "length of Wrot (~A) should be ~A~%" (length _Wrot) rows-rot)))
      ((matrixp _Wrot) (if (and (= (array-dimension _Wrot 0) rows-rot) (= (array-dimension _Wrot 1) rows-rot))
                             (setq Wrot _Wrot)
-                            (error "size of Wrot ~A should be ~A" (array-dimensions _Wrot) rows-rot)))
+                            (error "size of Wrot ~A should be ~A~%" (array-dimensions _Wrot) rows-rot)))
      )
-   (setq type :equality-constraint)
-   (setq rows (+ rows-trans rows-rot))
+   (setq inequality-rows 0)
+   (setq equality-rows (+ rows-trans rows-rot))
+   (setq Wa (concatenate-matrix-diagonal Wtrans Wrot))
+   (setq Wc (make-matrix inequality-rows inequality-rows))
+   (setq check _check)
+   (setq thre (cond ((numberp _thre)
+                     (fill (instantiate float-vector rows-trans) _thre))
+                    (t
+                     (if (= (length _thre) rows-trans)
+                         _thre
+                         (error "size of thre (~A) should be ~A~%" (length _thre) rows-trans)))))
+   (setq rthre (cond ((numberp _rthre)
+                     (fill (instantiate float-vector rows-rot) _rthre))
+                    (t
+                     (if (= (length _rthre) rows-rot)
+                         _rthre
+                         (error "size of rthre (~A) should be ~A~%" (length _thre) rows-rot)))))
+   (setq p-limit _p-limit)
+   (setq r-limit _r-limit)
+   (setq
+    tmp-v0 (instantiate float-vector 0)
+    tmp-v1 (instantiate float-vector 1)
+    tmp-v2 (instantiate float-vector 2)
+    tmp-v3 (instantiate float-vector 3)
+    tmp-v3a (instantiate float-vector 3)
+    tmp-v3b (instantiate float-vector 3)
+    tmp-m61 (make-matrix 6 1)
+    tmp-m33 (make-matrix 3 3))
    t
    )
   (:initialize
@@ -185,8 +375,29 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
    "
 探索変数\it{variables}のうち，\it{target-coords},\it{move-target}に影響を与える成分を調べ，記録する．
    "
-   (setq cols variable-length)
-   ;;TODO initialize A, b , W, Asparce, 
+   (send-super :initialize variable-length variables)
+   (setq b-raw (instantiate float-vector (length b)))
+   (setq move-target-variables
+         (remove-if-not
+          #'identity
+          (mapcar
+           #'(lambda (l)
+               (if (send l :joint)
+                   (find-if #'(lambda (variable) (eq (send variable :joint) (send l :joint))) variables)
+                   nil))
+           (get-link-list move-target))))
+   (setq target-coords-variables
+         (remove-if-not
+          #'identity
+          (mapcar
+           #'(lambda (l)
+               (if (send l :joint)
+                   (find-if #'(lambda (variable) (eq (send variable :joint) (send l :joint))) variables)
+                   nil))
+           (get-link-list target-coords))))
+   (dolist (variable (append move-target-variables target-coords-variables))
+     (fill-block-matrix Asparce 1.0 0 (send variable :index) equality-rows (send variable :dim))
+     )
    t
    )
   (:update
@@ -194,12 +405,165 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
    "
 現在の状態近傍で線形近似し$\mathbf{A}$, $\bm{b}$を更新する
    "
-   ;;TODO
+   ;;position error
+   (scale 0.001 (send move-target :difference-position target-coords :translation-axis translation-axis :world translation-coords) tmp-v3)
+   (copy-block-vec b-raw (calc-dif-with-axis tmp-v3 translation-axis tmp-v0 tmp-v1 tmp-v2) 0)
+   (if (> (norm (subseq b-raw 0 rows-trans)) p-limit)
+       (copy-block-vec b (scale p-limit (normalize-vector (subseq b-raw 0 rows-trans))) 0)
+       (copy-block-vec b (subseq b-raw 0 rows-trans) 0))
+   ;;rotation error
+   (copy-block-vec b-raw (calc-dif-with-axis (send move-target :difference-rotation target-coords :rotation-axis rotation-axis :world rotation-coords) rotation-axis tmp-v0 tmp-v1 tmp-v3) rows-trans)
+   (if (> (norm (subseq b-raw rows-trans)) r-limit)
+       (copy-block-vec b (scale r-limit (normalize-vector (subseq b-raw rows-trans))) rows-trans)
+       (copy-block-vec b (subseq b-raw rows-trans) rows-trans))
+   ;;calc jacobian of move-target
+   (dolist (variable (append move-target-variables target-coords-variables))
+     (fill-block-matrix A 0.0 0 (send variable :index) equality-rows (send variable :dim))
+     )
+   (dolist (variable move-target-variables)
+     (let* ((j (send variable :joint))
+            (paxis (case (j . axis)
+                     (:x #f(1 0 0)) (:y #f(0 1 0)) (:z #f(0 0 1))
+                     (:xx #f(1 0 0)) (:yy #f(0 1 0)) (:zz #f(0 0 1))
+                     (:-x #f(-1 0 0)) (:-y #f(0 -1 0)) (:-z #f(0 0 -1))
+                     (t (j . axis))))
+            (child-link (send j :child-link))
+            (parent-link (send j :parent-link))
+            (default-coords (j . default-coords))
+            (world-default-coords (send (send parent-link :copy-worldcoords)
+                                        :transform default-coords)))
+       ;;translation
+       (send j :calc-jacobian
+             tmp-m61 ;;fik
+             0 ;;row
+             0 ;;column
+             j ;;joint
+             paxis ;;paxis
+             child-link ;;child-link
+             world-default-coords ;;world-default-coords
+             nil ;;child-reverse
+             move-target ;;move-target
+             translation-coords ;;transform-coords
+             rotation-axis ;;rotation-axis
+             translation-axis ;;translation-axis
+             tmp-v0 tmp-v1 tmp-v2 tmp-v3 tmp-v3a tmp-v3b tmp-m33)
+       (dotimes (i rows-trans)
+         (dotimes (j (send variable :dim))
+           (incf (aref A i (+ (send variable :index) j)) (aref tmp-m61 i j))))
+       ;;rotation
+       (send j :calc-jacobian
+             tmp-m61 ;;fik
+             0 ;;row
+             0 ;;column
+             j ;;joint
+             paxis ;;paxis
+             child-link ;;child-link
+             world-default-coords ;;world-default-coords
+             nil ;;child-reverse
+             move-target ;;move-target
+             rotation-coords ;;transform-coords
+             rotation-axis ;;rotation-axis
+             translation-axis ;;translation-axis
+             tmp-v0 tmp-v1 tmp-v2 tmp-v3 tmp-v3a tmp-v3b tmp-m33)
+       (dotimes (i rows-rot)
+         (dotimes (j (send variable :dim))
+           (incf (aref A (+ rows-trans i) (+ (send variable :index) j)) (aref tmp-m61 (+ rows-trans i) j))))
+       ))
+   ;;calc jacobian of target-coords
+   (dolist (variable target-coords-variables)
+     (let* ((j (send variable :joint))
+            (paxis (case (j . axis)
+                     (:x #f(1 0 0)) (:y #f(0 1 0)) (:z #f(0 0 1))
+                     (:xx #f(1 0 0)) (:yy #f(0 1 0)) (:zz #f(0 0 1))
+                     (:-x #f(-1 0 0)) (:-y #f(0 -1 0)) (:-z #f(0 0 -1))
+                     (t (j . axis))))
+            (child-link (send j :child-link))
+            (parent-link (send j :parent-link))
+            (default-coords (j . default-coords))
+            (world-default-coords (send (send parent-link :copy-worldcoords)
+                                        :transform default-coords)))
+       ;;translation
+       (send j :calc-jacobian
+             tmp-m61 ;;fik
+             0 ;;row
+             0 ;;column
+             j ;;joint
+             paxis ;;paxis
+             child-link ;;child-link
+             world-default-coords ;;world-default-coords
+             nil ;;child-reverse
+             target-coords ;;move-target
+             translation-coords ;;transform-coords
+             rotation-axis ;;rotation-axis
+             translation-axis ;;translation-axis
+             tmp-v0 tmp-v1 tmp-v2 tmp-v3 tmp-v3a tmp-v3b tmp-m33)
+       (dotimes (i rows-trans)
+         (dotimes (j (send variable :dim))
+           (decf (aref A i (+ (send variable :index) j)) (aref tmp-m61 i j))))
+       ;;rotation
+       (send j :calc-jacobian
+             tmp-m61 ;;fik
+             0 ;;row
+             0 ;;column
+             j ;;joint
+             paxis ;;paxis
+             child-link ;;child-link
+             world-default-coords ;;world-default-coords
+             nil ;;child-reverse
+             target-coords ;;move-target
+             rotation-coords ;;transform-coords
+             rotation-axis ;;rotation-axis
+             translation-axis ;;translation-axis
+             tmp-v0 tmp-v1 tmp-v2 tmp-v3 tmp-v3a tmp-v3b tmp-m33)
+       (dotimes (i rows-rot)
+         (dotimes (j (send variable :dim))
+           (decf (aref A (+ rows-trans i) (+ (send variable :index) j)) (aref tmp-m61 (+ rows-trans i) j))))
+       ))
    t
    )
-  (:type () "return type" type)
-  (:A () "return A" A)
-  (:b () "return b" b)
-  (:W () "return W" W)
-  (:Asparce () "return Asparce" Asparce)
+  (:is-satisfied
+   ()
+   "
+move-targetとtarget-coordsが一致しているかどうかを判定
+   "
+   (if check
+       (and (every #'(lambda (i)
+                       (<= (abs (elt b-raw i)) (elt thre i)))
+                   (range rows-trans))
+            (every #'(lambda (i)
+                       (<= (abs (elt b-raw (+ rows-trans i))) (elt rthre i)))
+                   (range rows-rot)))
+       t)
+   )
+  (:draw
+   ()
+   "
+move-targetとtarget-coordsを描画
+   "
+   (send move-target :draw-on :color #F(1 0 0) :width 2)
+   (send target-coords :draw-on :color #F(1 0 0) :width 2)
+   (let ((pwidth (send *viewer* :viewsurface :line-width))
+         (psize (send *viewer* :viewsurface :point-size))
+         (pcolor (send *viewer* :viewsurface :color)))
+     (unwind-protect
+          (progn
+            (send *viewer* :viewsurface :color #f(1 0 0))
+            (send *viewer* :viewsurface :line-width 1)
+            (send *viewer* :viewsurface :point-size 3)
+            ;;(send *viewer* :viewsurface :3d-point (elt np 1) :depth-test t)
+            (send *viewer* :viewsurface :3d-line (send move-target :worldpos) (send target-coords :worldpos) :depth-test t))
+       (progn
+         (send *viewer* :viewsurface :line-width pwidth)
+         (send *viewer* :viewsurface :point-size psize)
+         (send *viewer* :viewsurface :color pcolor)))
+     )
+   t)
+  (:debug
+   ()
+   "
+現在のエラーを表示する
+   "
+   (format t "    move-target-task~%")
+   (format-array b-raw)
+   t)
   )

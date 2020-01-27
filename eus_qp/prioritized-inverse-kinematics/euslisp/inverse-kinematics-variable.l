@@ -23,7 +23,7 @@ Initialize instance
    (setq dim 0)
    t
    )
-  (:index (idx) "update or return index" (if idx (setq index idx) index)
+  (:index (&optional idx) "update or return index" (if idx (setq index idx) index)
    )
   (:apply-x
    (x)
@@ -85,7 +85,12 @@ jointのクラス．
    "
 $\bm{x}$の値だけjoint-angleを相対的に更新する．
    "
-   (send j :joint-angle (send j :speed-to-angle (subseq x index (+ index dim))) :relative t)
+   (send j :joint-angle
+         (send j :speed-to-angle
+               (if (= dim 1)
+                   (elt x index)
+                   (subseq x index (+ index dim))))
+         :relative t)
    t
    )
   (:revert
