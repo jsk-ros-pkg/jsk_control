@@ -242,11 +242,11 @@ $\bm{\theta}$の単位は\rm{m}，\rm{rad}である．
    t
    )
   (:is-satisfied
-   ()
+   (&optional force-check)
    "
 関節角度上下限を満足しているかどうかを判定
    "
-   (if check
+   (if (or check force-check)
        (and
         (every #'(lambda (v) (> v 0)) (v+ du check-margin))
         (every #'(lambda (v) (< v 0)) (v- dl check-margin)))
@@ -258,7 +258,7 @@ $\bm{\theta}$の単位は\rm{m}，\rm{rad}である．
 現在の関節角度と上下限を表示
    "
    (warning-message (cond
-                      ((send self :is-satisfied) 7);;white
+                      ((send self :is-satisfied t) 7);;white
                       (check 1) ;;red
                       (t 3)) ;;yellow
                     "    minmax-angle-task: ~A ~A < ~A < ~A [mm, deg]~%" (send j :name) min-angle (send j :joint-angle) max-angle)
@@ -577,11 +577,11 @@ $\bm{e}$の単位は\rm{m}，\rm{rad}である．
    t
    )
   (:is-satisfied
-   ()
+   (&optional force-check)
    "
 関節角度が一致しているかどうかを判定
    "
-   (if check
+   (if (or force-check check)
        (and
         (every #'(lambda (v) (> v 0)) (v+ b check-margin))
         (every #'(lambda (v) (< v 0)) (v- b check-margin)))
@@ -593,7 +593,7 @@ $\bm{e}$の単位は\rm{m}，\rm{rad}である．
 現在の角度誤差を表示
    "
    (warning-message (cond
-                      ((send self :is-satisfied) 7);;white
+                      ((send self :is-satisfied t) 7);;white
                       (check 1) ;;red
                       (t 3)) ;;yellow
                     "    joint-angle-task: ~A - ~A [mm, deg]~%"
@@ -920,11 +920,11 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
    t
    )
   (:is-satisfied
-   ()
+   (&optional force-check)
    "
 move-targetとtarget-coordsが一致しているかどうかを判定
    "
-   (if check
+   (if (or force-check check)
        (and (every #'(lambda (i)
                        (<= (abs (elt b-raw i)) (elt thre i)))
                    (range rows-trans))
@@ -962,10 +962,343 @@ move-targetとtarget-coordsを描画
 現在のエラーを表示する
    "
    (warning-message (cond
-                      ((send self :is-satisfied) 7);;white
+                      ((send self :is-satisfied t) 7);;white
                       (check 1) ;;red
                       (t 3)) ;;yellow
                     "    move-target-task: ~A - ~A [m, rad]~%" (send target-coords :name) (send move-target :name))
+   (format-array b-raw)
+   t)
+  )
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; cog-task
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass cog-task
+  :super inverse-kinematics-task
+  :slots ((target "重心を考える対象")
+          (target-variables ", 重心に影響を与えるvariableのリスト")
+          (target-jacobis ", 各target-variablesに対応した重心ヤコビアンのリスト")
+          (tmp-v0)
+          (tmp-v1)
+          (tmp-v2)
+          (tmp-va)
+          (tmp-vb)
+          (tmp-vc)
+          (tmp-vd)
+          (tmp-ma)
+          (tmp-mb)
+          (tmp-mc)
+          )
+  :documentation
+  "
+\ \ 重心を扱うための仮想クラス．単位は\rm{m}
+"
+  )
+
+(defmethod cog-task
+  (:init
+   (_target
+    )
+   "
+\begin{itemize}
+  \item target\\
+\it{cascaded-link}クラス.
+\end{itemize}
+   "
+   (send-super :init)
+   (setq target _target)
+   (setq tmp-v0 (instantiate float-vector 0))
+   (setq tmp-v1 (instantiate float-vector 1))
+   (setq tmp-v2 (instantiate float-vector 2))
+   (setq tmp-va (instantiate float-vector 3))
+   (setq tmp-vb (instantiate float-vector 3))
+   (setq tmp-vc (instantiate float-vector 3))
+   (setq tmp-vd (instantiate float-vector 3))
+   (setq tmp-ma (make-matrix 3 3))
+   (setq tmp-mb (make-matrix 3 3))
+   (setq tmp-mc (make-matrix 3 3))
+   t
+   )
+  (:initialize
+   (variable-length variables)
+   "
+探索変数\it{variables}のうち，\it{target}に影響を与える成分を調べ，記録する．
+   "
+   (send-super :initialize variable-length variables)
+   (setq target-variables
+         (append
+          (remove-if-not
+           #'identity
+           (mapcar
+            #'(lambda (l)
+                (if (send l :joint)
+                    (find-if #'(lambda (variable) (eq (send variable :joint) (send l :joint))) variables)
+                    nil))
+            (get-link-list (car (send target :links)))))
+          (remove-if-not
+           #'identity
+           (mapcar
+            #'(lambda (j)
+                (find-if #'(lambda (variable) (eq (send variable :joint) j)) variables))
+            (send target :joint-list)))))
+
+   (setq target-jacobis
+         (mapcar #'(lambda (variable)
+                     (make-matrix 3 (send variable :dim)))
+                 target-variables))
+   t
+   )
+  (:update
+   ()
+   "
+現在の状態近傍で線形近似しtarget-jacobisに重心ヤコビアンを入れる
+   "
+   (send target :update-mass-properties
+         :tmp-va tmp-va :tmp-vb tmp-vb :tmp-ma tmp-ma :tmp-mb tmp-mb :tmp-mc tmp-mc)
+   (let ((all-M (* 0.001 (send target :weight nil)))
+         (links (all-child-links (car (send target :links)))))
+     (mapc #'(lambda (variable jacobi)
+              (when (derivedp variable joint-variable)
+                (if (find (send (send variable :joint) :child-link) links) ;;:update-mass-propertiesによってm-til,c-tilが更新されている
+                    (let* ((j (send variable :joint))
+                           (l (send j :child-link))
+                           (paxis (case (j . axis)
+                                    (:x (float-vector 1 0 0)) (:-x (float-vector -1 0 0))
+                                    (:y (float-vector 0 1 0)) (:-y (float-vector 0 -1 0))
+                                    (:z (float-vector 0 0 1)) (:-z (float-vector 0 0 -1))
+                                    (t (j . axis))))
+                           (world-default-coords (send (send (send j :parent-link) :copy-worldcoords)
+                                                       :transform (j . default-coords))))
+                      (send j :calc-inertia-matrix
+                            jacobi ;;mat
+                            0 ;;row
+                            0 ;;column
+                            paxis ;;paxis
+                            (send l :get :m-til) ;;m-til
+                            (send l :get :c-til) ;;c-til
+                            (send l :get :I-til) ;;I-til
+                            (send target :centroid nil) ;;axis-for-angular
+                            world-default-coords ;;world-default-coords
+                            t ;;translation-axis
+                            nil ;;rotation-axis
+                            tmp-v0 tmp-v1 tmp-v2 tmp-va tmp-vb tmp-vc tmp-vd tmp-ma)
+                      )
+                    ;;else
+                    (let* ((j (send variable :joint))
+                           (l (car (send target :links)))
+                           (paxis (case (j . axis)
+                                    (:x (float-vector 1 0 0)) (:-x (float-vector -1 0 0))
+                                    (:y (float-vector 0 1 0)) (:-y (float-vector 0 -1 0))
+                                    (:z (float-vector 0 0 1)) (:-z (float-vector 0 0 -1))
+                                    (t (j . axis))))
+                           (world-default-coords (send (send (send j :parent-link) :copy-worldcoords)
+                                                       :transform (j . default-coords))))
+                      (send j :calc-inertia-matrix
+                            jacobi ;;mat
+                            0 ;;row
+                            0 ;;column
+                            paxis ;;paxis
+                            (send l :get :m-til) ;;m-til
+                            (send l :get :c-til) ;;c-til
+                            (send l :get :I-til) ;;I-til
+                            (send target :centroid nil) ;;axis-for-angular
+                            world-default-coords ;;world-default-coords
+                            t ;;translation-axis
+                            nil ;;rotation-axis
+                            tmp-v0 tmp-v1 tmp-v2 tmp-va tmp-vb tmp-vc tmp-vd tmp-ma)
+                      )
+                    ) ;;if
+                (scale-matrix (/ 1.0 all-M) jacobi jacobi)
+                );;when
+              );;lambda
+          target-variables
+          target-jacobis
+          )
+     )
+   t
+   )
+  (:draw
+   ()
+   "
+重心を描画
+   "
+   (send (send target :centroid nil) :draw-on :color #F(0 0 1) :width 2)
+   t)
+  )
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; target-centroid-pos-task
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass target-centroid-pos-task
+  :super cog-task
+  :slots ((target-centroid-pos)
+          (cog-translation-axis ",represented in translation-coords")
+          (cog-translation-coords)
+          (check "終了判定を行うか否か")
+          (centroid-thre "終了判定時の並進許容誤差")
+          (b-raw ", min-max適用前の$\bm{b}$")
+          (p-limit "一回の反復計算で動く並進ノルムの大きさの上限[m]")
+          )
+  :documentation
+  "
+\ \ 重心を目標位置に一致させるタスクを表すクラス．\\
+重心の目標位置までの並進誤差を\it{cog-translation-coords}の座標系で表現し，\it{cog-translation-axis}によって抽出された成分を$\bm{e}$と表す．$\bm{e}$のヤコビアンをそれぞれ$\mathbf{J}_{cog}$とすると，\it{prioritized-inverse-kinematics}中で次の問題に変換される．
+\begin{eqnarray}
+  \min_{\bm{x}} &\ & (\mathbf{J}_{cog} \bm{x} + \bm{e})^\mathrm{T} \mathbf{W} (\mathbf{J}_{cog} \bm{x} \nonumber
+\end{eqnarray}
+$\bm{e}$の単位は\rm{m}である．
+"
+  )
+
+(defmethod target-centroid-pos-task
+  (:init
+   (_target
+    &key
+    ((:target-centroid-pos _target-centroid-pos))
+    ((:cog-translation-axis _cog-translation-axis) :z)
+    ((:cog-translation-coords _cog-translation-coords) (make-coords))
+    ((:W _W) 1.0)
+    ((:check _check) t)
+    ((:centroid-thre _centroid-thre) 0.001)
+    ((:p-limit _p-limit) 0.1)
+    )
+   "
+\begin{itemize}
+  \item target\\
+\it{cascaded-link}クラス.このオブジェクトの重心を考える．
+  \item target-centroid-pos\\
+サイズ3の\it{float-vector}クラス．目標重心位置であり，world系で表す．単位は\rm{mm}.
+  \item cog-translation-axis : t :x :y :z :xy :yx :yz :zy :zx :xz nil
+  \item cog-translation-coords\\
+\it{cog-translation-axis}及び\it{W}は\it{translation-coords}系で表現される
+  \item W\\
+\it{float}クラスの場合$\mathbf{W}$はその値を対角成分に並べた行列になる\\
+\it{vector}クラスの場合$\mathbf{W}$は各値を対角成分に並べた行列になる\\
+\it{matrix}クラスの場合$\mathbf{W}$としてそのまま使用される．
+  \item check : t or nil\\
+終了判定を行うか否か
+  \item centroid-thre\\
+\it{float}クラスまたは\it{float-vector}クラス．終了判定時にこの値以下の侵犯を許容する．単位は\rm{m}
+  \item p-limit\\
+一回の反復計算で動く並進ノルムの上限．単位は\rm{m}.
+\end{itemize}
+   "
+   (send-super :init _target)
+   (setq target-centroid-pos _target-centroid-pos)
+   (setq cog-translation-axis _cog-translation-axis)
+   (setq cog-translation-coords _cog-translation-coords)
+   (setq equality-rows (case cog-translation-axis
+                         ((t) 3)
+                         ((:x :y :z) 2)
+                         ((:xy :yx :yz :zy :zx :xz) 1)
+                         (nil 0)))
+   (unless (= 3 (length target-centroid-pos))
+     (error "length of target-centroid-pos (~A) should be 3" (length target-centroid-pos)))
+   (cond
+     ((numberp _W) (setq Wa (scale-matrix _W (unit-matrix equality-rows))))
+     ((vectorp _W) (if (= (length _W) equality-rows)
+                       (setq Wa (diagonal _W))
+                       (error "length of W (~A) should be ~A~%" (length _W) equality-rows)))
+     ((matrixp _W) (if (and (= (array-dimension _W 0) equality-rows) (= (array-dimension _W 1) equality-rows))
+                       (setq Wa _W)
+                       (error "size of W ~A should be ~A~%" (array-dimensions _W) equality-rows)))
+     )
+   (setq inequality-rows 0)
+   (setq Wc (make-matrix inequality-rows inequality-rows))
+   (setq check _check)
+   (setq centroid-thre (cond ((numberp _centroid-thre)
+                              (fill (instantiate float-vector equality-rows) _centroid-thre))
+                             (t
+                              (if (= (length _centroid-thre) equality-rows)
+                                  _centroid-thre
+                                  (error "size of centroid-thre (~A) should be ~A~%" (length _centroid-thre) equality-rows)))))
+   (setq p-limit _p-limit)
+   t
+   )
+  (:initialize
+   (variable-length variables)
+   "
+探索変数\it{variables}のうち，\it{target-coords},\it{move-target}に影響を与える成分を調べ，記録する．
+   "
+   (send-super :initialize variable-length variables)
+   (setq b-raw (instantiate float-vector (length b)))
+   (dolist (variable target-variables)
+     (fill-block-matrix Asparce 1.0 0 (send variable :index) equality-rows (send variable :dim))
+     )
+   t
+   )
+  (:update
+   ()
+   "
+現在の状態近傍で線形近似し$\mathbf{A}$, $\bm{b}$を更新する
+   "
+   ;;calculate cog-jacobian
+   (send-super :update)
+   ;;position error
+   (scale 0.001 (transform (transpose (send cog-translation-coords :worldrot) tmp-ma) (v- target-centroid-pos (send target :centroid nil) tmp-va) tmp-va) tmp-va)
+   (copy-block-vec b-raw (calc-dif-with-axis tmp-va cog-translation-axis tmp-v0 tmp-v1 tmp-v2) 0)
+   (if (> (norm b-raw) p-limit)
+       (copy-block-vec b (scale p-limit (normalize-vector b-raw)) 0)
+       (copy-block-vec b b-raw 0))
+   ;;calc jacobian
+   (mapc #'(lambda (variable jacobi)
+             (transform (transpose (send cog-translation-coords :worldrot)) jacobi jacobi)
+             (dotimes (i (send variable :dim))
+               (copy-block-colvector A (calc-dif-with-axis (matrix-column jacobi i) cog-translation-axis tmp-v0 tmp-v1 tmp-v2) 0 (+ (send variable :index) i))))
+         target-variables
+         target-jacobis)
+   t
+   )
+  (:is-satisfied
+   (&optional force-check)
+   "
+重心が目標位置と一致しているかどうかを判定
+   "
+   (if (or force-check check)
+       (every #'(lambda (i)
+                  (<= (abs (elt b-raw i)) (elt centroid-thre i)))
+              (range equality-rows))
+       t)
+   )
+  (:draw
+   ()
+   "
+重心と目標位置を描画
+   "
+   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2)
+   (send target-centroid-pos :draw-on :color #F(0 0 1) :width 2)
+   (let ((pwidth (send *viewer* :viewsurface :line-width))
+         (psize (send *viewer* :viewsurface :point-size))
+         (pcolor (send *viewer* :viewsurface :color)))
+     (unwind-protect
+          (progn
+            (send *viewer* :viewsurface :color #f(0 0 1))
+            (send *viewer* :viewsurface :line-width 1)
+            (send *viewer* :viewsurface :point-size 3)
+            ;;(send *viewer* :viewsurface :3d-point (elt np 1) :depth-test t)
+            (send *viewer* :viewsurface :3d-line (send target :centroid :nil) target-centroid-pos :depth-test t))
+       (progn
+         (send *viewer* :viewsurface :line-width pwidth)
+         (send *viewer* :viewsurface :point-size psize)
+         (send *viewer* :viewsurface :color pcolor)))
+     )
+   t)
+  (:debug
+   ()
+   "
+現在のエラーを表示する
+   "
+   (warning-message (cond
+                      ((send self :is-satisfied t) 7);;white
+                      (check 1) ;;red
+                      (t 3)) ;;yellow
+                    "    target-centroid-pos-task: ~A [m, rad]~%" (send target :name))
    (format-array b-raw)
    t)
   )

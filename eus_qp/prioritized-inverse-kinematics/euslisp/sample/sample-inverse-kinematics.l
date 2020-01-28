@@ -281,8 +281,7 @@
    :task0 (append
            (list (instance minmax-angle-task :init *robot*
                            :min-angle #F(-200 -200 -200 -20 -20 -10)
-                           :max-angle #F(200 200 200 20 20 10)
-                           :check-margin #F(1e-5 1e-5 1e-5 1e-3 1e-3 1e-3))) ;;sphere関節は線形近似誤差によって上下限を厳密に満たしにくいため緩和
+                           :max-angle #F(200 200 200 20 20 10)))
            (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
                    (send *robot* :joint-list)))
    args
@@ -327,8 +326,7 @@
    :task0 (append
            (list (instance minmax-angle-task :init *robot*
                            :min-angle (float-vector -200 -200 -200 -20 -20 -10)
-                           :max-angle #F(200 200 200 20 20 10)
-                           :check-margin #F(1e-5 1e-5 1e-5 1e-3 1e-3 1e-3))) ;;sphere関節は線形近似誤差によって上下限を厳密に満たしにくいため緩和
+                           :max-angle #F(200 200 200 20 20 10)))
            (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
                   (send *robot* :joint-list)))
    :min-loop 30
@@ -336,3 +334,98 @@
    )
   )
 (print "(test-inverse-kinematics-fullbody-priority)")
+
+
+;;浮遊リンク系で両手両足を目標に伸ばし，重心を目標位置へ
+;;関節上下限を考慮する
+(defun test-inverse-kinematics-cog
+ (&rest
+    args
+    )
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+
+  (if (set-exclusive-or (send *irtviewer* :objects) (list *robot*))
+      (objects (list *robot*)))
+
+  (apply
+   #'prioritized-inverse-kinematics
+   (list (list (instance move-target-task :init
+                         (send *robot* :rarm :end-coords)
+                         (make-coords :pos #F(350 -200 700)))
+               (instance move-target-task :init
+                         (send *robot* :larm :end-coords)
+                         (make-coords :pos #F(300 100 600)))
+               (instance move-target-task :init
+                         (send *robot* :rleg :end-coords)
+                         (make-coords :pos #F(50 -100 50)))
+               (instance move-target-task :init
+                         (send *robot* :lleg :end-coords)
+                         (make-coords :pos #F(-50 100 -50) :rpy #F(0.3 0 0)))
+               (instance target-centroid-pos-task :init
+                         *robot*
+                         :target-centroid-pos #F(0 0 0))
+               ))
+   (append
+    (list (instance virtual-joint-variable :init *robot*))
+    (mapcar #'(lambda (j) (instance joint-variable :init j))
+            (send *robot* :joint-list)))
+   :task0 (append
+           (list (instance minmax-angle-task :init *robot*
+                           :min-angle #F(-200 -200 -200 -20 -20 -10)
+                           :max-angle #F(200 200 200 20 20 10)))
+           (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
+                   (send *robot* :joint-list)))
+   args
+   )
+  )
+(print "(test-inverse-kinematics-cog)")
+
+
+
+;;浮遊リンク系で両手両足を目標に伸ばし，重心は可能な限り満たす
+;;関節上下限を考慮する
+(defun test-inverse-kinematics-cog-priority
+ (&rest
+    args
+    )
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+
+  (if (set-exclusive-or (send *irtviewer* :objects) (list *robot*))
+      (objects (list *robot*)))
+
+  (apply
+   #'prioritized-inverse-kinematics
+   (list (list (instance move-target-task :init
+                         (send *robot* :rarm :end-coords)
+                         (make-coords :pos #F(700 -200 700)))
+               (instance move-target-task :init
+                         (send *robot* :larm :end-coords)
+                         (make-coords :pos #F(700 100 700)))
+               (instance move-target-task :init
+                         (send *robot* :rleg :end-coords)
+                         (send *robot* :rleg :end-coords :copy-worldcoords))
+               (instance move-target-task :init
+                         (send *robot* :lleg :end-coords)
+                         (send *robot* :lleg :end-coords :copy-worldcoords))
+               )
+         (list (instance target-centroid-pos-task :init
+                         *robot*
+                         :target-centroid-pos #F(0 0 0)
+                         :check nil)))
+   (append
+    (list (instance virtual-joint-variable :init *robot*))
+    (mapcar #'(lambda (j) (instance joint-variable :init j))
+            (send *robot* :joint-list)))
+   :task0 (append
+           (list (instance minmax-angle-task :init *robot*
+                           :min-angle #F(-200 -200 -200 -20 -20 -10)
+                           :max-angle #F(200 200 200 20 20 10)))
+           (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
+                   (send *robot* :joint-list)))
+   :min-loop 30
+   args
+   )
+  )
+(print "(test-inverse-kinematics-cog-priority)")
