@@ -7,7 +7,7 @@
     (tasks variables
      &key
        (regular 1e-6)
-       (regular-rel 1e-0)
+       (regular-rel 5e-0)
        (regular-max 1e-1)
        (task0 nil)
        (stop 50)
@@ -94,17 +94,17 @@
          (send *viewer* :viewsurface :flush)
          )
        (when (eq debug-view t)
-         (format t "~%Iteration: ~A~%" i)
-         (format t "  Priority: 0~%")
+         (warning-message 4 "~%Iteration: ~A~%" i)
+         (warning-message 2 "  Priority: 0~%")
          (dolist (task task0) (send task :debug)))
        ;;終了判定
        (when (and
               (>= i min-loop)
-              (every #'(lambda (task-p) (every #'identity (send-all task-p :is-satisfied))) tasks))
+              (every #'(lambda (task-p) (every #'identity (send-all task-p :is-satisfied))) (append (list task0) tasks)))
          (when (eq debug-view t)
            (let ((priority 1))
              (dolist (task-p tasks)
-               (format t "  Priority: ~A~%" priority)
+               (warning-message 2 "  Priority: ~A~%" priority)
                (dolist (task task-p) (send task :debug))
                (incf priority))))
          (return-from prioritized-inverse-kinematics t))
@@ -155,7 +155,7 @@
                                  (send-all task-p :Wc)))
                  )
              (when (eq debug-view t)
-               (format t "  Priority: ~A~%" (1+ priority))
+               (warning-message 2 "  Priority: ~A~%" (1+ priority))
                (dolist (task task-p) (send task :debug)))
              (let* ((omega-length (array-dimension this-C 0))
                     (this-error (+ (norm2 this-b)
@@ -234,6 +234,21 @@
            (format-array x))
          ) ;;let ((A
        ) ;;dotimes (i stop)
+     ;;debug
+     (when debug-view
+       (dolist (task-p (append (list task0) tasks)) (dolist (task task-p) (send task :update)))
+       ;;描画
+       (send *irtviewer* :draw-objects :flush nil)
+       (dolist (task-p (append (list task0) tasks)) (dolist (task task-p) (send task :draw)))
+       (send *viewer* :viewsurface :flush)
+       (when (eq debug-view t)
+         (warning-message 4 "~%Max Iteration:~%")
+         (let ((priority 0))
+           (dolist (task-p (append (list task0) tasks))
+             (warning-message 2 "  Priority: ~A~%" priority)
+             (dolist (task task-p) (send task :debug))
+             (incf priority))))
+       )
      ;;revert-if-fail判定
      (if revert-if-fail
          (if (every #'(lambda (task-p) (every #'identity (send-all task-p :is-satisfied))) tasks)
