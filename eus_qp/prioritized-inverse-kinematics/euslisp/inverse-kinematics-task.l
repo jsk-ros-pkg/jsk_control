@@ -797,7 +797,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
        (copy-block-vec b (scale p-limit (normalize-vector (subseq b-raw 0 rows-trans))) 0)
        (copy-block-vec b (subseq b-raw 0 rows-trans) 0))
    ;;rotation error
-   (copy-block-vec b-raw (calc-dif-with-axis (send move-target :difference-rotation target-coords :rotation-axis rotation-axis :world rotation-coords) rotation-axis tmp-v0 tmp-v1 tmp-v3) rows-trans)
+   (copy-block-vec b-raw (calc-dif-with-axis (send move-target :difference-rotation target-coords :rotation-axis rotation-axis :world rotation-coords) rotation-axis tmp-v0 tmp-v1 tmp-v2) rows-trans)
    (if (> (norm (subseq b-raw rows-trans)) r-limit)
        (copy-block-vec b (scale r-limit (normalize-vector (subseq b-raw rows-trans))) rows-trans)
        (copy-block-vec b (subseq b-raw rows-trans) rows-trans))
@@ -1224,7 +1224,7 @@ $\bm{e}$の単位は\rm{m}である．
   (:initialize
    (variable-length variables)
    "
-探索変数\it{variables}のうち，\it{target-coords},\it{move-target}に影響を与える成分を調べ，記録する．
+探索変数\it{variables}のうち，重心に影響を与える成分を調べ，記録する．
    "
    (send-super :initialize variable-length variables)
    (setq b-raw (instantiate float-vector (length b)))
@@ -1248,7 +1248,7 @@ $\bm{e}$の単位は\rm{m}である．
        (copy-block-vec b b-raw 0))
    ;;calc jacobian
    (mapc #'(lambda (variable jacobi)
-             (transform (transpose (send cog-translation-coords :worldrot)) jacobi jacobi)
+             (m* (transpose (send cog-translation-coords :worldrot)) jacobi jacobi)
              (dotimes (i (send variable :dim))
                (copy-block-colvector A (calc-dif-with-axis (matrix-column jacobi i) cog-translation-axis tmp-v0 tmp-v1 tmp-v2) 0 (+ (send variable :index) i))))
          target-variables
@@ -1300,5 +1300,349 @@ $\bm{e}$の単位は\rm{m}である．
                       (t 3)) ;;yellow
                     "    target-centroid-pos-task: ~A [m, rad]~%" (send target :name))
    (format-array b-raw)
+   t)
+  )
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; centroid-support-polygon-task
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass centroid-support-polygon-task
+  :super cog-task
+  :slots ((polygons "各support polygonを表すpolygonのリスト")
+          (polygons-variables "各polygonに影響を与えるvariableのリストのリスト")
+          (polygons-jacobis)
+          (normal "法線ベクトル")
+          (margin ", support polygonをこの値だけ縮小する")
+          (check "終了判定を行うか否か")
+          (centroid-thre "終了判定時の許容誤差")
+          (W ", 重み")
+          (hull ", 現在のpolygonsのhull")
+          )
+  :documentation
+  "
+\ \ 重心をsupport polygonの2次元の範囲内に位置させるタスクを表すクラス．\\
+法線ベクトル$\bm{n}$に対して半時計回りに並んだ凸包($\bm{p}_0, \bm{p}_1, \bm{p}_2, ...$)の表す領域内に重心$\bm{c}$を存在させる．$\bm{n}$に垂直な平面に各点を射影し$\bm{n}$をz軸とするlocal座標系で各点を${}^{0}\bm{p}_0, {}^{0}\bm{p}_1, {}^{0}\bm{p}_2, ..., {}^{0}\bm{c}$と表現する.点${}^{0}\bm{p}_i$と点${}^{0}\bm{p}_{i+1}$の距離を$l_i$とすると，直線の左側を正とした${}^{0}\bm{c}$と直線${}^{0}\bm{p}_i {}^{0}\bm{p}_{i+1}$の符号付き距離は，$d_i = \frac{({}^{0}y_i - {}^{0}y_{i+1}){}^{0}x_c+({}^{0}x_{i+1}-{}^{0}x_i){}^{0}y_c+{}^{0}x_i {}^{0}y_{i+1} - {}^{0}x_{i+1} {}^{0}y_i}{l}$である．よって，$\bm{d}$のヤコビアンを$\mathbf{J}$とすると，\it{prioritized-inverse-kinematics}中で次の問題に変換される．
+\begin{eqnarray}
+  \min_{\bm{x},\bm{\omega}} &\ & \bm{\omega}^\mathrm{T} \mathbf{W} \bm{\omega} \nonumber\\
+  \rm{subject\ to} &\ & \bm{d} + \mathbf{J} \bm{x} + \bm{\omega} \geqq margin \nonumber
+\end{eqnarray}
+なお，
+\begin{eqnarray}
+  \mathbf{J}_i &=& \frac{1}{l} [({}^{0}\bm{p}_{i+1} - {}^{0}\bm{p}_{i}) \times]_{z行} \frac{\partial}{\partial \bm{x}} \left [\begin{array}{c} {}^{0}x_c\\{}^{0}y_c\\0\end{array}\right] + \left\{\frac{1}{l} [({}^{0}\bm{c} - {}^{0}\bm{p}_{i+1}) \times]_{z行} + \frac{d}{l^2} ({}^{0}\bm{p}_{i+1} - {}^{0}\bm{p}_{i})^\mathrm{T}\right\} \frac{\partial}{\partial \bm{x}} \left [\begin{array}{c} {}^{0}x_i\\{}^{0}y_i\\0\end{array}\right]\nonumber\\
+  && + \left\{\frac{1}{l} [({}^{0}\bm{p}_i - {}^{0}\bm{c}) \times]_{z行} + \frac{d}{l^2} ({}^{0}\bm{p}_{i} - {}^{0}\bm{p}_{i+1})^\mathrm{T}\right\} \frac{\partial}{\partial \bm{x}} \left [\begin{array}{c} {}^{0}x_{i+1}\\{}^{0}y_{i+1}\\0\end{array}\right]\nonumber
+\end{eqnarray}
+である．単位は\rm{m}である．
+"
+  )
+
+(defmethod centroid-support-polygon-task
+  (:init
+   (_target
+    &key
+    ((:polygons _polygons))
+    ((:normal _normal) (float-vector 0 0 1))
+    ((:margin _margin) 0.0)
+    ((:W _W) 1.0)
+    ((:check _check) t)
+    ((:centroid-thre _centroid-thre) 0.001)
+    )
+   "
+\begin{itemize}
+  \item target\\
+\it{cascaded-link}クラス.このオブジェクトの重心を考える．
+  \item polygons\\
+各support polygonを表す\it{polygon}クラスのリスト.woeld座標系で，単位は\rm{m}.各反復ごとにこれらの\it{polygon}のconvex hullを計算し，この範囲内に重心を制限する．
+  \item normal\\
+サイズ3の\it{float-vector}クラス．上方向を表す法線ベクトルであり，このベクトルで表される2次元平面でsupport polygonを考える．
+  \item margin\\
+\it{float}クラス．重心をsupport polygonの端からこの値以上離す．単位は[m]．
+  \item W\\
+\it{float}クラス.$\mathbf{W}$はこの値を対角成分に並べた行列になる\\
+  \item check : t or nil\\
+終了判定を行うか否か
+  \item centroid-thre\\
+\it{float}クラス．終了判定時にこの値以下の侵犯を許容する．単位は\rm{m}
+\end{itemize}
+   "
+   (send-super :init _target)
+   (setq polygons _polygons)
+   (setq normal _normal)
+   (setq margin _margin)
+   (setq W _W)
+   (setq equality-rows 0)
+   (setq inequality-rows 0)
+   (setq check _check)
+   (setq centroid-thre _centroid-thre)
+   t
+   )
+  (:initialize
+   (variable-length variables)
+   "
+探索変数\it{variables}のうち，重心やpolygonsに影響を与える成分を調べ，記録する．
+   "
+   ;;重心
+   (send-super :initialize variable-length variables)
+   ;;polygons
+   (setq polygons-variables
+         (mapcar #'(lambda (p)
+                     (remove-if-not
+                      #'identity
+                      (mapcar
+                       #'(lambda (l)
+                           (if (send l :joint)
+                               (find-if #'(lambda (variable) (eq (send variable :joint) (send l :joint))) variables)
+                               nil))
+                       (get-link-list (send p :body)))))
+                 polygons))
+   (setq polygons-jacobis
+         (mapcar #'(lambda (polygon-variables)
+                     (mapcar #'(lambda (variable)
+                                 (make-matrix 3 (send variable :dim)))
+                             polygon-variables))
+                 polygons-variables))
+   t
+   )
+  (:update
+   ()
+   "
+現在の状態近傍で線形近似し$\mathbf{C}$,$\mathbf{C}_{sparce}$,  $\bm{d}_l$，$\bm{d}_u$, $\mathbf{W}_c$を更新する
+   "
+   ;;calculate cog-jacobian
+   (send-super :update)
+   ;;get support polygon
+   (send-all (send-all polygons :body) :worldcoords)
+   (setq hull (instance polygon :init :vertices (quickhull
+                                                 (apply
+                                                  #'append
+                                                  (mapcar #'(lambda (p)
+                                                              (send p :vertices))
+                                                          polygons))
+                                                 normal)))
+   ;;calc
+   (setq inequality-rows (length (send hull :edges)))
+   (if (= (array-dimension C 0) inequality-rows)
+       (progn
+         (fill (array-entity C) 0)
+         (fill (array-entity Csparce) 0)
+         (fill dl 0))
+       (progn
+         (setq C (make-matrix inequality-rows cols))
+         (setq Csparce (make-matrix inequality-rows cols))
+         (setq Wc (scale-matrix W (unit-matrix inequality-rows)))
+         (setq du (fill (instantiate float-vector inequality-rows) *inf*))
+         (setq dl (instantiate float-vector inequality-rows)))
+       )
+   (let* ((lc (orient-coords-to-axis (make-coords) normal))
+          jacobis-i1
+          variables-i1
+          jacobis-i2
+          variables-i2
+          (num 0)
+          polygon-idx
+          (cog (send target :centroid nil))
+          (0cog (scale 0.001 (send lc :inverse-transform-vector cog)));;m
+          p1
+          p2
+          (0p1 (instantiate float-vector 3));;m
+          (0p2 (instantiate float-vector 3));;m
+          l
+          d
+          (0p2-0p1-cross (make-matrix 1 3))
+          (0cog-0p2-cross (make-matrix 1 3))
+          (0p1-0cog-cross (make-matrix 1 3))
+          (0p2-0p1 (make-matrix 1 3))
+          (0p1-0p2 (make-matrix 1 3))
+          (sum1 (make-matrix 1 3))
+          (sum2 (make-matrix 1 3))
+          )
+     (setelt 0cog 2 0)
+     (dolist (jacobi target-jacobis)
+       (m* (transpose (send lc :worldrot)) jacobi jacobi))
+
+     (dolist (e (send hull :edges))
+       (setq p1 (elt (send e :vertices) 0))
+       (setq p2 (elt (send e :vertices) 1))
+       (scale 0.001 (send lc :inverse-transform-vector p1) 0p1)
+       (setelt 0p1 2 0)
+       (scale 0.001 (send lc :inverse-transform-vector p2) 0p2)
+       (setelt 0p2 2 0)
+       (setq l (distance 0p1 0p2))
+       (setq d (/ (+ (* (- (elt 0p1 1) (elt 0p2 1)) (elt 0cog 0))
+                     (* (- (elt 0p2 0) (elt 0p1 0)) (elt 0cog 1))
+                     (* (elt 0p1 0) (elt 0p2 1))
+                     (- (* (elt 0p2 0) (elt 0p1 1))))
+                  l))
+       (setf (aref 0p2-0p1-cross 0 0) (/ (- (elt 0p1 1) (elt 0p2 1)) l))
+       (setf (aref 0p2-0p1-cross 0 1) (/ (- (elt 0p2 0) (elt 0p1 0)) l))
+       (setf (aref 0cog-0p2-cross 0 0) (/ (- (elt 0p2 1) (elt 0cog 1)) l))
+       (setf (aref 0cog-0p2-cross 0 1) (/ (- (elt 0cog 0) (elt 0p2 0)) l))
+       (setf (aref 0p1-0cog-cross 0 0) (/ (- (elt 0cog 1) (elt 0p1 1)) l))
+       (setf (aref 0p1-0cog-cross 0 1) (/ (- (elt 0p1 0) (elt 0cog 0)) l))
+       (setf (aref 0p2-0p1 0 0) (/ (* (- (elt 0p2 0) (elt 0p1 0)) d) (expt l 2)))
+       (setf (aref 0p2-0p1 0 1) (/ (* (- (elt 0p2 1) (elt 0p1 1)) d) (expt l 2)))
+       (setf (aref 0p1-0p2 0 0) (/ (* (- (elt 0p1 0) (elt 0p2 0)) d) (expt l 2)))
+       (setf (aref 0p1-0p2 0 1) (/ (* (- (elt 0p1 1) (elt 0p2 1)) d) (expt l 2)))
+       (m+ 0cog-0p2-cross 0p2-0p1 sum1)
+       (m+ 0p1-0cog-cross 0p1-0p2 sum2)
+
+       ;;lower limit
+       (setelt dl num (- margin d))
+
+       ;;cog jacobian
+       (mapc #'(lambda (variable jacobi)
+                 (copy-block-matrix C (m* 0p2-0p1-cross jacobi) num (send variable :index))
+                 (fill-block-matrix Csparce 1.0 num (send variable :index) 1 (send variable :dim)))
+             target-variables
+             target-jacobis)
+
+       ;;p1 jacobian
+       (unless jacobis-i1 ;;first edge
+         (setq polygon-idx (position-if #'(lambda (p) (find (elt (send e :vertices) 0) (send p :vertices)))
+                                        polygons))
+         (setq variables-i1 (elt polygons-variables polygon-idx))
+         (setq jacobis-i1 (elt polygons-jacobis polygon-idx))
+         (mapc #'(lambda (variable jacobi)
+                   (let* ((j (send variable :joint))
+                          (paxis (case (j . axis)
+                                   (:x #f(1 0 0)) (:y #f(0 1 0)) (:z #f(0 0 1))
+                                   (:xx #f(1 0 0)) (:yy #f(0 1 0)) (:zz #f(0 0 1))
+                                   (:-x #f(-1 0 0)) (:-y #f(0 -1 0)) (:-z #f(0 0 -1))
+                                   (t (j . axis))))
+                          (child-link (send j :child-link))
+                          (parent-link (send j :parent-link))
+                          (default-coords (j . default-coords))
+                          (world-default-coords (send (send parent-link :copy-worldcoords)
+                                                      :transform default-coords))
+                          )
+
+                     ;;translation
+                     (send j :calc-jacobian
+                           jacobi ;;fik
+                           0 ;;row
+                           0 ;;column
+                           j ;;joint
+                           paxis ;;paxis
+                           child-link ;;child-link
+                           world-default-coords ;;world-default-coords
+                           nil ;;child-reverse
+                           (make-coords :pos (elt (send e :vertices) 0)) ;;move-target
+                           lc ;;transform-coords
+                           nil ;;rotation-axis
+                           t ;;translation-axis
+                           tmp-v0 tmp-v1 tmp-v2 tmp-va tmp-vb tmp-vc tmp-ma)
+                     )
+                   )
+               variables-i1
+               jacobis-i1)
+         )
+       (mapc #'(lambda (variable jacobi)
+                 (let ((tmpJ (m* sum1 jacobi)))
+                   (dotimes (i (send variable :dim))
+                     (incf (aref C num (+ i (send variable :index))) (aref tmpJ 0 i))))
+                 (fill-block-matrix Csparce 1.0 num (send variable :index) 1 (send variable :dim)))
+             variables-i1
+             jacobis-i1)
+
+       ;;p2 jacobian
+       (setq polygon-idx (position-if #'(lambda (p) (find (elt (send e :vertices) 1) (send p :vertices)))
+                                      polygons))
+       (setq variables-i2 (elt polygons-variables polygon-idx))
+       (setq jacobis-i2 (elt polygons-jacobis polygon-idx))
+       (mapc #'(lambda (variable jacobi)
+                 (let* ((j (send variable :joint))
+                        (paxis (case (j . axis)
+                                 (:x #f(1 0 0)) (:y #f(0 1 0)) (:z #f(0 0 1))
+                                 (:xx #f(1 0 0)) (:yy #f(0 1 0)) (:zz #f(0 0 1))
+                                 (:-x #f(-1 0 0)) (:-y #f(0 -1 0)) (:-z #f(0 0 -1))
+                                 (t (j . axis))))
+                        (child-link (send j :child-link))
+                        (parent-link (send j :parent-link))
+                        (default-coords (j . default-coords))
+                        (world-default-coords (send (send parent-link :copy-worldcoords)
+                                                    :transform default-coords))
+                        )
+                   ;;translation
+                   (send j :calc-jacobian
+                         jacobi ;;fik
+                         0 ;;row
+                         0 ;;column
+                         j ;;joint
+                         paxis ;;paxis
+                         child-link ;;child-link
+                         world-default-coords ;;world-default-coords
+                         nil ;;child-reverse
+                         (make-coords :pos (elt (send e :vertices) 1)) ;;move-target
+                         lc ;;transform-coords
+                         nil ;;rotation-axis
+                         t ;;translation-axis
+                         tmp-v0 tmp-v1 tmp-v2 tmp-va tmp-vb tmp-vc tmp-ma)
+                   )
+                 )
+             variables-i2
+             jacobis-i2)
+       (mapc #'(lambda (variable jacobi)
+                 (let ((tmpJ (m* sum2 jacobi)))
+                     (dotimes (i (send variable :dim))
+                       (incf (aref C num (+ i (send variable :index))) (aref tmpJ 0 i))))
+                 (fill-block-matrix Csparce 1.0 num (send variable :index) 1 (send variable :dim)))
+             variables-i2
+             jacobis-i2)
+
+
+       (setq jacobis-i1 jacobis-i2)
+       (setq variables-i1 variables-i2)
+       (incf num)
+       )
+     )
+   t
+   )
+  (:is-satisfied
+   (&optional force-check)
+   "
+重心が領域内にあるかどうかを判定
+   "
+   (if (or force-check check)
+       (every #'(lambda (i) (<= i 0))
+              (v- dl (fill (instantiate float-vector (length dl)) centroid-thre)))
+       t)
+   )
+  (:draw
+   ()
+   "
+重心と領域を描画
+   "
+   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2)
+   (send hull :draw-on :color #F(0 0 1) :width 2)
+   (let ((pwidth (send *viewer* :viewsurface :line-width))
+         (psize (send *viewer* :viewsurface :point-size))
+         (pcolor (send *viewer* :viewsurface :color)))
+     (unwind-protect
+          (progn
+            (send *viewer* :viewsurface :color #f(0 0 1))
+            (send *viewer* :viewsurface :line-width 1)
+            (send *viewer* :viewsurface :point-size 3)
+            ;;(send *viewer* :viewsurface :3d-point (elt np 1) :depth-test t)
+            (dolist (v (send hull :vertices))
+              (send *viewer* :viewsurface :3d-line v (v+ v (scale 50 (normalize-vector normal))) :depth-test t)))
+       (progn
+         (send *viewer* :viewsurface :line-width pwidth)
+         (send *viewer* :viewsurface :point-size psize)
+         (send *viewer* :viewsurface :color pcolor)))
+     )
+   t)
+  (:debug
+   ()
+   "
+現在のエラーを表示する
+   "
+   (warning-message (cond
+                      ((send self :is-satisfied t) 7);;white
+                      (check 1) ;;red
+                      (t 3)) ;;yellow
+                    "    centroid-support-polygon-task: ~A [m]~%" (send target :name))
+   (format-array (map float-vector #'(lambda (i) (if (> i 0) i 0)) dl))
    t)
   )

@@ -251,3 +251,29 @@ Override to support zero row matrix.
              ))))
        dif-rot)))
   )
+
+
+(defmethod robot-model
+  (:make-sole-polygon-ex
+   (name) ;;name of link
+   (unless (send self :link name) (return-from :make-sole-polygon-ex nil))
+   (send (send self :link name) :worldcoords)
+   (let* ((target-nm (read-from-string (format nil "~A-sole-body" name)))
+          (vs (remove-duplicates
+                 (flatten (send-all (flatten (send (send self :link name) :bodies)) :vertices))
+                 :test #'(lambda (x y) (eps-v= x y *epsilon*))))
+          (min-vs (find-extream vs #'(lambda (x) (elt x 2)) #'<))
+          (b (make-prism (quickhull
+                          (remove-if
+                           #'(lambda (p)
+                               (< 5.0 (- (elt p 2) (elt min-vs 2)))) vs)) ;; 5.0 is margin
+                         #F(0 0 1)
+                         :name target-nm
+                         ))
+          )
+     (send (send self :link name) :assoc b)
+     (send self :put target-nm b)
+     (send b :worldcoords)
+     (let ((f (find-if #'(lambda (x) (memq :bottom (send x :id))) (send b :faces))))
+       (send f :name name)
+       f))))
