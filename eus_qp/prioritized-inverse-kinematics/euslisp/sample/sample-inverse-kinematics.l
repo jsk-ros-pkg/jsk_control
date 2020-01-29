@@ -569,6 +569,7 @@
                (instance move-target-task :init
                          (send *robot* :lleg :end-coords)
                          (send *robot* :lleg :end-coords :copy-worldcoords)
+                         :translation-coords :world
                          :translation-axis :xy
                          :rotation-axis :z)
                (instance centroid-support-polygon-task :init

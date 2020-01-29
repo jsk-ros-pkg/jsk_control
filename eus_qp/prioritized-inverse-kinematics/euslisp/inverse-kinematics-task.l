@@ -673,9 +673,9 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
   \item translation-axis : t :x :y :z :xy :yx :yz :zy :zx :xz nil
   \item rotation-axis : t :x :y :z nil
   \item translation-coords\\
-\it{translation-axis}及び\it{Wtrans}は\it{translation-coords}系で表現される
+\it{translation-axis}及び\it{Wtrans}は\it{translation-coords}系で表現される.:localならmove-target系，:worldならworld系，\it{coordinates}クラスならその座標系である．
   \item rotation-coords\\
-\it{rotation-axis}及び\it{Wrot}は\it{rotation-coords}系で表現される
+\it{rotation-axis}及び\it{Wrot}は\it{rotation-coords}系で表現される.:localならmove-target系，:worldならworld系，\it{coordinates}クラスならその座標系である．
   \item Wtrans\\
 \it{float}クラスの場合$\mathbf{W}_{trans}$はその値を対角成分に並べた行列になる\\
 \it{vector}クラスの場合$\mathbf{W}_{trans}$は各値を対角成分に並べた行列になる\\
