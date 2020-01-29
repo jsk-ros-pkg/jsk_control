@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package>
+  <name> eus_cddlib </name>
+  <description>
+    eus_cddlib
+  </description>
+  <version>0.1.15</version>
+  <maintainer email="hiraoka@jsk.t.u-tokyo.ac.jp">Naoki Hiraoka</maintainer>
+  <license>Apache License 2.0</license>
+  <export> </export>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>libcddlib-dev</build_depend>
+
+  <run_depend>euslisp</run_depend>
+  <run_depend>libcddlib-dev</run_depend>
+</package>
