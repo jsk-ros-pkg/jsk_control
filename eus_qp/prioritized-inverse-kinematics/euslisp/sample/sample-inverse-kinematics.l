@@ -10,7 +10,7 @@
                                               (mapcar #'(lambda (l) (send *robot* :make-sole-polygon-ex l))
                                                       (list :rleg-link5 :lleg-link5 :rarm-link6 :larm-link6))
                                               (send *robot* :get-val 'support-polygons)))
-    (dolist (l (list :rleg-link5 :lleg-link5 :rarm-link6 :larm-link6))
+    (mapcar #'(lambda (l ee)
       (send (send *robot* :link l) :put :contact-constraint
             (instance* default-contact-constraint
                        :init
@@ -18,13 +18,15 @@
                        :mu-margin-ratio 1.0 :cop-margin-ratio 1.0
                        :mu-trans 0.5
                        :mu-rot 0.05
-                       (let* ((vs (mapcar #'(lambda (v) (send (send *robot* :link l) :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
+                       (let* ((vs (mapcar #'(lambda (v) (send (send *robot* ee :end-coords) :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
                          (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
                                :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
                                :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
                                :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
                                )))
             ))
+            (list :rleg-link5 :lleg-link5)
+            (list :rleg :lleg))
     )
   (unless (boundp '*irtviewer*)
     (make-irtviewer))
@@ -38,21 +40,23 @@
                                                 (mapcar #'(lambda (l) (send robot :make-sole-polygon-ex l))
                                                         (list :rleg-link5 :lleg-link5 :rarm-link6 :larm-link6))
                                                 (send robot :get-val 'support-polygons)))
-        (dolist (l (list :rleg-link5 :lleg-link5 :rarm-link6 :larm-link6))
-          (send (send robot :link l) :put :contact-constraint
-                (instance* default-contact-constraint
-                           :init
-                           :name l
-                           :mu-margin-ratio 1.0 :cop-margin-ratio 1.0
-                           :mu-trans 0.5
-                           :mu-rot 0.05
-                           (let* ((vs (mapcar #'(lambda (v) (send (send robot :link l) :inverse-transform-vector v)) (send (send robot :support-polygon l) :vertices))))
-                             (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
-                                   :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
-                                   :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
-                                   :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
-                                   )))
-                ))
+        (mapcar #'(lambda (l ee)
+                    (send (send robot :link l) :put :contact-constraint
+                          (instance* default-contact-constraint
+                                     :init
+                                     :name l
+                                     :mu-margin-ratio 1.0 :cop-margin-ratio 1.0
+                                     :mu-trans 0.5
+                                     :mu-rot 0.05
+                                     (let* ((vs (mapcar #'(lambda (v) (send (send robot ee :end-coords) :inverse-transform-vector v)) (send (send robot :support-polygon l) :vertices))))
+                                       (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
+                                             :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
+                                             :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
+                                             :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
+                                             )))
+                          ))
+                (list :rleg-link5 :lleg-link5)
+                (list :rleg :lleg))
         )))
   )
 (print "(setup)")
@@ -631,3 +635,103 @@
    )
   )
 (print "(test-inverse-kinematics-cog-support-priority)")
+
+
+
+;;浮遊リンク系で両手両足を目標に伸ばし，重心を静的重心実行可能領域内へ
+;;関節上下限を考慮する
+(defun test-inverse-kinematics-cog-scfr
+ (&rest
+    args
+    )
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+
+  (if (set-exclusive-or (send *irtviewer* :objects) (list *robot*))
+      (objects (list *robot*)))
+
+  (apply
+   #'prioritized-inverse-kinematics
+   (list (list (instance move-target-task :init
+                         (send *robot* :rarm :end-coords)
+                         (make-coords :pos #F(500 -200 700)))
+               (instance move-target-task :init
+                         (send *robot* :larm :end-coords)
+                         (make-coords :pos #F(500 100 700)))
+               (instance move-target-task :init
+                         (send *robot* :rleg :end-coords)
+                         (send *robot* :rleg :end-coords :copy-worldcoords))
+               (instance move-target-task :init
+                         (send *robot* :lleg :end-coords)
+                         (send *robot* :lleg :end-coords :copy-worldcoords))
+               (instance centroid-scfr-task :init
+                         *robot*
+                         :contact-constraints (mapcar #'(lambda (l) (send (send *robot* :link l) :get :contact-constraint))
+                                                      (list :rleg-link5 :lleg-link5))
+                         :contact-coords (mapcar #'(lambda (l) (send *robot*  l :end-coords))
+                                                 (list :rleg :lleg)))
+               ))
+   (append
+    (list (instance virtual-joint-variable :init *robot*))
+    (mapcar #'(lambda (j) (instance joint-variable :init j))
+            (send *robot* :joint-list)))
+   :task0 (append
+           (list (instance minmax-angle-task :init *robot*
+                           :min-angle #F(-200 -200 -200 -20 -20 -10)
+                           :max-angle #F(200 200 200 20 20 10)))
+           (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
+                   (send *robot* :joint-list)))
+   args
+   )
+  )
+(print "(test-inverse-kinematics-cog-scfr)")
+
+
+;;浮遊リンク系で両手両足を目標に伸ばし，重心を静的重心実行可能領域内へ
+;;関節上下限を考慮する
+(defun test-inverse-kinematics-cog-scfr2
+ (&rest
+    args
+    )
+  (send *robot* :reset-pose)
+  (send *robot* :fix-leg-to-coords (make-coords))
+
+  (if (set-exclusive-or (send *irtviewer* :objects) (list *robot*))
+      (objects (list *robot*)))
+
+  (apply
+   #'prioritized-inverse-kinematics
+   (list (list (instance move-target-task :init
+                         (send *robot* :rarm :end-coords)
+                         (make-coords :pos #F(500 -400 700)))
+               (instance move-target-task :init
+                         (send *robot* :larm :end-coords)
+                         (make-coords :pos #F(500 -100 700)))
+               (instance move-target-task :init
+                         (send *robot* :rleg :end-coords)
+                         (make-coords :pos #F(200 -400 100) :rpy #F(0.1 0.1 0.1)))
+               (instance move-target-task :init
+                         (send *robot* :lleg :end-coords)
+                         (make-coords :pos #F(-200 -100 200) :rpy #F(0.4 0.7 -0.2)))
+               )
+         (list
+          (instance centroid-scfr-task :init
+                    *robot*
+                    :contact-constraints (mapcar #'(lambda (l) (send (send *robot* :link l) :get :contact-constraint))
+                                                 (list :rleg-link5 :lleg-link5))
+                    :contact-coords (mapcar #'(lambda (l) (send *robot*  l :end-coords))
+                                            (list :rleg :lleg)))))
+   (append
+    (list (instance virtual-joint-variable :init *robot*))
+    (mapcar #'(lambda (j) (instance joint-variable :init j))
+            (send *robot* :joint-list)))
+   :task0 (append
+           (list (instance minmax-angle-task :init *robot*
+                           :min-angle #F(-200 -200 -200 -20 -20 -10)
+                           :max-angle #F(200 200 200 20 20 10)))
+           (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
+                   (send *robot* :joint-list)))
+   args
+   )
+  )
+(print "(test-inverse-kinematics-cog-scfr2)")

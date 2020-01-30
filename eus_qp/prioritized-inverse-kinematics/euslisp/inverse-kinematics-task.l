@@ -1,5 +1,7 @@
 (require (format nil "~A/prioritized-inverse-kinematics/euslisp/util" (ros::resolve-ros-path "package://eus_qp")))
 (require (format nil "~A/prioritized-inverse-kinematics/euslisp/inverse-kinematics-variable" (ros::resolve-ros-path "package://eus_qp")))
+(require (format nil "~A/euslisp/contact-optimization" (ros::resolve-ros-path "package://eus_qp")))
+(require (format nil "~A/euslisp/eus-cddlib-compiled.l" (ros::resolve-ros-path "package://eus_cddlib")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; inverse-kinematics-task
@@ -1644,5 +1646,445 @@ $\bm{e}$の単位は\rm{m}である．
                       (t 3)) ;;yellow
                     "    centroid-support-polygon-task: ~A [m]~%" (send target :name))
    (format-array (map float-vector #'(lambda (i) (if (> i 0) i 0)) dl))
+   t)
+  )
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; centroid-scfr-task
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass centroid-scfr-task
+  :super cog-task
+  :slots ((contact-constraints)
+          (contact-coords)
+          (margin ", support polygonをこの値だけ縮小する")
+          (check "終了判定を行うか否か")
+          (centroid-thre "終了判定時の許容誤差")
+          (W ", 重み")
+          (A_eq)
+          (b_eq)
+          (A_ineq)
+          (b_ineq)
+          (epsilon)
+          )
+  :documentation
+  "
+\ \ 重心を静的重心実行可能領域内に位置させるタスクを表すクラス．重心の位置は最適化するが，外界接触位置を最適化して静的重心実行可能領域を能動的に変化させるような処理はしない．\\
+外界接触部位でロボットが受ける接触レンチ(6自由度,world系,接触部位まわり)を並べたベクトルを$\bm{w}$とし，接触力拘束を$\mathbf{C}\bm{w} + \bm{d} \geqq 0$，力の静的釣り合いを$\mathbf{G} \bm{w} + [\begin{array}{c c c c c c} 0 & 0 & -mg & - c_y mg & c_x mg & 0 \end{array}]^\mathrm{T} = 0$とする．これらの式によって制限される$\bm{w'} = [\begin{array}{c c c} c_x & c_y & \bm{w}^\mathrm{T} \end{array}]^\mathrm{T}$の存在領域は，
+\begin{eqnarray}
+  \left\{ \bm{w'} \in \mathbb{R}^d : \left [\begin{array}{c c} \begin{array}{c c} \bm{0}_3&\bm{0}_3\\ 0&-mg\\ mg&0\\ 0&0\end{array} & \mathbf{G} \end{array}\right] \bm{w'} = 0, \left[\begin{array}{c c} \mathbf{0}&\mathbf{C}\end{array}\right] \bm{w'} \geqq \bm{d} \right\} \nonumber
+\end{eqnarray}
+となり，これはd次元空間の凸多面体(閉じていなくともよい)である．この多面体の頂点を考えることで，$\bm{w'}$の存在領域は，
+\begin{eqnarray}
+  \left\{ \bm{w'} \in \mathbb{R}^d : {}^\exists\bm{y}, {}^\exists\bm{z}, \bm{w'} = \mathbf{V} \bm{y} + \mathbf{R} \bm{z}, \sum_i \bm{y}_i=1, \bm{y}\geqq 0, \bm{z}\geqq 0 \right\} \nonumber
+\end{eqnarray}
+とも表せる．この頂点$\mathbf{V}$, $\mathbf{R}$を$c_x$ - $c_y$平面に射影した$\mathbf{V'}$, $\mathbf{R'}$を用いることで，静的重心実行可能領域が次のように得られる．
+\begin{eqnarray}
+  \left\{ c_x, c_y : {}^\exists\bm{y}, {}^\exists\bm{z}, \left[\begin{array}{c} c_x\\c_y\end{array} \right] = \mathbf{V'} \bm{y} + \mathbf{R'} \bm{z}, \sum_i \bm{y}_i=1, \bm{y}\geqq 0, \bm{z}\geqq 0 \right\} \nonumber
+\end{eqnarray}
+この多面体を不等式制約の形式で表現すれば，静的重心実行可能領域を表す不等式制約が得られる．
+\begin{eqnarray}
+  \left\{ c_x, c_y : \mathbf{A} \left[\begin{array}{c} c_x\\c_y\end{array} \right] + \bm{b} \geqq  0 \right\} \nonumber
+\end{eqnarray}
+
+重心$c_x$,$c_y$のヤコビアンを$\mathbf{J}$とすると，\it{prioritized-inverse-kinematics}中で次の問題に変換される．
+\begin{eqnarray}
+  \min_{\bm{x},\bm{\omega}} &\ & \bm{\omega}^\mathrm{T} \mathbf{W} \bm{\omega} \nonumber\\
+  \rm{subject\ to} &\ & \mathbf{A}(\left[\begin{array}{c} c_x\\c_y\end{array} \right] + \mathbf{J} \bm{x}) + \bm{\omega} \geqq -\bm{b} + margin \nonumber
+\end{eqnarray}
+単位が\rm{m}となるよう$\mathbf{A}$,$\bm{b}$はスケーリングされる．
+"
+  )
+
+(defmethod centroid-scfr-task
+  (:init
+   (_target
+    &key
+    ((:contact-constraints _contact-constraints))
+    ((:contact-coords _contact-coords))
+    ((:margin _margin) 0.0)
+    ((:W _W) 1.0)
+    ((:check _check) t)
+    ((:centroid-thre _centroid-thre) 0.001)
+    ((:epsilon _epsilon) 5)
+    )
+   "
+\begin{itemize}
+  \item target\\
+\it{cascaded-link}クラス.このオブジェクトの重心を考える．
+  \item contact-constraints\\
+\it{contact-constraint}クラスのリスト．これらによって定義される静的重心実行可能領域内に重心を制限する．
+  \item contact-coords\\
+\it{coordinates}クラスのリスト．それぞれのcontact-constraintの座標系を表す．
+  \item margin\\
+\it{float}クラス．重心を静的重心実行可能領域の端からこの値以上離す．単位は[m]．
+  \item W\\
+\it{float}クラス.$\mathbf{W}$はこの値を対角成分に並べた行列になる\\
+  \item check : t or nil\\
+終了判定を行うか否か
+  \item centroid-thre\\
+\it{float}クラス．終了判定時にこの値以下の侵犯を許容する．単位は\rm{m}
+  \item epsilon\\
+\it{integer}クラス．多面体計算時の離散化に用いる．
+\end{itemize}
+   "
+   (send-super :init _target)
+   (setq contact-constraints _contact-constraints)
+   (setq contact-coords _contact-coords)
+   (setq margin _margin)
+   (setq W _W)
+   (setq equality-rows 0)
+   (setq inequality-rows 0)
+   (setq check _check)
+   (setq centroid-thre _centroid-thre)
+   (setq epsilon _epsilon)
+   t
+   )
+  (:initialize
+   (variable-length variables)
+   "
+探索変数\it{variables}のうち，重心に影響を与える成分を調べ，記録する．
+   "
+   ;;重心
+   (send-super :initialize variable-length variables)
+   t
+   )
+  (:update
+   ()
+   "
+現在の状態近傍で線形近似し$\mathbf{A}$,$\mathbf{A}_{sparce}$,  $\bm{b}$， $\mathbf{W}_a$,$\mathbf{C}$,$\mathbf{C}_{sparce}$,  $\bm{d}_l$，$\bm{d}_u$, $\mathbf{W}_c$を更新する
+   "
+   ;;calculate cog-jacobian
+   (send-super :update)
+   ;;get support polygon
+   (let* ((mg (* 1e-6 (send target :weight nil) (elt *g-vec* 2)))
+          (_C (apply
+               #'concatenate-matrix-diagonal
+               (mapcar #'(lambda (constraint coords)
+                           (send constraint :calc-constraint-matrix (send coords :worldcoords)))
+                      contact-constraints contact-coords)))
+          (_d (v- (apply
+                   #'concatenate
+                   float-vector
+                   (mapcar #'(lambda (constraint)
+                               (send constraint :get-constraint-vector))
+                           contact-constraints))))
+          (_G (send target :calc-grasp-matrix
+                    (mapcar #'(lambda (coords)
+                                (send coords :worldpos))
+                            contact-coords)))
+          (total-wrench (float-vector 0
+                                      0
+                                      (- mg)
+                                      0
+                                      0
+                                      0))
+          (_C2  (concatenate-matrix-row _C (make-matrix (array-dimension _C 0) 2)))
+          (_G2 (concatenate-matrix-row _G (matrix (float-vector 0 0)
+                                                  (float-vector 0 0)
+                                                  (float-vector 0 0)
+                                                  (float-vector 0 (- mg))
+                                                  (float-vector mg 0)
+                                                  (float-vector 0 0))))
+          (eps (expt 10 (- (truncate (/ (log (max
+                                              (apply #'max (coerce (array-entity _C2) cons))
+                                              (apply #'max (coerce _d cons))
+                                              (apply #'max (coerce (array-entity _G2) cons))
+                                              (apply #'max (coerce total-wrench cons))
+                                              (- (apply #'min (coerce (array-entity _C2) cons)))
+                                              (- (apply #'min (coerce _d cons)))
+                                              (- (apply #'min (coerce (array-entity _G2) cons)))
+                                              (- (apply #'min (coerce total-wrench cons)))))
+                                        (log 10)))
+                           epsilon)))
+          (dummy (progn
+                   (dotimes (i (array-dimension _C2 0))
+                     (dotimes (j (array-dimension _C2 1))
+                       (setf (aref _C2 i j) (* (truncate (/ (aref _C2 i j) eps)) eps))))
+                   (dotimes (i (length _d))
+                     (setelt _d i (* (truncate (/ (elt _d i) eps)) eps)))
+                   (dotimes (i (array-dimension _G2 0))
+                     (dotimes (j (array-dimension _G2 1))
+                       (setf (aref _G2 i j) (* (truncate (/ (aref _G2 i j) eps)) eps))))
+                   (dotimes (i (length total-wrench))
+                     (setelt total-wrench i (* (truncate (/ (elt total-wrench i) eps)) eps)))
+                   t))
+          (ret (cddlib-H-to-V :A_ineq _C2 :b_ineq _d :A_eq _G2 :b_eq total-wrench :verbose 0))
+          (V (block-matrix (elt ret 0) (- (array-dimension (elt ret 0) 0) 2) 0 2 (array-dimension (elt ret 0) 1)))
+          (R_nonneg (block-matrix (elt ret 1) (- (array-dimension (elt ret 1) 0) 2) 0 2 (array-dimension (elt ret 1) 1)))
+          (R_free (block-matrix (elt ret 2) (- (array-dimension (elt ret 2) 0) 2) 0 2 (array-dimension (elt ret 2) 1)))
+          (ret2 (cddlib-V-to-H :V V :R_nonneg R_nonneg :R_free R_free :verbose 0))
+          (_A_eq (elt ret2 0))
+          (_b_eq (elt ret2 1))
+          (_A_ineq (elt ret2 2))
+          (_b_ineq (elt ret2 3))
+          )
+     (setq A_eq (copy-object _A_eq))
+     (setq b_eq (copy-object _b_eq))
+     (setq A_ineq (copy-object _A_ineq))
+     (setq b_ineq (copy-object _b_ineq))
+
+     (setq equality-rows (length b_eq))
+     (if (= (array-dimension A 0) equality-rows)
+         (progn
+           (fill (array-entity A) 0)
+           (fill (array-entity Asparce) 0)
+           (fill b 0))
+         (progn
+           (setq A (make-matrix equality-rows cols))
+           (setq Asparce (make-matrix equality-rows cols))
+           (setq Wa (scale-matrix W (unit-matrix equality-rows)))
+           (setq b (instantiate float-vector equality-rows)))
+         )
+     (setq inequality-rows (length b_ineq))
+     (if (= (array-dimension C 0) inequality-rows)
+         (progn
+           (fill (array-entity C) 0)
+           (fill (array-entity Csparce) 0)
+           (fill dl 0))
+         (progn
+           (setq C (make-matrix inequality-rows cols))
+           (setq Csparce (make-matrix inequality-rows cols))
+           (setq Wc (scale-matrix W (unit-matrix inequality-rows)))
+           (setq du (fill (instantiate float-vector inequality-rows) *inf*))
+           (setq dl (instantiate float-vector inequality-rows)))
+         )
+
+     (dotimes (i equality-rows)
+       (let ((n (sqrt (+ (* (aref _A_eq i 0) (aref _A_eq i 0)) (* (aref _A_eq i 1) (aref _A_eq i 1))))))
+         (unless (= n 0)
+           (setf (aref _A_eq i 0) (/ (aref _A_eq i 0) n))
+           (setf (aref _A_eq i 1) (/ (aref _A_eq i 1) n))
+           (setelt _b_eq i (/ (elt _b_eq i) n)))
+         ))
+     (dotimes (i inequality-rows)
+       (let ((n (sqrt (+ (* (aref _A_ineq i 0) (aref _A_ineq i 0)) (* (aref _A_ineq i 1) (aref _A_ineq i 1))))))
+         (unless (= n 0)
+           (setf (aref _A_ineq i 0) (/ (aref _A_ineq i 0) n))
+           (setf (aref _A_ineq i 1) (/ (aref _A_ineq i 1) n))
+           (setelt _b_ineq i (/ (elt _b_ineq i) n)))
+         ))
+
+     ;;calc error
+     (transform _A_eq (v- (scale 1e-3 (subseq (send target :centroid nil) 0 2))) b)
+     (v- b _b_eq b)
+     (fill dl margin)
+     (v- dl (transform _A_ineq (scale 1e-3 (subseq (send target :centroid nil) 0 2))) dl)
+     (v- dl _b_ineq dl)
+
+     ;;calc jacobian
+     (mapc #'(lambda (variable jacobi)
+               (dotimes (i (send variable :dim))
+                 (copy-block-colvector A (transform A_eq (calc-dif-with-axis (matrix-column jacobi i) :z tmp-v0 tmp-v1 tmp-v2)) 0 (+ (send variable :index) i))
+                 (copy-block-colvector C (transform A_ineq (calc-dif-with-axis (matrix-column jacobi i) :z tmp-v0 tmp-v1 tmp-v2)) 0 (+ (send variable :index) i))
+                 ))
+           target-variables
+           target-jacobis)
+     )
+   t
+   )
+  (:is-satisfied
+   (&optional force-check)
+   "
+重心が領域内にあるかどうかを判定
+   "
+   (if (or force-check check)
+       (and
+        (every #'(lambda (i) (<= (abs (elt b i)) centroid-thre))
+               (range equality-rows))
+        (every #'(lambda (i) (<= i 0))
+               (v- dl (fill (instantiate float-vector (length dl)) centroid-thre))))
+       t)
+   )
+  (:draw
+   ()
+   "
+重心と領域を描画
+   "
+   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2)
+   (dolist (cc contact-constraints)
+     (send cc :draw-on :flush nil))
+
+   (let* ((ret3 (cddlib-H-to-V :A_ineq A_ineq :b_ineq b_ineq :A_eq A_eq :b_eq b_eq :verbose 0))
+          (V (elt ret3 0))
+          (R_nonneg (elt ret3 1))
+          (R_free (elt ret3 2))
+          (z (elt (send target :centroid nil) 2))
+          )
+     (cond
+       ((= (array-dimension R_free 1) 2)
+        (let ((pwidth (send *viewer* :viewsurface :line-width))
+              (psize (send *viewer* :viewsurface :point-size))
+              (pcolor (send *viewer* :viewsurface :color))
+              (vec (if (= (array-dimension V 1) 0)
+                       (float-vector 0 0 z)
+                       (float-vector (* 1e3 (aref V 0 0))
+                                     (* 1e3 (aref V 1 0))
+                                     z))))
+          (unwind-protect
+               (progn
+                 (send *viewer* :viewsurface :color #f(0 0 1))
+                 (send *viewer* :viewsurface :line-width 3)
+                 (send *viewer* :viewsurface :point-size 3)
+                 (send *viewer* :viewsurface :3d-line
+                       (v+ vec (float-vector (* 1e6 (aref R_free 0 0))
+                                             (* 1e6 (aref R_free 1 0))
+                                             0))
+                       (v+ vec (float-vector (* -1e6 (aref R_free 0 0))
+                                             (* -1e6 (aref R_free 1 0))
+                                             0))
+                       :depth-test t)
+                 (send *viewer* :viewsurface :3d-line
+                       (v+ vec (float-vector (* 1e6 (aref R_free 0 1))
+                                             (* 1e6 (aref R_free 1 1))
+                                             0))
+                       (v+ vec (float-vector (* -1e6 (aref R_free 0 1))
+                                             (* -1e6 (aref R_free 1 1))
+                                             0))
+                       :depth-test t)
+                 )
+            (progn
+              (send *viewer* :viewsurface :line-width pwidth)
+              (send *viewer* :viewsurface :point-size psize)
+              (send *viewer* :viewsurface :color pcolor)))))
+       ((and (= (array-dimension R_free 1) 1)
+             (= (array-dimension R_nonneg 1) 1))
+        (let ((pwidth (send *viewer* :viewsurface :line-width))
+              (psize (send *viewer* :viewsurface :point-size))
+              (pcolor (send *viewer* :viewsurface :color))
+              (vec (if (= (array-dimension V 1) 0)
+                       (float-vector 0 0 z)
+                       (float-vector (+ 1e3 (aref V 0 0))
+                                     (+ 1e3 (aref V 1 0))
+                                     z))))
+          (unwind-protect
+               (progn
+                 (send *viewer* :viewsurface :color #f(0 0 1))
+                 (send *viewer* :viewsurface :line-width 3)
+                 (send *viewer* :viewsurface :point-size 3)
+                 (send *viewer* :viewsurface :3d-line
+                       (v+ vec (float-vector (* 1e6 (aref R_free 0 0))
+                                             (* 1e6 (aref R_free 1 0))
+                                             0))
+                       (v+ vec (float-vector (* -1e6 (aref R_free 0 0))
+                                             (* -1e6 (aref R_free 1 0))
+                                             0))
+                       :depth-test t)
+                 (send *viewer* :viewsurface :3d-line
+                       vec
+                       (v+ vec (float-vector (* 1e6 (aref R_nonneg 0 0))
+                                             (* 1e6 (aref R_nonneg 1 0))
+                                             0))
+                       :depth-test t)
+                 )
+            (progn
+              (send *viewer* :viewsurface :line-width pwidth)
+              (send *viewer* :viewsurface :point-size psize)
+              (send *viewer* :viewsurface :color pcolor)))))
+       ((and  (= (array-dimension R_free 1) 1)
+              (= (array-dimension R_nonneg 1) 0))
+        (let ((pwidth (send *viewer* :viewsurface :line-width))
+              (psize (send *viewer* :viewsurface :point-size))
+              (pcolor (send *viewer* :viewsurface :color))
+              (vec (if (= (array-dimension V 1) 0)
+                       (list (float-vector 0 0 z))
+                       (let ((vec))
+                         (dotimes (i (array-dimension V 1))
+                           (push (float-vector (+ 1e3 (aref V 0 i))
+                                               (+ 1e3 (aref V 1 i))
+                                               z) vec))
+                         vec))))
+          (unwind-protect
+               (progn
+                 (send *viewer* :viewsurface :color #f(0 0 1))
+                 (send *viewer* :viewsurface :line-width 3)
+                 (send *viewer* :viewsurface :point-size 3)
+                 (dolist (vv vec)
+                   (send *viewer* :viewsurface :3d-line
+                         (v+ vv (float-vector (* 1e6 (aref R_free 0 0))
+                                              (* 1e6 (aref R_free 1 0))
+                                              0))
+                         (v+ vv (float-vector (* -1e6 (aref R_free 0 0))
+                                              (* -1e6 (aref R_free 1 0))
+                                              0))
+                         :depth-test t))
+                 )
+            (progn
+              (send *viewer* :viewsurface :line-width pwidth)
+              (send *viewer* :viewsurface :point-size psize)
+              (send *viewer* :viewsurface :color pcolor)))))
+       (t
+        (let* ((points (let ((points nil))
+                         (dotimes (i (array-dimension V 1))
+                           (push (float-vector (* 1e3 (aref V 0 i)) (* 1e3 (aref V 1 i)) z) points))
+                         points))
+               (hull (instance polygon :init :vertices (if points (quickhull points) (list (float-vector 0 0 z)))))
+               (vec (cond ((= (array-dimension R_nonneg 1) 0)
+                           nil)
+                          ((= (array-dimension R_nonneg 1) 1)
+                           (list (float-vector (aref R_nonneg 0 0) (aref R_nonneg 1 0) 0)
+                                 (float-vector (aref R_nonneg 0 0) (aref R_nonneg 1 0) 0)))
+                          (t
+                           (let ((v1 (float-vector (aref R_nonneg 0 0) (aref R_nonneg 1 0) 0))
+                                 (v2 (float-vector (aref R_nonneg 0 1) (aref R_nonneg 1 1) 0)))
+                             (if (> (elt (v* v1 v2) 2) 0)
+                                 (list v1 v2)
+                                 (list v2 v1))))))
+               (ext (if vec
+                        (let ((v1 (v* (elt vec 0) #F(0 0 1)))
+                              (v2 (v* #F(0 0 1) (elt vec 0))))
+                          (list
+                           (find-extream (send hull :vertices) #'(lambda (v) (v. v v1)) #'>)
+                           (find-extream (send hull :vertices) #'(lambda (v) (v. v v2)) #'>)))
+                        nil))
+               )
+          (let ((pwidth (send *viewer* :viewsurface :line-width))
+                (psize (send *viewer* :viewsurface :point-size))
+                (pcolor (send *viewer* :viewsurface :color)))
+            (unwind-protect
+                 (progn
+                   (send *viewer* :viewsurface :color #f(0 0 1))
+                   (send *viewer* :viewsurface :line-width 3)
+                   (send *viewer* :viewsurface :point-size 3)
+                   (mapc #'(lambda (e)
+                             (unless (and (find (elt (send e :vertices) 0) vec) (find (elt (send e :vertices) 1) vec))
+                               (send *viewer* :viewsurface :3d-line
+                                     (elt (send e :vertices) 0)
+                                     (elt (send e :vertices) 1)
+                                     :depth-test t)))
+                         (send hull :edges))
+                   (mapc #'(lambda (v e)
+                             (send *viewer* :viewsurface :3d-line
+                                   e
+                                   (v+ e (scale 1e6 v))
+                                   :depth-test t))
+                         vec
+                         ext)
+                   )
+              (progn
+                (send *viewer* :viewsurface :line-width pwidth)
+                (send *viewer* :viewsurface :point-size psize)
+                (send *viewer* :viewsurface :color pcolor)))
+            )
+          )
+        )
+       )
+     )
+   t)
+  (:debug
+   ()
+   "
+現在のエラーを表示する
+   "
+   (warning-message (cond
+                      ((send self :is-satisfied t) 7);;white
+                      (check 1) ;;red
+                      (t 3)) ;;yellow
+                    "    centroid-scfr-task: ~A [m]~%" (send target :name))
+   (format-array (concatenate float-vector
+                              b
+                              (map float-vector #'(lambda (i) (if (> i 0) i 0)) dl)))
    t)
   )
