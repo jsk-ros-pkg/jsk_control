@@ -1,4 +1,4 @@
-(load (format nil "~A/euslisp/eus-cddlib.l" (ros::resolve-ros-path "package://eus_cddlib")))
+(load (format nil "~A/euslisp/eus-cddlib-compiled.l" (ros::resolve-ros-path "package://eus_cddlib")))
 
 
 ;; |0| + | 1  0| x >= 0
