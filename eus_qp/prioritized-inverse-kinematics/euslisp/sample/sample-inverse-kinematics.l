@@ -1,6 +1,8 @@
 (load "package://eus_qp/prioritized-inverse-kinematics/euslisp/prioritized-inverse-kinematics-compiled.l")
+(load "package://eus_qp/euslisp/contact-optimization.l")
 
 (defun setup ()
+  ;;ここで生成するオブジェクトや設定は，test関数で明示的に用いられていない限りはprioritized-inverse-kinematics関数の中で使用されることはない．
   (unless (boundp '*robot*)
     (load "irteus/demo/sample-robot-model.l")
     (setq *robot* (instance sample-robot :init))
@@ -8,6 +10,21 @@
                                               (mapcar #'(lambda (l) (send *robot* :make-sole-polygon-ex l))
                                                       (list :rleg-link5 :lleg-link5 :rarm-link6 :larm-link6))
                                               (send *robot* :get-val 'support-polygons)))
+    (dolist (l (list :rleg-link5 :lleg-link5 :rarm-link6 :larm-link6))
+      (send (send *robot* :link l) :put :contact-constraint
+            (instance* default-contact-constraint
+                       :init
+                       :name l
+                       :mu-margin-ratio 1.0 :cop-margin-ratio 1.0
+                       :mu-trans 0.5
+                       :mu-rot 0.05
+                       (let* ((vs (mapcar #'(lambda (v) (send (send *robot* :link l) :inverse-transform-vector v)) (send (send *robot* :support-polygon l) :vertices))))
+                         (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
+                               :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
+                               :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
+                               :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
+                               )))
+            ))
     )
   (unless (boundp '*irtviewer*)
     (make-irtviewer))
@@ -21,6 +38,21 @@
                                                 (mapcar #'(lambda (l) (send robot :make-sole-polygon-ex l))
                                                         (list :rleg-link5 :lleg-link5 :rarm-link6 :larm-link6))
                                                 (send robot :get-val 'support-polygons)))
+        (dolist (l (list :rleg-link5 :lleg-link5 :rarm-link6 :larm-link6))
+          (send (send robot :link l) :put :contact-constraint
+                (instance* default-contact-constraint
+                           :init
+                           :name l
+                           :mu-margin-ratio 1.0 :cop-margin-ratio 1.0
+                           :mu-trans 0.5
+                           :mu-rot 0.05
+                           (let* ((vs (mapcar #'(lambda (v) (send (send robot :link l) :inverse-transform-vector v)) (send (send robot :support-polygon l) :vertices))))
+                             (list :l-min-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'<) 0)
+                                   :l-max-x (elt (find-extream vs #'(lambda (v) (elt v 0)) #'>) 0)
+                                   :l-min-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'<) 1)
+                                   :l-max-y (elt (find-extream vs #'(lambda (v) (elt v 1)) #'>) 1)
+                                   )))
+                ))
         )))
   )
 (print "(setup)")
