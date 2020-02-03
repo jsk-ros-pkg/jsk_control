@@ -10,7 +10,7 @@
   <export> </export>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>cdd</build_depend>
+  <build_depend>libcdd-dev</build_depend>
 
   <run_depend>euslisp</run_depend>
   <run_depend>libcdd-dev</run_depend>
