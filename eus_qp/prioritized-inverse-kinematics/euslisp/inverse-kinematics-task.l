@@ -1765,19 +1765,19 @@ $\bm{e}$の単位は\rm{m}である．
                (mapcar #'(lambda (constraint coords)
                            (send constraint :calc-constraint-matrix (send coords :worldcoords)))
                       contact-constraints contact-coords)))
-          (_d (v- (apply
-                   #'concatenate
-                   float-vector
-                   (mapcar #'(lambda (constraint)
-                               (send constraint :get-constraint-vector))
-                           contact-constraints))))
+          (_d (scale (/ 1.0 mg) (v- (apply
+                                     #'concatenate
+                                     float-vector
+                                     (mapcar #'(lambda (constraint)
+                                                 (send constraint :get-constraint-vector))
+                                             contact-constraints)))))
           (_G (send target :calc-grasp-matrix
                     (mapcar #'(lambda (coords)
                                 (send coords :worldpos))
                             contact-coords)))
           (total-wrench (float-vector 0
                                       0
-                                      (- mg)
+                                      (- 1 #|mg|#)
                                       0
                                       0
                                       0))
@@ -1785,32 +1785,9 @@ $\bm{e}$の単位は\rm{m}である．
           (_G2 (concatenate-matrix-row _G (matrix (float-vector 0 0)
                                                   (float-vector 0 0)
                                                   (float-vector 0 0)
-                                                  (float-vector 0 (- mg))
-                                                  (float-vector mg 0)
+                                                  (float-vector 0 (- 1 #|mg|#))
+                                                  (float-vector 1 #|mg|# 0)
                                                   (float-vector 0 0))))
-          (eps (expt 10 (- (truncate (/ (log (max
-                                              (apply #'max (coerce (array-entity _C2) cons))
-                                              (apply #'max (coerce _d cons))
-                                              (apply #'max (coerce (array-entity _G2) cons))
-                                              (apply #'max (coerce total-wrench cons))
-                                              (- (apply #'min (coerce (array-entity _C2) cons)))
-                                              (- (apply #'min (coerce _d cons)))
-                                              (- (apply #'min (coerce (array-entity _G2) cons)))
-                                              (- (apply #'min (coerce total-wrench cons)))))
-                                        (log 10)))
-                           epsilon)))
-          (dummy (progn
-                   (dotimes (i (array-dimension _C2 0))
-                     (dotimes (j (array-dimension _C2 1))
-                       (setf (aref _C2 i j) (* (truncate (/ (aref _C2 i j) eps)) eps))))
-                   (dotimes (i (length _d))
-                     (setelt _d i (* (truncate (/ (elt _d i) eps)) eps)))
-                   (dotimes (i (array-dimension _G2 0))
-                     (dotimes (j (array-dimension _G2 1))
-                       (setf (aref _G2 i j) (* (truncate (/ (aref _G2 i j) eps)) eps))))
-                   (dotimes (i (length total-wrench))
-                     (setelt total-wrench i (* (truncate (/ (elt total-wrench i) eps)) eps)))
-                   t))
           (ret (cddlib-H-to-V :A_ineq _C2 :b_ineq _d :A_eq _G2 :b_eq total-wrench :verbose 0))
           (V (block-matrix (elt ret 0) (- (array-dimension (elt ret 0) 0) 2) 0 2 (array-dimension (elt ret 0) 1)))
           (R_nonneg (block-matrix (elt ret 1) (- (array-dimension (elt ret 1) 0) 2) 0 2 (array-dimension (elt ret 1) 1)))
