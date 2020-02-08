@@ -138,6 +138,7 @@
                                       (make-matrix 0 variable-length)
                                       (send-all task-p :Asparce)))
                  (this-b (apply #'concatenate float-vector
+                                (instantiate float-vector 0)
                                 (send-all task-p :b)))
                  (this-C (apply #'concatenate-matrix-column
                                 (make-matrix 0 variable-length)
@@ -146,8 +147,10 @@
                                       (make-matrix 0 variable-length)
                                       (send-all task-p :Csparce)))
                  (this-dl (apply #'concatenate float-vector
+                                 (instantiate float-vector 0)
                                  (send-all task-p :dl)))
                  (this-du (apply #'concatenate float-vector
+                                 (instantiate float-vector 0)
                                  (send-all task-p :du)))
                  (this-Wa (apply #'concatenate-matrix-diagonal
                                  (send-all task-p :Wa)))
