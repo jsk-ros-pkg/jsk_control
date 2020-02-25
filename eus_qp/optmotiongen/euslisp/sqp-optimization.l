@@ -157,7 +157,8 @@ Return status of sqp optimization.
    )
   (:_optimize-iterate-once
    ()
-   (send _config-task :update-collision-inequality-constraint)
+   (when (member :update-collision-inequality-constraint (send _config-task :methods))
+     (send _config-task :update-collision-inequality-constraint))
    (setq _task-value (send _config-task :task-value))
    (setq _task-jacobian (send _config-task :task-jacobian))
    ;; solve QP
