@@ -735,3 +735,31 @@
    )
   )
 (print "(test-inverse-kinematics-cog-scfr2)")
+
+
+
+;;今の関節角度から離れる
+;;(send *robot* :reset-pose)
+;;(send *robot* :fix-leg-to-coords (make-coords))
+(defun test-inverse-kinematics-avoid ()
+  (prioritized-inverse-kinematics
+   (list (list (instance move-target-task :init
+                         (send *robot* :larm :end-coords)
+                         (make-coords :pos #F(300 100 600))))
+         (mapcar #'(lambda (j ang)
+                     (instance joint-angle-task :init
+                               j ang
+                               :W -5e-2
+                               :check nil))
+                 (send *robot* :larm :joint-list)
+                 (coerce (v+ (scale 1.1 (v- (send *robot* :larm :angle-vector) #F(10.0 20.0 0.0 -20.0 10.0 0.0 0.0))) #F(10.0 20.0 0.0 -20.0 10.0 0.0 0.0)) cons)
+                 )
+         )
+   (mapcar #'(lambda (j) (instance joint-variable :init j))
+           (send *robot* :larm :joint-list))
+   :min-loop 100 :regular (list 1e-6 1)
+   :task0 (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
+                  (send *robot* :larm :joint-list))
+   )
+  )
+(print "(test-inverse-kinematics-avoid)")
