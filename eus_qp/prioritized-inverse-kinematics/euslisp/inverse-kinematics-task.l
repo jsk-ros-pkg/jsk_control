@@ -605,6 +605,138 @@ $\bm{e}$の単位は\rm{m}，\rm{rad}である．
    t)
   )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; infeasible-angle-vector-task
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass infeasible-angle-vector-task
+  :super inverse-kinematics-task
+  :slots ((joints ", target joints")
+          (infeasible-angle-vector "")
+          (min-distance)
+          (targets ", list of (joint infeasible-angle inverse-kinematics-variable)")
+          (check "終了判定を行うか否か")
+          )
+  :documentation
+  "
+\ \ 対象の複数関節の関節角度列を関節角度空間のある一点からの距離が閾値以上にさせる制約を表現するクラス．\\
+距離を$d$とおき，そのヤコビアンを$\mathbf{J}$とすると，\it{prioritized-inverse-kinematics}中で次の問題に変換される．
+\begin{eqnarray}
+  \min_{\bm{x},\omega} &\ & \omega W \omega \nonumber\\
+  \rm{subject\ to} &\ & d_{min} \leqq \mathbf{J} \bm{x} + d + \omega \nonumber
+\end{eqnarray}
+$d$の単位は\rm{m}，\rm{rad}である．
+"
+  )
+
+(defmethod infeasible-angle-vector-task
+  (:init
+   (_joints
+    _infeasible-angle-vector
+    &key
+    ((:min-distance _min-distance) 0.05)
+    ((:W _W) 1.0)
+    ((:check _check) t)
+    )
+   "
+\begin{itemize}
+  \item joints\\
+\it{joint}クラスのリスト.対象の関節を表す．仮想関節非対応.
+  \item infeasible-angle-vector\\
+\it{joint-vector}クラス.回避したい関節角度列を表す．[deg][mm]
+  \item min-distance\\
+\it{float}クラス.infeasible-angle-vectorからの距離の最小値を表す．[rad][m]
+  \item W\\
+\it{float}クラス
+  \item check : t or nil\\
+終了判定を行うか否か
+\end{itemize}
+   "
+   (setq joints _joints)
+   (setq infeasible-angle-vector _infeasible-angle-vector)
+   (unless (= (reduce #'+ (send-all joints :joint-dof))
+              (length infeasible-angle-vector))
+     (error "length of angle-vector should be same ~A ~A" joints infeasible-angle-vector))
+   (setq min-distance _min-distance)
+   (setq equality-rows 0)
+   (setq inequality-rows 1)
+   (setq Wa (make-matrix equality-rows equality-rows))
+   (setq Wc (scale-matrix _W (unit-matrix inequality-rows)))
+
+   (setq check _check)
+   t
+   )
+  (:initialize
+   (variable-length variables)
+   "
+探索変数\it{variables}のうち，該当\it{joint}に影響を与える成分を調べ，記録する．それぞれ0または1個の\it{variables}が発見されなければならない．
+   "
+   (send-super :initialize variable-length variables)
+   (setq target-variables
+         (let ((idx 0))
+           (mapcar #'(lambda (j)
+                       (let ((variable (find-if #'(lambda (variable) (and (derivedp variable joint-variable) (eq (send variable :joint) j))) variables)))
+                         (prog1
+                             (list j
+                                   (cond ((numberp (send j :joint-angle)) (elt infeasible-angle-vector idx))
+                                         (t (subseq infeasible-angle-vector idx (+ idx (sned j :joint-dof)))))
+                                   variable
+                                   )
+                           (when variable
+                             (fill-block-matrix C 1.0 0 (send variable :index) inequality-rows (send variable :dim))
+                             (fill-block-matrix Csparce 1.0 0 (send variable :index) inequality-rows (send variable :dim)))
+                           (incf idx (send j :joint-dof))
+                           )
+                         )
+                       )
+                   joints)
+           )
+         )
+   (setelt du 0 1e10)
+   t
+   )
+  (:update
+   ()
+   "
+現在の関節角度に応じて$\bm{d}_l$，$\mathbf{C}$を更新する
+   "
+   (setelt dl 0
+           (- min-distance
+              (reduce #'+ (mapcar #'(lambda (x) (cond ((numberp (elt x 1)) (abs (send (elt x 0) :angle-to-speed (- (elt x 1) (send (elt x 0) :joint-angle)))))
+                                                      (t (norm (send (elt x 0) :angle-to-speed (v- (elt x 1) (send (elt x 0) :joint-angle)))))))
+                                  target-variables))))
+   (dolist (x target-variables)
+     (when (elt x 2)
+       (cond ((numberp (elt x 1)) (setf (aref C 0 (send (elt x 2) :index)) (send (elt x 0) :angle-to-speed (- (send (elt x 0) :joint-angle) (elt x 1)))))
+             (t (copy-block-rowvector C (send (elt x 0) :angle-to-speed (v- (send (elt x 0) :joint-angle) (elt x 1))) 0 (send variable :index))))
+       )
+     )
+   t
+   )
+  (:is-satisfied
+   (&optional force-check)
+   "
+距離が最小値以上かどうかを判定
+   "
+   (if (or force-check check)
+       (>= (elt dl 0) 0)
+       t)
+   )
+  (:debug
+   ()
+   "
+現在の距離を表示
+   "
+   (warning-message (cond
+                      ((send self :is-satisfied t) 7);;white
+                      (check 1) ;;red
+                      (t 3)) ;;yellow
+                    "    infeasible-angle-vector-task: distance = ~A (> ~A [m, rad]) from~%"
+                    (+ min-distance (elt dl 0))
+                    min-distance)
+   (format-array infeasible-angle-vector)
+   t)
+  )
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
