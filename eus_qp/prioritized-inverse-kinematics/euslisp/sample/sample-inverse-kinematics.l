@@ -763,3 +763,108 @@
    )
   )
 (print "(test-inverse-kinematics-avoid)")
+
+
+
+;;前回までのIK結果の関節角度から一定距離以上離れる
+(defun test-inverse-kinematics-infeasible-prev
+ (&rest
+    args
+    )
+
+  (if (set-exclusive-or (send *irtviewer* :objects) (list *robot*))
+      (objects (list *robot*)))
+
+  (let ((infeasible-angle-vectors nil))
+    (dotimes (i 30)
+      (send *robot* :reset-pose)
+      (send *robot* :fix-leg-to-coords (make-coords))
+      (if
+       (apply
+        #'prioritized-inverse-kinematics
+        (list (list (instance move-target-task :init
+                              (send *robot* :larm :end-coords)
+                              (make-coords :pos #F(300 100 650))))
+              (mapcar #'(lambda (infeasible-angle-vector)
+                          (instance infeasible-angle-vector-task :init
+                                    (send *robot* :larm :joint-list)
+                                    infeasible-angle-vector
+                                    :min-distance 0.2
+                                    )
+                          )
+                      infeasible-angle-vectors)
+              )
+        (mapcar #'(lambda (j) (instance joint-variable :init j))
+                (send *robot* :larm :joint-list))
+        :task0 (append
+                (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
+                        (send *robot* :larm :joint-list))
+                (mapcar #'(lambda (j) (instance joint-velocity-task :init j :max-vel 0.01 :min-vel -0.01 :periodic-time 1.0));;1回の反復計算で最大0.01rad/s * 1.0sだけ動く
+                        (send *robot* :larm :joint-list))
+                )
+        :stop 1000
+        :revert-if-fail nil
+        :regular 1e-2
+        :regular-rel 5e4
+        :regular-max 1e0
+        args
+        )
+       (print "ik success")
+       (print "ik fail"))
+      (push (send *robot* :larm :angle-vector) infeasible-angle-vectors)
+      (print "press enter")
+      (read-char)
+      )
+    )
+  )
+(print "(test-inverse-kinematics-infeasible-prev)")
+
+
+;;前回までのIK結果の関節角度から離れる
+(defun test-inverse-kinematics-avoid-prev
+ (&rest
+    args
+    )
+
+  (if (set-exclusive-or (send *irtviewer* :objects) (list *robot*))
+      (objects (list *robot*)))
+
+  (let ((infeasible-angle-vectors nil))
+    (dotimes (i 5)
+      (send *robot* :reset-pose)
+      (send *robot* :fix-leg-to-coords (make-coords))
+      (if
+       (apply
+        #'prioritized-inverse-kinematics
+        (list (list (instance move-target-task :init
+                              (send *robot* :larm :end-coords)
+                              (make-coords :pos #F(300 100 650))))
+              (list (instance avoid-angle-vectors-task :init
+                              (send *robot* :larm :joint-list)
+                              infeasible-angle-vectors
+                              :W 1e-2))
+              )
+        (mapcar #'(lambda (j) (instance joint-variable :init j))
+                (send *robot* :larm :joint-list))
+        :task0 (append
+                (mapcar #'(lambda (j) (instance minmax-angle-task :init j))
+                        (send *robot* :larm :joint-list))
+                (mapcar #'(lambda (j) (instance joint-velocity-task :init j :max-vel 0.01 :min-vel -0.01 :periodic-time 1.0));;1回の反復計算で最大0.01rad/s * 1.0sだけ動く
+                        (send *robot* :larm :joint-list))
+                )
+        :stop 1000
+        :revert-if-fail nil
+        :regular 1e-2
+        :regular-rel 5e4
+        :regular-max 1e0
+        args
+        )
+       (print "ik success")
+       (print "ik fail"))
+      (push (send *robot* :larm :angle-vector) infeasible-angle-vectors)
+      (print "press enter")
+      (read-char)
+      )
+    )
+  )
+(print "(test-inverse-kinematics-avoid-prev)")

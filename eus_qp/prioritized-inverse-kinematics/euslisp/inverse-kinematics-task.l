@@ -67,7 +67,7 @@ update A, b , Wa, Asparce, equality-rows, C, dl, du , Wc, Csparce, inequality-ro
    "
    t)
   (:is-satisfied
-   ()
+   (&optional force-check)
    "
 終了判定に用いる．
    "
@@ -93,6 +93,8 @@ debug message
   (:du () "return $\bm{d}_u$" du)
   (:Wc () "return $\mathbf{W}_C$" Wc)
   (:Csparce () "return $\mathbf{C}_{sparce}$" Csparce)
+  (:additional-variables () "return list of additional variable" nil)
+  (:additional-task0s () "return list of additional task0" nil)
   )
 
 
@@ -634,7 +636,7 @@ $d$の単位は\rm{m}，\rm{rad}である．
    (_joints
     _infeasible-angle-vector
     &key
-    ((:min-distance _min-distance) 0.05)
+    ((:min-distance _min-distance) 0.1)
     ((:W _W) 1.0)
     ((:check _check) t)
     )
@@ -672,14 +674,14 @@ $d$の単位は\rm{m}，\rm{rad}である．
 探索変数\it{variables}のうち，該当\it{joint}に影響を与える成分を調べ，記録する．それぞれ0または1個の\it{variables}が発見されなければならない．
    "
    (send-super :initialize variable-length variables)
-   (setq target-variables
+   (setq targets
          (let ((idx 0))
            (mapcar #'(lambda (j)
                        (let ((variable (find-if #'(lambda (variable) (and (derivedp variable joint-variable) (eq (send variable :joint) j))) variables)))
                          (prog1
                              (list j
                                    (cond ((numberp (send j :joint-angle)) (elt infeasible-angle-vector idx))
-                                         (t (subseq infeasible-angle-vector idx (+ idx (sned j :joint-dof)))))
+                                         (t (subseq infeasible-angle-vector idx (+ idx (send j :joint-dof)))))
                                    variable
                                    )
                            (when variable
@@ -692,7 +694,7 @@ $d$の単位は\rm{m}，\rm{rad}である．
                    joints)
            )
          )
-   (setelt du 0 1e10)
+   (setelt du 0 *inf*)
    t
    )
   (:update
@@ -700,15 +702,17 @@ $d$の単位は\rm{m}，\rm{rad}である．
    "
 現在の関節角度に応じて$\bm{d}_l$，$\mathbf{C}$を更新する
    "
-   (setelt dl 0
-           (- min-distance
-              (reduce #'+ (mapcar #'(lambda (x) (cond ((numberp (elt x 1)) (abs (send (elt x 0) :angle-to-speed (- (elt x 1) (send (elt x 0) :joint-angle)))))
-                                                      (t (norm (send (elt x 0) :angle-to-speed (v- (elt x 1) (send (elt x 0) :joint-angle)))))))
-                                  target-variables))))
-   (dolist (x target-variables)
-     (when (elt x 2)
-       (cond ((numberp (elt x 1)) (setf (aref C 0 (send (elt x 2) :index)) (send (elt x 0) :angle-to-speed (- (send (elt x 0) :joint-angle) (elt x 1)))))
-             (t (copy-block-rowvector C (send (elt x 0) :angle-to-speed (v- (send (elt x 0) :joint-angle) (elt x 1))) 0 (send variable :index))))
+   (let ((d (sqrt (reduce #'+ (mapcar #'(lambda (x) (cond ((numberp (elt x 1)) (expt (send (elt x 0) :angle-to-speed (- (elt x 1) (send (elt x 0) :joint-angle))) 2))
+                                                          (t (norm2 (send (elt x 0) :angle-to-speed (v- (elt x 1) (send (elt x 0) :joint-angle)))))))
+                                      targets)))))
+     (setelt dl 0 (- min-distance d))
+     (unless (= d 0)
+       (dolist (x targets)
+         (when (elt x 2)
+           (cond ((numberp (elt x 1)) (setf (aref C 0 (send (elt x 2) :index)) (/ (send (elt x 0) :angle-to-speed (- (send (elt x 0) :joint-angle) (elt x 1))) d)))
+                 (t (copy-block-rowvector C (scale (/ 1.0 d) (send (elt x 0) :angle-to-speed (v- (send (elt x 0) :joint-angle) (elt x 1)))) 0 (send (elt x 2) :index))))
+           )
+         )
        )
      )
    t
@@ -719,7 +723,7 @@ $d$の単位は\rm{m}，\rm{rad}である．
 距離が最小値以上かどうかを判定
    "
    (if (or force-check check)
-       (>= (elt dl 0) 0)
+       (<= (elt dl 0) 0)
        t)
    )
   (:debug
@@ -731,10 +735,243 @@ $d$の単位は\rm{m}，\rm{rad}である．
                       ((send self :is-satisfied t) 7);;white
                       (check 1) ;;red
                       (t 3)) ;;yellow
-                    "    infeasible-angle-vector-task: distance = ~A (> ~A [m, rad]) from~%"
-                    (+ min-distance (elt dl 0))
+                    "    infeasible-angle-vector-task: distance = ~A (> ~A [m, rad]) between~%"
+                    (- min-distance (elt dl 0))
                     min-distance)
    (format-array infeasible-angle-vector)
+   (format-array (concatenate float-vector (flatten (mapcar #'(lambda (j) (cond ((numberp (send j :joint-angle)) (send j :joint-angle))
+                                                                                (t (coerce (send j :joint-angle) cons))))
+                                                            joints))))
+   t)
+  )
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; avoid-angle-vectors-task
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass avoid-angle-vectors-task
+  :super inverse-kinematics-task
+  :slots ((joints ", target joints")
+          (avoid-angle-vectors "")
+          (min-variable)
+          (min-variable-task)
+          (targets ", list of list of (joint avoid-angle inverse-kinematics-variable)")
+          )
+  :documentation
+  "
+\ \ 対象の複数関節の関節角度列と，関節角度空間の複数点からの距離の最小値を最大化するタスクを表現するクラス．\\
+関節角度空間の点$i$からの距離を$d_i$とおき，そのヤコビアンを$\mathbf{J}_i$とすると，\it{prioritized-inverse-kinematics}中で次の問題に変換される．
+\begin{eqnarray}
+  \min_{\bm{x},d} &\ & - d W d \nonumber\\
+  \rm{subject\ to} &\ & 0 \leqq d \nonumber\\
+  &\ & d \leqq \mathbf{J}_i \bm{x} + d_i \nonumber
+\end{eqnarray}
+$d$の単位は\rm{m}，\rm{rad}である．
+"
+  )
+
+(defmethod avoid-angle-vectors-task
+  (:init
+   (_joints
+    _avoid-angle-vectors
+    &key
+    ((:W _W) 1.0)
+    (value-scale 1.0)
+    )
+   "
+\begin{itemize}
+  \item joints\\
+\it{joint}クラスのリスト.対象の関節を表す．仮想関節非対応.
+  \item infeasible-angle-vector\\
+\it{joint-vector}クラス.回避したい関節角度列を表す．[deg][mm]
+  \item min-distance\\
+\it{float}クラス.infeasible-angle-vectorからの距離の最小値を表す．[rad][m]
+  \item W\\
+\it{float}クラス
+  \item check : t or nil\\
+終了判定を行うか否か
+\end{itemize}
+   "
+   (setq joints _joints)
+   (setq avoid-angle-vectors _avoid-angle-vectors)
+   (dolist (avoid-angle-vector avoid-angle-vectors)
+     (unless (= (reduce #'+ (send-all joints :joint-dof))
+                (length avoid-angle-vector))
+       (error "length of angle-vector should be same ~A ~A" joints avoid-angle-vector)))
+   (if avoid-angle-vectors
+       (progn (setq equality-rows 1)
+              (setq min-variable (instance value-variable :init :value-scale value-scale))
+              (setq min-variable-task (instance avoid-angle-vectors-task-task0 :init joints avoid-angle-vectors min-variable)))
+       (setq equality-rows 0))
+   (setq inequality-rows 0)
+   (setq Wa (scale-matrix (- _W) (unit-matrix equality-rows)))
+   (setq Wc (make-matrix inequality-rows inequality-rows))
+
+   t
+      )
+  (:initialize
+   (variable-length variables)
+   "
+探索変数\it{variables}のうち，影響を与える成分を調べ，記録する．
+   "
+   (send-super :initialize variable-length variables)
+   (when min-variable
+     (setf (aref A 0 (send min-variable :index)) (send min-variable :value-scale))
+     (setf (aref Asparce 0 (send min-variable :index)) 1.0))
+   t
+   )
+  (:update
+   ()
+   "
+現在の関節角度に応じて$\bm{b}$，$\mathbf{A}$を更新する
+   "
+   (when min-variable
+     (setelt b 0 (- (send min-variable :value))))
+   t
+   )
+
+  (:debug
+   ()
+   "
+現在の距離を表示
+   "
+   (warning-message 7 "    avoid-angle-vectors-task: min distance = ~A~%"
+                    (if min-variable (send min-variable :value) nil))
+   (if min-variable
+       (send min-variable-task :debug))
+   t)
+  (:additional-variables () (list min-variable))
+  (:additional-task0s () (list min-variable-task))
+  )
+
+
+(defclass avoid-angle-vectors-task-task0
+  :super inverse-kinematics-task
+  :slots ((joints ", target joints")
+          (avoid-angle-vectors "")
+          (min-variable)
+          (targets ", list of list of (joint avoid-angle inverse-kinematics-variable)")
+          )
+  :documentation
+  "
+\ \ avoid-angle-vectors-taskクラスの不等式制約を担当するクラス
+  "
+  )
+
+(defmethod avoid-angle-vectors-task-task0
+  (:init
+   (_joints
+    _avoid-angle-vectors
+    _min-variable
+    )
+   "
+   "
+   (setq joints _joints)
+   (setq avoid-angle-vectors _avoid-angle-vectors)
+   (setq min-variable _min-variable)
+   (setq equality-rows 0)
+   (setq inequality-rows (1+ (length avoid-angle-vectors)))
+   (setq Wa (make-matrix equality-rows equality-rows))
+   (setq Wc (scale-matrix 1.0 (unit-matrix inequality-rows)))
+   t
+   )
+  (:initialize
+   (variable-length variables)
+   "
+探索変数\it{variables}のうち，該当\it{joint}に影響を与える成分を調べ，記録する．それぞれ0または1個の\it{variables}が発見されなければならない．
+   "
+   (send-super :initialize variable-length variables)
+   (setq targets
+         (let ((idx 0))
+           (mapcar #'(lambda (j)
+                       (let ((variable (find-if #'(lambda (variable) (and (derivedp variable joint-variable) (eq (send variable :joint) j))) variables)))
+                         (prog1
+                             (list j
+                                   (cond ((numberp (send j :joint-angle)) (mapcar #'(lambda (avoid-angle-vector) (elt avoid-angle-vector idx)) avoid-angle-vectors))
+                                         (t (mapcar #'(lambda (avoid-angle-vector) (subseq avoid-angle-vector idx (+ idx (send j :joint-dof)))) avoid-angle-vectors)))
+                                   variable
+                                   )
+                           (when variable
+                             (fill-block-matrix C 1.0 0 (send variable :index) (1- inequality-rows) (send variable :dim))
+                             (fill-block-matrix Csparce 1.0 0 (send variable :index) (1- inequality-rows) (send variable :dim)))
+                           (incf idx (send j :joint-dof))
+                           )
+                         )
+                       )
+                   joints)
+           )
+         )
+   (fill-block-matrix C (- (send min-variable :value-scale)) 0 (send min-variable :index) (1- inequality-rows) 1)
+   (fill-block-matrix Csparce 1.0 0 (send min-variable :index) (1- inequality-rows) 1)
+   (fill-block-matrix C (send min-variable :value-scale) (1- inequality-rows) (send min-variable :index) 1 1)
+   (fill-block-matrix Csparce 1.0 (1- inequality-rows) (send min-variable :index) 1 1)
+   (fill du *inf*)
+   (setelt dl (1- inequality-rows) 0.1)
+   t
+   )
+  (:update
+   ()
+   "
+現在の関節角度に応じて$\bm{d}_l$，$\mathbf{C}$を更新する
+   "
+   (let ((ds (mapcar #'sqrt
+                     (coerce
+                      (reduce #'v+
+                              (mapcar #'(lambda (x) (cond ((numberp (send (elt x 0) :joint-angle))
+                                                           (map float-vector #'(lambda (angle) (expt (send (elt x 0) :angle-to-speed (- angle (send (elt x 0) :joint-angle))) 2))
+                                                                (elt x 1)))
+                                                          (t
+                                                           (map float-vector #'(lambda (angle) (norm2 (send (elt x 0) :angle-to-speed (v- angle (send (elt x 0) :joint-angle)))))
+                                                                (elt x 1)))))
+                                      targets))
+                      cons))))
+     (send min-variable :value (apply #'min ds))
+     (let ((idx 0))
+       (dolist (d ds)
+         (setelt dl idx (- (send min-variable :value) d))
+         (incf idx)))
+     (dolist (x targets)
+       (when (elt x 2)
+         (cond ((numberp (send (elt x 0) :joint-angle))
+                (let ((idx 0))
+                  (mapc #'(lambda (angle d)
+                            (unless (= d 0)
+                              (setf (aref C idx (send (elt x 2) :index)) (/ (send (elt x 0) :angle-to-speed (- (send (elt x 0) :joint-angle) angle)) d)))
+                            (incf idx)
+                            )
+                        (elt x 1)
+                        ds)))
+               (t
+                (let ((idx 0))
+                  (mapc #'(lambda (angle d)
+                            (unless (= d 0)
+                              (copy-block-rowvector C (scale (/ 1.0 d) (send (elt x 0) :angle-to-speed (v- (send (elt x 0) :joint-angle) angle))) idx (send (elt x 2) :index)))
+                            (incf idx)
+                            )
+                        (elt x 1)
+                        ds)))
+               )
+         )
+       )
+     )
+   (setelt dl (1- inequality-rows) (- (send min-variable :value)))
+   t
+   )
+  (:debug
+   ()
+   "
+現在の距離を表示
+   "
+   (warning-message 7 "        current angle:~%")
+   (format-array (concatenate float-vector (flatten (mapcar #'(lambda (j) (cond ((numberp (send j :joint-angle)) (send j :joint-angle))
+                                                                                (t (coerce (send j :joint-angle) cons))))
+                                                            joints))))
+   (let ((idx 0))
+     (dolist (avoid-angle-vector avoid-angle-vectors)
+       (warning-message 7 "        avoid angle: distance = ~A~%" (- (send min-variable :value) (elt dl idx)))
+       (format-array avoid-angle-vector)
+       (incf idx)))
    t)
   )
 
@@ -902,7 +1139,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
           (mapcar
            #'(lambda (l)
                (if (send l :joint)
-                   (find-if #'(lambda (variable) (eq (send variable :joint) (send l :joint))) variables)
+                   (find-if #'(lambda (variable) (and (derivedp variable joint-variable) (eq (send variable :joint) (send l :joint)))) variables)
                    nil))
            (get-link-list move-target))))
    (setq target-coords-variables
@@ -911,7 +1148,7 @@ $\bm{e}_{trans}$の単位は\rm{m}，$\bm{e}_{rot}$の単位は\rm{rad}である
           (mapcar
            #'(lambda (l)
                (if (send l :joint)
-                   (find-if #'(lambda (variable) (eq (send variable :joint) (send l :joint))) variables)
+                   (find-if #'(lambda (variable) (and (derivedp variable joint-variable) (eq (send variable :joint) (send l :joint)))) variables)
                    nil))
            (get-link-list target-coords))))
    (dolist (variable (append move-target-variables target-coords-variables))

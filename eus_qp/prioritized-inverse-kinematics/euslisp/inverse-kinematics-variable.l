@@ -54,6 +54,57 @@ Initialize instance
   (:dim () "return dim" dim)
   )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;; value-variable
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass value-variable
+  :super inverse-kinematics-variable
+  :slots ((value)
+          (value-scale)
+          )
+  :documentation
+  "
+valueのクラス．
+  "
+  )
+
+(defmethod value-variable
+  (:init
+   (
+    &key
+    (initial-value 0.0)
+    ((:value-scale _value-scale) 1.0)
+    )
+   "
+最大値等を表現するための探索変数．$\bm{x}$に\it{value-scale}を乗じたものが\it{value}の更新量に相当する．ユーザが直接使うことはない．
+   "
+   (setq value initial-value)
+   (setq value-scale _value-scale)
+   (setq dim 1)
+   (setq initial-state value)
+   t
+   )
+  (:apply-x
+   (x)
+   "
+$\bm{x}$の値だけjoint-angleを相対的に更新する．
+   "
+   (incf value (* (elt x index) value-scale))
+   t
+   )
+  (:revert
+   ()
+   "
+prioritized-inverse-kinematicsの初期状態に戻す
+   "
+   (setq value initial-state)
+   t
+   )
+  (:value (&optional _value) "return value" (if _value (setq value _value) value))
+  (:value-scale () "return value-scale" value-scale)
+  )
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; joint-variable

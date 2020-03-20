@@ -77,6 +77,8 @@
        (setq regular-rel (make-list (length tasks) :initial-element regular-rel)))
      (when (numberp regular-max)
        (setq regular-max (make-list (length tasks) :initial-element regular-max)))
+     (setq variables (append variables (flatten (send-all (flatten (append (list task0) tasks)) :additional-variables))))
+     (setq task0 (append task0 (flatten (send-all (flatten (append (list task0) tasks)) :additional-task0s))))
      (dolist (variable variables)
        (send variable :init-form)
        (send variable :index variable-length)
