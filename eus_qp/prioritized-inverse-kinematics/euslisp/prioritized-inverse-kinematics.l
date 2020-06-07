@@ -16,6 +16,7 @@
        (debug-view :no-message)
        (qp-solver #'solve-osqp-qp)
        (qp-args (list :solve-qp-mode :sqp-with-hotstart))
+       (viewer (send *irtviewer* :viewer))
      )
   "
 \begin{itemize}
@@ -92,8 +93,8 @@
        ;;描画
        (when debug-view
          (send *irtviewer* :draw-objects :flush nil)
-         (dolist (task-p (append (list task0) tasks)) (dolist (task task-p) (send task :draw)))
-         (send *viewer* :viewsurface :flush)
+         (dolist (task-p (append (list task0) tasks)) (dolist (task task-p) (send task :draw :viewer viewer)))
+         (send viewer :viewsurface :flush)
          )
        (when (eq debug-view t)
          (warning-message 4 "~%Iteration: ~A~%" i)
@@ -209,7 +210,7 @@
                  (format t "    e: ~A~%" this-error))
                ;;QPfail判定
                (unless this-x
-                 (warn "priority ~A: QP could not be colved (status ~A)~%" (1+ priority) (round (elt status 0)))
+                 (warn "priority ~A: QP could not be solved (status ~A)~%" (1+ priority) (round (elt status 0)))
                  (return-from prioritized-inverse-kinematics nil)
                  )
                ;;今タスクの結果の反映
@@ -244,8 +245,8 @@
        (dolist (task-p (append (list task0) tasks)) (dolist (task task-p) (send task :update)))
        ;;描画
        (send *irtviewer* :draw-objects :flush nil)
-       (dolist (task-p (append (list task0) tasks)) (dolist (task task-p) (send task :draw)))
-       (send *viewer* :viewsurface :flush)
+       (dolist (task-p (append (list task0) tasks)) (dolist (task task-p) (send task :draw :viewer viewer)))
+       (send viewer :viewsurface :flush)
        (when (eq debug-view t)
          (warning-message 4 "~%Max Iteration:~%")
          (let ((priority 0))

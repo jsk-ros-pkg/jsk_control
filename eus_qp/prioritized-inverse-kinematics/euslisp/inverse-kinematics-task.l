@@ -73,7 +73,7 @@ update A, b , Wa, Asparce, equality-rows, C, dl, du , Wc, Csparce, inequality-ro
    "
    t)
   (:draw
-   ()
+   (&key ((:viewer vwer) *viewer*))
    "
 debug view
    "
@@ -1305,26 +1305,26 @@ move-targetとtarget-coordsが一致しているかどうかを判定
        t)
    )
   (:draw
-   ()
+   (&key ((:viewer vwer) *viewer*))
    "
 move-targetとtarget-coordsを描画
    "
-   (send move-target :draw-on :color #F(1 0 0) :width 2)
-   (send target-coords :draw-on :color #F(1 0 0) :width 2)
-   (let ((pwidth (send *viewer* :viewsurface :line-width))
-         (psize (send *viewer* :viewsurface :point-size))
-         (pcolor (send *viewer* :viewsurface :color)))
+   (send move-target :draw-on :color #F(1 0 0) :width 2 :viewer vwer)
+   (send target-coords :draw-on :color #F(1 0 0) :width 2 :viewer vwer)
+   (let ((pwidth (send vwer :viewsurface :line-width))
+         (psize (send vwer :viewsurface :point-size))
+         (pcolor (send vwer :viewsurface :color)))
      (unwind-protect
           (progn
-            (send *viewer* :viewsurface :color #f(1 0 0))
-            (send *viewer* :viewsurface :line-width 1)
-            (send *viewer* :viewsurface :point-size 3)
-            ;;(send *viewer* :viewsurface :3d-point (elt np 1) :depth-test t)
-            (send *viewer* :viewsurface :3d-line (send move-target :worldpos) (send target-coords :worldpos) :depth-test t))
+            (send vwer :viewsurface :color #f(1 0 0))
+            (send vwer :viewsurface :line-width 1)
+            (send vwer :viewsurface :point-size 3)
+            ;;(send vwer :viewsurface :3d-point (elt np 1) :depth-test t)
+            (send vwer :viewsurface :3d-line (send move-target :worldpos) (send target-coords :worldpos) :depth-test t))
        (progn
-         (send *viewer* :viewsurface :line-width pwidth)
-         (send *viewer* :viewsurface :point-size psize)
-         (send *viewer* :viewsurface :color pcolor)))
+         (send vwer :viewsurface :line-width pwidth)
+         (send vwer :viewsurface :point-size psize)
+         (send vwer :viewsurface :color pcolor)))
      )
    t)
   (:debug
@@ -1492,11 +1492,11 @@ move-targetとtarget-coordsを描画
    t
    )
   (:draw
-   ()
+   (&key ((:viewer vwer) *viewer*))
    "
 重心を描画
    "
-   (send (send target :centroid nil) :draw-on :color #F(0 0 1) :width 2)
+   (send (send target :centroid nil) :draw-on :color #F(0 0 1) :width 2 :viewer vwer)
    t)
   )
 
@@ -1638,26 +1638,26 @@ $\bm{e}$の単位は\rm{m}である．
        t)
    )
   (:draw
-   ()
+   (&key ((:viewer vwer) *viewer*))
    "
 重心と目標位置を描画
    "
-   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2)
-   (send target-centroid-pos :draw-on :color #F(0 0 1) :width 2)
-   (let ((pwidth (send *viewer* :viewsurface :line-width))
-         (psize (send *viewer* :viewsurface :point-size))
-         (pcolor (send *viewer* :viewsurface :color)))
+   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2 :viewer vwer)
+   (send target-centroid-pos :draw-on :color #F(0 0 1) :width 2 :viewer vwer)
+   (let ((pwidth (send vwer :viewsurface :line-width))
+         (psize (send vwer :viewsurface :point-size))
+         (pcolor (send vwer :viewsurface :color)))
      (unwind-protect
           (progn
-            (send *viewer* :viewsurface :color #f(0 0 1))
-            (send *viewer* :viewsurface :line-width 1)
-            (send *viewer* :viewsurface :point-size 3)
-            ;;(send *viewer* :viewsurface :3d-point (elt np 1) :depth-test t)
-            (send *viewer* :viewsurface :3d-line (send target :centroid :nil) target-centroid-pos :depth-test t))
+            (send vwer :viewsurface :color #f(0 0 1))
+            (send vwer :viewsurface :line-width 1)
+            (send vwer :viewsurface :point-size 3)
+            ;;(send vwer :viewsurface :3d-point (elt np 1) :depth-test t)
+            (send vwer :viewsurface :3d-line (send target :centroid :nil) target-centroid-pos :depth-test t))
        (progn
-         (send *viewer* :viewsurface :line-width pwidth)
-         (send *viewer* :viewsurface :point-size psize)
-         (send *viewer* :viewsurface :color pcolor)))
+         (send vwer :viewsurface :line-width pwidth)
+         (send vwer :viewsurface :point-size psize)
+         (send vwer :viewsurface :color pcolor)))
      )
    t)
   (:debug
@@ -1981,27 +1981,27 @@ $\bm{e}$の単位は\rm{m}である．
        t)
    )
   (:draw
-   ()
+   (&key ((:viewer vwer) *viewer*))
    "
 重心と領域を描画
    "
-   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2)
-   (send hull :draw-on :color #F(0 0 1) :width 2)
-   (let ((pwidth (send *viewer* :viewsurface :line-width))
-         (psize (send *viewer* :viewsurface :point-size))
-         (pcolor (send *viewer* :viewsurface :color)))
+   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2 :viewer vwer)
+   (send hull :draw-on :color #F(0 0 1) :width 2 :viewer vwer)
+   (let ((pwidth (send vwer :viewsurface :line-width))
+         (psize (send vwer :viewsurface :point-size))
+         (pcolor (send vwer :viewsurface :color)))
      (unwind-protect
           (progn
-            (send *viewer* :viewsurface :color #f(0 0 1))
-            (send *viewer* :viewsurface :line-width 1)
-            (send *viewer* :viewsurface :point-size 3)
+            (send vwer :viewsurface :color #f(0 0 1))
+            (send vwer :viewsurface :line-width 1)
+            (send vwer :viewsurface :point-size 3)
             ;;(send *viewer* :viewsurface :3d-point (elt np 1) :depth-test t)
             (dolist (v (send hull :vertices))
-              (send *viewer* :viewsurface :3d-line v (v+ v (scale 50 (normalize-vector normal))) :depth-test t)))
+              (send vwer :viewsurface :3d-line v (v+ v (scale 50 (normalize-vector normal))) :depth-test t)))
        (progn
-         (send *viewer* :viewsurface :line-width pwidth)
-         (send *viewer* :viewsurface :point-size psize)
-         (send *viewer* :viewsurface :color pcolor)))
+         (send vwer :viewsurface :line-width pwidth)
+         (send vwer :viewsurface :point-size psize)
+         (send vwer :viewsurface :color pcolor)))
      )
    t)
   (:debug
@@ -2245,13 +2245,13 @@ $\bm{e}$の単位は\rm{m}である．
        t)
    )
   (:draw
-   ()
+   (&key ((:viewer vwer) *viewer*))
    "
 重心と領域を描画
    "
-   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2)
+   (send (send target :centroid :nil) :draw-on :color #F(0 0 1) :width 2 :viewer vwer)
    (dolist (cc contact-constraints)
-     (send cc :draw-on :flush nil))
+     (send cc :draw-on :flush nil :viewer vwer))
 
    (let* ((ret3 (cddlib-H-to-V :A_ineq A_ineq :b_ineq b_ineq :A_eq A_eq :b_eq b_eq :verbose 0))
           (V (elt ret3 0))
