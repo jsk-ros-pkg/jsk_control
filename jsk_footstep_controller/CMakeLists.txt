@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   jsk_pcl_ros
   tf_conversions
   std_msgs
+  std_srvs
   message_generation genmsg message_filters sensor_msgs geometry_msgs tf jsk_topic_tools
   eigen_conversions
   kdl_parser
@@ -43,7 +44,10 @@ add_executable(footcoords src/footcoords.cpp)
 target_link_libraries(footcoords ${catkin_LIBRARIES})
 add_dependencies(footcoords ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_gencpp)
 
-install(TARGETS footcoords
+add_executable(simple_footcoords src/simple_footcoords.cpp)
+target_link_libraries(simple_footcoords ${catkin_LIBRARIES})
+
+install(TARGETS footcoords simple_footcoords
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
