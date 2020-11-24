@@ -15,7 +15,7 @@ namespace jsk_footstep_controller{
     pnh.param("rfoot_frame_id", rfoot_frame_id_,
               std::string("rleg_end_coords"));
 
-    odomSub_ = nh.subscribe("odom", 100, &SimpleFootcoords::odomCallback, this);
+    odomSub_ = nh.subscribe("odom", 3, &SimpleFootcoords::odomCallback, this); // keep only latest ones to avoid latency because waitForTransform in callback function takes much time.
     activateService_ = pnh.advertiseService("activate", &SimpleFootcoords::activateCallback, this);
     deactivateService_ = pnh.advertiseService("deactivate", &SimpleFootcoords::deactivateCallback, this);
   }
@@ -120,5 +120,7 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "simple_footcoords");
   jsk_footstep_controller::SimpleFootcoords c;
-  ros::spin();
+  ros::AsyncSpinner spinner(10); // Use many threads to increase frequency because waitForTransform in callback function takes much time.
+  spinner.start();
+  ros::waitForShutdown();
 }
