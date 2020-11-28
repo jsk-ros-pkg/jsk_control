@@ -1,9 +1,17 @@
 <launch>
   <arg name="use_footcoords" default="true"/>
+  <arg name="use_simple_footcoords" default="false"/>
   <node pkg="jsk_footstep_controller"
         type="footcoords"
         name="footcoords"
         if="$(arg use_footcoords)"
+        >
+  </node>
+
+  <node pkg="jsk_footstep_controller"
+        type="simple_footcoords"
+        name="simple_footcoords"
+        if="$(arg use_simple_footcoords)"
         >
   </node>
 

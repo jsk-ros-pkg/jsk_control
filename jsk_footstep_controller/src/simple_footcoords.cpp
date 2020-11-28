@@ -16,8 +16,8 @@ namespace jsk_footstep_controller{
               std::string("rleg_end_coords"));
 
     odomSub_ = nh.subscribe("odom", 3, &SimpleFootcoords::odomCallback, this); // keep only latest ones to avoid latency because waitForTransform in callback function takes much time.
-    activateService_ = pnh.advertiseService("activate", &SimpleFootcoords::activateCallback, this);
-    deactivateService_ = pnh.advertiseService("deactivate", &SimpleFootcoords::deactivateCallback, this);
+    odomBaseFootPrintPub_ = nh.advertise<nav_msgs::Odometry>("odom_base_footprint", 1);
+    enableService_ = pnh.advertiseService("enable", &SimpleFootcoords::enableCallback, this);
   }
 
   void SimpleFootcoords::odomCallback(const nav_msgs::Odometry::ConstPtr& msg){
@@ -69,30 +69,38 @@ namespace jsk_footstep_controller{
       }
       base_footprint_pose.linear() = mid_rot;
 
-      // convert to root frame
-      base_footprint_pose = odom_pose.inverse() * base_footprint_pose;
-
       geometry_msgs::TransformStamped base_footprint_coords;
       base_footprint_coords.header = msg->header;
-      base_footprint_coords.header.frame_id = msg->child_frame_id;
+      base_footprint_coords.header.frame_id = "odom";
       base_footprint_coords.child_frame_id = "base_footprint";
       tf::transformEigenToMsg(base_footprint_pose, base_footprint_coords.transform);
       tf_transforms.push_back(base_footprint_coords);
+
+      nav_msgs::Odometry base_footprint_msg;
+      base_footprint_msg.header = msg->header;
+      base_footprint_msg.header.frame_id = "odom";
+      base_footprint_msg.child_frame_id = "base_footprint";
+      tf::poseEigenToMsg(base_footprint_pose,base_footprint_msg.pose.pose);
+      odomBaseFootPrintPub_.publish(base_footprint_msg);
     }
 
     tfBroadcaster_.sendTransform(tf_transforms);
   }
 
-  bool SimpleFootcoords::activateCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
-    isActive_ = true;
-    ROS_INFO("[SimpleFootcoords::activateCallback] Activated");
-    return true;
-  }
+  bool SimpleFootcoords::enableCallback(std_srvs::SetBool::Request& request, std_srvs::SetBool::Response& response) {
+    if(isActive_ == request.data){
+      ROS_INFO("[SimpleFootcoords::enableCallback] Already %s",(isActive_ ? "Enabled" : "Disabled"));
+      response.success = true;
+      response.message = "";
+      return true;
+    } else {
+      isActive_ = request.data;
 
-  bool SimpleFootcoords::deactivateCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
-    isActive_ = false;
-    ROS_INFO("[SimpleFootcoords::deactivateCallback] Deactivated");
-    return true;
+      ROS_INFO("[SimpleFootcoords::enableCallback] %s",(isActive_ ? "Enabled" : "Disabled"));
+      response.success = true;
+      response.message = "";
+      return true;
+    }
   }
 
   bool SimpleFootcoords::waitForEndEffectorTransformation(const ros::Time& stamp)
