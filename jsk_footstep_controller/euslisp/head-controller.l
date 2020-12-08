@@ -6,11 +6,13 @@
 (hrp2jsknts-init)
 (setq *robot* *hrp2jsknts*)
 
+;; 首振り動作はrtabmapとの相性が良くない
+;; (setq *head-av-list* (list (float-vector 0 0)
+;;                            (float-vector 40 20)
+;;                            (float-vector 0 40)
+;;                            (float-vector -40 20)))
+(setq *head-av-list* (list (float-vector 0 40)))
 
-(setq *head-av-list* (list (float-vector 0 0)
-                           (float-vector 40 20)
-                           (float-vector 0 40)
-                           (float-vector -40 20)))
 (setq *av-id* 0)
 
 (ros::rate 5)
