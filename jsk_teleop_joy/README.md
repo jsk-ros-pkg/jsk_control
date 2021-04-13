@@ -121,12 +121,16 @@ The script maps those buttons to `sensor_msgs/Joy/axes`
 `/tmp/midi.yaml`.
 
 - Troubleshooting:
- For Ubuntu18.04, in case ` python -c "import pygame.midi; pygame.midi.init()"` returns error below;
+
+ For Ubuntu18.04 and pygame2.0.1 installed by pip, `python -c "import pygame.midi; pygame.midi.init()"` returns error below;
+ 
  ```
  ALSA lib conf.c:3558:(snd_config_hooks_call) Cannot open shared library libasound_module_conf_pulse.so (/usr/lib/alsa-lib/libasound_module_conf_pulse.so: libasound_module_conf_pulse.so: cannot open shared object file: No such file or directory)
 ALSA lib seq.c:935:(snd_seq_open_noupdate) Unknown SEQ default
 ```
-You need to make symbolic link i.e. `ln -s /usr/lib/x86_64-linux-gnu/alsa-lib /usr/lib/alsa-lib`.
+In this case, you need to get pygame from apt i.e `pip uninstall pygame && apt-get install python-pygame`
+
+Or if you really want to keep using pip installed pygame, you can make symbolic link i.e. `ln -s /usr/lib/x86_64-linux-gnu/alsa-lib /usr/lib/alsa-lib`.
 
 
 ### [`midi_write.py`](scripts/midi_write.py)
