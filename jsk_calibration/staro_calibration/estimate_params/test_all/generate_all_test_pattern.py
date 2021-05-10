@@ -560,7 +560,7 @@ chmod ag+w staro_calibration/*
     replaced_str = replaceStringWithDict(file_str, {"root_dir": root_dir, "port": port})
     with open(os.path.join(root_dir, "calibrate_staro.sh"), "w") as f:
         f.write(replaced_str)
-    os.chmod(os.path.join(root_dir, "calibrate_staro.sh"), 0755)
+    os.chmod(os.path.join(root_dir, "calibrate_staro.sh"), 0o0755)
         
 def copyBagFiles(root_dir):
     os.mkdir(os.path.join(root_dir, "staro_calibration"))
