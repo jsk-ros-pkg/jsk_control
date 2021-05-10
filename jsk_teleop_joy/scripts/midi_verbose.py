@@ -18,10 +18,10 @@ def main():
       data = controller.read(1)
       for elem_set in data:
         midi_command = elem_set[0][0]
-        print elem_set[0],
-        print "(0x%X, 0x%X, 0x%X)" % (midi_command, elem_set[0][1], elem_set[0][2]),
-        print MIDICommand.toStr(MIDICommand.detect(midi_command))
-        print MIDIParse(elem_set)
+        print(elem_set[0], end=' ')
+        print("(0x%X, 0x%X, 0x%X)" % (midi_command, elem_set[0][1], elem_set[0][2]), end=' ')
+        print(MIDICommand.toStr(MIDICommand.detect(midi_command)))
+        print(MIDIParse(elem_set))
     time.sleep(0.1)
   
 if __name__ == "__main__":

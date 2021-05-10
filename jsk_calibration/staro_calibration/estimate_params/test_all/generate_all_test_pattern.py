@@ -625,8 +625,8 @@ def multipleExecution():
                 new_env["ROS_MASTER_URI"] = "http://localhost:%d" % (11311 + i + 1)
                 process = subprocess.Popen([sh_files.pop()], env=new_env, shell=True)
                 free_workers[i] = process
-        print "%d tasks are remained"  % (len(sh_files))
-        print free_workers
+        print("%d tasks are remained"  % (len(sh_files)))
+        print(free_workers)
         time.sleep(1)
 
         

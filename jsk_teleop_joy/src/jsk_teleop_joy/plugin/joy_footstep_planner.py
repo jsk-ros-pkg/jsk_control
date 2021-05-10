@@ -212,7 +212,7 @@ up/down    : Move menu cursors
   def joyCB(self, status, history):
     self.publishUsage()
     if self.prev_mode != self.mode:
-      print self.prev_mode, " -> ", self.mode
+      print(self.prev_mode, " -> ", self.mode)
     if self.mode == self.PLANNING:
       JoyPose6D.joyCB(self, status, history)
       if history.new(status, "circle"):

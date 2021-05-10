@@ -28,7 +28,7 @@ class VehicleJoyController(JSKJoyPlugin):
       }
     self.synchronizeAllCommand()
     self.execute_flag = False
-    print >> sys.stderr, "Joystick initialization is finished"
+    print("Joystick initialization is finished", file=sys.stderr)
     self.initialize_service = rospy.Service('drive/operation/initialize', Empty, self.initializeServiceCallback)
     self.synchronize_service = rospy.Service('drive/operation/synchronize', StringRequest, self.synchronizeServiceCallback)
     self.subscriber = rospy.Subscriber('drive/execute_flag', Bool, self.executeFlagCallback)
@@ -88,7 +88,7 @@ class VehicleJoyController(JSKJoyPlugin):
       command.initialize()
 
   def synchronizeCommand(self, key):
-    print >> sys.stderr, "Sync " + key
+    print("Sync " + key, file=sys.stderr)
     self.command_states[key].synchronize()
 
   def synchronizeAllCommand(self):
@@ -97,10 +97,10 @@ class VehicleJoyController(JSKJoyPlugin):
 
   def executeFlagCallback(self, msg):
     self.execute_flag = msg.data
-    print >> sys.stderr, "set execute_flag as " + str(self.execute_flag)
+    print("set execute_flag as " + str(self.execute_flag), file=sys.stderr)
 
   def initializeServiceCallback(self, req):
-    print >> sys.stderr, "initialize vehicle joy"
+    print("initialize vehicle joy", file=sys.stderr)
     self.initializeAllCommand()
     return EmptyResponse()
       
@@ -114,7 +114,7 @@ class VehicleJoyController(JSKJoyPlugin):
     elif key == "all":
       self.synchronizeAllCommand()
     else:
-      print >> sys.stderr, "Invalid key"
+      print("Invalid key", file=sys.stderr)
     return StringRequestResponse()
 
 class VehicleCommandState():
@@ -141,11 +141,11 @@ class VehicleCommandState():
         if self.wait_for_message_flag:
           rospy.wait_for_message(self.robot_topic, self.sub_type, timeout)
           self.wait_for_message_flag = False
-        print >> sys.stderr, "Sync with " + self.robot_topic
-        print "%s -> %s" % (str(self.command), str(self.robot_value))
+        print("Sync with " + self.robot_topic, file=sys.stderr)
+        print("%s -> %s" % (str(self.command), str(self.robot_value)))
         self.command = self.robot_value
       except rospy.ROSException, e:
-        print >> sys.stderr, "Cannot subscribe " + self.robot_topic
+        print("Cannot subscribe " + self.robot_topic, file=sys.stderr)
   def publishCommand(self):
     pub_msg = self.pub_type(data = self.command)
     self.publisher.publish(pub_msg)
