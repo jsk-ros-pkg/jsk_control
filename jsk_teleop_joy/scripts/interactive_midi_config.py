@@ -70,7 +70,7 @@ def configAnalogInputs(controller):
           if (command, index) not in analog_configs:
             print("(%d, %d) installing into %d" % (command, index, len(analog_configs)))
             analog_configs.append((command, index))
-        except MIDIException, e:
+        except MIDIException as e:
           print("(%d, %d, %d) is not supported" % (elem_set[0][0], elem_set[0][1], elem_set[0][2]))
 
 def main():
@@ -79,7 +79,7 @@ def main():
     try:
       device_num = parseDeviceName()
       break
-    except ParseException, e:
+    except ParseException as e:
       print(e.message)
       print("")
       continue

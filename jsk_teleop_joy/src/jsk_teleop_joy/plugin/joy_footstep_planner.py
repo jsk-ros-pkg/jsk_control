@@ -73,13 +73,13 @@ class JoyFootstepPlanner(JoyPose6D):
     try:
       lock = rospy.ServiceProxy(self.furutaractive_namespace + '/lock_joint_states', EmptySrv)
       lock()
-    except rospy.ServiceException, e:
+    except rospy.ServiceException as e:
       rospy.logerror("failed to call service: %s" % (e.message))
   def unlockFurutaractive(self):
     try:
       unlock = rospy.ServiceProxy(self.furutaractive_namespace + '/unlock_joint_states', EmptySrv)
       unlock()
-    except rospy.ServiceException, e:
+    except rospy.ServiceException as e:
       rospy.logerror("failed to call service: %s" % (e.message))
   def cancelMenuCB(self, msg):
     with self.status_lock:
@@ -172,7 +172,7 @@ up/down    : Move menu cursors
     try:
       change_successor = rospy.ServiceProxy('/change_successor', ChangeSuccessor)
       change_successor(successor_type)
-    except rospy.ServiceException, e:
+    except rospy.ServiceException as e:
       rospy.logerror("failed to call service: %s" % (e.message))
   def procCancelMenu(self, index):
     selected_title = self.CANCELED_MENUS[index]
@@ -207,7 +207,7 @@ up/down    : Move menu cursors
       clear_maps()
       look_around = rospy.ServiceProxy('/lookaround_ground', std_srvs.srv.Empty)
       look_around()
-    except Exception, e:
+    except Exception as e:
       rospy.logerr("error when lookaround ground: %s", e.message)
   def joyCB(self, status, history):
     self.publishUsage()

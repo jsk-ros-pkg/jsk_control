@@ -144,7 +144,7 @@ class VehicleCommandState():
         print("Sync with " + self.robot_topic, file=sys.stderr)
         print("%s -> %s" % (str(self.command), str(self.robot_value)))
         self.command = self.robot_value
-      except rospy.ROSException, e:
+      except rospy.ROSException as e:
         print("Cannot subscribe " + self.robot_topic, file=sys.stderr)
   def publishCommand(self):
     pub_msg = self.pub_type(data = self.command)
