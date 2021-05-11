@@ -3,7 +3,7 @@
 on: [push, pull_request]
 
 jobs:
-  melodic_foot_step_planner:
+  melodic:
     runs-on: ubuntu-latest
     name: melodic_foot_step_planner
 
