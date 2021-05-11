@@ -17,16 +17,16 @@ def callback(msg):
     data_pitch.append(msg.error_pitch_angle)
     data_roll.append(msg.error_roll_angle)
     data_z.append(msg.error_z)
-    print "samples: %d" % len(data_pitch)
-    print " pitch:"
-    print "   average: %f rad (%f deg)" % (numpy.average(data_pitch), numpy.average(data_pitch) / pi * 180)
-    print "   stddev: %f" % numpy.std(data_pitch)
-    print " roll:"
-    print "   average: %f rad (%f deg)" % (numpy.average(data_roll), numpy.average(data_roll) / pi * 180)
-    print "   stddev: %f" % numpy.std(data_roll)
-    print " z:"
-    print "   average: %f m" % (numpy.average(data_z))
-    print "   stddev: %f" % numpy.std(data_z)
+    print("samples: %d" % len(data_pitch))
+    print(" pitch:")
+    print("   average: %f rad (%f deg)" % (numpy.average(data_pitch), numpy.average(data_pitch) / pi * 180))
+    print("   stddev: %f" % numpy.std(data_pitch))
+    print(" roll:")
+    print("   average: %f rad (%f deg)" % (numpy.average(data_roll), numpy.average(data_roll) / pi * 180))
+    print("   stddev: %f" % numpy.std(data_roll))
+    print(" z:")
+    print("   average: %f m" % (numpy.average(data_z)))
+    print("   stddev: %f" % numpy.std(data_z))
     
 
 def main():
