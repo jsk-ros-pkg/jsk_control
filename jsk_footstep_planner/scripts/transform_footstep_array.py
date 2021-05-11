@@ -53,7 +53,7 @@ def callback(msg):
             new_footstep.pose.orientation.w = rotation[3]
             new_msg.footsteps.append(new_footstep)
         pub.publish(new_msg)
-    except tf.Exception, e:
+    except tf.Exception as e:
         rospy.logerr("[transform_footstep_array] Failed to lookup transform: %s" % (e.message))
     
 
