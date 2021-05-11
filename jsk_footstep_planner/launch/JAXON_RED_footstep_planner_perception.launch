@@ -2,44 +2,60 @@
   <arg name="rviz" default="true"/>
   <arg name="use_joy" default="true"/>
   <arg name="joy_dev" default="/dev/input/js0"/>
-  <arg name="USE_NORMAL" default="false" />
   <arg name="use_footstep_marker" default="true"/>
-  <arg name="use_go_pos_server" default="true"/>
+  <arg name="use_go_pos_server"   default="true"/>
   <arg name="use_floor_detection" default="false"/>
   <arg name="use_footstep_plane_detection" default="false"/>
+  <arg name="use_octomap"    default="true" />
+  <arg name="use_obstacle"   default="true" />
+  <arg name="use_pointcloud" default="true" />
+  <arg name="use_footstep_controller" default="true" />
   <arg name="LAUNCH_TF_BUFFER_SERVER" default="false" />
+  <arg name="USE_NORMAL" default="false" />
 
+  <arg name="obstacle_cloud" default="/robot_center_pointcloud_bbox_clipped/output" />
+  <arg name="point_cloud"    default="/accumulated_heightmap_pointcloud_static/output" />
+
+  <arg if="$(arg use_octomap)"     name="input_obstacle_cloud"
+       value="octomap_point_cloud_centers" />
+  <arg unless="$(arg use_octomap)" name="input_obstacle_cloud"
+       value="$(arg obstacle_cloud)" />
   <arg if="$(arg USE_NORMAL)"     name="input_point_cloud"
        value="/footstep_normal_estimation/output_with_xyz" />
   <arg unless="$(arg USE_NORMAL)" name="input_point_cloud"
-       value="/accumulated_heightmap_pointcloud_static/output" />
+       value="$(arg point_cloud)" />
 
   <!-- nodes for perception -->
   <node if="$(arg USE_NORMAL)" pkg="jsk_pcl_ros" type="normal_estimation_omp" name="footstep_normal_estimation">
-    <remap from="~input" to="/accumulated_heightmap_pointcloud_static/output" />
+    <remap from="~input" to="$(arg point_cloud)" />
     <rosparam subst_value="true">
       k_search: 36
       use_multithread_callback: false
       number_of_threads: 1
     </rosparam>
   </node>
-  <include file="$(find jsk_robot_startup)/launch/slam_octomap.launch"/>
+  <include if="$(arg use_octomap)"
+           file="$(find jsk_robot_startup)/launch/slam_octomap.launch" >
+    <arg name="input_cloud" value="$(arg obstacle_cloud)" />
+  </include>
 
   <!-- footstep planner -->
-  <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen">
+  <node pkg="jsk_footstep_planner" type="footstep_planner_node"
+        name="footstep_planner" output="screen">
     <remap from="~pointcloud_model" to="$(arg input_point_cloud)" />
-    <remap from="~obstacle_model" to="octomap_point_cloud_centers" />
+    <remap from="~obstacle_model" to="$(arg input_obstacle_cloud)" />
     <!-- use point cloud (plane estimation) for making footstep -->
-    <rosparam>
-      use_pointcloud_model: true
-      project_start_state: true
-      project_goal_state: true
+    <rosparam subst_value="true">
+      use_pointcloud_model: $(arg use_pointcloud)
+      project_start_state:  $(arg use_pointcloud)
+      project_goal_state:   $(arg use_pointcloud)
     </rosparam>
     <!-- obstacles -->
-    <rosparam>
-      use_obstacle_model: true
+    <rosparam subst_value="true">
+      use_obstacle_model: $(arg use_obstacle)
       obstacle_resolution: 0.1
-      collision_bbox_size: [0.4, 1.2, 1.0]
+      ## collision_bbox_size: [0.4, , 1.0]
+      collision_bbox_size: [0.35, 0.65, 0.65]
       collision_bbox_offset: [0, 0, 0.8]
     </rosparam>
     <!-- size of foot -->
@@ -213,10 +229,12 @@
         footstep_size_y: 0.134017
         lleg_footstep_offset: [0.015502,  0.010078, 0.0]
         rleg_footstep_offset: [0.015502, -0.010078, 0.0]
+        default_footstep_margin: 0.2
+        use_default_step_as_goal: true
       </rosparam>
     </node>
-    <node pkg="jsk_footstep_controller" type="jaxon-footstep-controller.l" name="jaxon_footstep_controller"
-          output="screen">
+    <node pkg="jsk_footstep_controller" type="jaxon-footstep-controller.l"
+          name="jaxon_footstep_controller" output="screen" if="$(arg use_footstep_controller)">
       <param name="use_step_refine" value="true" />
       <param name="plane_projection" value="$(arg use_footstep_plane_detection)"/>
       <remap from="~planes" to="/footstep_plane_plane_rejector/output_polygons"/>
@@ -237,7 +255,7 @@
   </group>
 
   <include file="$(find jsk_footstep_planner)/launch/footstep_plane_detection.launch" if="$(arg use_footstep_plane_detection)">
-    <arg name="input_cloud" value="/accumulated_heightmap_pointcloud_static/output" />
+    <arg name="input_cloud" value="$(arg point_cloud)" />
     <arg name="fixed_frame_id" value="map" />
   </include>
 
@@ -245,7 +263,7 @@
     <arg name="use_snapshot" value="false"/>
   </include>
 
-  <node pkg="rviz" type="rviz" name="rviz" 
+  <node pkg="rviz" type="rviz" name="rviz"
         args="-d $(find jsk_footstep_planner)/config/jaxon_footstep_planner_perception.rviz"
         if="$(arg rviz)"/>
 

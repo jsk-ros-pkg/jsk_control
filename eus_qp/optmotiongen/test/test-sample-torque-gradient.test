@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="optmotiongen_test_sample_torque_gradient" pkg="eus_qp" type="test-sample-torque-gradient.l" time-limit="2000.0">
+  </test>
+</launch>

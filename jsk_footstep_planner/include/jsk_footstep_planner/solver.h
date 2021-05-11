@@ -39,7 +39,7 @@
 
 #include "jsk_footstep_planner/graph.h"
 #include "jsk_footstep_planner/solver_node.h"
-#include <boost/unordered/unordered_set.hpp>
+#include <boost/unordered_map.hpp>
 
 namespace jsk_footstep_planner
 {
@@ -52,6 +52,8 @@ namespace jsk_footstep_planner
     typedef typename GraphT::StateT::Ptr StatePtr;
     typedef typename GraphT::Ptr GraphPtr;
     typedef typename SolverNode<State, GraphT>::Ptr SolverNodePtr;
+    typedef boost::unordered_map< StatePtr, double > SolveList;
+
     Solver(): verbose_(false) {};
     Solver(GraphPtr graph): graph_(graph), verbose_(false) {}
 
@@ -98,18 +100,40 @@ namespace jsk_footstep_planner
       }
     }
 
-    virtual void addToCloseList(StatePtr state)
+    virtual void addToCloseList(StatePtr state, double cost = 0)
     {
-      close_list_.insert(state);
+      //close_list_.insert(state);
+      //close_list_[state] = cost;
+      close_list_
+        .insert(typename SolveList::value_type(state, cost));
     }
-    
     virtual bool findInCloseList(StatePtr state)
     {
       return close_list_.find(state) != close_list_.end();
     }
+    virtual bool findInCloseList(StatePtr state, double &cost)
+    {
 
+      typename SolveList::const_iterator it
+        = close_list_.find(state);
+      if (it != close_list_.end()) {
+        cost = it->second;
+        return true;
+      }
+      return false;
+    }
+    virtual bool removeFromCloseList(StatePtr state)
+    {
+      typename SolveList::const_iterator it
+        = close_list_.find(state);
+      if(it != close_list_.end()) {
+        close_list_.erase(it);
+        return true;
+      }
+      return false;
+    }
   protected:
-    boost::unordered_set<StatePtr> close_list_;
+    SolveList close_list_;
     GraphPtr graph_;
     bool verbose_;
   private:

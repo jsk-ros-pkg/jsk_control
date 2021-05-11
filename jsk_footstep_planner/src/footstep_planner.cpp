@@ -64,6 +64,8 @@ namespace jsk_footstep_planner
       "collision_bounding_box_info", &FootstepPlanner::collisionBoundingBoxInfoService, this);
     srv_project_footstep_ = nh.advertiseService(
       "project_footstep", &FootstepPlanner::projectFootstepService, this);
+    srv_set_heuristic_path_ = nh.advertiseService(
+      "set_heuristic_path", &FootstepPlanner::setHeuristicPathService, this);
     std::vector<double> lleg_footstep_offset, rleg_footstep_offset;
     if (jsk_topic_tools::readVectorParameter(nh, "lleg_footstep_offset", lleg_footstep_offset)) {
       inv_lleg_footstep_offset_ = Eigen::Vector3f(- lleg_footstep_offset[0],
@@ -343,6 +345,26 @@ namespace jsk_footstep_planner
       return false;
     }
   }
+  bool FootstepPlanner::setHeuristicPathService (
+    jsk_footstep_planner::SetHeuristicPath::Request& req,
+    jsk_footstep_planner::SetHeuristicPath::Response& res)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    if (!graph_) {
+      return false;
+    }
+    std::vector<Eigen::Vector3f> points;
+    for(int i = 0; i < req.segments.size(); i++) {
+      Eigen::Vector3f p(req.segments[i].x,
+                        req.segments[i].y,
+                        req.segments[i].z);
+      points.push_back(p);
+    }
+    jsk_recognition_utils::PolyLine pl(points);
+    setHeuristicPathLine(pl);
+
+    return true;
+  }
 
   void FootstepPlanner::publishText(ros::Publisher& pub,
                                     const std::string& text,
@@ -581,6 +603,7 @@ namespace jsk_footstep_planner
 
     graph_->setSuccessorFunction(boost::bind(&FootstepGraph::successors_original, graph_, _1, _2));
     graph_->setPathCostFunction(boost::bind(&FootstepGraph::path_cost_original, graph_, _1, _2, _3));
+
     //ROS_INFO_STREAM(graph_->infoString());
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
@@ -602,6 +625,9 @@ namespace jsk_footstep_planner
     else if (heuristic_ == "straight_rotation") {
       solver.setHeuristic(boost::bind(&FootstepPlanner::straightRotationHeuristic, this, _1, _2));
     }
+    else if (heuristic_ == "follow_path") {
+      solver.setHeuristic(boost::bind(&FootstepPlanner::followPathLineHeuristic, this, _1, _2));
+    }
     else {
       ROS_ERROR("Unknown heuristics");
       as_.setPreempted();
@@ -609,17 +635,34 @@ namespace jsk_footstep_planner
     }
     graph_->clearPerceptionDuration();
     solver.setProfileFunction(boost::bind(&FootstepPlanner::profile, this, _1, _2));
+    ROS_INFO("start_solver timeout: %f", timeout.toSec());
     ros::WallTime start_time = ros::WallTime::now();
     std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(timeout);
     ros::WallTime end_time = ros::WallTime::now();
     double planning_duration = (end_time - start_time).toSec();
-    ROS_INFO_STREAM("took " << planning_duration << " sec");
-    ROS_INFO_STREAM("path: " << path.size());
+    //ROS_INFO_STREAM("took " << planning_duration << " sec");
+    //ROS_INFO_STREAM("path: " << path.size());
     if (path.size() == 0) {
-      ROS_ERROR("Failed to plan path");
+      pcl::PointCloud<pcl::PointNormal> close_list_cloud, open_list_cloud;
+      solver.openListToPointCloud(open_list_cloud);
+      solver.closeListToPointCloud(close_list_cloud);
+      std::string info_str
+        = (boost::format("Failed to plan path / Took %f sec\nPerception took %f sec\nPlanning took %f sec\n%lu path\nopen list: %lu\nclose list:%lu")
+           % planning_duration
+           % graph_->getPerceptionDuration().toSec()
+           % (planning_duration - graph_->getPerceptionDuration().toSec())
+           % path.size()
+           % open_list_cloud.points.size()
+           % close_list_cloud.points.size()).str();
+      ROS_ERROR_STREAM(info_str);
+      // pub open/close list
+      publishPointCloud(close_list_cloud, pub_close_list_, goal->goal_footstep.header);
+      publishPointCloud(open_list_cloud, pub_open_list_, goal->goal_footstep.header);
+      // pub text
       publishText(pub_text_,
-                  "Failed to plan",
+                  info_str,
                   ERROR);
+      //
       as_.setPreempted();
       return;
     }
@@ -662,15 +705,16 @@ namespace jsk_footstep_planner
     solver.closeListToPointCloud(close_list_cloud);
     publishPointCloud(close_list_cloud, pub_close_list_, goal->goal_footstep.header);
     publishPointCloud(open_list_cloud, pub_open_list_, goal->goal_footstep.header);
-    publishText(pub_text_,
-                (boost::format("Took %f sec\nPerception took %f sec\nPlanning took %f sec\n%lu path\nopen list: %lu\nclose list:%lu")
-                 % planning_duration 
-                 % graph_->getPerceptionDuration().toSec()
-                 % (planning_duration - graph_->getPerceptionDuration().toSec())
-                 % path.size()
-                 % open_list_cloud.points.size()
-                 % close_list_cloud.points.size()).str(),
-                OK);
+    std::string info_str
+      = (boost::format("Took %f sec\nPerception took %f sec\nPlanning took %f sec\n%lu path\nopen list: %lu\nclose list:%lu")
+         % planning_duration
+         % graph_->getPerceptionDuration().toSec()
+         % (planning_duration - graph_->getPerceptionDuration().toSec())
+         % path.size()
+         % open_list_cloud.points.size()
+         % close_list_cloud.points.size()).str();
+    ROS_INFO_STREAM(info_str);
+    publishText(pub_text_, info_str, OK);
     ROS_INFO_STREAM("use_obstacle_model: " << graph_->useObstacleModel());
   }
 
@@ -730,7 +774,13 @@ namespace jsk_footstep_planner
   {
     return footstepHeuristicStraightRotation(node, graph);
   }
-  
+
+  double FootstepPlanner::followPathLineHeuristic(
+    SolverNode<FootstepState, FootstepGraph>::Ptr node, FootstepGraph::Ptr graph)
+  {
+    return footstepHeuristicFollowPathLine(node, graph);
+  }
+
   /**
      format is
        successors:
@@ -791,6 +841,9 @@ namespace jsk_footstep_planner
         theta = jsk_topic_tools::getXMLDoubleValue(successor_xml["theta"]);
         theta += default_theta;
       }
+      // successors written in parameters should not include offset
+      // successors using in graph include offset(between the center of the cube and the end-coords)
+      // Footstep returned to a client, its pose indicates end-coords
       Eigen::Affine3f successor =
         Eigen::Translation3f(inv_lleg_footstep_offset_[0],
                              inv_lleg_footstep_offset_[1],
@@ -914,6 +967,7 @@ namespace jsk_footstep_planner
     parameters_.obstacle_resolution = config.obstacle_resolution;
     if (need_to_rebuild_graph) {
       if (graph_) {             // In order to skip first initialization
+        ROS_INFO("re-building graph");
         buildGraph();
       }
     }
@@ -938,5 +992,9 @@ namespace jsk_footstep_planner
     graph_->setParameters(parameters_);
     graph_->setBasicSuccessors(successors_);
   }
-}
 
+  void FootstepPlanner::setHeuristicPathLine(jsk_recognition_utils::PolyLine &path_line)
+  {
+    graph_->setHeuristicPathLine(path_line); // copy ???
+  }
+}

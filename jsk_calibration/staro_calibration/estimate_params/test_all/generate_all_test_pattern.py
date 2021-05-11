@@ -560,7 +560,7 @@ chmod ag+w staro_calibration/*
     replaced_str = replaceStringWithDict(file_str, {"root_dir": root_dir, "port": port})
     with open(os.path.join(root_dir, "calibrate_staro.sh"), "w") as f:
         f.write(replaced_str)
-    os.chmod(os.path.join(root_dir, "calibrate_staro.sh"), 0755)
+    os.chmod(os.path.join(root_dir, "calibrate_staro.sh"), 0o0755)
         
 def copyBagFiles(root_dir):
     os.mkdir(os.path.join(root_dir, "staro_calibration"))
@@ -625,8 +625,8 @@ def multipleExecution():
                 new_env["ROS_MASTER_URI"] = "http://localhost:%d" % (11311 + i + 1)
                 process = subprocess.Popen([sh_files.pop()], env=new_env, shell=True)
                 free_workers[i] = process
-        print "%d tasks are remained"  % (len(sh_files))
-        print free_workers
+        print("%d tasks are remained"  % (len(sh_files)))
+        print(free_workers)
         time.sleep(1)
 
         

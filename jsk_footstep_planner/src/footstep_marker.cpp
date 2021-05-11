@@ -44,6 +44,7 @@
 #include <jsk_topic_tools/rosparam_utils.h>
 #include <jsk_interactive_marker/SnapFootPrint.h>
 #include <jsk_footstep_planner/CollisionBoundingBoxInfo.h>
+#include <dynamic_reconfigure/Reconfigure.h>
 
 #define printAffine(af) { \
   geometry_msgs::Pose __geom_pose;\
@@ -576,6 +577,18 @@ namespace jsk_footstep_planner
       command_mode_ = SINGLE;
       resetInteractiveMarker();
       publishCurrentMarkerMode();
+      { // change heuristic
+        dynamic_reconfigure::Reconfigure rconf;
+        dynamic_reconfigure::StrParameter spara;
+        spara.name = "heuristic";
+        spara.value = "path_cost";
+        rconf.request.config.strs.push_back(spara);
+        if (!ros::service::call("footstep_planner/set_parameters", rconf)) {
+          // ERROR
+          ROS_ERROR("Dynamic reconfigure: set parameters failed");
+          return;
+        }
+      }
     }
   }
 
@@ -593,6 +606,18 @@ namespace jsk_footstep_planner
       command_mode_ = CONTINUOUS;
       resetInteractiveMarker();
       publishCurrentMarkerMode();
+      { // change heuristic
+        dynamic_reconfigure::Reconfigure rconf;
+        dynamic_reconfigure::StrParameter spara;
+        spara.name = "heuristic";
+        spara.value = "path_cost";
+        rconf.request.config.strs.push_back(spara);
+        if (!ros::service::call("footstep_planner/set_parameters", rconf)) {
+          // ERROR
+          ROS_ERROR("Dynamic reconfigure: set parameters failed");
+          return;
+        }
+      }
     }
   }
 
@@ -612,6 +637,18 @@ namespace jsk_footstep_planner
       stacked_poses_.push_back(original_foot_poses_->midcoords());
       resetInteractiveMarker();
       publishCurrentMarkerMode();
+      { // change heuristic
+        dynamic_reconfigure::Reconfigure rconf;
+        dynamic_reconfigure::StrParameter spara;
+        spara.name = "heuristic";
+        spara.value = "follow_path";
+        rconf.request.config.strs.push_back(spara);
+        if (!ros::service::call("footstep_planner/set_parameters", rconf)) {
+          // ERROR
+          ROS_ERROR("Dynamic reconfigure: set parameters failed");
+          return;
+        }
+      }
     }
   }
 
@@ -681,7 +718,7 @@ namespace jsk_footstep_planner
                                           new_center_pose * rleg_trans, rleg_end_coords_));
       }
       else {
-        ROS_ERROR("Failed to project goal");
+        ROS_ERROR("Failed to project goal"); // should display message
         return;
       }
     }
@@ -749,6 +786,11 @@ namespace jsk_footstep_planner
       rleg_goal_pose_ = current_marker_pose * current_rleg_offset_;
       if(command_mode_ != STACK) {
         planIfPossible(feedback);
+      } else { // stack mode
+        if (planning_state_ != ON_GOING) {
+          ROS_INFO("follow plan");
+          callFollowPathPlan(feedback);
+        }
       }
     }
     updateMarkerArray(feedback->header, feedback->pose);
@@ -1020,8 +1062,13 @@ namespace jsk_footstep_planner
     FootstepTrans lleg_transform_eigen, rleg_transform_eigen;
     tf::transformMsgToEigen(lleg_transform.transform, lleg_transform_eigen);
     tf::transformMsgToEigen(rleg_transform.transform, rleg_transform_eigen);
-    return PosePair::Ptr(new PosePair(lleg_transform_eigen, lleg_end_coords_,
+    PosePair::Ptr ppair (new PosePair(lleg_transform_eigen, lleg_end_coords_,
                                       rleg_transform_eigen, rleg_end_coords_));
+    if(use_default_goal_) {
+      return PosePair::Ptr(new PosePair(ppair->midcoords() * getDefaultLeftLegOffset(),  lleg_end_coords_,
+                                        ppair->midcoords() * getDefaultRightLegOffset(), rleg_end_coords_));
+    }
+    return ppair;
   }
 
   void FootstepMarker::configCallback(Config &config, uint32_t level)
@@ -1029,6 +1076,7 @@ namespace jsk_footstep_planner
     boost::mutex::scoped_lock lock(planner_mutex_);
     disable_tf_ = config.disable_tf;
     default_footstep_margin_ = config.default_footstep_margin;
+    use_default_goal_ =  config.use_default_step_as_goal;
   }
 
 
@@ -1224,6 +1272,42 @@ namespace jsk_footstep_planner
     msg.fg_color = color;
     msg.text_size = 24;
     pub_current_marker_mode_.publish(msg);
+  }
+
+  void FootstepMarker::callFollowPathPlan(const visualization_msgs::InteractiveMarkerFeedbackConstPtr& feedback)
+  {
+    if(stacked_poses_.size() > 1) {
+      boost::mutex::scoped_lock lock(planner_mutex_);
+
+      jsk_footstep_planner::SetHeuristicPath srv_arg;
+      for(int i = 0; i < stacked_poses_.size(); i++) {
+        geometry_msgs::Point p;
+        FootstepVec tl = stacked_poses_[i].translation();
+        p.x = tl[0];
+        p.y = tl[1];
+        p.z = tl[2];
+        srv_arg.request.segments.push_back(p);
+      }
+      { // add final pose
+        geometry_msgs::Point p;
+        PosePair::Ptr goal_pose_pair(new PosePair(lleg_goal_pose_, lleg_end_coords_,
+                                                  rleg_goal_pose_, rleg_end_coords_));
+        FootstepVec tl = goal_pose_pair->midcoords().translation();
+        p.x = tl[0];
+        p.y = tl[1];
+        p.z = tl[2];
+        srv_arg.request.segments.push_back(p);
+      }
+      if (!ros::service::call("footstep_planner/set_heuristic_path", srv_arg)) {
+        // ERROR
+        ROS_ERROR("Service: failed to call footstep_planner/set_heuristic_path");
+        return;
+      }
+    } else {
+      return;
+    }
+    // plan
+    plan(feedback);
   }
 }
 

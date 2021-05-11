@@ -1,6 +1,6 @@
 <package>
   <name>jsk_footstep_planner</name>
-  <version>0.1.13</version>
+  <version>0.1.15</version>
   <description>jsk_footstep_planner</description>
   <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
 
@@ -13,13 +13,13 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
+  <build_depend>message_generation</build_depend>
+
   <build_depend>jsk_footstep_msgs</build_depend>
   <run_depend>jsk_footstep_msgs</run_depend>
 
   <build_depend>jsk_recognition_utils</build_depend>
   <run_depend>jsk_recognition_utils</run_depend>
-
-  <run_depend>jsk_recognition_msgs</run_depend>
 
   <build_depend>roseus</build_depend>
   <run_depend>roseus</run_depend>
@@ -39,17 +39,17 @@
   <build_depend>visualization_msgs</build_depend>
   <run_depend>visualization_msgs</run_depend>
 
-  <build_depend>pcl_ros</build_depend>
-  <run_depend>pcl_ros</run_depend>
+  <build_depend>pcl_ros</build_depend> <!-- pcl?? -->
+  <run_depend>pcl_ros</run_depend>     <!-- pcl?? -->
 
   <build_depend>dynamic_reconfigure</build_depend>
   <run_depend>dynamic_reconfigure</run_depend>
 
-  <build_depend>message_generation</build_depend>
-
   <build_depend>geometry_msgs</build_depend>
   <run_depend>geometry_msgs</run_depend>
 
+  <run_depend>jsk_pcl_ros</run_depend>
+  <run_depend>jsk_recognition_msgs</run_depend>
   <export>
 
   </export>

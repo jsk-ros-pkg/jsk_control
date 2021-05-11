@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="optmotiongen_test_sample_inverse_kinematics_statics" pkg="eus_qp" type="test-sample-inverse-kinematics-statics.l" time-limit="2000.0">
+  </test>
+</launch>

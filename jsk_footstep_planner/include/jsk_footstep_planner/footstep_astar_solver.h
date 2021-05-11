@@ -94,18 +94,18 @@ namespace jsk_footstep_planner
         SolverNodePtr target_node = popFromOpenList();
         if (graph_->usePointCloudModel() && lazy_projection) {
           unsigned int error_state;
-          FootstepState::Ptr projected_state = graph_->projectFootstep(target_node->getState(),
-                                                                       error_state);
+          StatePtr projected_state = graph_->projectFootstep(target_node->getState(),
+                                                             error_state);
           if (!projected_state) { // failed to project footstep
             if (graph_->localMovement() && error_state == projection_state::close_to_success) {
               // try local movement
-              std::vector<FootstepState::Ptr> locally_moved_states;
+              std::vector<StatePtr> locally_moved_states;
               {
-                std::vector<FootstepState::Ptr> states_candidates
+                std::vector<StatePtr> states_candidates
                   = graph_->localMoveFootstepState(target_node->getState());
                 for (int i = 0; i < states_candidates.size(); i ++) {
-                  FootstepGraph::StatePtr tmp_state = graph_->projectFootstep(states_candidates[i],
-                                                                              error_state);
+                  StatePtr tmp_state = graph_->projectFootstep(states_candidates[i],
+                                                               error_state);
                   if (!!tmp_state) {
                     locally_moved_states.push_back(tmp_state);
                   }
@@ -218,7 +218,7 @@ namespace jsk_footstep_planner
       {
         SolverNodePtr solver_node = copied_open_list.top();
         StatePtr state = solver_node->getState();
-        PointT p = ((FootstepState::Ptr)state)->toPoint<PointT>(); // hacky way
+        PointT p = state->template toPoint<PointT>();
         output_cloud.points.push_back(p);
         copied_open_list.pop();
       }
