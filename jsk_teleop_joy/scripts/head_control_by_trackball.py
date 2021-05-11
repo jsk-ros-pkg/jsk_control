@@ -45,7 +45,7 @@ class TrackballController:
             # integral the sequence
             dx = - reduce(add, [msg.axes[0] for msg in sequence])
             dy = reduce(add, [msg.axes[1] for msg in sequence])
-            print (dx, dy)
+            print((dx, dy))
             dpitch_deg = dx / 2.0
             dyaw_deg = dy / 2.0
             dpitch_rad = dpitch_deg / 180.0 * math.pi
@@ -60,10 +60,10 @@ class TrackballController:
                 yaw_index = joint_state.name.index(self.yaw_joint_name)
                 current_pitch = joint_state.position[pitch_index]
                 current_yaw = joint_state.position[yaw_index]
-                print (current_pitch, current_yaw)
+                print((current_pitch, current_yaw))
                 next_pitch = current_pitch + dpitch_rad
                 next_yaw = current_yaw + dyaw_rad
-                print (next_pitch, next_yaw)
+                print((next_pitch, next_yaw))
                 # move
                 goal = FollowJointTrajectoryGoal()
                 goal.trajectory.header.stamp = joint_state.header.stamp
@@ -79,11 +79,11 @@ class TrackballController:
                 rospy.logwarn("the joint for pitch and yaw cannot be found in joint_states")
                 return
     def enableHeadGroupControl(self):
-        print 'enable head joint group'
+        print('enable head joint group')
         self.enable_head_joint_group_srv(gname='head', jnames=[self.pitch_joint_name, self.yaw_joint_name])
         self.enable_head_control_flag = True
     def disableHeadGroupControl(self):
-        print 'disable head joint group'
+        print('disable head joint group')
         self.disable_head_joint_group_srv(gname='head')
         self.enable_head_control_flag = False
     def jointCB(self, msg):

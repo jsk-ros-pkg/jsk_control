@@ -54,17 +54,17 @@ class EnvironmentPlaneModelingClient(JSKJoyPlugin):
     def registerCurrentGridMap(self):
         try:
             self.register_current_map_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             rospy.logfatal("failed to register current map: %s" % (e))
     def appendPreDefinedPolygon(self):
         try:
             self.register_completed_map_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             rospy.logfatal("failed to register completed current map: %s" % (e))
     def clearEnvironment(self):
         try:
             self.clear_maps_srv()
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             rospy.logfatal("failed to clear_map: %s" % (e))
     def publishMenu(self, close=False):
         menu = OverlayMenu()
