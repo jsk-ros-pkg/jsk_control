@@ -40,7 +40,7 @@ def plot(theta, one_data, ax):
             try:
                 z = zs[(x, y)]
             except:
-                print >> sys.stderr, "Failed to find (%f, %f)" % (x, y)
+                print("Failed to find (%f, %f)" % (x, y), file=sys.stderr)
             img[j][i] = z
     #im = ax.pcolor(img, vmin=minz, vmax=maxz, cmap="gnuplot")
     im = ax.imshow(img, vmin=minz, vmax=maxz, cmap="gnuplot")
@@ -79,7 +79,7 @@ counter = 0
 #for theta, one_data in data.items():
 for theta in sorted(data.keys()):
     one_data = data[theta]
-    print "Plotting theta=", theta
+    print("Plotting theta=", theta)
     plot(float(theta), one_data, axes.flat[counter])
     counter = counter + 1
     
@@ -94,7 +94,7 @@ plt.interactive(True)
 plt.show()
 # save figure
 eps_file = os.path.basename(csv_file) + "." + args.image_suffix
-print "Saving to %s file: " % (args.image_suffix), eps_file
+print("Saving to %s file: " % (args.image_suffix), eps_file)
 plt.savefig(eps_file)
 if args.only_save_image:
     sys.exit(0)
