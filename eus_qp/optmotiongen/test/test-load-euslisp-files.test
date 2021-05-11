@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="load_optmotiongen_euslisp_files" pkg="eus_qp" type="test-load-euslisp-files.l" time-limit="1000.0">
+  </test>
+</launch>

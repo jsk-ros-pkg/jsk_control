@@ -1,7 +1,14 @@
 language:
   - generic
+cache:
+  apt: true
+  pip: true
+  directories:
+    - $HOME/.ccache
+    - $HOME/.cache/pip
+    - $HOME/apt-cacher-ng
 sudo: required
-dist: trusty
+dist: bionic
 services:
   - docker
 notifications:
@@ -21,10 +28,12 @@ env:
     - ROS_DISTRO=indigo  USE_DEB=true
     - ROS_DISTRO=jade    USE_DEB=true
     - ROS_DISTRO=kinetic USE_DEB=true
+    - ROS_DISTRO=melodic USE_DEB=true
 matrix:
   fast_finish: true
   allow_failures:
     - env: ROS_DISTRO=hydro   USE_DEB=false  BEFORE_SCRIPT='$CI_SOURCE_PATH/.travis_before_script_jsk_recognition_utils.bash'
+    - env: ROS_DISTRO=jade    USE_DEB=true
 script: source .travis/travis.sh
 before_script:
   - export ROS_PARALLEL_JOBS="-j2 -l2"

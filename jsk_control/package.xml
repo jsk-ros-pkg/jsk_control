@@ -6,6 +6,8 @@
   <maintainer email="ueda@jsk.t.u-tokyo.ac.jp">Ryohei Ueda</maintainer>
 
   <license>BSD</license>
+  
+  <url type="website">http://ros.org/wiki/jsk_control</url>
 
   <buildtool_depend>catkin</buildtool_depend>
   <run_depend>eus_nlopt</run_depend>
