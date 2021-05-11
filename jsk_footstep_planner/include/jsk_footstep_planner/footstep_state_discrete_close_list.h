@@ -182,7 +182,7 @@ namespace jsk_footstep_planner
       std::map<VolumeKey, FootstepStateDiscreteCloseListLocal::Ptr>::iterator it
         = local_volumes_.find(key);
       if (it != local_volumes_.end()) { // found!
-        return it->second->get(xi, yi, ti);
+        return (bool)it->second->get(xi, yi, ti);
       }
       else {
         return false;

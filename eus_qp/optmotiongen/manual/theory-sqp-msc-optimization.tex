@@ -1,0 +1,176 @@
+\eqref{eq:ik-opt-3a}の最適化問題に逐次二次計画法などの制約付き非線形最適化手法を適用すると，
+初期値から勾配方向に進行して至る局所最適解が得られると考えられる．
+したがって解は初期値に強く依存する．
+
+\eqref{eq:ik-opt-3a}の代わりに，以下の最適化問題を考える．
+\begin{eqnarray}
+  &&\min_{\bm{\hat{q}}} \ \sum_{i \in \mathcal{I}} \left\{ F(\bm{q}^{(i)}) + k_{\mathit{msc}} F_{\mathit{msc}}(\bm{\hat{q}}; i) \right\} \label{eq:solution-candidate-opt} \\
+  &&{\rm s.t.} \ \  \bm{A} \bm{q}^{(i)} = \bm{\bar{b}} \ \ \ \ i \in \mathcal{I} \\
+  &&\phantom{\rm s.t.} \ \  \bm{C} \bm{q}^{(i)} \geq \bm{\bar{d}} \ \ \ \ i \in \mathcal{I} \\
+  &&{\rm where} \ \ \bm{\hat{q}} \eqdef \begin{pmatrix} \bm{q}^{(1)T} & \bm{q}^{(2)T} & \cdots & \bm{q}^{(N_{\mathit{msc}})T} \end{pmatrix}^T \\
+  &&\phantom{\rm where} \ \ \mathcal{I} \eqdef \{ 1,2,\cdots,N_{\mathit{msc}} \} \\
+  &&\phantom{\rm where} \ \ F_{\mathit{msc}}(\bm{\hat{q}}; i) \eqdef - \frac{1}{2} \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \log \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 \\
+  &&\phantom{\rm where} \ \ \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \eqdef \bm{q}^{(i)} - \bm{q}^{(j)}
+\end{eqnarray}
+$N_{\mathit{msc}}$は解候補の個数で，事前に与えるものとする．$\mathit{msc}$は複数解候補(multiple solution candidates)を表す．
+これは，複数の解候補を同時に探索し，それぞれの解候補$\bm{q}^{(i)}$が本来の目的関数$F(\bm{q}^{(i)})$を小さくして，なおかつ，解候補どうしの距離が大きくなるように最適化することを表している．
+これにより，初期値に依存した唯一の局所解だけでなく，そこから離れた複数の局所解を得ることが可能となり，通常の最適化に比べてより良い解が得られることが期待される．
+以降では，解候補どうしの距離のコストを表す項$F_{\mathit{msc}}(\bm{\hat{q}}; i)$を解候補分散項と呼ぶ
+\footnote{解分散項の$\log$を無くすことは適切ではない．なぜなら，$d = \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|$として，解分散項の勾配は，
+\begin{eqnarray}
+  \frac{\partial}{\partial d}\left(- \frac{1}{2} \log d^2 \right) = - \frac{1}{d} \to - \infty \ \ (d \to +0) \hspace{10mm}
+  \frac{\partial}{\partial d}\left(- \frac{1}{2} \log d^2 \right) = - \frac{1}{d} \to 0 \ \ (d \to \infty)
+\end{eqnarray}
+となり，最適化により，コンフィギュレーションが近いときほど離れるように更新し，遠くなるとその影響が小さくなる効果が期待される．それに対し，$\log$がない場合の勾配は，
+\begin{eqnarray}
+  \frac{\partial}{\partial d}\left(- \frac{1}{2} d^2 \right) = - d \to 0 \ \ (d \to +0) \hspace{10mm}
+  \frac{\partial}{\partial d}\left(- \frac{1}{2} d^2 \right) = - d \to - \infty \ \ (d \to \infty)
+\end{eqnarray}
+となり，コンフィギュレーションが遠くなるほど離れるように更新し，近いときはその影響が小さくなる．これは，コンフィギュレーションが一致する勾配ゼロの点と，無限に離れ発散する最適値をもち，これらは最適化において望まない挙動をもたらす．
+}．
+
+解候補分散項のヤコビ行列，ヘッセ行列の各成分は次式で得られる\footnote{ヘッセ行列の導出は以下を参考にした．\url{https://math.stackexchange.com/questions/175263/gradient-and-hessian-of-general-2-norm}}．
+\begin{subequations}
+\begin{eqnarray}
+  \nabla_i F_{\mathit{msc}}(\bm{\hat{q}}; i) &=& \frac{\partial F_{\mathit{msc}}(\bm{\hat{q}}; i)}{\partial \bm{q}^{(i)}} \\
+  &=& - \frac{1}{2} \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \frac{\partial}{\partial \bm{q}^{(i)}} \log \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 \\
+  &=& - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \frac{1}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2} \left( \frac{\partial \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)})}{\partial \bm{q}^{(i)}} \right)^T \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)})\\
+  &=& - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \frac{\bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)})}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2} \\
+\end{eqnarray}
+\end{subequations}
+\begin{subequations}
+\begin{eqnarray}
+  \nabla_k F_{\mathit{msc}}(\bm{\hat{q}}; i) &=& \frac{\partial F_{\mathit{msc}}(\bm{\hat{q}}; i)}{\partial \bm{q}^{(k)}} \ \ \ \ k \in \mathcal{I} \land k \not= i \\
+  &=& - \frac{1}{2} \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \frac{\partial}{\partial \bm{q}^{(k)}} \log \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 \\
+  &=& - \frac{1}{2} \frac{\partial}{\partial \bm{q}^{(k)}} \log \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2 \\
+  &=& - \frac{1}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2} \left( \frac{\partial \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)})}{\partial \bm{q}^{(k)}} \right)^T \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)})\\
+  &=& \frac{\bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)})}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2} \\
+\end{eqnarray}
+\end{subequations}
+\begin{subequations}
+\begin{eqnarray}
+  \nabla^2_{ii} F_{\mathit{msc}}(\bm{\hat{q}}; i) &=& \frac{\partial^2 F_{\mathit{msc}}(\bm{\hat{q}}; i)}{\partial \bm{q}^{(i) 2}} \\
+  &=& - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \frac{\partial}{\partial \bm{q}^{(i)}} \left( \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 \right\}^{-1} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \right) \\
+  &=& - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \left( - 2 \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 \right\}^{-2} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)})^T + \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 \right\}^{-1} \bm{I} \right) \\
+  &=& - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \left( - \frac{2}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^4} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)})^T + \frac{1}{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 } \bm{I} \right) \\
+  &=& - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \bm{H}(\bm{q}^{(i)}, \bm{q}^{(j)})
+\end{eqnarray}
+\end{subequations}
+ただし，
+\begin{eqnarray}
+  \bm{H}(\bm{q}^{(i)}, \bm{q}^{(j)}) \eqdef
+  - \frac{2}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^4} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)})^T + \frac{1}{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 } \bm{I}
+\end{eqnarray}
+\begin{subequations}
+\begin{eqnarray}
+  \nabla^2_{ik} F_{\mathit{msc}}(\bm{\hat{q}}; i) &=& \frac{\partial^2 F_{\mathit{msc}}(\bm{\hat{q}}; i)}{\partial \bm{q}^{(i)} \partial \bm{q}^{(k)}} \ \ \ \ k \in \mathcal{I} \land k \not= i \\
+  &=& - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \frac{\partial}{\partial \bm{q}^{(k)}} \left( \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2 \right\}^{-1} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \right) \\
+  &=& - \frac{\partial}{\partial \bm{q}^{(k)}} \left( \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2 \right\}^{-1} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \right) \\
+  &=& - \left( 2 \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2 \right\}^{-2} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)})^T - \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2 \right\}^{-1} \bm{I} \right) \\
+  &=& - \frac{2}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^4} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)})^T + \frac{1}{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2 } \bm{I} \\
+  &=& \bm{H}(\bm{q}^{(i)}, \bm{q}^{(k)})
+\end{eqnarray}
+\end{subequations}
+\begin{subequations}
+\begin{eqnarray}
+  \nabla^2_{kk} F_{\mathit{msc}}(\bm{\hat{q}}; i) &=& \frac{\partial^2 F_{\mathit{msc}}(\bm{\hat{q}}; i)}{\partial \bm{q}^{(k)2}} \ \ \ \ k \in \mathcal{I} \land k \not= i\\
+  &=& \frac{\partial}{\partial \bm{q}^{(k)}} \left( \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2 \right\}^{-1} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \right) \\
+  &=& - \left( - \frac{2}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^4} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)})^T + \frac{1}{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2 } \bm{I} \right) \\
+  &=& - \bm{H}(\bm{q}^{(i)}, \bm{q}^{(k)})
+\end{eqnarray}
+\end{subequations}
+\begin{subequations}
+\begin{eqnarray}
+  \nabla^2_{kl} F_{\mathit{msc}}(\bm{\hat{q}}; i) &=& \frac{\partial^2 F_{\mathit{msc}}(\bm{\hat{q}}; i)}{\partial \bm{q}^{(k)} \partial \bm{q}^{(l)}} \ \ \ \ k \in \mathcal{I} \land l \in \mathcal{I} \land k \not= i \land l \not= i \land k \not= l\\
+  &=& \frac{\partial}{\partial \bm{q}^{(l)}} \left( \left\{ \| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \|^2 \right\}^{-1} \bm{d}(\bm{q}^{(i)}, \bm{q}^{(k)}) \right) \\
+  &=& \bm{O}
+\end{eqnarray}
+\end{subequations}
+したがって，
+解候補分散項のヤコビ行列，ヘッセ行列は次式で表される．
+\begin{subequations}
+\begin{eqnarray}
+  \nabla F_{\mathit{msc}}(\bm{\hat{q}}; i) &=& \frac{\partial F_{\mathit{msc}}(\bm{\hat{q}}; i)}{\partial \bm{\hat{q}}} \\
+  &=&
+  \begin{pmatrix}
+  \frac{\bm{d}(\bm{q}^{(i)}, \bm{q}^{(1)})}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(1)}) \|^2} \\
+  \vdots \\
+  \frac{\bm{d}(\bm{q}^{(i)}, \bm{q}^{(i-1)})}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(i-1)}) \|^2} \\
+  - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \frac{\bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)})}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) \|^2} \\
+  \frac{\bm{d}(\bm{q}^{(i)}, \bm{q}^{(i+1)})}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(i+1)}) \|^2} \\
+  \vdots \\
+  \frac{\bm{d}(\bm{q}^{(i)}, \bm{q}^{(N_{\mathit{msc}})})}{\| \bm{d}(\bm{q}^{(i)}, \bm{q}^{(N_{\mathit{msc}})}) \|^2}
+  \end{pmatrix} \\
+  \bm{v}_{\mathit{msc}} &\eqdef&
+  \sum_{i \in \mathcal{I}} \nabla F_{\mathit{msc}}(\bm{\hat{q}}; i) \\
+  &=&
+  2
+  \begin{pmatrix}
+  - \sum_{\substack{j \in \mathcal{I} \\ j \not= 1}} \frac{\bm{d}(\bm{q}^{(1)}, \bm{q}^{(j)})}{\| \bm{d}(\bm{q}^{(1)}, \bm{q}^{(j)}) \|^2} \\
+  \vdots \\
+  - \sum_{\substack{j \in \mathcal{I} \\ j \not= N_{\mathit{msc}}}} \frac{\bm{d}(\bm{q}^{(N_{\mathit{msc}})}, \bm{q}^{(j)})}{\| \bm{d}(\bm{q}^{(N_{\mathit{msc}})}, \bm{q}^{(j)}) \|^2} \\
+  \end{pmatrix} \label{eq:sqp-msc-dispersion-matrix}
+\end{eqnarray}
+\end{subequations}
+\begin{subequations}
+\begin{eqnarray}
+  \nabla^2 F_{\mathit{msc}}(\bm{\hat{q}}; i) &=& \frac{\partial^2 F_{\mathit{msc}}(\bm{\hat{q}}; i)}{\partial \bm{\hat{q}}^2} \\
+  &=&
+  \bordermatrix{
+    & 1 & \cdots & i-1 & i & i+1 & \cdots & N_{\mathit{msc}} \cr
+    1 & - \bm{H}_{i,1} & & & \bm{H}_{i,1} & & &\cr
+    \vdots & & \ddots & & \vdots & & & \cr
+    i-1 & & & - \bm{H}_{i,i-1} & \bm{H}_{i,i-1} & & & \cr
+    i & \bm{H}_{i,1} & \cdots & \bm{H}_{i,i-1} & - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \bm{H}_{i,j} & \bm{H}_{i,i+1} & \cdots & \bm{H}_{i,N_{\mathit{msc}}} \cr
+    i+1 & & & & \bm{H}_{i,i+1} & - \bm{H}_{i,i+1} & & \cr
+    \vdots & & & & \vdots & & \ddots & \cr
+    N_{\mathit{msc}} & & & & \bm{H}_{i,N_{\mathit{msc}}} & & & - \bm{H}_{i, N_{\mathit{msc}}} \cr
+  } \\
+  \bm{W}_{\mathit{msc}} &\eqdef&
+  \sum_{i \in \mathcal{I}} \nabla^2 F_{\mathit{msc}}(\bm{\hat{q}}; i) \\
+  &=&
+  2
+  \begin{pmatrix}
+    - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \bm{H}_{1,j} & \bm{H}_{1,2} & \cdots & \bm{H}_{1,N_{\mathit{msc}}} \\
+    \bm{H}_{2,1} & - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \bm{H}_{2,j} & & \bm{H}_{2,N_{\mathit{msc}}} \\
+    \vdots & & \ddots & \vdots \\
+    \bm{H}_{N_{\mathit{msc}},1} & \bm{H}_{N_{\mathit{msc}},2} & \cdots & - \sum_{\substack{j \in \mathcal{I} \\ j \not= i}} \bm{H}_{N_{\mathit{msc}},j}
+  \end{pmatrix} \label{eq:sqp-msc-dispersion-vector}
+\end{eqnarray}
+\end{subequations}
+ただし，$\bm{H}(\bm{q}^{(i)}, \bm{q}^{(j)})$を$\bm{H}_{i,j}$と略して記す．
+また，$\bm{d}(\bm{q}^{(i)}, \bm{q}^{(j)}) = - \bm{d}(\bm{q}^{(j)}, \bm{q}^{(i)}), \ \bm{H}_{i,j} = \bm{H}_{j,i}$を利用した．
+
+解候補分散項$\sum_{i \in \mathcal{I}} F_{\mathit{msc}}(\bm{\hat{q}}; i)$による二次計画問題の目的関数(\eqref{eq:sqp-1a})は次式で表される．
+\begin{eqnarray}
+  &&\sum_{i \in \mathcal{I}} \left\{ F_{\mathit{msc}}(\bm{\hat{q}}_k; i) + \nabla F_{\mathit{msc}}(\bm{\hat{q}}_k; i)^T \Delta \bm{\hat{q}}_k + \frac{1}{2} \Delta \bm{\hat{q}}_k^T \nabla^2 F_{\mathit{msc}}(\bm{\hat{q}}_k; i) \Delta \bm{\hat{q}}_k \right\} \\
+  &=&
+  \sum_{i \in \mathcal{I}} F_{\mathit{msc}}(\bm{\hat{q}}_k; i)
+  + \left\{ \sum_{i \in \mathcal{I}} \nabla F_{\mathit{msc}}(\bm{\hat{q}}_k; i) \right\}^T \Delta \bm{\hat{q}}_k
+  + \frac{1}{2} \Delta \bm{\hat{q}}_k^T \left\{ \sum_{i \in \mathcal{I}} \nabla^2 F_{\mathit{msc}}(\bm{\hat{q}}_k; i) \right\} \Delta \bm{\hat{q}}_k \\
+  &=&
+  \sum_{i \in \mathcal{I}} F_{\mathit{msc}}(\bm{\hat{q}}_k; i) + \bm{v}_{\mathit{msc}}^T \Delta \bm{\hat{q}}_k + \frac{1}{2} \Delta \bm{\hat{q}}_k^T \bm{W}_{\mathit{msc}} \Delta \bm{\hat{q}}_k
+\end{eqnarray}
+
+$\bm{W}_{\mathit{msc}}$が必ずしも半正定値行列ではないことに注意する必要がある．
+以下のようにして$\bm{W}_{\mathit{msc}}$に近い正定値行列を計算し用いることで対処する
+\footnote{$\bm{W}_{\mathit{msc}}$が対称行列であることから，以下を参考にした．\url{https://math.stackexchange.com/questions/648809/how-to-find-closest-positive-definite-matrix-of-non-symmetric-matrix\#comment1689831_649522}}．
+$\bm{W}_{\mathit{msc}}$が次式のように固有値分解されるとする．
+\begin{eqnarray}
+  \bm{W}_{\mathit{msc}} = \bm{V}_{\mathit{msc}} \bm{D}_{\mathit{msc}} \bm{V}_{\mathit{msc}}^{-1}
+\end{eqnarray}
+ただし，$\bm{D}_{\mathit{msc}}$は固有値を対角成分にもつ対角行列，$\bm{V}_{\mathit{msc}}$は固有ベクトルを並べた行列である．
+このとき$\bm{W}_{\mathit{msc}}$に近い正定値行列$\bm{\tilde{W}}_{\mathit{msc}}$は次式で得られる．
+\begin{eqnarray}
+  \bm{\tilde{W}}_{\mathit{msc}} = \bm{V}_{\mathit{msc}} \bm{D}_{\mathit{msc}}^+ \bm{V}_{\mathit{msc}}^{-1}
+\end{eqnarray}
+ただし，$\bm{D}_{\mathit{msc}}^+$は$\bm{D}_{\mathit{msc}}$の対角成分のうち，負のものを$0$で置き換えた対角行列である．
+
+\eqref{eq:solution-candidate-opt}において，
+解候補を分散させながら，最終的に本来の目的関数を最小にする解を得るために，
+SQPのイテレーションごとに，解候補分散項のスケール$k_{\mathit{msc}}$を次式のように更新することが有効である．
+\begin{eqnarray}
+  k_{\mathit{msc}} \gets \min ( \gamma_{\mathit{msc}} k_{\mathit{msc}}, k_{\mathit{msc\mathchar`-min}})
+\end{eqnarray}
+$\gamma_{\mathit{msc}}$は$0< \gamma_{\mathit{msc}} < 1$なるスケール減少率，
+$k_{\mathit{msc\mathchar`-min}}$はスケール最小値を表す．

@@ -26,10 +26,20 @@
     </rosparam>
   </node>
 
-  <!-- manager -->
-  <node if="$(arg USE_NODELET_MANAGER)"
-        pkg="jsk_topic_tools" type="standalone_complexed_nodelet"
-        name="$(arg NODELET_MANAGER_NAME)" output="screen" />
+  <!-- height map -->
+  <include file="$(find jsk_pcl_ros)/launch/heightmap_converter.launch">
+    <arg name="USE_NODELET_MANAGER"  value="$(arg USE_NODELET_MANAGER)"/>
+    <arg name="NODELET_MANAGER_NAME" value="$(arg NODELET_MANAGER_NAME)"/>
+    <arg name="NODELET_INDEX"        value="1$(arg NODELET_INDEX)"/>
+    <arg name="DEBUG_VIEW"           value="$(arg DEBUG_VIEW)" />
+
+    <arg name="INPUT" value="$(arg TO_HEIGHTMAP_CONVERTER)" />
+
+    <arg name="STATIC_FRAME" default="$(arg STATIC_FRAME)" />
+    <arg name="ROBOT_FRAME"  default="$(arg ROBOT_FRAME)" />
+    <arg name="PROJECTED_FRAME" default="$(arg PROJECTED_FRAME)" />
+    <arg name="USE_PROJECTED_FRAME" default="$(arg USE_PROJECTED_FRAME)" />
+  </include>
 
   <!-- nodelets -->
   <group ns="$(arg NODELET_MANAGER_NAME)">
@@ -114,20 +124,5 @@
     filter_limit_max: $(arg MAXIMUM_Z)  ## as same as robot height?
     filter_limit_negative: False
   </rosparam>
-
-  <!-- height map -->
-  <include file="$(find jsk_pcl_ros)/launch/heightmap_converter.launch">
-    <arg name="USE_NODELET_MANAGER"  value="$(arg USE_NODELET_MANAGER)"/>
-    <arg name="NODELET_MANAGER_NAME" value="$(arg NODELET_MANAGER_NAME)"/>
-    <arg name="NODELET_INDEX"        value="1$(arg NODELET_INDEX)"/>
-    <arg name="DEBUG_VIEW"           value="$(arg DEBUG_VIEW)" />
-
-    <arg name="INPUT" value="$(arg TO_HEIGHTMAP_CONVERTER)" />
-
-    <arg name="STATIC_FRAME" default="$(arg STATIC_FRAME)" />
-    <arg name="ROBOT_FRAME"  default="$(arg ROBOT_FRAME)" />
-    <arg name="PROJECTED_FRAME" default="$(arg PROJECTED_FRAME)" />
-    <arg name="USE_PROJECTED_FRAME" default="$(arg USE_PROJECTED_FRAME)" />
-  </include>
 
 </launch>

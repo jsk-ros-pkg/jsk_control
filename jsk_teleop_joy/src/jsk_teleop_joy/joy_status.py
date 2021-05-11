@@ -113,6 +113,89 @@ class JoyStatus():
         return joy
 
 
+class IpegaStatus(JoyStatus):
+    def __init__(self, msg):
+        '''
+        ipaga game pad
+        No home button
+        Y button => triangle
+        X button => square
+        B button => circle
+        A button => cross
+        '''
+        JoyStatus.__init__(self)
+        self.center = False
+        if msg.buttons[10] == 1:
+            self.select = True
+        else:
+            self.select = False
+        if msg.buttons[11] == 1:
+            self.start = True
+        else:
+            self.start = False
+        if msg.buttons[13] == 1:
+            self.L3 = True
+        else:
+            self.L3 = False
+        if msg.buttons[14] == 1:
+            self.R3 = True
+        else:
+            self.R3 = False
+        if msg.buttons[3] == 1:
+            self.square = True
+        else:
+            self.square = False
+        if msg.buttons[1] == 1:
+            self.circle = True
+        else:
+            self.circle = False
+        if msg.axes[7] > 0.1:
+            self.up = True
+        else:
+            self.up = False
+        if msg.axes[7] < -0.1:
+            self.down = True
+        else:
+            self.down = False
+        if msg.axes[6] > 0.1:
+            self.left = True
+        else:
+            self.left = False
+        if msg.axes[6] < -0.1:
+            self.right = True
+        else:
+            self.right = False
+        if msg.buttons[4] == 1:
+            self.triangle = True
+        else:
+            self.triangle = False
+        if msg.buttons[0] == 1:
+            self.cross = True
+        else:
+            self.cross = False
+        if msg.buttons[6] == 1:
+            self.L1 = True
+        else:
+            self.L1 = False
+        if msg.buttons[7] == 1:
+            self.R1 = True
+        else:
+            self.R1 = False
+        if msg.axes[5] < -0.5:
+            self.L2 = True
+        else:
+            self.L2 = False
+        if msg.axes[4] < -0.5:
+            self.R2 = True
+        else:
+            self.R2 = False
+        self.left_analog_x = msg.axes[0]
+        self.left_analog_y = msg.axes[1]
+        self.right_analog_x = msg.axes[2]
+        self.right_analog_y = msg.axes[3]
+        self.checkAnalogStick()
+        self.orig_msg = msg
+
 class XBoxStatus(JoyStatus):
     def __init__(self, msg):
         '''

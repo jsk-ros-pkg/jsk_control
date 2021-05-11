@@ -17,7 +17,7 @@ except:
 from sensor_msgs.msg import Joy
 from diagnostic_msgs.msg import DiagnosticStatus, DiagnosticArray
 import tf.transformations
-from joy_status import XBoxStatus, PS3Status, PS3WiredStatus
+from joy_status import IpegaStatus, XBoxStatus, PS3Status, PS3WiredStatus
 from jsk_rviz_plugins.msg import OverlayMenu
 from plugin_manager import PluginManager
 from status_history import StatusHistory
@@ -38,6 +38,9 @@ def autoJoyDetect(msg):
   elif len(msg.axes) == 20 and len(msg.buttons) == 17:
     rospy.loginfo("auto detected as ps3")
     AUTO_DETECTED_CLASS = PS3Status
+  elif len(msg.axes) == 8 and len(msg.buttons) == 19:
+    rospy.loginfo("auto detected as ipega")
+    AUTO_DETECTED_CLASS = IpegaStatus
   else:
     AUTO_DETECTED_CLASS = "UNKNOWN"
     
@@ -93,6 +96,8 @@ class JoyManager():
       self.JoyStatus = PS3Status
     elif self.controller_type == 'ps3wired':
       self.JoyStatus = PS3WiredStatus
+    elif self.controller_type == 'ipega':
+      self.JoyStatus = IpegaStatus
     elif self.controller_type == 'auto':
       s = rospy.Subscriber('/joy', Joy, autoJoyDetect)
       self.state = self.STATE_WAIT_FOR_JOY

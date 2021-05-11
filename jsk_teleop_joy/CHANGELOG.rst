@@ -2,6 +2,16 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.15 (2018-05-16)
+-------------------
+* Merge pull request `#693 <https://github.com/jsk-ros-pkg/jsk_control/issues/693>`_ from k-okada/fix_apt_slow
+  remove unused build_depends
+* remove unused build_depends
+* Contributors: Kei Okada
+
+0.1.14 (2018-01-15)
+-------------------
+
 0.1.13 (2017-04-18)
 -------------------
 * [jsk_footstep_planner, jsk_teleop_joy] add stack mode to footstep_marker

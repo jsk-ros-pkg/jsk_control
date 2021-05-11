@@ -440,7 +440,7 @@
                  (float-vector (* 1 mu-trans z-length) (* -1 mu-trans z-length) z-length))
            )))
      (send b :worldcoords)
-     (send b :put :draw-on-args (list :color #f(1 1 1) :width 3))
+     (send b :put :draw-on-args (list :color #f(1 1 0) :width 3))
      (setq drawing-object b))
    )
   )
@@ -571,7 +571,7 @@
                   (car (calc-vertices-directions-for-regular-polygon mu div :offset-angle offset-angle)))
           ))
    (send drawing-object :worldcoords)
-   (send drawing-object :put :draw-on-args (list :color #f(1 1 1) :width 3))
+   (send drawing-object :put :draw-on-args (list :color #f(1 1 0) :width 3))
    )
   )
 
@@ -652,7 +652,7 @@
              (float-vector (* -1 mu-trans z-length) (* -1 (force-axis->sgn slide-axis) mu-trans z-length) z-length))
             ))
           1))
-   (send drawing-object :put :draw-on-args (list :color #f(1 1 1) :width 3))
+   (send drawing-object :put :draw-on-args (list :color #f(1 1 0) :width 3))
    )
   )
 
@@ -829,7 +829,7 @@
            lower-faces (geometry::make-conic-side-faces (list bottom) (reverse middles) :lower))
      ;; make body instance
      (setq drawing-object (send (instantiate *body-class*) :init :faces (flatten (append upper-faces lower-faces)) :approximated t))
-     (send drawing-object :put :draw-on-args (list :color #f(1 1 1) :width 2))
+     (send drawing-object :put :draw-on-args (list :color #f(1 1 0) :width 2))
      ))
   )
 
