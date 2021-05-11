@@ -26,9 +26,9 @@ def main():
    pygame.midi.init()
    devices = pygame.midi.get_count()
    if devices < 1:
-      print "No MIDI devices detected"
+      print("No MIDI devices detected")
       exit(-1)
-   print "Found %d MIDI devices" % devices
+   print("Found %d MIDI devices" % devices)
 
    if len(sys.argv) > 1:
       input_dev = int(sys.argv[1])
@@ -40,12 +40,12 @@ def main():
                    input_dev = i
                    break
        if not input_dev:
-           print "No MIDI device"
+           print("No MIDI device")
            exit(-1)
-   print "Using input device %d" % input_dev
+   print("Using input device %d" % input_dev)
 
    controller = pygame.midi.Input(input_dev)
-   print "Opened it"
+   print("Opened it")
 
    rospy.init_node('kontrol')
    pub = rospy.Publisher('/joy_pad', Joy, latch=True)
@@ -65,7 +65,7 @@ def main():
       while controller.poll():
          c += 1
          data = controller.read(1)
-         print data
+         print(data)
          # loop through events received
          for event in data:
             control = event[0]

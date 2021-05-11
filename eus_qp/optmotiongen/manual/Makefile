@@ -1,6 +1,6 @@
 TMPDIR := $(shell mktemp -d)
 FIGDIR := ${TMPDIR}/fig
-EUSFILES = instant-configuration-task trajectory-configuration-task sqp-optimization robot-object-environment instant-manipulation-configuration-task bspline-fundamental bspline-configuration-task extended-joint-link contact-kinematics robot-environment torque-gradient inverse-kinematics-wrapper sqp-msc-optimization bspline-dynamic-configuration-task
+EUSFILES = instant-configuration-task trajectory-configuration-task sqp-optimization robot-object-environment instant-manipulation-configuration-task bspline-fundamental bspline-configuration-task extended-joint-link contact-kinematics robot-environment torque-gradient inverse-kinematics-wrapper sqp-msc-optimization bspline-dynamic-configuration-task discrete-kinematics-configuration-task
 EUSFILESDIR = "../euslisp"
 
 # IMAGE_FILES := $(shell find ${FIGDIR} -name "*.(jpg|png)" | sed s/jpg/bb/g)

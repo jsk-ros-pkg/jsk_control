@@ -8,6 +8,7 @@
      (optimize-torque? t)
      (pre-process-func)
      (post-process-func)
+     (loop-num 50)
      &allow-other-keys
      )
   (setq *robot* (instance sample-robot :init))
@@ -71,7 +72,7 @@
                   :pre-process-func pre-process-func
                   :post-process-func post-process-func
                   ))
-  (send *sqp-opt* :optimize :loop-num 50)
+  (send *sqp-opt* :optimize :loop-num loop-num)
   t)
 (warn "(sample-robot-reach-iks-raw)~%")
 
@@ -82,6 +83,7 @@
       (make-coords :pos (float-vector 400 -200 600) :rpy (list 0 0 0)))
      (pre-process-func)
      (post-process-func)
+     (stop 50)
      &allow-other-keys
      )
   (setq *robot* (instance sample-robot :init))
@@ -134,7 +136,7 @@
         :debug-view t
         :root-virtual-mode :6dof
         :optimize-torque? optimize-torque?
-        :stop 50
+        :stop stop
         :min-loop 30
         :pre-process-func pre-process-func
         :post-process-func post-process-func
@@ -147,6 +149,7 @@
      (optimize-torque? t)
      (pre-process-func)
      (post-process-func)
+     (stop 50)
      &allow-other-keys
      )
   (setq *robot* (instance sample-robot :init))
@@ -216,7 +219,7 @@
         :debug-view t
         :root-virtual-mode :6dof
         :optimize-torque? optimize-torque?
-        :stop 50
+        :stop stop
         :min-loop 30
         :pre-process-func pre-process-func
         :post-process-func post-process-func
@@ -231,6 +234,7 @@
      (pre-process-func)
      (post-process-func)
      (visualize-callback-func)
+     (loop-num 50)
      &allow-other-keys
      )
   (setq *robot* (instance sample-robot :init))
@@ -430,7 +434,7 @@
                   :pre-process-func pre-process-func
                   :post-process-func post-process-func
                   ))
-  (send *sqp-opt* :optimize :loop-num 50)
+  (send *sqp-opt* :optimize :loop-num loop-num)
 
   (objects (append (list *robot-env* *arrow*)))
   (send *trajectory-config-task* :play-animation
@@ -450,6 +454,7 @@
      (pre-process-func)
      (post-process-func)
      (visualize-callback-func)
+     (stop 50)
      &allow-other-keys
      )
   (setq *robot* (instance sample-robot :init))
@@ -585,7 +590,7 @@
          :root-virtual-mode :6dof
          :optimize-torque? optimize-torque?
          :optimize-start-end-torque? optimize-start-end-torque?
-         :stop 50
+         :stop stop
          :min-loop 30
          :adjacent-regular-scale 1e-5
          :torque-regular-scale 1e-5
@@ -605,6 +610,7 @@
      (pre-process-func)
      (post-process-func)
      (visualize-callback-func)
+     (stop 100)
      &allow-other-keys
      )
   (setq *robot* (instance sample-robot :init))
@@ -775,7 +781,7 @@
          :root-virtual-mode :6dof
          :optimize-torque? optimize-torque?
          :optimize-start-end-torque? optimize-start-end-torque?
-         :stop 100
+         :stop stop
          :min-loop 30
          :norm-regular-scale-offset 1e-5
          :adjacent-regular-scale 1e-5
