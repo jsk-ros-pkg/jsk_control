@@ -1,0 +1,11 @@
+<launch>
+  <arg name="main" default="true" />
+  <arg name="vive" default="true" />
+
+  <include file="$(find eus_vive)/launch/baxter/baxter_vr_display.launch">
+    <arg name="head" value="false" />
+    <arg name="respeaker" value="true" />
+    <arg name="mirror" value="false" />
+    <arg name="republish" value="true" />
+  </include>
+</launch>
