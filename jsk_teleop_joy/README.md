@@ -130,6 +130,8 @@ ALSA lib seq.c:935:(snd_seq_open_noupdate) Unknown SEQ default
 ```
 In this case, you need to get pygame from apt i.e `pip uninstall pygame && apt-get install python-pygame`
 
+NOT RECOMMENDED: Or if you really want to keep using pip installed pygame, you can make symbolic link i.e. `ln -s /usr/lib/x86_64-linux-gnu/alsa-lib /usr/lib/alsa-lib`: BUT WE DO NOT RECOMMED
+
 ### [`midi_write.py`](scripts/midi_write.py)
 In order to control LEDs and active faders, need to output some MIDI commands
 from you computer.
