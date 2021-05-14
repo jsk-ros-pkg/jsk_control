@@ -68,8 +68,8 @@ Return configuration-task instance
    (&key
     (loop-num 100)
     (loop-num-min)
-    (update-viewer-interval 1)
-    (print-status-interval 10)
+    (update-viewer-interval 1) ;; nil for no visualization
+    (print-status-interval 10) ;; nil for no print
     )
    "
 Optimize
@@ -106,7 +106,8 @@ and update configuration:
    (when loop-num-min
      (setq loop-num-min (min loop-num loop-num-min)))
    (setq _i 0)
-   (send self :_update-viewer-once)
+   (when update-viewer-interval
+     (send self :_update-viewer-once))
    (while t
      (incf _i)
      (when (and (or (not loop-num-min) (>= _i loop-num-min))
@@ -125,9 +126,11 @@ and update configuration:
        (setq _status :qp-error)
        (return-from :optimize _status)
        )
-     (when (or (and print-status-interval (= (mod _i print-status-interval) 0)) (= _i loop-num))
+     (when (and print-status-interval
+                (or (= (mod _i print-status-interval) 0) (= _i loop-num)))
        (send self :_print-status-once :loop-num loop-num))
-     (when (or (and update-viewer-interval (= (mod _i update-viewer-interval) 0)) (= _i loop-num))
+     (when (and update-viewer-interval
+                (or (= (mod _i update-viewer-interval) 0) (= _i loop-num)))
        (send self :_update-viewer-once))
      (when _post-process-func
        (funcall _post-process-func self))
