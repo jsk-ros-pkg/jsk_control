@@ -89,6 +89,6 @@ def callback(msg):
         
 if __name__ == "__main__":
     rospy.init_node("joint_states_appender")
-    pub = rospy.Publisher("joint_states_appended", JointState)
+    pub = rospy.Publisher("joint_states_appended", JointState, queue_size=1)
     sub = rospy.Subscriber("joint_states", JointState, callback, queue_size=1)
     rospy.spin()

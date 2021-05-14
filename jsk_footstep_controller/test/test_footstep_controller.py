@@ -58,7 +58,7 @@ def oneFootstep(origin, leg, x=0, y=0, z=0, roll=0, pitch=0, yaw=0):
     q = quaternion_from_euler(roll, pitch, yaw)
     offset = transRotToMat(translation, q)
     target = concatenate_matrices(origin, offset)
-    print origin
+    print(origin)
     msg.pose = matToMsg(target)
     msg.dimensions.x = 0.23
     msg.dimensions.y = 0.13
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     rospy.init_node("test_footstep_controller")
     tf_listener = tf.TransformListener()
     client = actionlib.SimpleActionClient('footstep_controller', ExecFootstepsAction)
-    pub_footsteps = rospy.Publisher('footstep', FootstepArray, latch=True)
+    pub_footsteps = rospy.Publisher('footstep', FootstepArray, latch=True, queue_size=1)
     rospy.loginfo("Waiting for footstep controller")
     client.wait_for_server()
     rospy.loginfo("Found footstep controller")

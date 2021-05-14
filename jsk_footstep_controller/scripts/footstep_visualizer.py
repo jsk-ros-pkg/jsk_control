@@ -66,7 +66,7 @@ def drawPoint(image, point, size, color, text):
 #def cop_callback(lleg_cop, rleg_cop):
 def periodicCallback(event):
     global tf_buffer, lleg_cop_msg, rleg_cop_msg, zmp_msg, act_cp_msg, ref_cp_msg, act_contact_states_msg
-    print "run"
+    print("run")
     with msg_lock:
      try:
         _lleg_pose = tf_buffer.lookup_transform(root_link, lleg_end_coords, rospy.Time())
@@ -271,7 +271,7 @@ def config_callback(config, level):
 
 if __name__ == "__main__":
     rospy.init_node("footstep_visualizer")
-    pub = rospy.Publisher("~output", Image)
+    pub = rospy.Publisher("~output", Image, queue_size=1)
     srv = Server(FootstepVisualizerConfig, config_callback)
     tf_buffer = tf2_ros.Buffer()
     tf_listener = tf2_ros.TransformListener(tf_buffer)

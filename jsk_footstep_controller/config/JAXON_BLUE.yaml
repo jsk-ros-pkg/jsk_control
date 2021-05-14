@@ -1,0 +1,13 @@
+# jaxon_blue.yaml
+footstep_margin: 0.2
+# coordinate system
+lfoot_frame_id: LLEG_LINK5
+rfoot_frame_id: RLEG_LINK5
+# offset link coordinate -> center of foot
+lfoot_offset: [0.045, 0, -0.1025, 0, 0, 0, 1]
+rfoot_offset: [0.045, 0, -0.1025, 0, 0, 0, 1]
+# offset link coordinate -> end coords
+lfoot_endcoords_offset: [-0.009, 0, -0.1025, 0, 0, 0, 1]
+rfoot_endcoords_offset: [-0.009, 0, -0.1025, 0, 0, 0, 1]
+lleg_vertices: [[-0.062, -0.056], [-0.062, 0.056], [0.170, 0.056], [0.170, -0.056]]
+rleg_vertices: [[-0.062, -0.056], [-0.062, 0.056], [0.170, 0.056], [0.170, -0.056]]

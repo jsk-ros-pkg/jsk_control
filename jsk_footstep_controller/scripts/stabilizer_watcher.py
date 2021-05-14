@@ -80,7 +80,7 @@ if __name__ == "__main__":
     rospy.init_node("stabilizer_watcher")
     contact_states_sub = rospy.Subscriber("/act_contact_states", ContactStatesStamped, contactStatesCallback, queue_size=1)
     motor_states_sub = rospy.Subscriber("/motor_states", MotorStates, motorStatesCallback, queue_size=1)
-    g_odom_init_trigger_pub = rospy.Publisher("/odom_init_trigger", Empty)
-    g_robotsound_pub = rospy.Publisher("/robotsound", SoundRequest)
+    g_odom_init_trigger_pub = rospy.Publisher("/odom_init_trigger", Empty, queue_size=1)
+    g_robotsound_pub = rospy.Publisher("/robotsound", SoundRequest, queue_size=1)
     rospy.spin()
 
