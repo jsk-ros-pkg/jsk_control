@@ -55,8 +55,11 @@ namespace jsk_footstep_controller
     tf_listener_.reset(new tf::TransformListener());
     odom_status_ = UNINITIALIZED;
     odom_pose_ = Eigen::Affine3d::Identity();
+    root_to_rfoot_pose_ = Eigen::Affine3d::Identity();
+    root_to_lfoot_pose_ = Eigen::Affine3d::Identity();
     ground_transform_.setRotation(tf::Quaternion(0, 0, 0, 1));
     root_link_pose_.setIdentity();
+    midcoords_.setRotation(tf::Quaternion(0, 0, 0, 1));
     midcoords_.setRotation(tf::Quaternion(0, 0, 0, 1));
     estimated_odom_pose_.setRotation(tf::Quaternion(0, 0, 0, 1));
     diagnostic_updater_->setHardwareID("none");
@@ -815,9 +818,11 @@ namespace jsk_footstep_controller
         tf::StampedTransform lfoot_transform;
         tf_listener_->lookupTransform(
           root_frame_id_, lfoot_frame_id_, stamp, lfoot_transform);
+        tf::transformTFToEigen(lfoot_transform, root_to_lfoot_pose_);
         tf::StampedTransform rfoot_transform;
         tf_listener_->lookupTransform(
           root_frame_id_, rfoot_frame_id_, stamp, rfoot_transform);
+        tf::transformTFToEigen(rfoot_transform, root_to_rfoot_pose_);
         tf::Quaternion lfoot_rot = lfoot_transform.getRotation();
         tf::Quaternion rfoot_rot = rfoot_transform.getRotation();
         tf::Quaternion mid_rot = lfoot_rot.slerp(rfoot_rot, 0.5);
@@ -955,7 +960,7 @@ namespace jsk_footstep_controller
   {
     // publish midcoords_ and ground_cooords_
     geometry_msgs::TransformStamped ros_midcoords, 
-      ros_ground_coords, ros_odom_to_body_coords,
+      ros_ground_coords, ros_odom_to_body_coords, ros_odom_to_base_footprint_coords,
       ros_body_on_odom_coords, ros_odom_init_coords;
     // ros_midcoords: ROOT -> ground
     // ros_ground_coords: odom -> odom_on_ground = identity
@@ -973,6 +978,9 @@ namespace jsk_footstep_controller
     ros_odom_to_body_coords.header.stamp = stamp;
     ros_odom_to_body_coords.header.frame_id = parent_frame_id_;
     ros_odom_to_body_coords.child_frame_id = root_frame_id_;
+    ros_odom_to_base_footprint_coords.header.stamp = stamp;
+    ros_odom_to_base_footprint_coords.header.frame_id = parent_frame_id_;
+    ros_odom_to_base_footprint_coords.child_frame_id = "base_footprint";
     ros_body_on_odom_coords.header.stamp = stamp;
     ros_body_on_odom_coords.header.frame_id = root_frame_id_;
     ros_body_on_odom_coords.child_frame_id = body_on_odom_frame_;
@@ -1002,6 +1010,19 @@ namespace jsk_footstep_controller
     tf::transformEigenToMsg(identity, ros_ground_coords.transform);
     tf::transformEigenToMsg(body_on_odom_pose.inverse(), ros_body_on_odom_coords.transform);
     tf::transformEigenToMsg(odom_pose_, ros_odom_to_body_coords.transform);
+    {
+      Eigen::Affine3d odom_to_base_footprint_pose;
+      Eigen::Affine3d odom_to_rfoot_pose = odom_pose_ * root_to_rfoot_pose_;
+      Eigen::Affine3d odom_to_lfoot_pose = odom_pose_ * root_to_lfoot_pose_;
+      odom_to_base_footprint_pose.translation()(0) = (odom_to_rfoot_pose.translation()(0) + odom_to_lfoot_pose.translation()(0)) / 2.0;
+      odom_to_base_footprint_pose.translation()(1) = (odom_to_rfoot_pose.translation()(1) + odom_to_lfoot_pose.translation()(1)) / 2.0;
+      odom_to_base_footprint_pose.translation()(2) = std::min(odom_to_rfoot_pose.translation()(2), odom_to_lfoot_pose.translation()(2));
+      odom_to_base_footprint_pose.linear() = Eigen::Quaterniond(odom_to_rfoot_pose.linear()).slerp(0.5, Eigen::Quaterniond(odom_to_lfoot_pose.linear())).toRotationMatrix();
+      Eigen::Quaterniond rot;
+      rot.setFromTwoVectors(odom_to_base_footprint_pose.linear() * Eigen::Vector3d::UnitZ(), Eigen::Vector3d::UnitZ());
+      odom_to_base_footprint_pose.linear() = (odom_to_base_footprint_pose.linear() * rot).eval();
+      tf::transformEigenToMsg(odom_to_base_footprint_pose, ros_odom_to_base_footprint_coords.transform);
+    }
     if (invert_odom_init_) {
       tf::transformEigenToMsg(odom_init_pose.inverse(), ros_odom_init_coords.transform);
     } else {
@@ -1012,6 +1033,7 @@ namespace jsk_footstep_controller
     tf_transforms.push_back(ros_ground_coords);
     if (publish_odom_tf_) {
       tf_transforms.push_back(ros_odom_to_body_coords);
+      tf_transforms.push_back(ros_odom_to_base_footprint_coords);
     }
     tf_transforms.push_back(ros_body_on_odom_coords);
     tf_transforms.push_back(ros_odom_init_coords);
