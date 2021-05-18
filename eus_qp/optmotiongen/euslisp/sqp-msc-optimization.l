@@ -180,7 +180,8 @@ return $\bm{v}_{\mathit{msc}} \in \mathbb{R}^{N_{\mathit{msc}} \mathit{dim}(\bm{
    ()
    (setq _dispersion-scale
          (max (* _dispersion-scale-decrease-ratio _dispersion-scale) _dispersion-scale-min))
-   (send-all _config-task-list :update-collision-inequality-constraint)
+   (when (member :update-collision-inequality-constraint (send (car _config-task-list) :methods))
+     (send-all _config-task-list :update-collision-inequality-constraint))
    (setq _task-value (apply #'concatenate float-vector (send-all _config-task-list :task-value)))
    (setq _task-jacobian (apply #'concatenate-matrix-diagonal (send-all _config-task-list :task-jacobian)))
    ;; solve QP

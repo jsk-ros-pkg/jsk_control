@@ -20,51 +20,84 @@
   (:init
    (&key
     (name "contact")
+    (fix-yaw? nil)
     (contact-pre-offset 100) ;; [mm]
     )
    "
 Initialize instance
    "
    (send-super :init :name name)
-   (let (vl-list-root vj-list-root)
+   (let* (rv-ll
+          rv-jl
+          (string-name
+           (string-left-trim ":" (format nil "~a" name)))
+          (joint-class-list
+           (remove
+            nil
+            (list linear-joint linear-joint (if fix-yaw? nil rotational-joint))
+            ))
+          (joint-axis-list
+           (remove
+            nil
+            (list :x :y (if fix-yaw? nil :z))
+            ))
+          (root-link
+           (instance bodyset-link :init
+                     (make-cascoords)
+                     :bodies (list (make-cube 1e-3 1e-3 1e-3))
+                     :name (read-from-string (format nil ":~a-root" string-name))
+                     :weight 0.0
+                     ))
+          )
      ;; 1. setup link
-     (setq vl-list-root
-           (mapcar #'(lambda (i)
-                       (instance bodyset-link :init (make-cascoords) :bodies (list (make-cube 1e-3 1e-3 1e-3))
-                                 :name (read-from-string (format nil ":~a-virtual-~a" name i))
-                                 :weight 0.0
-                                 ))
-                   (range 4)))
-     (dotimes (i 3)
-       (send (elt vl-list-root i) :assoc (elt vl-list-root (1+ i))))
-     (send self :assoc (car vl-list-root))
-     (setq _contact-coords (make-cascoords :parent (car (last vl-list-root))))
-     (setq _contact-pre-coords (make-cascoords :pos (float-vector 0 0 contact-pre-offset) :parent (car (last vl-list-root))))
-     (setq links vl-list-root)
+     (setq rv-ll
+           (append
+            (list root-link)
+            (mapcar
+             #'(lambda (joint-class
+                        joint-axis
+                        )
+                 (instance bodyset-link :init (make-cascoords) :bodies (list (make-cube 1e-3 1e-3 1e-3))
+                           :name
+                           (read-from-string
+                            (format nil ":~a-~a-~a" string-name (send joint-class :name) (symbol-name joint-axis)))
+                           :weight 0.0
+                           ))
+             joint-class-list
+             joint-axis-list
+             )))
+     (dotimes (i (1- (length rv-ll)))
+       (send (elt rv-ll i) :assoc (elt rv-ll (1+ i))))
+     (send self :assoc (car rv-ll))
+     (setq links rv-ll)
      ;; 2. setup joint
-     (setq vj-list-root
-           (mapcar #'(lambda (joint-class
-                              joint-axis
-                              joint-name
-                              parent-link
-                              child-link
-                              )
-                       (instance joint-class :init
-                                 :name joint-name
-                                 :parent-link parent-link :child-link child-link
-                                 :axis joint-axis :min -1e10 :max 1e10
-                                 :max-joint-torque 0.0
-                                 ))
-                   (list linear-joint linear-joint rotational-joint)
-                   (list :x :y :z)
-                   (list (read-from-string (format nil ":~a-root-virtual-x" (send self :name)))
-                         (read-from-string (format nil ":~a-root-virtual-y" (send self :name)))
-                         (read-from-string (format nil ":~a-root-virtual-yaw" (send self :name))))
-                   (butlast vl-list-root)
-                   (cdr vl-list-root)
-                   ))
-     (setq joint-list vj-list-root)
+     (setq rv-jl
+           (mapcar
+            #'(lambda (joint-class
+                       joint-axis
+                       parent-link
+                       child-link
+                       )
+                (instance joint-class :init
+                          :name
+                          (read-from-string
+                           (format nil ":~a-~a-~a" string-name (send joint-class :name) (symbol-name joint-axis)))
+                          :parent-link parent-link :child-link child-link
+                          :axis joint-axis :min -1e10 :max 1e10
+                          :max-joint-torque 0.0
+                          ))
+            joint-class-list
+            joint-axis-list
+            (butlast rv-ll)
+            (cdr rv-ll)
+            ))
+     (setq joint-list rv-jl)
      (send self :init-ending)
+     ;; 3. set contact-coords and other settings
+     (setq _contact-coords
+           (make-cascoords :name name :parent (car (last rv-ll))))
+     (setq _contact-pre-coords
+           (make-cascoords :name name :pos (float-vector 0 0 contact-pre-offset) :parent (car (last rv-ll))))
      self
      ))
   (:contact-coords
