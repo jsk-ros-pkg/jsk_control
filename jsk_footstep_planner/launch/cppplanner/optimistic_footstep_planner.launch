@@ -38,6 +38,7 @@
   <group if="$(arg USE_CONTROLLER)" >
     <node pkg="jsk_footstep_controller" type="simple-footstep-controller.l" name="simple_footstep_controller"
           output="screen" if="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)">
+      <env name="ROBOT" value="$(arg ROBOT)"/>
     </node>
     <node pkg="jsk_footstep_controller" type="footstep-controller.l" name="footstep_controller"
           output="screen" unless="$(arg USE_SIMPLE_FOOTSTEP_CONTROLLER)">
@@ -45,6 +46,7 @@
         interruptible_mode: ":semi-interruptible"
         auto_lookground: false
       </rosparam>
+      <env name="ROBOT" value="$(arg ROBOT)"/>
     </node>
     <node pkg="jsk_footstep_controller" type="footstep-refinement.l"
           name="footstep_refinement" if="false">
@@ -52,6 +54,7 @@
       <remap from="refined_footstep_result" to="footstep_planner/result" />
     </node>
     <node pkg="jsk_footstep_controller" type="gui-client.l" name="gui_client">
+      <env name="ROBOT" value="$(arg ROBOT)"/>
     </node>
   </group>
 
@@ -95,37 +98,37 @@
       <remap from="/urdf_model_marker/robot/reset_joint_states" to="joint_states_throttle/output" />
       <rosparam>
         model_config:
-        - name: "robot"
-        frame-id: "/robot_marker_root"
-        robot: false
-        mode: "visualization"
-        # mode: "registration"
-        use_robot_description: true
-        scale: 1.0
-        pose:
-        position:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        orientation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-        offset:
-        position:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        orientation:
-        x: 0.0
-        y: 0.0
-        z: 0.0
-        w: 1.0
-        fixed_link:
-        - "lleg_end_coords"
-        - "rleg_end_coords"
-        display: true
+          - name: "robot"
+            frame-id: "/robot_marker_root"
+            robot: false
+            mode: "visualization"
+            # mode: "registration"
+            use_robot_description: true
+            scale: 1.0
+            pose:
+              position:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+                w: 1.0
+            offset:
+              position:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+              orientation:
+                x: 0.0
+                y: 0.0
+                z: 0.0
+                w: 1.0
+            fixed_link:
+              - "lleg_end_coords"
+              - "rleg_end_coords"
+            display: true
       </rosparam>
       <param name="use_dynamic_tf" value="true"/>
     </node>
