@@ -9,6 +9,8 @@
   <arg name="USE_OBSTACLE_MODEL"   default="false" />
   <arg name="ROBOT"   default="" />
   <arg name="FOOTSTEP_PLANNER_PARAM_FILE"   default="$(find jsk_footstep_planner)/config/$(arg ROBOT)_footstep_planner_params.yaml" />
+  <arg name="point_cloud" default="accumulated_heightmap_pointcloud_static/output" />
+  <arg name="obstacle_cloud" default="robot_center_pointcloud_bbox_clipped/output" />
   <node pkg="dynamic_tf_publisher" type="tf_publish.py" name="dynamic_tf_publisher"
         output="log">
     <param name="use_cache" value="false"/>
@@ -16,7 +18,8 @@
 
   <node pkg="jsk_footstep_planner" type="footstep_planner_node" name="footstep_planner" output="screen"
         respawn="true">
-    <remap from="~pointcloud_model" to="accumulated_heightmap_pointcloud_static/output" />
+    <remap from="~pointcloud_model" to="$(arg point_cloud)" />
+    <remap from="~obstacle_model" to="$(arg obstacle_cloud)" />
     <!-- <remap from="footstep_planner/result" to="footstep_planner/result_non_refined" /> -->
     <rosparam subst_value="true">
       use_pointcloud_model: $(arg USE_PERCEPTION)
