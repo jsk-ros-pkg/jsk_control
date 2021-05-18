@@ -332,7 +332,9 @@
    given-wrench-list
    &key (robot)
         (contact-constraint-matrix-list)
-        (contact-constraint-vector-list))
+        (contact-constraint-vector-list)
+        (qp-solver #'solve-qpoases-qp)
+        (solve-qp-mode :qp))
   (wrench-distribute-from-total-wrench
    ungiven-wrench-contact-coords-list
    contact-constraint-matrix-list
@@ -340,7 +342,9 @@
    :total-wrench (v- (concatenate float-vector (send (car (send robot :links)) :force) (send (car (send robot :links)) :moment))
                      (transform (send robot :calc-grasp-matrix (send-all given-wrench-contact-coords-list :worldpos))
                                 (apply #'concatenate float-vector given-wrench-list)))
-   :contact-constraint-vector-list contact-constraint-vector-list)
+   :contact-constraint-vector-list contact-constraint-vector-list
+   :qp-solver qp-solver
+   :solve-qp-mode solve-qp-mode)
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
