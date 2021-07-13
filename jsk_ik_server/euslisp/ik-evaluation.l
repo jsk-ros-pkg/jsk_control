@@ -129,6 +129,7 @@
     )
   (:normalize-cells ()
     (let ((sum (reduce #'+ (send-all cells :get-value))))
+      (if (eq sum 0) (return-from :normalize-cells nil))
       (dolist (cell cells)
         (send cell :set-value (/ (send cell :get-value) (float sum))))
       ))
