@@ -62,7 +62,7 @@ max_z = np.amax(z_values)
 step = (max_z - min_z) / (k_num - 1)
 # print "estimated step is", step
 
-fig, axes = plt.subplots(int(math.ceil(k_num / 3)), 3)
+fig, axes = plt.subplots(int(math.ceil(k_num / 3.0)), 3)
 images = dict()
 non_zero_counter = 0
 for k, counter in zip(data_by_k, range(k_num)):             # need to sort by k?
