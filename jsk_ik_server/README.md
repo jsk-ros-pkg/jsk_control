@@ -10,11 +10,6 @@ cd scripts/ik-grid
 # bash <robot name>.sh
 bash pr2.sh
 ```
-
-### Jaxon IK Evaluation
-
-Read [docs/jaxon_ik_evaluation](docs/jaxon_ik_evaluation.md)
-
 ### PR2 IK Evaluation
 
 #### X-up IK reachability with `:rotation-axis :z`
@@ -31,3 +26,22 @@ Read [docs/jaxon_ik_evaluation](docs/jaxon_ik_evaluation.md)
 
 ![](./data/pr2-zup-iterate009-concatenated.png)
 ![](./data/pr2-zup-iterate009.csv.png)
+
+### Jaxon IK Evaluation
+
+For more detailed infomation. please read [docs/jaxon_ik_evaluation](docs/jaxon_ik_evaluation.md)
+
+#### X-up IK reachability with `:rotation-axis :z`
+
+![](./data/jaxon-xup-iterate009-concatenated.png)
+![](./data/jaxon-xup-iterate009.csv.png)
+
+#### Y-up IK reachability with `:rotation-axis :z`
+
+![](./data/jaxon-yup-iterate009-concatenated.png)
+![](./data/jaxon-yup-iterate009.csv.png)
+
+#### Z-up IK reachability with `:rotation-axis :z`
+
+![](./data/jaxon-zup-iterate009-concatenated.png)
+![](./data/jaxon-zup-iterate009.csv.png)
