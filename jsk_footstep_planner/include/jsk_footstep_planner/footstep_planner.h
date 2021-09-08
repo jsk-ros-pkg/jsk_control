@@ -182,6 +182,7 @@ namespace jsk_footstep_planner
     double heuristic_weight_;
     std::string pointcloud_model_frame_id_, obstacle_model_frame_id_;
     double planning_timeout_;
+    size_t num_finalize_steps_;
 
   private:
     
