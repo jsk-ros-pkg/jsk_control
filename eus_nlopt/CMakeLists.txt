@@ -2,7 +2,7 @@ project(eus_nlopt)
 
 cmake_minimum_required(VERSION 2.4.6)
 
-find_package(catkin REQUIRED COMPONENTS nlopt)
+find_package(catkin COMPONENTS nlopt)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src)
@@ -50,10 +50,10 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 if(NLOPT_FOUND)
   add_library(nlopt_wrapper SHARED src/nlopt_wrapper.cpp src/nlopt_solver.cpp)
   TARGET_LINK_LIBRARIES(nlopt_wrapper ${NLOPT_LIBRARY})
-endif(NLOPT_FOUND)
 
-install(TARGETS nlopt_wrapper
-  DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+  install(TARGETS nlopt_wrapper
+    DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+endif(NLOPT_FOUND)
 
 install(DIRECTORY euslisp launch
   USE_SOURCE_PERMISSIONS
