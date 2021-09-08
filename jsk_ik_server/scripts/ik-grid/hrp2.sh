@@ -2,7 +2,6 @@
 
 rosrun jsk_ik_server hrp2.l
 find $(rospack find jsk_ik_server) -name hrp2-*.csv -exec rosrun jsk_ik_server plot_ik_grid.py {} {}.png \;
-find $(rospack find jsk_ik_server) -name hrp2-*.csv -exec rosrun jsk_ik_server plot_ik_grid_one.py {} {} \;
 
 # Concatenate pickview images
 for prefix in xup yup zup
