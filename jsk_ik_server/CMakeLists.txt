@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(jsk_ik_server)
 
-find_package(catkin REQUIRED COMPONENTS tf moveit_msgs rostest cmake_modules mk roseus)
+find_package(catkin REQUIRED)
 
-catkin_package(CATKIN_DEPENDS roseus tf moveit_msgs rostest cmake_modules mk)
+catkin_package(CATKIN_DEPENDS)
 
 install(DIRECTORY test
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
