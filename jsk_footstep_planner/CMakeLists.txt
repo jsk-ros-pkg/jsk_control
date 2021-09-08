@@ -8,9 +8,13 @@ if(CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
 
+if($ENV{ROS_DISTRO} STREQUAL "indigo") # indigo requres to add find_pacakge(roseus) to compile roseus message
+  set(ROSEUS_package roseus)
+endif()
+
 find_package(catkin REQUIRED COMPONENTS jsk_footstep_msgs jsk_recognition_utils
   message_generation jsk_topic_tools roscpp pcl_ros geometry_msgs eigen_conversions
-  jsk_interactive_marker visualization_msgs dynamic_reconfigure roseus rostest)
+  jsk_interactive_marker visualization_msgs dynamic_reconfigure ${ROSEUS_package} rostest)
 #find_package(PCL REQUIRED)
 add_service_files(FILES
   ChangeSuccessor.srv CollisionBoundingBoxInfo.srv ProjectFootstep.srv SetHeuristicPath.srv)

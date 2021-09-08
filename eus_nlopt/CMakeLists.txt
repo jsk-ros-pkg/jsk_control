@@ -2,7 +2,7 @@ project(eus_nlopt)
 
 cmake_minimum_required(VERSION 2.4.6)
 
-find_package(catkin REQUIRED COMPONENTS nlopt)
+find_package(catkin COMPONENTS nlopt)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src)
@@ -32,7 +32,14 @@ if(nlopt_FOUND_CATKIN_PROJECT)
   MARK_AS_ADVANCED (NLOPT_LIBRARY NLOPT_INCLUDE_DIR)
   MESSAGE("-- NLopt found (include: " ${NLOPT_INCLUDE_DIR} ", link: "  ${NLOPT_LIBRARY} ")")
 else ()
-  MESSAGE("-- NLopt missing")
+  find_package(PkgConfig)
+  pkg_check_modules(NLOPT nlopt)
+  if(NLOPT_FOUND)
+    set(NLOPT_LIBRARY ${NLOPT_LIBRARIES})
+    message("-- Found system NLopt library at ${NLOPT_LIBRARY}")
+  else()
+    MESSAGE("-- NLopt missing")
+  endif()
 endif()
 
 catkin_package(
@@ -50,10 +57,10 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 if(NLOPT_FOUND)
   add_library(nlopt_wrapper SHARED src/nlopt_wrapper.cpp src/nlopt_solver.cpp)
   TARGET_LINK_LIBRARIES(nlopt_wrapper ${NLOPT_LIBRARY})
-endif(NLOPT_FOUND)
 
-install(TARGETS nlopt_wrapper
-  DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+  install(TARGETS nlopt_wrapper
+    DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+endif(NLOPT_FOUND)
 
 install(DIRECTORY euslisp launch
   USE_SOURCE_PERMISSIONS
