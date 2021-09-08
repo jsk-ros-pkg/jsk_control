@@ -62,3 +62,20 @@ For more detailed infomation. please read [docs/jaxon_ik_evaluation](docs/jaxon_
 
 ![](./data/fetch-zup-iterate009-concatenated.png)
 ![](./data/fetch-zup-iterate009.csv.png)
+
+### Baxter IK Evaluation
+
+#### X-up IK reachability with `:rotation-axis :z`
+
+![](./data/baxter-xup-iterate009-concatenated.png)
+![](./data/baxter-xup-iterate009.csv.png)
+
+#### Y-up IK reachability with `:rotation-axis :z`
+
+![](./data/baxter-yup-iterate009-concatenated.png)
+![](./data/baxter-yup-iterate009.csv.png)
+
+#### Z-up IK reachability with `:rotation-axis :z`
+
+![](./data/baxter-zup-iterate009-concatenated.png)
+![](./data/baxter-zup-iterate009.csv.png)
