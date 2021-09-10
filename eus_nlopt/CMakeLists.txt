@@ -38,7 +38,7 @@ else ()
     set(NLOPT_LIBRARY ${NLOPT_LIBRARIES})
     message("-- Found system NLopt library at ${NLOPT_LIBRARY}")
   else()
-    MESSAGE("-- NLopt missing")
+    MESSAGE(WARNING "-- NLopt missing")
   endif()
 endif()
 
