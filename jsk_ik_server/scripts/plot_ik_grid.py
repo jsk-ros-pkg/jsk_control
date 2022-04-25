@@ -45,7 +45,7 @@ with open(csvfile) as f:
                 "j": j,
                 "k": k,
                 "value": value}
-        if data_by_k.has_key(k):
+        if k in data_by_k:
             data_by_k[k].append(data)
         else:
             data_by_k[k] = [data]
