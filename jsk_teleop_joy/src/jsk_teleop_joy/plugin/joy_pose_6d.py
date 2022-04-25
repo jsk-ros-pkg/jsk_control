@@ -1,4 +1,4 @@
-from joy_rviz_view_controller import RVizViewController
+from jsk_teleop_joy.plugin.joy_rviz_view_controller import RVizViewController
 
 import imp
 try:

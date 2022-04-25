@@ -8,7 +8,7 @@ except:
 
 import actionlib
 from jsk_rviz_plugins.msg import OverlayMenu
-from joy_pose_6d import JoyPose6D
+from jsk_teleop_joy.joy_pose_6d import JoyPose6D
 from jsk_interactive_marker.srv import GetTransformableMarkerPose
 from jsk_interactive_marker.srv import SetPose
 from geometry_msgs.msg import PoseStamped

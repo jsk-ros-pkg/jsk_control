@@ -17,10 +17,10 @@ except:
 from sensor_msgs.msg import Joy
 from diagnostic_msgs.msg import DiagnosticStatus, DiagnosticArray
 import tf.transformations
-from joy_status import IpegaStatus, XBoxStatus, PS3Status, PS3WiredStatus
+from jsk_teleop_joy.joy_status import IpegaStatus, XBoxStatus, PS3Status, PS3WiredStatus
 from jsk_rviz_plugins.msg import OverlayMenu
-from plugin_manager import PluginManager
-from status_history import StatusHistory
+from jsk_teleop_joy.plugin_manager import PluginManager
+from jsk_teleop_joy.status_history import StatusHistory
 from diagnostic_updater import Updater as DiagnosticUpdater
 
 AUTO_DETECTED_CLASS = None
