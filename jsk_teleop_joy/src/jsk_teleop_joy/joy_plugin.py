@@ -17,7 +17,7 @@ class JSKJoyPlugin():
     def disable(self):
         pass
     def getArg(self, key, default=None):
-        if self.args.has_key(key):
+        if key in self.args:
             return self.args[key]
         else:
             return default

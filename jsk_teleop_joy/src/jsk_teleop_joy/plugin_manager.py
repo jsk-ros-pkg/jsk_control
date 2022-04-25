@@ -26,7 +26,7 @@ class PluginManager():
       instance_spec = plugins[instance_name]
       instance_class = instance_spec["class"]
       instance_args = instance_spec["args"]
-      if not self.plugin_defs.has_key(instance_class):
+      if instance_class not in self.plugin_defs:
         rospy.logerr('cannot find %s in plugins for %s' % (instance_class,
                                                            self.package_name))
       else:
@@ -68,12 +68,12 @@ class PluginManager():
         for library_elem in root.getiterator('library'):
           for class_elem in library_elem.getiterator('class'):
             items = class_elem.attrib
-            if not items.has_key('name'):
+            if 'name' not in items:
               rospy.logerr('class tag of %s does not have name attribute' 
                            % (xml_path))
             else:
               name = items['name']
-              if not items.has_key('type'):
+              if 'type' not in items:
                 rospy.logerr('%s does not have type attribute' % (name))
               else:
                 plugin_name = items['type']

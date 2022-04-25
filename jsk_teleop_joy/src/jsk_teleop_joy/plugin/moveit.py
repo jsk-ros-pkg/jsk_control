@@ -1,5 +1,5 @@
 import rospy
-from joy_pose_6d import JoyPose6D
+from jsk_teleop_joy.joy_pose_6d import JoyPose6D
 
 import imp
 try:
