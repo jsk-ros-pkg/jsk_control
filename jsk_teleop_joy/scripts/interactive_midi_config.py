@@ -13,6 +13,10 @@ except:
   roslib.load_manifest("jsk_teleop_joy")
   from jsk_teleop_joy.midi_util import MIDIParse, MIDICommand, MIDIException
 
+# use raw_input for python2 c.f. https://stackoverflow.com/questions/5868506/backwards-compatible-input-calls-in-python
+if hasattr(__builtins__, 'raw_input'):
+    input = raw_input
+
 G_DEVICE_INFO = {
   "device_name": "",
   "analogs": [] #[[command, index], [command, index], ...
@@ -32,7 +36,7 @@ def parseDeviceName():
       print("  [%d] %s (%s)" % (d, info[1], "input"))
     else:
       print("  [%d] %s (%s)" % (d, info[1], "output"))
-  val = raw_input("Please select the device by number[%d-%d]:" % (0, d))
+  val = input("Please select the device by number[%d-%d]:" % (0, d))
   try:
     parsed_number = int(val)
     if parsed_number >= 0 and parsed_number <= d:
