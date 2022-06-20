@@ -46,6 +46,23 @@ For more detailed infomation. please read [docs/jaxon_ik_evaluation](docs/jaxon_
 ![](./data/jaxon-zup-iterate009-concatenated.png)
 ![](./data/jaxon-zup-iterate009.csv.png)
 
+### TABLIS IK Evaluation
+
+#### X-up IK reachability with `:rotation-axis :z`
+
+![](./data/tablis-xup-iterate009-concatenated.png)
+![](./data/tablis-xup-iterate009.csv.png)
+
+#### Y-up IK reachability with `:rotation-axis :z`
+
+![](./data/tablis-yup-iterate009-concatenated.png)
+![](./data/tablis-yup-iterate009.csv.png)
+
+#### Z-up IK reachability with `:rotation-axis :z`
+
+![](./data/tablis-zup-iterate009-concatenated.png)
+![](./data/tablis-zup-iterate009.csv.png)
+
 ### Fetch IK Evaluation
 
 #### X-up IK reachability with `:rotation-axis :z`
