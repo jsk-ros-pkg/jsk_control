@@ -2,8 +2,8 @@
 Changelog for package eus_qpoases
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.16 (2022-10-27)
+-------------------
 * https://projects.coin-or.org have mved to github (`#776 <https://github.com/jsk-ros-pkg/jsk_control/issues/776>`_)
 
 * add optimization motion generation (`#700 <https://github.com/jsk-ros-pkg/jsk_control/issues/700>`_)

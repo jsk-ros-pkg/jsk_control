@@ -2,8 +2,8 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.16 (2022-10-27)
+-------------------
 * [jsk_footstep_controller] add head-controller.l, add base-controller.l (`#758 <https://github.com/jsk-ros-pkg/jsk_control/issues/758>`_)
 * [jsk_footstep_controler/robot-boundingbox.l] remove dependency on jsk_demos/drc_task_common (`#764 <https://github.com/jsk-ros-pkg/jsk_control/issues/764>`_)
 * [jsk_control]add queue_size (`#735 <https://github.com/jsk-ros-pkg/jsk_control/issues/735>`_)

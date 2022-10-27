@@ -2,8 +2,8 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.16 (2022-10-27)
+-------------------
 * check x::*display* is available before running graph-view (gnuplot) (`#776 <https://github.com/jsk-ros-pkg/jsk_control/issues/776>`_)
 * ptmotiongen: no visualization / print if argument is nil. (`#729 <https://github.com/jsk-ros-pkg/jsk_control/issues/729>`_)
 * [optmotiongen] inverse-kinematics for the discrete target (`#728 <https://github.com/jsk-ros-pkg/jsk_control/issues/728>`_)

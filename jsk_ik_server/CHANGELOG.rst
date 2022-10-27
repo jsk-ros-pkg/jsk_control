@@ -2,8 +2,8 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.16 (2022-10-27)
+-------------------
 * [jsk_ik_server] add TABLIS reachability map (`#777 <https://github.com/jsk-ros-pkg/jsk_control/issues/777>`_)
 * https://projects.coin-or.org have mved to github (`#776 <https://github.com/jsk-ros-pkg/jsk_control/issues/776>`_)
 * [jsk_ik_server] add fetch ik reachability map script (`#769 <https://github.com/jsk-ros-pkg/jsk_control/issues/769>`_)
