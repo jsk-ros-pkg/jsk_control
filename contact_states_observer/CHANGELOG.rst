@@ -2,6 +2,9 @@
 Changelog for package contact_states_observer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.15 (2018-05-16)
 -------------------
 
