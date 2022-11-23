@@ -1,0 +1,16 @@
+
+<launch>
+
+  <!-- Hack to create the directory -->
+  <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/baxter_calibration" />
+  <param name="mkdir_tmp" command="mkdir -m 777 -p /tmp/baxter_calibration/cb_fail" />
+
+  <param name="/right_hand_camera/rgb/annotated_viewer/filename_format" type="string"
+         value="/tmp/baxter_calibration/cb_fail/cb_monocam_%04i.jpg" />
+
+  <include file="$(find calibration_launch)/capture_data/annotated_viewer.launch"
+           ns="/right_hand_camera/rgb" >
+    <arg name="image_topic" value="image_rect_annotated" />
+  </include>
+
+</launch>
