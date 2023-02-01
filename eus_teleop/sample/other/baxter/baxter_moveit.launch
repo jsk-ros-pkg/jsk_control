@@ -1,0 +1,28 @@
+<launch>
+  <arg name="realsense_camera" default="true" />
+  <arg name="spherical_camera" default="false" />
+  <arg name="logging" default="true" />
+  <arg name="arm_interpolation" default="minjerk" />
+  <arg name="arm_control_mode" default="position_w_id" />
+  <arg name="moveit" default="true" />
+  <arg name="gui" default="true" />
+  <arg name="lgripper_type" default="softhand" />
+  <arg name="rgripper_type" default="softhand" />
+  <arg name="launch_tabletop_detector" default="true" />
+
+  <include file="$(find eus_teleop)/launch/baxter/baxter.launch">
+    <arg name="realsense_camera" value="$(arg realsense_camera)" />
+    <arg name="spherical_camera" value="$(arg spherical_camera)" />
+    <arg name="logging" value="$(arg logging)" />
+    <arg name="arm_interpolation" value="$(arg arm_interpolation)" />
+    <arg name="arm_control_mode" value="$(arg arm_control_mode)" />
+    <arg name="moveit" value="$(arg moveit)" />
+    <arg name="lgripper_type" value="$(arg lgripper_type)" />
+    <arg name="rgripper_type" value="$(arg rgripper_type)" />
+    <arg name="launch_tabletop_detector" value="$(arg launch_tabletop_detector)" />
+  </include>
+
+  <node name="$(anon rviz)" pkg="rviz" type="rviz" if="$(arg gui)"
+        args="-d $(find eus_teleop)/rvizconfig/baxter/baxter_moveit.rviz"/>
+
+</launch>
