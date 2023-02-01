@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from six.moves import input
+
 import sys
 import time
 
@@ -104,7 +106,7 @@ class TABLIS_Configurator:
 
         c = False
         while (c != 'Y' and c != 'y'):
-            c = raw_input("press 'Y' for servo ON and power ON. >> ")
+            c = input("press 'Y' for servo ON and power ON. >> ")
 
         # urata system flag resetting for jaxon
         self.rh_svc.power(jname, OpenHRP.RobotHardwareService.SWITCH_ON)
@@ -142,7 +144,7 @@ class TABLIS_Configurator:
     def servoOff(self, jname='all'):
         c = False
         while (c != 'Y' and c != 'y'):
-            c = raw_input("press 'Y' for servo OFF and power OFF. >> ")
+            c = input("press 'Y' for servo OFF and power OFF. >> ")
 
         self.rh_svc.servo('all', OpenHRP.RobotHardwareService.SWITCH_OFF)
         time.sleep(0.2)
