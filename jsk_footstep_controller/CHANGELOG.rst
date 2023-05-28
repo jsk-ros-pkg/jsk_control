@@ -2,6 +2,9 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.16 (2022-10-27)
 -------------------
 * [jsk_footstep_controller] add head-controller.l, add base-controller.l (`#758 <https://github.com/jsk-ros-pkg/jsk_control/issues/758>`_)

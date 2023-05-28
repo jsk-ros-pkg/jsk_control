@@ -2,6 +2,9 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.16 (2022-10-27)
 -------------------
 * remove roseus from CMakeLists.txt (`#773 <https://github.com/jsk-ros-pkg/jsk_control/issues/773>`_)
