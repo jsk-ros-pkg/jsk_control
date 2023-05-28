@@ -8,13 +8,13 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>rospy</build_depend>
   <build_depend>sensor_msgs</build_depend>
-  <build_depend condition="$ROS_PYTHON_VERSION == 2">python-udev</build_depend>
-  <build_depend condition="$ROS_PYTHON_VERSION == 3">python3-udev</build_depend>
+  <build_depend condition="$ROS_PYTHON_VERSION == 2">python-pyudev</build_depend>
+  <build_depend condition="$ROS_PYTHON_VERSION == 3">python3-pyudev</build_depend>
 
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-udev</exec_depend>
-  <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-udev</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 2">python-pyudev</exec_depend>
+  <exec_depend condition="$ROS_PYTHON_VERSION == 3">python3-pyudev</exec_depend>
 
   <export>
   </export>
