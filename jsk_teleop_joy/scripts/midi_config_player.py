@@ -67,7 +67,7 @@ def main():
     # automatically mapping to buttons from axes if it has NOTE_OFF or NOTE_ON MIDI commands
     button_configs = [c for c in config["analogs"]
                       if c[0] == MIDICommand.NOTE_ON or c[0] == MIDICommand.NOTE_OFF]
-    if config.has_key("output"):
+    if "output" in config:
       out_controller = openMIDIOutputByName(config["device_name"])
       s = rospy.Subscriber("~set_feedback", JoyFeedbackArray, lambda msg: feedback_array_cb(out_controller, config, msg))
     joy.buttons = [0] * len(button_configs)

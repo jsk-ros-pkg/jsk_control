@@ -2,6 +2,31 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.16 (2022-10-27)
+-------------------
+* fix for python3 (`#776 <https://github.com/jsk-ros-pkg/jsk_control/issues/776>`_)
+
+  * fix with 2to3 -w -f import, and fix ValueError: Attempted relative import in non-package
+  * use raw_input for python2 c.f. https://stackoverflow.com/questions/5868506/backwards-compatible-input-calls-in-python
+  * run 2to3 -w -f has_key . for python3 check
+
+* add from __future_\_ import print_function (`#773 <https://github.com/jsk-ros-pkg/jsk_control/issues/773>`_)
+* [README.md] delete pip instruction and recommend apt version only (`#760 <https://github.com/jsk-ros-pkg/jsk_control/issues/760>`_)
+* fix for  python3 (`#763 <https://github.com/jsk-ros-pkg/jsk_control/issues/763>`_)
+
+  * 2to3 -w -fexcept .
+  * 2to3 -w -fprint .
+  * update readme
+  * Update jsk_teleop_joy/README.md
+
+
+* Add ipega controller support (`#716 <https://github.com/jsk-ros-pkg/jsk_control/issues/716>`_)
+
+  * Fixed a key setting mistake. Add controller_type ipega as a possible input for joy_status
+  * Add ipega controller support
+
+* Contributors: Shingo Kitagawa, Iki Yo, Kei Okada, Yoichiro Kawamura
+
 0.1.15 (2018-05-16)
 -------------------
 * Merge pull request `#693 <https://github.com/jsk-ros-pkg/jsk_control/issues/693>`_ from k-okada/fix_apt_slow

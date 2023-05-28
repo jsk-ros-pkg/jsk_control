@@ -106,7 +106,7 @@ def main():
     # configuration := command, channel, use_param1[, param1_value]
     with open(options.write, "r+") as f:
       config = yaml.load(f)
-      if config.has_key("output"):
+      if "output" in config:
         output = config["output"]
       else:
         output = []

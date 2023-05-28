@@ -1,0 +1,34 @@
+<launch>
+  <arg name="main" default="true" />
+  <arg name="vive" default="true" />
+  <arg name="head" default="true" />
+  <arg name="mirror" default="false" />
+  <arg name="vive_set" default="default" />
+  <arg name="lgripper_type" default="softhand" />
+  <arg name="rgripper_type" default="softhand" />
+  <arg name="button_toggle" default="true" />
+
+  <include file="$(find eus_teleop)/launch/baxter/baxter_teleop.launch">
+    <arg name="main" value="$(arg main)" />
+    <arg name="vive" value="$(arg vive)" />
+    <arg name="device" value="tablis" />
+    <arg name="tablis" value="true" />
+    <arg name="head" value="$(arg head)" />
+    <arg name="mirror" value="$(arg mirror)" />
+    <arg name="launch_baxter" value="false" />
+    <arg name="display" value="false" />
+    <arg name="lgripper_type" value="$(arg lgripper_type)" />
+    <arg name="rgripper_type" value="$(arg rgripper_type)" />
+    <arg name="button_toggle" value="$(arg button_toggle)" />
+    <arg name="workspace_max_x" value="1300.0" />
+    <arg name="workspace_min_x" value="300.0" />
+    <arg name="workspace_max_y" value="750.0" />
+    <arg name="workspace_min_y" value="-750.0" />
+    <arg name="workspace_max_z" value="1200.0" />
+    <arg name="workspace_min_z" value="-150.0" />
+  </include>
+
+  <group ns="eus_teleop" if="$(arg vive)">
+    <rosparam command="load" file="$(find eus_teleop)/config/vive/$(arg vive_set)_vive_ids.yaml" />
+  </group>
+</launch>

@@ -2,6 +2,35 @@
 Changelog for package jsk_footstep_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.16 (2022-10-27)
+-------------------
+* run 2to3 -w -f has_key . for python3 check (`#776 <https://github.com/jsk-ros-pkg/jsk_control/issues/776>`_)
+* fix for test (`#773 <https://github.com/jsk-ros-pkg/jsk_control/issues/773>`_)
+
+  * indigo requres to add find_pacakge(roseus) to compile roseus message
+  * remove roseus from find_package(catkin at jsk_footstep_planner and jsk_ik_server
+  * add from __future_\_ import print_function
+
+* [jsk_footstep_planner] add an example of footstep planner client with disarranged goal footsteps (`#739 <https://github.com/jsk-ros-pkg/jsk_control/issues/739>`_)
+* [jsk_footstep_planner] add num_finalize_steps option to dynamic_reconfigure of jsk_footstep_planner (`#741 <https://github.com/jsk-ros-pkg/jsk_control/issues/741>`_)
+* 2to3 -w -fexcept ., 2to3 -w -fprint . (`#763 <https://github.com/jsk-ros-pkg/jsk_control/issues/763>`_)
+* add melodic support (`#740 <https://github.com/jsk-ros-pkg/jsk_control/issues/740>`_)
+
+  * [jsk_footstep_planner] fixed returned value of FootstepStateDiscreteCloseList::find()
+  * [jsk_footstep_planner] fixed a returned value of FootstepStateDiscreteCloseList::find()
+
+* Update README.md and Delete duplicated launch files (`#733 <https://github.com/jsk-ros-pkg/jsk_control/issues/733>`_)
+
+  * [jsk_footstep_planner] Update README.md to fix link to an image.
+  * [jsk_footstep_planner] add footstep_planner_perception_sample.gif and update README.md to fix syntax error and add an image.
+  * [jsk_footstep_planner] delete unintentionally duplicated launch files
+  * [jsk_footstep_planner] update README.md to add notice about euslisp implementation
+  * [jsk_footstep_planner] update README.md to add description about how to execute examples
+
+* fix heightmap launch so that it can work with nodelet. (`#694 <https://github.com/jsk-ros-pkg/jsk_control/issues/694>`_)
+
+* Contributors: Kei Okada, Koki Shinjo, Riku Shigematsu, Yohei Kakiuchi
+
 0.1.15 (2018-05-16)
 -------------------
 * Merge pull request `#692 <https://github.com/jsk-ros-pkg/jsk_control/issues/692>`_ from orikuma/replace-footstep-state-to-state-ptr

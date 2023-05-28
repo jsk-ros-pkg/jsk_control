@@ -6,7 +6,7 @@ except:
 
 
 from geometry_msgs.msg import PoseStamped, Pose
-from joy_pose_6d import JoyPose6D
+from jsk_teleop_joy.joy_pose_6d import JoyPose6D
 from jsk_footstep_msgs.msg import FootstepArray, Footstep
 import tf
 import rospy

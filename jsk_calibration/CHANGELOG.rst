@@ -2,6 +2,13 @@
 Changelog for package jsk_calibration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.16 (2022-10-27)
+-------------------
+* remove roseus from CMakeLists.txt (`#773 <https://github.com/jsk-ros-pkg/jsk_control/issues/773>`_)
+* [joint_states_appender.py]add queue_size (`#734 <https://github.com/jsk-ros-pkg/jsk_control/issues/734>`_)
+* 0755 -> -h0o0755 : SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers, 2to3 -w -fprint . (`#763 <https://github.com/jsk-ros-pkg/jsk_control/issues/763>`_)
+* Contributors: Kei Okada, Naoki Hiraoka
+
 0.1.15 (2018-05-16)
 -------------------
 
