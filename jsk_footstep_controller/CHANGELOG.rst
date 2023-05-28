@@ -2,6 +2,20 @@
 Changelog for package jsk_footstep_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.16 (2022-10-27)
+-------------------
+* [jsk_footstep_controller] add head-controller.l, add base-controller.l (`#758 <https://github.com/jsk-ros-pkg/jsk_control/issues/758>`_)
+* [jsk_footstep_controler/robot-boundingbox.l] remove dependency on jsk_demos/drc_task_common (`#764 <https://github.com/jsk-ros-pkg/jsk_control/issues/764>`_)
+* [jsk_control]add queue_size (`#735 <https://github.com/jsk-ros-pkg/jsk_control/issues/735>`_)
+* [jsk_footstep_controller] add sole conf for JAXON_BLUE (`#690 <https://github.com/jsk-ros-pkg/jsk_control/issues/690>`_)
+* 2to3 -w -fprint . (`#763 <https://github.com/jsk-ros-pkg/jsk_control/issues/763>`_)
+* Add melodic support [jsk_footstep_controller] fix a bug in footcoords.cpp due to a bug of boost::assign::list_of (`#740 <https://github.com/jsk-ros-pkg/jsk_control/issues/740>`_)
+* [jsk_footstep_controller] install config (`#725 <https://github.com/jsk-ros-pkg/jsk_control/issues/725>`_)
+* jsk_footstep_controller: check SoundRequest  has volume attribute (`#726 <https://github.com/jsk-ros-pkg/jsk_control/issues/726>`_, `#724 <https://github.com/jsk-ros-pkg/jsk_control/issues/724>`_)
+* add missing install directories (`#699 <https://github.com/jsk-ros-pkg/jsk_control/issues/699>`_)
+
+* Contributors: Kei Okada, Koki Shinjo, Masaki Murooka, Naoki Hiraoka, Yasuhiro Ishiguro, Kunio Kojima
+
 0.1.15 (2018-05-16)
 -------------------
 

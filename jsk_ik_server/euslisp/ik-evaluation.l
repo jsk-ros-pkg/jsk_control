@@ -129,6 +129,7 @@
     )
   (:normalize-cells ()
     (let ((sum (reduce #'+ (send-all cells :get-value))))
+      (if (eq sum 0) (return-from :normalize-cells nil))
       (dolist (cell cells)
         (send cell :set-value (/ (send cell :get-value) (float sum))))
       ))
@@ -516,12 +517,12 @@
                                          ik-arg
                                          rot-matrix
                                          output-directory
-                                         &key (min-distance 0))
+                                         &key (min-distance 0) (arm :larm))
   (format t "Generate reachability map for ~A with rotation ~A~%" (send robot :name) rot-matrix)
   (setq *grid* (instance ik-grid :init
                          min-max-x min-max-y min-max-z
                          :grid-step grid-step))
-  (ik-evaluation *robot* *grid* :larm ik-arg :update-view nil
+  (ik-evaluation *robot* *grid* arm ik-arg :update-view nil
                  :rotation rot-matrix
                  :min-distance min-distance)
   (send *grid* :dump-to-csv (format nil "~A/~A-input.csv" output-directory file-prefix))

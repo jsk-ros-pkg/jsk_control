@@ -1,6 +1,6 @@
 import rospy
 import actionlib
-from joy_pose_6d import JoyPose6D
+from jsk_teleop_joy.joy_pose_6d import JoyPose6D
 from std_msgs.msg import String, Empty
 from geometry_msgs.msg import PoseStamped
 import xml.etree.ElementTree as ET

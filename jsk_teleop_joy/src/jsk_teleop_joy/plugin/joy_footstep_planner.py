@@ -7,7 +7,7 @@ except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 import threading
 import actionlib
-from joy_pose_6d import JoyPose6D
+from jsk_teleop_joy.joy_pose_6d import JoyPose6D
 from actionlib_msgs.msg import GoalStatusArray
 from jsk_footstep_msgs.msg import PlanFootstepsAction, PlanFootstepsGoal, Footstep, FootstepArray, ExecFootstepsAction, ExecFootstepsGoal
 from jsk_rviz_plugins.msg import OverlayMenu, OverlayText

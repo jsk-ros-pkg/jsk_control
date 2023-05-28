@@ -2,6 +2,110 @@
 Changelog for package eus_qp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.16 (2022-10-27)
+-------------------
+* check x::*display* is available before running graph-view (gnuplot) (`#776 <https://github.com/jsk-ros-pkg/jsk_control/issues/776>`_)
+* ptmotiongen: no visualization / print if argument is nil. (`#729 <https://github.com/jsk-ros-pkg/jsk_control/issues/729>`_)
+* [optmotiongen] inverse-kinematics for the discrete target (`#728 <https://github.com/jsk-ros-pkg/jsk_control/issues/728>`_)
+
+  * optmotiongen: add test of discrete-kinematics-configuration-task.
+  * optmotiongen: update manual.pdf
+  * optmotiongen: add manual for discrete target ik.
+  * optmotiongen: add sample/sample-sqp-optimization-discrete-kinematics.l
+  * optmotiongen: add sample function sample-arm-reach-ik-discrete-raw.
+  * optmotiongen: add discrete-kinematics-configuration-task.l
+  * optmotiongen: flatten for drawing kin coords list for support discrete-kinematics-configuration-task.
+
+* [optmotiongen] add sample to maximize contact force (`#727 <https://github.com/jsk-ros-pkg/jsk_control/issues/727>`_)
+
+  * optmotiongen: update manual.pdf
+  * optmotiongen: add demo-jaxon-hand-force.l
+  * optmotiongen: add :wrench-maximize-regular-vector to instant-config-task.
+  * optmotiongen: add norm-regular-scale-coeff to instant-config-task.
+  * optmotiongen: enable to set nil for print-status-interval and update-viewer-interval.
+  * optmotiongen: add sqp-convergence-check and sqp-failure-callback.
+  * optmotiongen: enable to set external-wrench-list.
+
+* [optmotiongen] visualize force fix (`#722 <https://github.com/jsk-ros-pkg/jsk_control/issues/722>`_)
+
+* fix for test (`#723 <https://github.com/jsk-ros-pkg/jsk_control/issues/723>`_)
+
+  * optmotiongen: fix and reduce some tests because travis does not finish within 50 min.
+  * optmotiongen: fix for visualize contact force in sample-sqp-optimization-trajectory.l.
+  * optmotiongen: add functions for visualizing force and moment in playing motion
+
+* [eus_qp/optmotiongen] add target-posture-scale-list argument (`#718 <https://github.com/jsk-ros-pkg/jsk_control/issues/718>`_)
+
+  * optmotiongen: add target-posture-scale-list argument to instant-configuration-task :init method. support to change scale for each posture joint.
+
+* add demo rhp4b reach suitcase instant manip (`#715 <https://github.com/jsk-ros-pkg/jsk_control/issues/715>`_)
+* [optmotiongen] fix gravity torque calculation (`#714 <https://github.com/jsk-ros-pkg/jsk_control/issues/714>`_)
+
+  * optmotiongen: update manual.pdf for gravity torque document.
+  * optmotiongen: consider fixed link weight to calculate gravity torque. ToDo: The effect for centroid is not considered yet.
+  * optmotiongen: update gravity-torque-jacobian calculation and document.
+  * optmotiongen: add euslisp/demo/demo-rhp4b-torque-gradient.l
+  * optmotiongen: test torque calculation with irtdyna result.
+
+* [optmotiongen] Rebase https://github.com/jsk-ros-pkg/jsk_control/pull/711 (`#713 <https://github.com/jsk-ros-pkg/jsk_control/issues/713>`_)
+
+  * optmotiongen: update manual.pdf for torque gradient update.
+  * optmotiongen: update torque gradient calculation (get-contact-torque-jacobian function) and update document.
+  * optmotiongen: add sample and test of torque gradient.
+
+* set adjacent regular scale as list format via :adjacent-regular-scale-list argument. add sample for that argument. (`#708 <https://github.com/jsk-ros-pkg/jsk_control/issues/708>`_)
+
+  * optmotiongen: add test of min/max angle of root virtual joint from ik wrapper.
+  * optmotiongen: support min/max angle of root virtual joint from ik wrapper.
+
+* set adjacent regular scale as list format via :adjacent-regular-scale-list argument. add sample for that argument. (`#708 <https://github.com/jsk-ros-pkg/jsk_control/issues/708>`_)
+* [eus_qp/optmotiongen] support min/max angle of root virtual joint (`#709 <https://github.com/jsk-ros-pkg/jsk_control/issues/709>`_)
+
+  * optmotiongen: add test of min/max angle of root virtual joint from ik wrapper.
+  * optmotiongen: support min/max angle of root virtual joint from ik wrapper.
+
+* [eus_qp/optmotiongen] dynamic motion generation with bspline (`#705 <https://github.com/jsk-ros-pkg/jsk_control/issues/705>`_)
+
+  * [eus_qp/optmotiongen/manual] update manual.pdf for bspline-dynamic-configuration-task.
+  * [eus_qp/optmotiongen/euslisp/contact-kinematics.l] add look-at-contact class and sample, test for that.
+  * [eus_qp/optmotiongen] update sample and test for bspline-dynamic-configuration-task.
+  * [eus_qp/optmotiongen/euslisp/demo,sample] move from demo to sample directory.
+  * [eus_qp/optmotiongen/euslisp/sample,test] add option to supress graph generation for travis test.
+  * [eus_qp/CMakeLists.txt] install optmotiongen directories.
+  * [eus_qp/optmotiongen/euslisp/demo] rename hrp2 line face sample.
+  * [eus_qp/optmotiongen/test] fix test name to use '_' instead of '-'. cf. http://wiki.ros.org/Names
+  * [eus_qp/optmotiongen/euslisp/sample] use irtviewer :draw-floor and :floor-color methods instead of direct slots access.
+  * [eus_qp/optmotiongen/test,euslisp/sample] add sample and test with irteus sample-robot.
+  * [eus_qp/optmotiongen/doc] add README for bspline-dynamic-configuration-task.
+  * [eus_qp/optmotiongen/euslisp/bspline-configuration-task.l] support delta-time argument in :generate-angle-vector-sequence.
+  * [eus_qp/euslisp/contact-optimization.l] change drawing color from white to yellow for visibility in white background viewer.
+  * [eus_qp/optmotiongen/manual] update manual for bspline-dynamic-configuration-task.
+  * [eus_qp/optmotiongen] add bspline-dynamic-configuration-task and sample.
+  * [eus_qp] add test-load-euslisp-files.
+
+* [eus_qp/optmotiongen] add sqp with multi solution candidates (`#702 <https://github.com/jsk-ros-pkg/jsk_control/issues/702>`_)
+* [eus_qp/optmotiongen] Test eus loading without bash script (`#707 <https://github.com/jsk-ros-pkg/jsk_control/issues/707>`_)
+
+  * [eus_qp/optmotiongen/euslisp/inverse-kinematics-wrapper.l] Fix load path
+  * test-load-euslisp-files.l: run everything within euslisp code
+  * [eus_qp] add test-load-euslisp-files.
+  * [eus_qp/optmotiongen] add sqp-msc (multi solution candidates) feature. add manual and samples of sqp-msc.
+  * [eus_qp/optmotiongen] fix variable name, _qp-retval.
+  * [eus_qp/optmotiongen] set contact-ik-args name from argument.
+
+* add two use case of optmotiongen (`#701 <https://github.com/jsk-ros-pkg/jsk_control/issues/701>`_)
+
+  * [eus_qp/optmotiongen] update README, gif, and generate-gif.l to generate demo images"
+  * [eus_qp/optmotiongen] set name of face and line contact from argument.
+  * [eus_qp/optmotiongen] add demo-pr2-regrasp-object.l
+  * [eus_qp/optmotiongen] update manual.pdf
+  * [eus_qp/optmotiongen] add fetch demo using :inverse-kinematics-optmotiongen
+  * [eus_qp/optmotiongen] add line and face demo with hrp2
+
+* add optimization motion generation (`#700 <https://github.com/jsk-ros-pkg/jsk_control/issues/700>`_)
+
+* Contributors: Kei Okada, Masaki Murooka, Naoya Yamaguchi, Riku Shigematsu, Satoshi Otsubo, Tatsuya Ishikawa, Weiqi Yang
+
 0.1.15 (2018-05-16)
 -------------------
 

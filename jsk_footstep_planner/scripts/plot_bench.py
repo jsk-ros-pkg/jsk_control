@@ -72,7 +72,7 @@ for row in reader:
         initialized = True
     theta_str = row[fields.index("theta")]
     theta = float(theta_str)
-    if not data.has_key(theta_str):
+    if theta_str not in data:
         data[theta_str] = []
     data[theta_str].append((float(row[fields.index("x")]), float(row[fields.index("y")]), float(row[fields.index("one_time")])))
 

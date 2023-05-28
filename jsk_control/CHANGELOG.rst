@@ -2,6 +2,11 @@
 Changelog for package jsk_control
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.16 (2022-10-27)
+-------------------
+* [jsk_control] add url in package.xml of jsk_control (`#744 <https://github.com/jsk-ros-pkg/jsk_control/issues/744>`_)
+* Contributors: Shingo Kitagawa
+
 0.1.15 (2018-05-16)
 -------------------
 

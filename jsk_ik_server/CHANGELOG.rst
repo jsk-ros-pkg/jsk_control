@@ -2,6 +2,29 @@
 Changelog for package jsk_ik_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.16 (2022-10-27)
+-------------------
+* [jsk_ik_server] add TABLIS reachability map (`#777 <https://github.com/jsk-ros-pkg/jsk_control/issues/777>`_)
+* https://projects.coin-or.org have mved to github (`#776 <https://github.com/jsk-ros-pkg/jsk_control/issues/776>`_)
+* [jsk_ik_server] add fetch ik reachability map script (`#769 <https://github.com/jsk-ros-pkg/jsk_control/issues/769>`_)
+* avoid zero division ik ik-evaluation.l (`#767 <https://github.com/jsk-ros-pkg/jsk_control/issues/767>`_)
+* [jsk_ik_server] add baxter reachability map script (`#771 <https://github.com/jsk-ros-pkg/jsk_control/issues/771>`_)
+
+  * add baxter ik reachability map images in readme
+  * add fetch ik reachability map in readme
+  * add baxter reachability map
+
+* fix for test (`#773 <https://github.com/jsk-ros-pkg/jsk_control/issues/773>`_)
+
+  * indigo requres to add find_pacakge(roseus) to compile roseus message
+  * remove roseus from find_package(catkin at jsk_footstep_planner and jsk_ik_server
+
+* [jsk_ik_server] fix typo in hrp2.sh and pr2.sh (`#768 <https://github.com/jsk-ros-pkg/jsk_control/issues/768>`_)
+* [jsk_ik_server] add readme for jsk_ik_server (`#772 <https://github.com/jsk-ros-pkg/jsk_control/issues/772>`_)
+* 2to3 -w -fprint . (`#763 <https://github.com/jsk-ros-pkg/jsk_control/issues/763>`_)
+
+* Contributors: Kei Okada, Shingo Kitagawa
+
 0.1.15 (2018-05-16)
 -------------------
 

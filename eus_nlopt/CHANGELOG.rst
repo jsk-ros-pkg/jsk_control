@@ -2,6 +2,11 @@
 Changelog for package eus_nlopt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.16 (2022-10-27)
+-------------------
+* use System nlopt library for noetic, skip compile if nlopt is missing (`#773 <https://github.com/jsk-ros-pkg/jsk_control/issues/773>`_)
+* Contributors: Kei Okada
+
 0.1.15 (2018-05-16)
 -------------------
 

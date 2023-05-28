@@ -6,7 +6,7 @@
   <author email="furuta@jsk.t.u-tokyo.ac.jp">furuta</author>
   <maintainer email="furuta@jsk.t.u-tokyo.ac.jp">furuta</maintainer>
   <license>BSD</license>
-  <version>0.1.15</version>
+  <version>0.1.16</version>
   <url>http://ros.org/wiki/jsk_ik_server</url>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roseus</build_depend>
