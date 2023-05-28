@@ -1,0 +1,175 @@
+<launch>
+  <arg name="input_cloud" />
+  <arg name="input_image" />
+  <arg name="camera_frame_id"  />
+  <arg name="manager" />
+
+  <arg name="launch_transformable_server" default="true" />
+  <arg name="clip" default="true" />
+
+  <arg name="CLOUD" value="bbox_cloud_extract/output" if="$(arg clip)" />
+  <arg name="CLOUD" value="$(arg input_cloud)" unless="$(arg clip)" />
+
+  <group if="$(arg clip)">
+    <node name="transformable_markers_client"
+          pkg="jsk_interactive_marker" type="transformable_markers_client.py"
+          if="$(arg launch_transformable_server)"
+          output="screen">
+      <remap from="~server" to="transformable_interactive_server" />
+      <rosparam subst_value="true">
+        config_file: $(find eus_teleop)/config/baxter/workspace_transformable_markers_client.yaml
+        config_auto_save: true
+        interactive_mode: 2  # BUTTON
+      </rosparam>
+    </node>
+
+    <!-- bboxes -> bbox -->
+    <node name="bboxes_to_bbox"
+          pkg="jsk_pcl_ros_utils" type="bounding_box_array_to_bounding_box"
+          output="screen" >
+      <remap from="~input" to="transformable_markers_client/output/boxes" />
+      <rosparam>
+        index: 0
+      </rosparam>
+    </node>
+
+    <!-- attention_clipper -->
+    <node name="bbox_attention_clipper"
+          pkg="nodelet" type="nodelet" args="load jsk_pcl/AttentionClipper $(arg manager)"
+          output="screen" >
+      <remap from="~input/points" to="$(arg input_cloud)" />
+      <remap from="~input/box" to="bboxes_to_bbox/output" />
+      <rosparam>
+        frame_id: base
+        use_multiple_attention: false
+      </rosparam>
+    </node>
+
+    <!-- indices_to_mask -->
+    <node name="indices_to_mask"
+          pkg="nodelet" type="nodelet"
+          args="load jsk_pcl_utils/PointIndicesToMaskImage $(arg manager)" >
+        <remap from="~input" to="bbox_attention_clipper/output/point_indices" />
+        <remap from="~input/image" to="$(arg input_image)" />
+        <rosparam>
+          approximate_sync: true
+          queue_size: 100
+        </rosparam>
+    </node>
+
+    <!-- extract indices -->
+    <node name="bbox_cloud_extract"
+          pkg="nodelet" type="nodelet" args="load jsk_pcl/ExtractIndices $(arg manager)"
+          output="screen" >
+      <remap from="~input" to="$(arg input_cloud)" />
+      <remap from="~indices" to="bbox_attention_clipper/output/point_indices" />
+      <rosparam>
+        keep_organized: true
+        approximate_sync: true
+        max_queue_size: 100
+      </rosparam>
+    </node>
+  </group>
+
+  <node name="multi_plane_estimate" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/OrganizedMultiPlaneSegmentation $(arg manager)"
+        output="screen" >
+    <remap from="~input" to="$(arg CLOUD)" />
+    <rosparam>
+      max_curvature: 0.01
+      estimate_normal: true
+      min_size: 10000
+    </rosparam>
+  </node>
+  <node name="polygon_magnifier" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl_utils/PolygonMagnifier $(arg manager)"
+        output="screen" >
+    <remap from="~input" to="multi_plane_estimate/output_refined_polygon" />
+  </node>
+  <node name="plane_extraction" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/MultiPlaneExtraction $(arg manager)"
+        output="screen" >
+    <remap from="~input" to="$(arg CLOUD)" />
+    <remap from="~indices" to="multi_plane_estimate/output_refined" />
+    <remap from="~input_polygons" to="multi_plane_estimate/output_refined_polygon" />
+    <remap from="~input_coefficients" to="multi_plane_estimate/output_refined_coefficients" />
+    <rosparam subst_value="true">
+      use_indices: true
+      use_sensor_frame: true
+      sensor_frame: /$(arg camera_frame_id)
+      min_height: 0.01
+      max_height: 1000.0
+      use_async: true
+      max_queue_size: 300
+    </rosparam>
+  </node>
+  <node name="euclidean_clustering" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/EuclideanClustering $(arg manager)"
+        output="screen">
+    <remap from="~input" to="plane_extraction/output_nonplane_cloud" />
+    <rosparam>
+      tolerance: 0.02
+      min_size: 100
+      downsample_enable: true
+      leaf_size: 0.01
+    </rosparam>
+  </node>
+  <node name="throttle_segmentation" pkg="nodelet" type="nodelet"
+        args="load jsk_topic_tools/LightweightThrottle $(arg manager)"
+        output="screen">
+    <remap from="~input" to="euclidean_clustering/output" />
+    <remap from="~output" to="euclidean_clustering/output_throttle" />
+  </node>
+  <node name="segmentation_decomposer" pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/ClusterPointIndicesDecomposer $(arg manager)"
+        output="screen" >
+    <remap from="~input" to="plane_extraction/output" />
+    <remap from="~target" to="euclidean_clustering/output_throttle" />
+    <remap from="~align_planes" to="multi_plane_estimate/output_refined_polygon" />
+    <remap from="~align_planes_coefficients"
+           to="multi_plane_estimate/output_refined_coefficients" />
+    <rosparam subst_value="true">
+      align_boxes: true
+      align_boxes_with_plane: false
+      target_frame_id: base
+      use_pca: true
+      sort_by: cloud_size
+      publish_clouds: false
+      publish_tf: true
+      approximate_sync: true
+      queue_size: 300
+    </rosparam>
+  </node>
+
+  <node name="tabletop_outlier_removal"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/OrganizedStatisticalOutlierRemoval $(arg manager)">
+    <remap from="~input" to="plane_extraction/output" />
+    <remap from="~input/cluster_indices" to="euclidean_clustering/output" />
+    <rosparam>
+      mean_k: 30
+      stddev: 0.4
+      keep_organized: true
+      use_cluster_point_indices: true
+      approximate_sync: true
+    </rosparam>
+  </node>
+  <node name="tabletop_cpi_decomposer"
+        pkg="nodelet" type="nodelet"
+        args="load jsk_pcl/ClusterPointIndicesDecomposer $(arg manager)">
+    <remap from="~input" to="tabletop_outlier_removal/output" />
+    <remap from="~target" to="euclidean_clustering/output" />
+    <rosparam>
+      align_boxes: true
+      align_boxes_with_plane: false
+      target_frame_id: base
+      use_pca: true
+      sort_by: cloud_size
+      publish_clouds: false
+      publish_tf: true
+      approximate_sync: true
+      queue_size: 300
+    </rosparam>
+  </node>
+
+</launch>
