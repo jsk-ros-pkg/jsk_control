@@ -2,8 +2,8 @@
 Changelog for package joy_mouse
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.17 (2023-05-28)
+-------------------
 * jsk_mouse: fix wrong rosdep keys
   https://github.com/jsk-ros-pkg/jsk_control/pull/779/files changes rosdep key from python-pyudev to python-udev, which does not exists
 * [joy_mouse] update joy_mouse python3 deps for noetic
