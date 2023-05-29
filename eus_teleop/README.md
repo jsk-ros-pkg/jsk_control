@@ -25,15 +25,11 @@ This package depends on these branches below:
 
 ### Build environment
 
-#### Ubuntu 16.04 + ROS Kinetic
+#### Ubuntu 20.04 + ROS Noetic
 
-- NVidia driver: `396.37`
-- OpenVR: `1.3.22`
-- Steam VR: `1.6.10`
+Steam does not work on Melodic or Kinetic now.
 
-#### Ubuntu 18.04 + ROS Melodic
-
-- NVidia driver: `390.116`
+- NVidia driver: `525.105`
 - OpenVR: `1.3.22`
 - Steam VR: `1.6.10`
 
@@ -91,6 +87,12 @@ sudo apt install nvidia-396
 #### Install `OpenVR`, `steam` and `steamVR` (for Vive)
 
 Follow [here](https://github.com/knorth55/vive_ros)
+
+#### Remove libcurl packages in Steam (for Vive)
+
+```bash
+rm -r ~/.steam/steam/ubuntu12_32/steam-runtime/usr/lib/x86_64-linux-gnu/libcurl*
+```
 
 #### Install kodak 4k pro camera and ELP usb camera udev (for Baxter)
 
@@ -252,13 +254,23 @@ https://user-images.githubusercontent.com/9300063/213144997-0d224d5c-b462-43a7-b
 
 #### Baxter + Vive in JSK 73B2
 
+##### Baxter control PC
+
 ```bash
 rossetip
 rossetmaster baxter
-# HMD mode
-roslaunch eus_teleop baxter_vive.launch
+roslaunch eus_teleop baxter_remote.launch
+```
+
+##### Vive PC
+
+```bash
+rossetip
+rossetmaster baxter
 # No HMD mode
-roslaunch eus_teleop baxter_vive.launch head:=false
+roslaunch eus_teleop baxter_vive_remote.launch
+# for display
+roslaunch eus_teleop baxter_display_remote.launch
 ```
 
 #### Baxter + Vive in Gazebo
