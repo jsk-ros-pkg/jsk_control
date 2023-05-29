@@ -267,10 +267,16 @@ roslaunch eus_teleop baxter_remote.launch
 ```bash
 rossetip
 rossetmaster baxter
+
 # No HMD mode
 roslaunch eus_teleop baxter_vive_remote.launch
 # for display
 roslaunch eus_teleop baxter_display_remote.launch
+
+# HMD mode
+roslaunch eus_teleop baxter_vive_remote.launch head:=true
+# for display
+roslaunch eus_teleop baxter_display_remote.launch head:=true
 ```
 
 #### Baxter + Vive in Gazebo
