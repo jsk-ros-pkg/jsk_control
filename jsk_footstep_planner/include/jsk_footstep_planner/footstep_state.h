@@ -87,7 +87,7 @@ namespace jsk_footstep_planner
                   const Eigen::Vector3f& resolution):
       leg_(leg), pose_(pose), dimensions_(dimensions), resolution_(resolution)
     {
-      debug_print_ = false;
+      debug_print_ = true;
       float x = pose_.translation()[0];
       float y = pose_.translation()[1];
       float roll, pitch, yaw;
@@ -107,7 +107,7 @@ namespace jsk_footstep_planner
       leg_(leg), pose_(pose), dimensions_(dimensions), resolution_(resolution),
       index_x_(index_x), index_y_(index_y), index_yaw_(index_yaw)
     {
-      debug_print_ = false;
+      debug_print_ = true;
     }
 
     static
@@ -220,6 +220,26 @@ namespace jsk_footstep_planner
     inline virtual int indexT() { return index_yaw_; }
 
 
+    /**
+     * Check if footstep can be supported with pointcloud by 2 steps
+     *
+     *  - 
+     *
+     * @param [in] pose:
+     *      pose of footstep ?
+     * @param [in] cloud:
+     *      pointcloud of env
+     * @param [in] tree:
+     *      kdtree object used when finding nearest points from given point cloud
+     * @param [in] foot_x_samppling_num:
+     *      number of divided section in x direction when dividing footstep in order to find supporting pointcloud in each section.
+     * @param [in] foot_y_samppling_num:
+     *      number of divided section in y direction when dividing footstep in order to find supporting pointcloud in each section.
+     * @param [in] vertex_threshold:
+     *      平面からどれくらいz方向にずれていても許容するかのスレッショルド
+     *      およびに、キーポイントの近くに点があるかを探す探索範囲
+     *      
+     */
     virtual FootstepSupportState
     isSupportedByPointCloud(const Eigen::Affine3f& pose,
                             pcl::PointCloud<pcl::PointNormal>::Ptr cloud,

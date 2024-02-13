@@ -152,8 +152,8 @@ namespace jsk_footstep_planner
     std::vector<Eigen::Affine3f> successors_;
     Eigen::Vector3f collision_bbox_size_;
     Eigen::Affine3f collision_bbox_offset_;
-    Eigen::Vector3f inv_lleg_footstep_offset_;
-    Eigen::Vector3f inv_rleg_footstep_offset_;
+    Eigen::Vector3f inv_lleg_footstep_offset_; // default left footstep offset from center position
+    Eigen::Vector3f inv_rleg_footstep_offset_; // default right footstep offset from center position
     std_msgs::Header latest_header_;
     // Common Parameters
     FootstepParameters parameters_;
@@ -169,8 +169,8 @@ namespace jsk_footstep_planner
     double resolution_x_;
     double resolution_y_;
     double resolution_theta_;
-    double footstep_size_x_;
-    double footstep_size_y_;
+    double footstep_size_x_; // default footstep size x
+    double footstep_size_y_; // default footstep size y
     int close_list_x_num_;
     int close_list_y_num_;
     int close_list_theta_num_;
