@@ -1,10 +1,14 @@
 <launch>
   <arg name="use_footcoords" default="true"/>
+  <arg name="root_frame_id" default="BODY"/>
+  <arg name="use_wheel_odometry" default="false"/>
   <node pkg="jsk_footstep_controller"
         type="footcoords"
         name="footcoords"
         if="$(arg use_footcoords)"
         >
+    <param name="~root_frame_id" value="$(arg root_frame_id)"/>
+    <remap from="/odom" to="/wheel_odom" if="$(arg use_wheel_odometry)"/>
   </node>
 
   <node pkg="jsk_footstep_controller"
