@@ -247,7 +247,7 @@
            )))
      mat))
   (:proc-model-predictive-control
-   (&key (calc-state-value-list t) (solve-qp-mode :qp))
+   (&key (calc-state-value-list t) (solve-qp-mode :qp) (qp-solver #'solve-qpoases-qp))
    "Solve QP for one predictive control calculation."
    ;; Parameter list for all k = 0, ..., N-1
    (let* ((system-matrix-list (mapcar #'(lambda (x) (send x :system-matrix)) param-list))
@@ -338,7 +338,7 @@
                        (m* projected-output-error-weight-matrix total-feedforward-matrix)))
                   )
              (setq total-input-value-vector
-                   (solve-qpoases-qp
+                   (funcall qp-solver
                     :eval-weight-matrix
                     (if use-output-matrix
                         (m+ (m+ error-eval-weight-matrix input-weight-matrix) output-eval-weight-matrix)
@@ -351,7 +351,7 @@
                     :inequality-min-vector total-inequality-min-vector
                     :equality-matrix total-equality-matrix
                     :equality-vector total-equality-vector
-                    :solve-qp-mode solve-qp-mode
+                    :solve-qp-mode solve-qp-mode :print-level 1
                     ;;:print-level :pl-low
                     )
                    tmp-input-state-value (transform total-input-matrix total-input-value-vector))))
