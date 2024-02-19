@@ -178,6 +178,7 @@ namespace jsk_footstep_controller
     // ros variables
     boost::mutex mutex_;
     Eigen::Affine3d odom_pose_;
+    Eigen::Affine3d root_to_rfoot_pose_, root_to_lfoot_pose_;
     Eigen::Affine3d odom_init_pose_;
     ros::Timer periodic_update_timer_;
     ros::Subscriber odom_init_trigger_sub_;
