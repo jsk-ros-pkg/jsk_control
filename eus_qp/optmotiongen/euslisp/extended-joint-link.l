@@ -43,6 +43,35 @@ return $\bm{p}_i \in \mathbb{R}^3$
    )
   )
 
+(defmethod rotational-joint
+  (:calc-normal-jacobian
+   (jacobi row-idx col-idx paxis world-default-coords mtn tc &aux cross-prod)
+   "
+Calculate the block matrix of the jacobian of normal direction.
+The block matrix is $\bm{a} \times \bm{n}$, where $\bm{a}$ is joint axis and $\bm{n}$ is target normal.
+   "
+   (setq paxis (send world-default-coords :rotate-vector paxis))
+   (setq mtn (send tc :rotate-vector mtn))
+   (setq cross-prod (v* paxis mtn))
+   (dotimes (i 3)
+     (setf (aref jacobi (+ row-idx i) col-idx)
+           (aref cross-prod i))
+     )
+   )
+  )
+
+(defmethod linear-joint
+  (:calc-normal-jacobian
+   (jacobi row-idx col-idx paxis world-default-coords mtn tc &aux cross-prod)
+   "
+Calculate the block matrix of the jacobian of normal direction.
+The block matrix is $\bm{0}$.
+   "
+   (dotimes (i 3)
+     (setf (aref jacobi (+ row-idx i) col-idx) 0))
+   )
+  )
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; bodyset-link (add methods)
@@ -269,6 +298,66 @@ Get CoG jacobian matrix from union-joint-list.
        (dotimes (j (elt (array-dimensions inertia-matrix) 1))
          (setf (aref inertia-matrix i j) (/ (aref inertia-matrix i j) all-mass))))
      inertia-matrix
+     ))
+  (:calc-normal-jacobian-from-joint-list
+   (&key
+    (union-joint-list) ;; required
+    (move-target) ;; required
+    (joint-list
+     (mapcar
+      #'(lambda (mt) (send-all (send self :link-list (send mt :parent)) :joint))
+      move-target))
+    (transform-coords
+     (mapcar #'(lambda (mt) (make-coords)) move-target))
+    )
+   "
+\begin{description}
+\item[\it{union-joint-list}] list of all joints considered in jacobian. column num of jacobian is same with length of union-joint-list.
+\item[\it{move-target}] list of move-target. z-axis is assumed to be normal direction. x-axis and y-axis are ignored.
+\item[\it{joint-list}] list of joint-list which is contained in each chain of move-target.
+\item[\it{transform-coords}] list of transform-coords of each move-target.
+\end{description}
+
+Get jacobian matrix of normal direction.
+"
+   (let* ((joint-dim
+           (calc-target-joint-dimension union-joint-list))
+          (task-dim
+           (* (length move-target) 3))
+          (jacobi
+           (make-matrix task-dim joint-dim))
+          (col-idx 0)
+          (row-idx 0)
+          )
+     (dotimes (joint-idx joint-dim) ;; for each joint in union-joint-list
+       (setq col-idx joint-idx) ;; update idx
+       (setq row-idx 0) ;; update idx
+       (dotimes (mt-idx (length move-target)) ;; for each move-target
+         (let* ((jnt (elt union-joint-list joint-idx))
+                (mt (elt move-target mt-idx))
+                (jnt-list (elt joint-list mt-idx))
+                (tc (elt transform-coords mt-idx))
+                )
+           ;; check whether joint is contained in joint-list of move-target.
+           (when (and (derivedp jnt joint) (member jnt jnt-list :test #'equal))
+             ;; set jacobian matrix calcualted from jnt, mt, ra, ta to (row-idx, col-idx) block.
+             (let* ((paxis (case (jnt . axis)
+                                 (:x #f(1 0 0)) (:y #f(0 1 0)) (:z #f(0 0 1))
+                                 (:xx #f(1 0 0)) (:yy #f(0 1 0)) (:zz #f(0 0 1))
+                                 (:-x #f(-1 0 0)) (:-y #f(0 -1 0)) (:-z #f(0 0 -1))
+                                 (t (jnt . axis))))
+                    (parent-link (send jnt :parent-link))
+                    (default-coords (jnt . default-coords))
+                    (world-default-coords (send (send parent-link :copy-worldcoords)
+                                                :transform default-coords))
+                    (mtn (send mt :rotate-vector (float-vector 0 0 1)))
+                    )
+               (send jnt :calc-normal-jacobian
+                     jacobi row-idx col-idx paxis world-default-coords mtn tc)
+               ))
+           (incf row-idx 3) ;; update idx
+           )))
+        jacobi
      ))
   (:find-link-route
    (to &optional from)
