@@ -69,11 +69,11 @@
           (float-vector
            (* 1e-3 (- (elt (find-extream (send bb :vertices) #'(lambda (x) (elt x 0)) #'>) 0) (elt (find-extream (send bb :vertices) #'(lambda (x) (elt x 0)) #'<) 0)))
            (* 1e-3 (- (elt (find-extream (send bb :vertices) #'(lambda (x) (elt x 1)) #'>) 1) (elt (find-extream (send bb :vertices) #'(lambda (x) (elt x 1)) #'<) 1)))
-           (* 1e-3 (- (elt (find-extream (send bb :vertices) #'(lambda (x) (elt x 2)) #'>) 2) (elt (find-extream (send bb :vertices) #'(lambda (x) (elt x 2)) #'<) 2)))))
+           (- (* 1e-3 (- (elt (find-extream (send bb :vertices) #'(lambda (x) (elt x 2)) #'>) 2) (elt (find-extream (send bb :vertices) #'(lambda (x) (elt x 2)) #'<) 2))) 0.3))) ;;0.3[m] from the ground is not considered
          (neglect-thre (* 1e-3 0.1)) ;; 0.1[mm]
          (bbox-offset
           (let ((tmp (scale 1e-3 (send (send robot :foot-midcoords) :inverse-transform-vector (send bb :centroid)))))
-            (float-vector (neglect-small-value (elt tmp 0) neglect-thre) (neglect-small-value (elt tmp 1) neglect-thre) 0.0)
+            (float-vector (neglect-small-value (elt tmp 0) neglect-thre) (neglect-small-value (elt tmp 1) neglect-thre) (+ 0.15 (neglect-small-value (elt tmp 2) neglect-thre))) ;;0.3[m] from the ground is not considered
             )))
     (if return-value
         (list bbox-size bbox-offset)
