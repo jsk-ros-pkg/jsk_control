@@ -9,7 +9,13 @@ catkin_package(
   
   )
 
-install(DIRECTORY launch scripts configs
+file(GLOB PYTHON_SCRIPTS scripts/*.py)
+catkin_install_python(
+  PROGRAMS ${PYTHON_SCRIPTS}
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(DIRECTORY launch configs
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
   USE_SOURCE_PERMISSIONS
   PATTERN ".svn" EXCLUDE
