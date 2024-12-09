@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>eus_teleop</name>
-  <version>0.1.17</version>
+  <version>0.1.18</version>
   <description>The eus_teleop package</description>
 
   <maintainer email="shingogo.5511@gmail.com">Shingo Kitagawa</maintainer>

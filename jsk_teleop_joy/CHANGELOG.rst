@@ -2,8 +2,8 @@
 Changelog for package jsk_teleop_joy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.18 (2024-12-09)
+-------------------
 * [jsk_teleop_joy] support midi launchpad X (`#789 <https://github.com/jsk-ros-pkg/jsk_control/issues/789>`_)
 * [jsk_teleop_joy] python3-pygame is required on noetic (`#787 <https://github.com/jsk-ros-pkg/jsk_control/issues/787>`_)
 * Contributors: Shun Hasegawa, Yoshiki Obinata
