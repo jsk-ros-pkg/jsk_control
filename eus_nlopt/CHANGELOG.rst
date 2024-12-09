@@ -2,6 +2,9 @@
 Changelog for package eus_nlopt
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.17 (2023-05-28)
 -------------------
 * use message(WARNING for 'NLopt missing'

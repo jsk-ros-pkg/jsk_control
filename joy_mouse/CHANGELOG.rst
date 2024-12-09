@@ -2,6 +2,9 @@
 Changelog for package joy_mouse
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.17 (2023-05-28)
 -------------------
 * jsk_mouse: fix wrong rosdep keys
