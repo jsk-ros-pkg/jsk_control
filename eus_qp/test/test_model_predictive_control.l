@@ -10,6 +10,11 @@
   (assert (every #'identity (demo-mpc-gen-motion-all))))
 (deftest test-demo-mpc-gen-motion-all-2
   (assert (every #'identity (demo-mpc-gen-motion-all :receding-horizon-proc-count 2))))
+(deftest test-demo-mpc-gen-motion-all-3
+  (assert (every #'identity (demo-mpc-gen-motion-all :solve-qp-mode :sqp-with-hotstart))))
+(deftest test-demo-mpc-gen-motion-all-4
+  (assert (every #'identity (demo-mpc-gen-motion-all :receding-horizon-proc-count 2 :solve-qp-mode :sqp-with-hotstart))))
+
 (deftest test-test-predictive-matrices-all
   (assert (every #'identity (test-predictive-matrices-all))))
 

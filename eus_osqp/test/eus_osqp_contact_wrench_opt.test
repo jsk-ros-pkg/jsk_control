@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="eus_osqp_contact_wrench_opt_test" pkg="eus_osqp" type="eus-osqp-contact-wrench-opt.test.l" time-limit="10.0">
+  </test>
+</launch>
