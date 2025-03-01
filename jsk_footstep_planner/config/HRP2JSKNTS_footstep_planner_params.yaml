@@ -4,8 +4,8 @@ footstep_size_x: 0.254
 footstep_size_y: 0.150368
 rleg_footstep_offset: [0.016411, 0.0, 0.0]
 lleg_footstep_offset: [0.016411, 0.0, 0.0]
-collision_bbox_size: [0.499967, 0.39561, 1.33184]
-collision_bbox_offset: [-0.055675, 0.0, 0.0]
+collision_bbox_size: [0.499966, 0.396911, 1.03184]
+collision_bbox_offset: [-0.055675, 0.00064, 0.805435]
 successors:
   - x: 0.15
     y: 0.0
@@ -250,3 +250,6 @@ successors:
   - x: -0.05
     y: -0.05
     theta: -0.349066
+goal_pos_thr: 0.05
+goal_rot_thr: 0.087266
+transition_limit_yaw: 0.350811
