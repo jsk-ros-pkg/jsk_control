@@ -13,7 +13,6 @@ try:
 except:
   import roslib; roslib.load_manifest('jsk_teleop_joy')
 
-
 from sensor_msgs.msg import Joy
 from diagnostic_msgs.msg import DiagnosticStatus, DiagnosticArray
 import tf.transformations
@@ -38,12 +37,12 @@ def autoJoyDetect(msg):
   elif len(msg.axes) == 20 and len(msg.buttons) == 17:
     rospy.loginfo("auto detected as ps3")
     AUTO_DETECTED_CLASS = PS3Status
-  elif len(msg.axes) == 8 and len(msg.buttons) == 19:
+  elif len(msg.axes) == 8 and (len(msg.buttons) == 16 or len(msg.buttons) == 19):
     rospy.loginfo("auto detected as ipega")
     AUTO_DETECTED_CLASS = IpegaStatus
   else:
     AUTO_DETECTED_CLASS = "UNKNOWN"
-    
+
 class JoyManager():
   STATE_INITIALIZATION = 1
   STATE_RUNNING = 2
@@ -52,7 +51,7 @@ class JoyManager():
   MODE_PLUGIN = 0
   MODE_MENU = 1
   mode = 0
-  
+
   plugin_instances = []
   def stateDiagnostic(self, stat):
     if self.state == self.STATE_INITIALIZATION:
@@ -99,7 +98,7 @@ class JoyManager():
     elif self.controller_type == 'ipega':
       self.JoyStatus = IpegaStatus
     elif self.controller_type == 'auto':
-      s = rospy.Subscriber('/joy', Joy, autoJoyDetect)
+      s = rospy.Subscriber('/joy', Joy, autoJoyDetect, queue_size=1)
       self.state = self.STATE_WAIT_FOR_JOY
       error_message_published = False
       r = rospy.Rate(1)
@@ -190,7 +189,7 @@ class JoyManager():
     self.pre_status = status
     self.history.add(status)
     self.diagnostic_updater.update()
-    
+
 def main():
   global g_manager
   rospy.sleep(1)
@@ -202,7 +201,6 @@ def main():
     return False
   else:
     rospy.spin()
-  
+
 if __name__ == '__main__':
   main()
-  

@@ -117,14 +117,13 @@ class IpegaStatus(JoyStatus):
     def __init__(self, msg):
         '''
         ipaga game pad
-        No home button
         Y button => triangle
         X button => square
         B button => circle
         A button => cross
+        START + SELECT => HOME(center)
         '''
         JoyStatus.__init__(self)
-        self.center = False
         if msg.buttons[10] == 1:
             self.select = True
         else:
@@ -189,6 +188,12 @@ class IpegaStatus(JoyStatus):
             self.R2 = True
         else:
             self.R2 = False
+        if self.start and self.select:
+            self.start = False
+            self.select = False
+            self.center = True
+        else:
+            self.center = False 
         self.left_analog_x = msg.axes[0]
         self.left_analog_y = msg.axes[1]
         self.right_analog_x = msg.axes[2]

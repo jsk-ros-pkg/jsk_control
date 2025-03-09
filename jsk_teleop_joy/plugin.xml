@@ -12,6 +12,10 @@
   </class>
   <class name="JoyPose6D" type="jsk_teleop_joy.plugin.joy_pose_6d.JoyPose6D">
   </class>
+  <class name="JoyTarget6D" type="jsk_teleop_joy.plugin.joy_target_6d.JoyTarget6D">
+  </class>
+  <class name="BasePose" type="jsk_teleop_joy.plugin.base_pose.BasePose">
+  </class>
   <class name="JoyFootstep" type="jsk_teleop_joy.plugin.joy_footstep.JoyFootstep">
   </class>
   <class name="JoyFootstepPlanner" type="jsk_teleop_joy.plugin.joy_footstep_planner.JoyFootstepPlanner">
@@ -29,5 +33,9 @@
   <class name="JoyFootstepMarker" type="jsk_teleop_joy.plugin.joy_footstep_marker.JoyFootstepMarker">
   </class>
   <class name="JoyCmdVel" type="jsk_teleop_joy.plugin.joy_cmd_vel.JoyCmdVel">
+  </class>
+  <class name="JoyReverseAxis" type="jsk_teleop_joy.plugin.joy_reverse_axis.JoyReverseAxis">
+  </class>
+  <class name="JoyBoundingBoxSelector" type="jsk_teleop_joy.plugin.joy_bounding_box_selector.JoyBoundingBoxSelector">
   </class>
 </library>

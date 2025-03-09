@@ -28,7 +28,7 @@ class JoyPose6D(RVizViewController):
 Usage:
 Left Analog x/y: translate x/y
 Up/Down/Right/Left: rotate pitch/roll
-L1/R2: rotate yaw
+L1/R1: rotate yaw
 L2/R2: translate z
 square: move faster
 
@@ -55,7 +55,7 @@ set_pose [String, default: set_pose]: topic name for setting pose by topic
                                       PoseStamped)
     self.supportFollowView(True)
 
-    self.puse_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'), PoseStamped, self.setPoseCB)
+    self.pose_sub = rospy.Subscriber(self.getArg('set_pose', 'set_pose'), PoseStamped, self.setPoseCB)
     if rospy.has_param('~frame_id'):
       self.frame_id = rospy.get_param('~frame_id')
     self.tf_listener = tf.TransformListener()
