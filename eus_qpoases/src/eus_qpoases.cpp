@@ -48,6 +48,7 @@ double* solve_qpoases_qp_common (double* ret,
 
   QProblem example( state_len,inequality_len, (solve_lp ? HST_ZERO : HST_UNKNOWN));
   Options options;
+  options.setToReliable();
   options.printLevel = print_level;
   example.setOptions( options );
   /* Solve first QP/LP. */
@@ -131,6 +132,7 @@ double* solve_qpoases_qp_with_hotstart_common (double* ret,
   }
 
   Options options;
+  options.setToReliable();
   options.printLevel = print_level;
   example->setOptions( options );
   int nWSR = 10000;
@@ -227,6 +229,7 @@ double* solve_qpoases_sqp_with_hotstart_common (double* ret,
   }
 
   Options options;
+  options.setToReliable();
   options.printLevel = print_level;
   example->setOptions( options );
   int nWSR = 10000;
