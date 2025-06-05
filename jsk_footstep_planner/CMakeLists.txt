@@ -106,4 +106,6 @@ install(TARGETS jsk_footstep_planner sample_astar sample_simple_graph
 install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
-add_rostest(test/test_footstep_planning_eus_client.test)
+if(CATKIN_ENABLE_TESTING)
+  add_rostest(test/test_footstep_planning_eus_client.test)
+endif()
