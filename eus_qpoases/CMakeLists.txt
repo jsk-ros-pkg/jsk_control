@@ -36,7 +36,9 @@ set_target_properties(eus_qpoases PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_
 add_dependencies(eus_qpoases qpoases)
 target_link_libraries(eus_qpoases qpOASES)
 
-add_rostest(test/eus_qpoases.test)
+if(CATKIN_ENABLE_TESTING)
+  add_rostest(test/eus_qpoases.test)
+endif()
 
 install(DIRECTORY lib/
   USE_SOURCE_PERMISSIONS
