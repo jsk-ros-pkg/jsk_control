@@ -9,7 +9,7 @@ ExternalProject_Add(qpoases
   GIT_REPOSITORY https://github.com/coin-or/qpOASES
   GIT_TAG releases/3.0.1
   TIMEOUT 30
-  PATCH_COMMAND patch -s -p0 < ${PROJECT_SOURCE_DIR}/patch/UseShareLibrary.patch
+  PATCH_COMMAND patch -s -p0 --forward < ${PROJECT_SOURCE_DIR}/patch/UseShareLibrary.patch || true # # If there is no --forward, the build process hangs because the patch command waits interactively for input on whether a file that has already been patched can be patched again. If there is no || true , the patch command returns non-zero status.
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release
   BUILD_COMMAND make -j
   BUILD_IN_SOURCE 1
