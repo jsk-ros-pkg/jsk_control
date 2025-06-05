@@ -37,6 +37,7 @@
 #ifndef JSK_FOOTSTEP_PLANNER_POINTCLOUD_MODEL_GENERATOR_H_
 #define JSK_FOOTSTEP_PLANNER_POINTCLOUD_MODEL_GENERATOR_H_
 
+#include <boost/shared_ptr.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 

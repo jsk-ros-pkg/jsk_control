@@ -16,6 +16,7 @@
 #include <jsk_footstep_planner/CollisionBoundingBoxInfo.h>
 
 // pcl
+#include <pcl/common/common.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
 // grid path planning
