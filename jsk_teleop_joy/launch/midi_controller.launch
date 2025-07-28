@@ -1,0 +1,10 @@
+<launch>
+  <arg name="midi_config" default="launchpad_x.yaml" />
+
+  <!-- MIDI controller -->
+  <node pkg="jsk_teleop_joy" type="midi_config_player.py"
+        output="screen" name="midi_controller"
+        args="$(find jsk_teleop_joy)/configs/$(arg midi_config)">
+    <remap from="/joy" to="/midi_controller/joy" />
+  </node>
+</launch>

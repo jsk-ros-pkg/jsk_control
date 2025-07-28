@@ -142,5 +142,10 @@ the configuration to a yaml file by `-w` option.
 This script publishes `sensor_msgs/Joy` to `/joy` based on a yaml file
 configured by `interactive_midi_config.py` and `midi_write.py`.
 
+You can launch the program as follows.
+```bash
+roslaunch jsk_teleop_joy midi_controller.launch midi_config:=[your config file]
+```
+
 [`configs`](configs) directory includes some yaml files for several MIDI
 devices.
