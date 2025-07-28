@@ -20,14 +20,17 @@ catkin_package()
 
 add_executable(euq_qp_test src/example.cpp)
 add_library(eus_qp SHARED src/qp_lib.cpp)
-add_rostest(test/test_contact_wrench_opt.test)
-add_rostest(test/test_model_predictive_control.test)
-add_rostest(test/test_cfr_cwc_calculation.test)
-add_rostest(optmotiongen/test/test-sample-inverse-kinematics.test)
-add_rostest(optmotiongen/test/test-sample-inverse-kinematics-statics.test)
-add_rostest(optmotiongen/test/test-samplerobot.test)
-add_rostest(optmotiongen/test/test-sample-torque-gradient.test)
-add_rostest(optmotiongen/test/test-load-euslisp-files.test)
+
+if(CATKIN_ENABLE_TESTING)
+  add_rostest(test/test_contact_wrench_opt.test)
+  add_rostest(test/test_model_predictive_control.test)
+  add_rostest(test/test_cfr_cwc_calculation.test)
+  add_rostest(optmotiongen/test/test-sample-inverse-kinematics.test)
+  add_rostest(optmotiongen/test/test-sample-inverse-kinematics-statics.test)
+  add_rostest(optmotiongen/test/test-samplerobot.test)
+  add_rostest(optmotiongen/test/test-sample-torque-gradient.test)
+  add_rostest(optmotiongen/test/test-load-euslisp-files.test)
+endif()
 
 install(DIRECTORY euslisp test
   USE_SOURCE_PERMISSIONS

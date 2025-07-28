@@ -9,7 +9,7 @@ ExternalProject_Add(qpoases
   GIT_REPOSITORY https://github.com/coin-or/qpOASES
   GIT_TAG releases/3.0.1
   TIMEOUT 30
-  PATCH_COMMAND patch -s -p0 < ${PROJECT_SOURCE_DIR}/patch/UseShareLibrary.patch
+  PATCH_COMMAND patch -s -p0 --forward < ${PROJECT_SOURCE_DIR}/patch/UseShareLibrary.patch || true # # If there is no --forward, the build process hangs because the patch command waits interactively for input on whether a file that has already been patched can be patched again. If there is no || true , the patch command returns non-zero status.
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release
   BUILD_COMMAND make -j
   BUILD_IN_SOURCE 1
@@ -36,7 +36,9 @@ set_target_properties(eus_qpoases PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_
 add_dependencies(eus_qpoases qpoases)
 target_link_libraries(eus_qpoases qpOASES)
 
-add_rostest(test/eus_qpoases.test)
+if(CATKIN_ENABLE_TESTING)
+  add_rostest(test/eus_qpoases.test)
+endif()
 
 install(DIRECTORY lib/
   USE_SOURCE_PERMISSIONS

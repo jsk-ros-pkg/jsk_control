@@ -39,6 +39,7 @@
 
 #include <jsk_footstep_msgs/Footstep.h>
 
+#include <pcl/common/transforms.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl/sample_consensus/method_types.h>
