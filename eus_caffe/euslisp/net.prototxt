@@ -1,0 +1,122 @@
+name: "sample_net"
+layer {
+  name: "input"
+  type: "MemoryData"
+  top: "input"
+  top: "dummy_label1"
+  memory_data_param {
+    batch_size: 32
+    channels: 2
+    height: 1
+    width: 1
+  }
+}
+layer {
+  name: "ip"
+  type: "InnerProduct"
+  bottom: "input"
+  top: "ip"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 50
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "encode1neuron"
+  type: "Sigmoid"
+  bottom: "ip"
+  top: "encode1neuron"
+}
+layer {
+  name: "middle1"
+  type: "InnerProduct"
+  bottom: "encode1neuron"
+  top: "middle1"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 10
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "encode2neuron"
+  type: "Sigmoid"
+  bottom: "middle1"
+  top: "encode2neuron"
+}
+layer {
+  name: "output"
+  type: "InnerProduct"
+  bottom: "encode2neuron"
+  top: "output"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 1
+    weight_filler {
+      type: "gaussian"
+      std: 1
+      sparse: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "target"
+  type: "MemoryData"
+  top: "target"
+  top: "dummy_label2"
+  memory_data_param {
+    batch_size: 32
+    channels: 1
+    height: 1
+    width: 1
+  }
+}
+layer {
+  name: "loss"
+  type: "EuclideanLoss"
+  bottom: "output"
+  bottom: "target"
+  top: "loss"
+}
