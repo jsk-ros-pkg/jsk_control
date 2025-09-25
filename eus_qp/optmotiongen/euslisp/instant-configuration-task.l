@@ -34,8 +34,10 @@
           (_dim-variant-config "$\mathit{dim}(\bm{q}_{\mathit{var}})$")
           (_dim-invariant-config "$\mathit{dim}(\bm{q}_{\mathit{invar}})$")
           (_dim-config "$\mathit{dim}(\bm{q})$")
+          (_dim-kin "$\mathit{dim}(\bm{e}^{\mathit{kin}})$")
           (_dim-task "$\mathit{dim}(\bm{e})$")
           ;; scale
+          (_kin-rotation-type-list "rotation type of kinematics task (:axis-angle or :normal)")
           (_kin-scale-mat-list "$K_{\mathit{kin}}$")
           (_target-posture-scale-list "$k_{\mathit{posture}}$")
           (_norm-regular-scale-max "$k_{\mathit{max}}$")
@@ -194,6 +196,8 @@ $\bm{\hat{w}}$は次式のように，全接触部位でのワールド座標系
     (collision-pair-list)
     (collision-distance-margin 0.01) ;; [m]
     (collision-distance-margin-list) ;; [m]
+    (kin-rotation-type :axis-angle) ;; :axis-angle or :normal
+    (kin-rotation-type-list)
     (kin-scale 1.0)
     (kin-scale-list)
     (kin-scale-mat-list)
@@ -233,24 +237,36 @@ Initialize instance
    (setq _collision-distance-margin-list
          (or collision-distance-margin-list
              (make-list (length _collision-pair-list) :initial-element collision-distance-margin)))
+   (cond (kin-rotation-type-list
+          (setq _kin-rotation-type-list kin-rotation-type-list)
+          )
+         (t
+          (setq _kin-rotation-type-list
+                (make-list (length kin-target-coords-list) :initial-element kin-rotation-type))
+          ))
    (cond (kin-scale-mat-list
           (setq _kin-scale-mat-list kin-scale-mat-list)
           )
          (kin-scale-list
           (setq _kin-scale-mat-list
                 (mapcar
-                 #'(lambda (sc)
+                 #'(lambda (sc rot-type)
                      (cond ((numberp sc)
-                            (scale-matrix sc (unit-matrix 6))
+                            (scale-matrix sc (unit-matrix (if (equal rot-type :normal) 4 6)))
                             )
                            (t
                             (diagonal sc)
                             )))
-                 kin-scale-list))
+                 kin-scale-list
+                 _kin-rotation-type-list
+                 ))
           )
          (kin-scale
           (setq _kin-scale-mat-list
-                (make-list (length kin-target-coords-list) :initial-element (scale-matrix kin-scale (unit-matrix 6))))
+                (mapcar
+                 #'(lambda (rot-type)
+                     (scale-matrix kin-scale (unit-matrix (if (equal rot-type :normal) 4 6))))
+                 _kin-rotation-type-list))
           ))
    (cond (target-posture-scale-list
           (setq _target-posture-scale-list target-posture-scale-list)
@@ -297,11 +313,12 @@ Initialize instance
    (setq _dim-variant-config (+ _dim-theta _dim-wrench _dim-torque))
    (setq _dim-invariant-config _dim-phi)
    (setq _dim-config (+ _dim-variant-config _dim-invariant-config))
+   (setq _dim-kin (apply #'+ (mapcar #'(lambda (rot-type) (if (equal rot-type :normal) 4 6)) _kin-rotation-type-list)))
    (cond (_only-kinematics?
-          (setq _dim-task (+ (* 6 _num-kin) _num-posture-joint))
+          (setq _dim-task (+ _dim-kin _num-posture-joint))
           )
          (t
-          (setq _dim-task (+ (* 6 _num-kin) 3 3 _num-drive-joint _num-posture-joint))
+          (setq _dim-task (+ _dim-kin 3 3 _num-drive-joint _num-posture-joint))
           ))
    )
   (:robot-env
@@ -645,6 +662,24 @@ return $\mathcal{T}^{\mathit{kin\mathchar`-trg}} := \{T_1^{\mathit{kin\mathchar`
    "
    _kin-target-coords-list
    )
+  (:kin-target-coords
+   (&key
+    (name)
+    (coords)
+    )
+   "
+set / get $T_i^{\mathit{kin\mathchar`-trg}}$
+   "
+   (let* ((idx
+           (position-if #'(lambda (c) (equal (send c :name) name)) _kin-target-coords-list))
+          )
+     (cond (coords
+            (setf (elt _kin-target-coords-list idx) coords)
+            )
+           (t
+            (elt _kin-target-coords-list idx)
+            ))
+     ))
   (:kin-attention-coords-list
    ()
    "
@@ -655,6 +690,31 @@ return $\mathcal{T}^{\mathit{kin\mathchar`-trg}} := \{T_1^{\mathit{kin\mathchar`
 return $\mathcal{T}^{\mathit{kin\mathchar`-att}} := \{T_1^{\mathit{kin\mathchar`-att}}, T_2^{\mathit{kin\mathchar`-att}}, \cdots, T_{N_\mathit{kin}}^{\mathit{kin\mathchar`-att}} \}$
    "
    _kin-attention-coords-list
+   )
+  (:kin-attention-coords
+   (&key
+    (name)
+    (coords)
+    )
+   "
+set / get $T_i^{\mathit{kin\mathchar`-att}}$
+   "
+   (let* ((idx
+           (position-if #'(lambda (c) (equal (send c :name) name)) _kin-attention-coords-list))
+          )
+     (cond (coords
+            (setf (elt _kin-attention-coords-list idx) coords)
+            )
+           (t
+            (elt _kin-attention-coords-list idx)
+            ))
+     ))
+  (:kin-rotation-type-list
+   ()
+   "
+return rotation type of kinematics task
+   "
+   _kin-rotation-type-list
    )
   (:contact-target-coords-list
    ()
@@ -667,6 +727,24 @@ return $\mathcal{T}^{\mathit{cnt\mathchar`-trg}} := \{T_1^{\mathit{cnt\mathchar`
    "
    _contact-target-coords-list
    )
+  (:contact-target-coords
+   (&key
+    (name)
+    (coords)
+    )
+   "
+set / get $T_i^{\mathit{cnt\mathchar`-trg}}$
+   "
+   (let* ((idx
+           (position-if #'(lambda (c) (equal (send c :name) name)) _contact-target-coords-list))
+          )
+     (cond (coords
+            (setf (elt _contact-target-coords-list idx) coords)
+            )
+           (t
+            (elt _contact-target-coords-list idx)
+            ))
+     ))
   (:contact-attention-coords-list
    ()
    "
@@ -678,6 +756,24 @@ return $\mathcal{T}^{\mathit{cnt\mathchar`-att}} := \{T_1^{\mathit{cnt\mathchar`
    "
    _contact-attention-coords-list
    )
+  (:contact-attention-coords
+   (&key
+    (name)
+    (coords)
+    )
+   "
+set / get $T_i^{\mathit{cnt\mathchar`-att}}$
+   "
+   (let* ((idx
+           (position-if #'(lambda (c) (equal (send c :name) name)) _contact-attention-coords-list))
+          )
+     (cond (coords
+            (setf (elt _contact-attention-coords-list idx) coords)
+            )
+           (t
+            (elt _contact-attention-coords-list idx)
+            ))
+     ))
   (:contact-constraint-list
    ()
    "
@@ -717,6 +813,13 @@ set / get $\{ \bm{w}_1^{\mathit{ex}}, \bm{w}_2^{\mathit{ex}}, \cdots, \bm{w}_{N_
          (t
           (setq _external-wrench-list new-external-wrench-list)
           ))
+   )
+  (:external-coords-list
+   ()
+   "
+return $\{T_1^{\mathit{ex}}, T_2^{\mathit{ex}}, \cdots, T_{N_{\mathit{ex}}}^{\mathit{ex}} \}$
+   "
+   _external-coords-list
    )
   (:external-force-list
    ()
@@ -761,13 +864,30 @@ return $\bm{p}_G(\bm{q})$
     \bm{e}_{1}^{\mathit{kin}}(\bm{\theta}, \bm{\phi}) \\ \bm{e}_{2}^{\mathit{kin}}(\bm{\theta}, \bm{\phi}) \\ \vdots \\ \bm{e}_{N_{\mathit{kin}}}^{\mathit{kin}}(\bm{\theta}, \bm{\phi})
   \end{pmatrix} \\
   \bm{e}_{m}^{\mathit{kin}}(\bm{\theta}, \bm{\phi}) &=&
+  \left\{
+  \begin{array}{lll}
+  K_{\mathit{kin}}
+  \begin{pmatrix}
+    \bm{p}_{m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) - \bm{p}_{m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi}) \\
+    1 - \bm{\xi}_{m}^{\mathit{kin\mathchar`-trg}, T}(\bm{\theta}, \bm{\phi}) \bm{\xi}_{m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi})
+  \end{pmatrix}
+  & \in \mathbb{R}^4
+  & \rm{if\ kin\mathchar`-rotation\mathchar`-type\ is\ :normal}
+  \\
   K_{\mathit{kin}}
   \begin{pmatrix}
     \bm{p}_{m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) - \bm{p}_{m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi}) \\
     \bm{a}\left(\bm{R}_{m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) \bm{R}_{m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi})^T\right)
-  \end{pmatrix} \in \mathbb{R}^6 \ \ (m = 1,2,\cdots,N_{\mathit{kin}})
+  \end{pmatrix}
+  & \in \mathbb{R}^6
+  & \rm{otherwise}
+  \end{array}
+  \right.
+  \\
+  && \ \ \ \ (m = 1,2,\cdots,N_{\mathit{kin}}) \nonumber
 \end{eqnarray}
-$\bm{a}(\bm{R})$は姿勢行列$\bm{R}$の等価角軸ベクトルを表す．
+$\bm{a}(\bm{R}) \in \mathbb{R}^3$は姿勢行列$\bm{R}$の等価角軸ベクトルを表す．
+$\bm{\xi} \in \mathbb{R}^3$は法線ベクトル(Z方向の単位ベクトル)を表す．
 
 return $\bm{e}^{\mathit{kin}}(\bm{q}) \in \mathbb{R}^{6 N_{\mathit{kin}}}$
    "
@@ -776,7 +896,7 @@ return $\bm{e}^{\mathit{kin}}(\bm{q}) \in \mathbb{R}^{6 N_{\mathit{kin}}}$
            (apply #'concatenate
                   float-vector
                   (mapcar
-                   #'(lambda (trg-coords att-coords sc-mat)
+                   #'(lambda (trg-coords att-coords sc-mat rot-type)
                        (let* ((pos-diff ;; [m]
                                (cond ((equal att-coords :cog)
                                       (v- (scale 1e-3 (send trg-coords :worldpos)) (send self :cog))
@@ -788,6 +908,13 @@ return $\bm{e}^{\mathit{kin}}(\bm{q}) \in \mathbb{R}^{6 N_{\mathit{kin}}}$
                                (cond ((equal att-coords :cog)
                                       (float-vector 0 0 0)
                                       )
+                                     ((equal rot-type :normal)
+                                      (float-vector
+                                       (- 1.0
+                                          (v. (send trg-coords :rotate-vector (float-vector 0 0 1))
+                                              (send att-coords :rotate-vector (float-vector 0 0 1)))
+                                          ))
+                                      )
                                      (t
                                       (matrix-log (m* (send trg-coords :worldrot) (transpose (send att-coords :worldrot))))
                                       )))
@@ -797,6 +924,7 @@ return $\bm{e}^{\mathit{kin}}(\bm{q}) \in \mathbb{R}^{6 N_{\mathit{kin}}}$
                    _kin-target-coords-list
                    _kin-attention-coords-list
                    _kin-scale-mat-list
+                   _kin-rotation-type-list
                    ))
            ))
    (send self :get :kinematics-task-value)
@@ -955,58 +1083,117 @@ return $\bm{e}(\bm{q})
     \frac{\partial \bm{e}_1^{\mathit{kin}}}{\partial \bm{\theta}} \\ \frac{\partial \bm{e}_2^{\mathit{kin}}}{\partial \bm{\theta}} \\ \vdots \\ \frac{\partial \bm{e}_{N_{\mathit{kin}}}^{\mathit{kin}}}{\partial \bm{\theta}}
   \end{pmatrix} \\
   \frac{\partial \bm{e}_m^{\mathit{kin}}}{\partial \bm{\theta}}
-  &=& K_{\mathit{kin}} \left\{ \bm{J}_{\theta,m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) - \bm{J}_{\theta,m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi}) \right\} \ \ (m = 1,2,\cdots,N_{\mathit{kin}})
+  &=&
+  \left\{
+  \begin{array}{l}
+  K_{\mathit{kin}}
+  \begin{pmatrix}
+  \bm{\bar{J}}_{\theta,m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) - \bm{\bar{J}}_{\theta,m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi}) \\
+  - \bm{\xi}_{m}^{\mathit{kin\mathchar`-trg}, T}(\bm{\theta}, \bm{\phi}) \frac{\partial \bm{\xi}_{m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi})}{\partial \bm{\theta}} - \bm{\xi}_{m}^{\mathit{kin\mathchar`-att}, T}(\bm{\theta}, \bm{\phi}) \frac{\partial \bm{\xi}_{m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi})}{\partial \bm{\theta}}
+  \end{pmatrix}
+  \\
+  \ \ \ \ \ \ \ \ \in \mathbb{R}^{4 \times N_\mathit{var\mathchar`-joint}}
+  \ \ \ \ \rm{if\ kin\mathchar`-rotation\mathchar`-type\ is\ :normal}
+  \\
+  K_{\mathit{kin}} \left\{ \bm{J}_{\theta,m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) - \bm{J}_{\theta,m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi}) \right\}
+  \\
+  \ \ \ \ \ \ \ \ \in \mathbb{R}^{6 \times N_\mathit{var\mathchar`-joint}}
+  \ \ \ \ \rm{otherwise}
+  \end{array}
+  \right.
+  \\
+  && \ \ \ \ (m = 1,2,\cdots,N_{\mathit{kin}}) \nonumber
 \end{eqnarray}
+$\bm{\bar{J}}$は位置のみ，$\bm{J}$は位置姿勢に関する基礎ヤコビ行列を表す．
 
 return $\dfrac{\partial \bm{e}^{\mathit{kin}}}{\partial \bm{\theta}} \in \mathbb{R}^{6 N_{\mathit{kin}} \times N_\mathit{var\mathchar`-joint}}$
    "
    (apply
     #'concatenate-matrix-column
     (mapcar
-     #'(lambda (trg-coords att-coords sc-mat)
+     #'(lambda (trg-coords att-coords sc-mat rot-type &aux (rotation-axis (if (equal rot-type :normal) nil t)))
          (let* ((mat
-                 (reduce
-                  #'m+
+                 (apply
+                  #'concatenate-matrix-column
                   (remove
                    nil
                    (list
-                    (if (derivedp trg-coords cascaded-coords)
-                        (send _robot-env :calc-jacobian-from-joint-list
-                              :union-joint-list _variant-joint-list
-                              :move-target (list trg-coords)
-                              :transform-coords (list (make-coords))
-                              :translation-axis (list t)
-                              :rotation-axis (list t)
-                              ))
-                    (scale-matrix
-                     -1
-                     (cond ((equal att-coords :cog)
-                            (concatenate-matrix-column
-                             (send _robot-env :robot-with-root-virtual :calc-cog-jacobian-from-joint-list
-                                   :union-joint-list _variant-joint-list
-                                   :translation-axis t
-                                   )
-                             (make-matrix 3 (length _variant-joint-list))
-                             )
-                            )
-                           (t
-                            (send _robot-env :calc-jacobian-from-joint-list
-                                  :union-joint-list _variant-joint-list
-                                  :move-target (list att-coords)
-                                  :transform-coords (list (make-coords))
-                                  :translation-axis (list t)
-                                  :rotation-axis (list t)
-                                  )
-                            ))
-                     )
-                    )
-                   )))
+                    ;; use axis-angle for rotation
+                    (reduce
+                     #'m+
+                     (remove
+                      nil
+                      (list
+                       (if (derivedp trg-coords cascaded-coords)
+                           (send _robot-env :calc-jacobian-from-joint-list
+                                 :union-joint-list _variant-joint-list
+                                 :move-target (list trg-coords)
+                                 :transform-coords (list (make-coords))
+                                 :translation-axis (list t)
+                                 :rotation-axis (list rotation-axis)
+                                 ))
+                       (scale-matrix
+                        -1
+                        (cond ((equal att-coords :cog)
+                               (concatenate-matrix-column
+                                (send _robot-env :robot-with-root-virtual :calc-cog-jacobian-from-joint-list
+                                      :union-joint-list _variant-joint-list
+                                      :translation-axis t
+                                      )
+                                (make-matrix 3 (length _variant-joint-list))
+                                )
+                               )
+                              (t
+                               (send _robot-env :calc-jacobian-from-joint-list
+                                     :union-joint-list _variant-joint-list
+                                     :move-target (list att-coords)
+                                     :transform-coords (list (make-coords))
+                                     :translation-axis (list t)
+                                     :rotation-axis (list rotation-axis)
+                                     )
+                               ))
+                        )
+                       )))
+                    ;; use normal for rotation
+                    (if (equal rot-type :normal)
+                        (let* ((trg-normal
+                                (send trg-coords :rotate-vector (float-vector 0 0 1)))
+                               (att-normal
+                                (send att-coords :rotate-vector (float-vector 0 0 1)))
+                               )
+                          (scale-matrix
+                           -1
+                           (reduce
+                            #'m+
+                            (remove
+                             nil
+                             (list
+                              (if (derivedp trg-coords cascaded-coords)
+                                  (m*
+                                   (matrix att-normal)
+                                   (send _robot-env :calc-normal-jacobian-from-joint-list
+                                         :union-joint-list _variant-joint-list
+                                         :move-target (list trg-coords)
+                                         :transform-coords (list (make-coords))
+                                         )))
+                              (m*
+                               (matrix trg-normal)
+                               (send _robot-env :calc-normal-jacobian-from-joint-list
+                                     :union-joint-list _variant-joint-list
+                                     :move-target (list att-coords)
+                                     :transform-coords (list (make-coords))
+                                     ))
+                              ))))
+                          ))
+                    )))
+                 )
                 )
            (m* sc-mat mat)
            ))
      _kin-target-coords-list
      _kin-attention-coords-list
      _kin-scale-mat-list
+     _kin-rotation-type-list
      ))
    )
   (:kinematics-task-jacobian-with-phi
@@ -1018,58 +1205,117 @@ return $\dfrac{\partial \bm{e}^{\mathit{kin}}}{\partial \bm{\theta}} \in \mathbb
     \frac{\partial \bm{e}_1^{\mathit{kin}}}{\partial \bm{\phi}} \\ \frac{\partial \bm{e}_2^{\mathit{kin}}}{\partial \bm{\phi}} \\ \vdots \\ \frac{\partial \bm{e}_{N_{\mathit{kin}}}^{\mathit{kin}}}{\partial \bm{\phi}}
   \end{pmatrix} \\
   \frac{\partial \bm{e}_m^{\mathit{kin}}}{\partial \bm{\phi}}
-  &=& K_{\mathit{kin}} \left\{ \bm{J}_{\phi,m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) - \bm{J}_{\phi,m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi}) \right\} \ \ (m = 1,2,\cdots,N_{\mathit{kin}})
+  &=&
+  \left\{
+  \begin{array}{l}
+  K_{\mathit{kin}}
+  \begin{pmatrix}
+  \bm{\bar{J}}_{\phi,m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) - \bm{\bar{J}}_{\phi,m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi}) \\
+  - \bm{\xi}_{m}^{\mathit{kin\mathchar`-trg}, T}(\bm{\theta}, \bm{\phi}) \frac{\partial \bm{\xi}_{m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi})}{\partial \bm{\phi}} - \bm{\xi}_{m}^{\mathit{kin\mathchar`-att}, T}(\bm{\theta}, \bm{\phi}) \frac{\partial \bm{\xi}_{m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi})}{\partial \bm{\phi}}
+  \end{pmatrix}
+  \\
+  \ \ \ \ \ \ \ \ \in \mathbb{R}^{4 \times N_\mathit{invar\mathchar`-joint}}
+  \ \ \ \ \rm{if\ kin\mathchar`-rotation\mathchar`-type\ is\ :normal}
+  \\
+  K_{\mathit{kin}} \left\{ \bm{J}_{\phi,m}^{\mathit{kin\mathchar`-trg}}(\bm{\theta}, \bm{\phi}) - \bm{J}_{\phi,m}^{\mathit{kin\mathchar`-att}}(\bm{\theta}, \bm{\phi}) \right\}
+  \\
+  \ \ \ \ \ \ \ \ \in \mathbb{R}^{6 \times N_\mathit{invar\mathchar`-joint}}
+  \ \ \ \ \rm{otherwise}
+  \end{array}
+  \right.
+  \\
+  && \ \ \ \ (m = 1,2,\cdots,N_{\mathit{kin}}) \nonumber
 \end{eqnarray}
+$\bm{\bar{J}}$は位置のみ，$\bm{J}$は位置姿勢に関する基礎ヤコビ行列を表す．
 
 return $\dfrac{\partial \bm{e}^{\mathit{kin}}}{\partial \bm{\phi}} \in \mathbb{R}^{6 N_{\mathit{kin}} \times N_\mathit{invar\mathchar`-joint}}$
    "
    (apply
     #'concatenate-matrix-column
     (mapcar
-     #'(lambda (trg-coords att-coords sc-mat)
+     #'(lambda (trg-coords att-coords sc-mat rot-type &aux (rotation-axis (if (equal rot-type :normal) nil t)))
          (let* ((mat
-                 (reduce
-                  #'m+
+                 (apply
+                  #'concatenate-matrix-column
                   (remove
                    nil
                    (list
-                    (if (derivedp trg-coords cascaded-coords)
-                        (send _robot-env :calc-jacobian-from-joint-list
-                              :union-joint-list _invariant-joint-list
-                              :move-target (list trg-coords)
-                              :transform-coords (list (make-coords))
-                              :translation-axis (list t)
-                              :rotation-axis (list t)
-                              ))
-                    (scale-matrix
-                     -1
-                     (cond ((equal att-coords :cog)
-                            (concatenate-matrix-column
-                             (send _robot-env :robot-with-root-virtual :calc-cog-jacobian-from-joint-list
-                                   :union-joint-list _invariant-joint-list
-                                   :translation-axis t
-                                   )
-                             (make-matrix 3 (length _invariant-joint-list))
-                             )
-                            )
-                           (t
-                            (send _robot-env :calc-jacobian-from-joint-list
-                                  :union-joint-list _invariant-joint-list
-                                  :move-target (list att-coords)
-                                  :transform-coords (list (make-coords))
-                                  :translation-axis (list t)
-                                  :rotation-axis (list t)
-                                  )
-                            ))
-                     )
-                    )
-                   )))
+                    ;; use axis-angle for rotation
+                    (reduce
+                     #'m+
+                     (remove
+                      nil
+                      (list
+                       (if (derivedp trg-coords cascaded-coords)
+                           (send _robot-env :calc-jacobian-from-joint-list
+                                 :union-joint-list _invariant-joint-list
+                                 :move-target (list trg-coords)
+                                 :transform-coords (list (make-coords))
+                                 :translation-axis (list t)
+                                 :rotation-axis (list rotation-axis)
+                                 ))
+                       (scale-matrix
+                        -1
+                        (cond ((equal att-coords :cog)
+                               (concatenate-matrix-column
+                                (send _robot-env :robot-with-root-virtual :calc-cog-jacobian-from-joint-list
+                                      :union-joint-list _invariant-joint-list
+                                      :translation-axis t
+                                      )
+                                (make-matrix 3 (length _invariant-joint-list))
+                                )
+                               )
+                              (t
+                               (send _robot-env :calc-jacobian-from-joint-list
+                                     :union-joint-list _invariant-joint-list
+                                     :move-target (list att-coords)
+                                     :transform-coords (list (make-coords))
+                                     :translation-axis (list t)
+                                     :rotation-axis (list rotation-axis)
+                                     )
+                               ))
+                        )
+                       )))
+                    ;; use normal for rotation
+                    (if (equal rot-type :normal)
+                        (let* ((trg-normal
+                                (send trg-coords :rotate-vector (float-vector 0 0 1)))
+                               (att-normal
+                                (send att-coords :rotate-vector (float-vector 0 0 1)))
+                               )
+                          (scale-matrix
+                           -1
+                           (reduce
+                            #'m+
+                            (remove
+                             nil
+                             (list
+                              (if (derivedp trg-coords cascaded-coords)
+                                  (m*
+                                   (matrix att-normal)
+                                   (send _robot-env :calc-normal-jacobian-from-joint-list
+                                         :union-joint-list _invariant-joint-list
+                                         :move-target (list trg-coords)
+                                         :transform-coords (list (make-coords))
+                                         )))
+                              (m*
+                               (matrix trg-normal)
+                               (send _robot-env :calc-normal-jacobian-from-joint-list
+                                     :union-joint-list _invariant-joint-list
+                                     :move-target (list att-coords)
+                                     :transform-coords (list (make-coords))
+                                     ))
+                              ))))
+                          ))
+                    )))
+                 )
                 )
            (m* sc-mat mat)
            ))
      _kin-target-coords-list
      _kin-attention-coords-list
      _kin-scale-mat-list
+     _kin-rotation-type-list
      ))
    )
   (:eom-trans-task-jacobian-with-wrench
@@ -1425,31 +1671,31 @@ return $\frac{\partial \bm{e}}{\partial \bm{q}_{\mathit{var}}} \in \mathbb{R}^{(
    (unless _only-kinematics?
      (copy-block-matrix _variant-task-jacobi
                         (send self :eom-trans-task-jacobian-with-wrench)
-                        (* 6 _num-kin) _num-variant-joint)
+                        _dim-kin _num-variant-joint)
      (copy-block-matrix _variant-task-jacobi
                         (send self :eom-rot-task-jacobian-with-theta)
-                        (+ (* 6 _num-kin) 3) 0)
+                        (+ _dim-kin 3) 0)
      (copy-block-matrix _variant-task-jacobi
                         (send self :eom-rot-task-jacobian-with-wrench)
-                        (+ (* 6 _num-kin) 3) _num-variant-joint)
+                        (+ _dim-kin 3) _num-variant-joint)
      (when (> _num-drive-joint 0)
        (copy-block-matrix _variant-task-jacobi
                           (send self :torque-task-jacobian-with-theta)
-                          (+ (* 6 _num-kin) 3 3) 0)
+                          (+ _dim-kin 3 3) 0)
        (copy-block-matrix _variant-task-jacobi
                           (send self :torque-task-jacobian-with-wrench)
-                          (+ (* 6 _num-kin) 3 3) _num-variant-joint)
+                          (+ _dim-kin 3 3) _num-variant-joint)
        (copy-block-matrix _variant-task-jacobi
                           (send self :torque-task-jacobian-with-torque)
-                          (+ (* 6 _num-kin) 3 3) (+ _num-variant-joint (* 6 _num-contact)))
+                          (+ _dim-kin 3 3) (+ _num-variant-joint (* 6 _num-contact)))
        )
      )
    (when (> _num-posture-joint 0)
      (copy-block-matrix _variant-task-jacobi
                         (send self :posture-task-jacobian-with-theta)
                         (if _only-kinematics?
-                            (* 6 _num-kin)
-                          (+ (* 6 _num-kin) 3 3 _num-drive-joint))
+                            _dim-kin
+                          (+ _dim-kin 3 3 _num-drive-joint))
                         0)
      )
    _variant-task-jacobi
@@ -1486,11 +1732,11 @@ return $\frac{\partial \bm{e}}{\partial \bm{q}_{\mathit{invar}}} \in \mathbb{R}^
    (unless _only-kinematics?
      (copy-block-matrix _invariant-task-jacobi
                         (send self :eom-rot-task-jacobian-with-phi)
-                        (+ (* 6 _num-kin) 3) 0)
+                        (+ _dim-kin 3) 0)
      (when (> _num-drive-joint 0)
        (copy-block-matrix _invariant-task-jacobi
                           (send self :torque-task-jacobian-with-phi)
-                          (+ (* 6 _num-kin) 3 3) 0)
+                          (+ _dim-kin 3 3) 0)
        )
      )
    _invariant-task-jacobi
@@ -2271,14 +2517,16 @@ return $\bm{v}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q})}$
   (:update-collision-inequality-constraint
    ()
    "
-リンク1とリンク2の最近点を$\bm{p}_1, \bm{p}_2$とする．
+リンク1とリンク2が干渉していないとき，最近点を$\bm{p}_1, \bm{p}_2$とする．
+また，干渉しているとき，最も深く侵入している点を$\bm{p}_1, \bm{p}_2$とする．
 リンク1とリンク2が干渉しない条件を，
-最近点$\bm{p}_1, \bm{p}_2$の距離が$d_{\mathit{margin}}$以上である条件に置き換えて考える．
+$\bm{p}_1, \bm{p}_2$の距離が$d_{\mathit{margin}}$以上である条件に置き換えて考える．
 これは次式で表される．
 \begin{eqnarray}
   &&\bm{d}_{12}^T ( \bm{p}_1 - \bm{p}_2 ) \geq d_{\mathit{margin}} \\
-  &&{\rm where} \ \ \bm{d}_{12} = \bm{p}_1 - \bm{p}_2
+  &&{\rm where} \ \ \bm{d}_{12} = \left\{ \begin{array}{ll} \frac{\bm{p}_1 - \bm{p}_2}{\| \bm{p}_1 - \bm{p}_2 \|} & {\rm (no \ collision)} \\ -\frac{\bm{p}_1 - \bm{p}_2}{\| \bm{p}_1 - \bm{p}_2 \|} & {\rm (collision)} \end{array} \right.
 \end{eqnarray}
+以降では$\bm{p}_1, \bm{p}_2$はコンフィギュレーションに依存するが，$\bm{d}_{12}$はコンフィギュレーションに依存しないと近似する．
 コンフィギュレーションが$\Delta \bm{q}$だけ更新されてもこれが成立するための条件は次式で表される．
 \begin{eqnarray}
   &&\bm{d}_{12}^T \left\{ ( \bm{p}_1 + \Delta \bm{p}_1 ) - ( \bm{p}_2 + \Delta \bm{p}_2 ) \right\} \geq d_{\mathit{margin}} \\
@@ -2299,7 +2547,9 @@ return $\bm{v}_{\mathit{reg}} \in \mathbb{R}^{\mathit{dim}(\bm{q})}$
   &&\phantom{\rm where} \ \
   \bm{c}_{\mathit{col,invar}}^T = \bm{d}_{12}^T (\bm{J}_{\phi, 1} - \bm{J}_{\phi, 2}) \\
   &&\phantom{\rm where} \ \
-  d_{\mathit{col}} = - ( \bm{d}_{12}^T (\bm{p}_{1} - \bm{p}_2) - d_{\mathit{margin}} )
+  d_{\mathit{col}} = - ( \bm{d}_{12}^T (\bm{p}_{1} - \bm{p}_2) - d_{\mathit{margin}} ) = - ( \mathit{signed\mathchar`-dist}(\bm{p}_1, \bm{p}_2) - d_{\mathit{margin}} ) \\
+  &&\phantom{\rm where} \ \
+  \mathit{signed\mathchar`-dist}(\bm{p}_1, \bm{p}_2) = \left\{ \begin{array}{ll} \| \bm{p}_1 - \bm{p}_2 \| & {\rm (no \ collision)} \\ - \| \bm{p}_1 - \bm{p}_2 \| & {\rm (collision)} \end{array} \right.
 \end{eqnarray}
 
 $i$番目の干渉回避リンクペアに関する行列，ベクトルをそれぞれ$\bm{c}_{\mathit{col,var,i}}^T, \bm{c}_{\mathit{col,invar,i}}^T, d_{\mathit{col, i}}$とする．
@@ -2332,14 +2582,29 @@ update inequality matrix $\bm{C}_{\mathit{col},\theta}, \bm{C}_{\mathit{col,\phi
        (let* ((pair (elt _collision-pair-list i))
               (b1 (elt pair 0))
               (b2 (elt pair 1))
-              (col-ret (pqp-collision-distance b1 b2 :qsize 2))
+              (col-ret
+               (cond ((functionp 'bt-collision-distance)
+                      (bt-collision-distance b1 b2)
+                      )
+                     (t
+                      (pqp-collision-distance b1 b2 :qsize 2)
+                      ))
+               )
               (p1 (elt col-ret 1))
               (p2 (elt col-ret 2))
               (c1 (make-cascoords :pos p1 :parent b1))
               (c2 (make-cascoords :pos p2 :parent b2))
-              (dir (normalize-vector (v- p1 p2)))
               (dist-margin (elt _collision-distance-margin-list i))
+              ;; 'dist' is the signed distance when using 'bt-collision-distance' (i.e. negative for penetration depth)
               (dist (- (* 1e-3 (elt col-ret 0)) dist-margin)) ;; [m]
+              (dir
+               (cond ((functionp 'bt-collision-distance)
+                      (scale (if (> (elt col-ret 0) 0) 1 -1) (normalize-vector (v- p1 p2)))
+                      )
+                     (t
+                      (normalize-vector (v- p1 p2))
+                      ))
+               )
               (variant-mat-vector
                (transform
                 dir
@@ -2499,9 +2764,11 @@ Print status.
    (unless _only-kinematics?
      (warning-message 9 "|eom-trans-task|=~a~%" (norm (send self :eom-trans-task-value :update? nil)))
      (warning-message 9 "|eom-rot-task|=~a~%" (norm (send self :eom-rot-task-value :update? nil)))
-     (warning-message 9 "|torque-task|=~a~%" (norm (send self :torque-task-value :update? nil)))
+     (when (> _num-drive-joint 0)
+       (warning-message 9 "|torque-task|=~a~%" (norm (send self :torque-task-value :update? nil))))
      )
-   (warning-message 9 "|posture-task|=~a~%" (norm (send self :posture-task-value :update? nil)))
+   (when (> _num-posture-joint 0)
+     (warning-message 9 "|posture-task|=~a~%" (norm (send self :posture-task-value :update? nil))))
    )
   (:_get-contact-index-from-limb ;; used in trajectory-configuration-task
    (&key (limb))

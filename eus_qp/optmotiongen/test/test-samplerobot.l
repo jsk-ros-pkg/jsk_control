@@ -2,6 +2,7 @@
 
 (require :unittest "lib/llib/unittest.l")
 (load "../euslisp/sample/sample-samplerobot.l")
+(load "../euslisp/sample/sample-sqp-optimization-joint-surface.l")
 
 
 (init-unit-test)
@@ -36,6 +37,11 @@
                 :graph-filename nil
                 ))
   (assert (< (norm (send *bspline-dynamic-config-task* :task-value :update? nil)) 100.0))
+  )
+
+(deftest test-sample-robot-sqp-joint-surface-config-task
+  (null-output (sample-sqp-optimization-joint-surface))
+  (assert (< (norm (send *joint-surface-config-task* :task-value :update? nil)) 1.0))
   )
 
 
