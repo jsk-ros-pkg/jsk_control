@@ -11,6 +11,7 @@ by `~lleg_end_coords` and `~rleg_end_coords`.
 * `/odom_on_ground`: The coordinate computing by projecting `/odom` on the plane which is defined by `/ground` frame. The transformation is updated only if the robot on the floow by checking
 both of `lfsensor` and `rfsensor` provides enough force (the threshold is `~force_threshold`).
 * `/odom_init`: The coordinate of `/odom` when the robot lands on the ground most recent.
+* `/base_footprint`: Roll and Pitch are zero respect to `~parent_frame_id`. Z = min(`~rfoot_frame_id`_Z, `~lfoot_frame_id`_Z). X, Y and Yaw are the barycenter of `~rfoot_frame_id` and `~lfoot_frame_id`.
 
 ### Subscribing Topics
 * `lfsensosor` (`geometry_msgs/WrenchStamped`)
