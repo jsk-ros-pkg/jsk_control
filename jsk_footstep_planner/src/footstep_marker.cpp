@@ -782,6 +782,7 @@ namespace jsk_footstep_planner
       // update position of goal footstep
       FootstepTrans current_marker_pose;
       tf::poseMsgToEigen(feedback->pose, current_marker_pose);
+
       lleg_goal_pose_ = current_marker_pose * current_lleg_offset_;
       rleg_goal_pose_ = current_marker_pose * current_rleg_offset_;
       if(command_mode_ != STACK) {
@@ -1097,8 +1098,7 @@ namespace jsk_footstep_planner
         FootstepTrans offset_eigen;
         tf::poseMsgToEigen(msg->pose, msg_eigen);
         tf::transformMsgToEigen(offset.transform, offset_eigen);
-        FootstepTrans pose = msg_eigen * offset_eigen;
-
+        FootstepTrans pose = offset_eigen * msg_eigen;
         tf::poseEigenToMsg(pose, tmp_pose_stamped.pose);
         tmp_pose_stamped.header.stamp = msg->header.stamp;
         tmp_pose_stamped.header.frame_id = odom_frame_id_;
