@@ -42,12 +42,23 @@
 
 namespace jsk_footstep_planner
 {
-  // Only available for FootstepState and FootstepGraph
-  // because close list behavior is specialized for the purpose
+  //! The FootsteAStarSolver class
+  /*!
+    A start solver class for FootstepState and FootstepGraph
+    
+    Caution:
+      This class only works with FootstepState and FootstepGraph
+      because close list behavior is specialized for the purpose
+  */
   template <class GraphT>
   class FootstepAStarSolver: public AStarSolver<GraphT>
   {
   public:
+
+    //! typedefs
+    /*!
+     Type definitions used in this class.
+     */
     typedef boost::shared_ptr<FootstepAStarSolver> Ptr;
     typedef typename GraphT::StateT State;
     typedef typename GraphT::StateT::Ptr StatePtr;
@@ -57,6 +68,10 @@ namespace jsk_footstep_planner
     typedef typename std::priority_queue<SolverNodePtr,
                                          std::vector<SolverNodePtr>,
                                          std::greater<SolverNodePtr> > OpenList;    
+
+    //! Constructor
+    /*!
+     */
     FootstepAStarSolver(
       GraphPtr graph, size_t x_num, size_t y_num, size_t theta_num,
       unsigned int profile_period = 1024,

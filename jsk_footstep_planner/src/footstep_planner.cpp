@@ -408,13 +408,33 @@ namespace jsk_footstep_planner
     pub.publish(msg);
   }
 
+  /*
+   * Callback function of actionlib server to plan footsteps to a given goal
+   */
   void FootstepPlanner::planCB(
     const jsk_footstep_msgs::PlanFootstepsGoal::ConstPtr& goal)
   {
     boost::mutex::scoped_lock lock(mutex_);
+
+    // Store header of latest action goal footstep
     latest_header_ = goal->goal_footstep.header;
     ROS_INFO("planCB");
-    // check message sanity
+
+
+    /*
+     * Verifying whether a requested message meets requirements below or not
+     *   - FootstepArray in the "initial_footstep" record of a goal is set.
+     *   - The size of FootstepArray in the "initial_footstep" record of a goal is 2.
+     *   - The frame_id of the "initial_footstep" record of a goal is equal to
+     *         the frame_id of pointcloud
+     *   - The frame_id of the "initial_footstep" record of a goal is equal to
+     *         the frame_id of obstacle pointcloudif obstacle_mode is used.
+     *   - The size of FootstepArray in the "goal_footstep" record of a goal is 2.
+     *
+     * And verifying if settings below is correct.
+     *   - pointcloud options are correctly set.
+     */
+    // check messgae sanity
     if (goal->initial_footstep.footsteps.size() == 0) {
       ROS_ERROR("no initial footstep is specified");
       as_.setPreempted();
@@ -450,15 +470,23 @@ namespace jsk_footstep_planner
         return;
       }
     }
-    Eigen::Vector3f footstep_size(footstep_size_x_, footstep_size_y_, 0.000001);
-    Eigen::Vector3f search_resolution(resolution_x_, resolution_y_, resolution_theta_);
-    // check goal is whether collision free
-    // conevrt goal footstep into FootstepState::Ptr instance.
     if (goal->goal_footstep.footsteps.size() != 2) {
       ROS_ERROR("goal footstep should be a pair of footsteps");
       as_.setPreempted();
       return;
     }
+
+
+    /*
+     * Initialize footstep_size and search_resolution
+     */
+    Eigen::Vector3f footstep_size(footstep_size_x_, footstep_size_y_, 0.000001);
+    Eigen::Vector3f search_resolution(resolution_x_, resolution_y_, resolution_theta_);
+
+
+    /*
+     * Convert goal footstep (Footstep message instance) into FootstepState::Ptr instance.
+     */
     std::vector<jsk_footstep_msgs::Footstep > goal_ros;
     goal_ros.push_back(goal->goal_footstep.footsteps[0]);
     goal_ros.push_back(goal->goal_footstep.footsteps[1]);
@@ -484,18 +512,26 @@ namespace jsk_footstep_planner
         goal_ros[i].dimensions.z = 0.000001;
       }
     }
-
     FootstepState::Ptr first_goal = FootstepState::fromROSMsg(goal_ros[0],
                                                               footstep_size,
                                                               search_resolution);
     FootstepState::Ptr second_goal = FootstepState::fromROSMsg(goal_ros[1],
                                                                footstep_size,
                                                                search_resolution);
+
+    /*
+     *  Check whether a given goal is reachable or not
+     */
+    // check goal is whether collision free
     if (!graph_->isSuccessable(second_goal, first_goal)) {
       ROS_ERROR("goal is non-realistic");
       as_.setPreempted();
       return;
     }
+
+    /*
+     * Set Timeout
+     */
     ros::WallDuration timeout;
     if(goal->timeout.toSec() == 0.0) {
       timeout = ros::WallDuration(planning_timeout_);
@@ -504,6 +540,9 @@ namespace jsk_footstep_planner
     }
 
 
+    /*
+     * Initialize search tree with start footstep state and goal footstep state
+     */
     ////////////////////////////////////////////////////////////////////
     // set start state
     // 0 is always start
@@ -537,7 +576,6 @@ namespace jsk_footstep_planner
         return;
       }
     }
-
     ////////////////////////////////////////////////////////////////////
     // set goal state
     jsk_footstep_msgs::Footstep left_goal, right_goal;
@@ -572,6 +610,7 @@ namespace jsk_footstep_planner
         return;
       }
     }
+    ////////////////////////////////////////////////////////////////////
     // set parameters
     if (parameters_.use_transition_limit) {
       graph_->setTransitionLimit(
@@ -595,17 +634,19 @@ namespace jsk_footstep_planner
         TransitionLimitRP::Ptr(new TransitionLimitRP(
                                      parameters_.global_transition_limit_roll,
                                      parameters_.global_transition_limit_pitch)));
-
     }
     else {
       graph_->setGlobalTransitionLimit(TransitionLimitRP::Ptr());
     }
     graph_->setParameters(parameters_);
-
     graph_->setSuccessorFunction(boost::bind(&FootstepGraph::successors_original, graph_, _1, _2));
     graph_->setPathCostFunction(boost::bind(&FootstepGraph::path_cost_original, graph_, _1, _2, _3));
-
     //ROS_INFO_STREAM(graph_->infoString());
+
+
+    /*
+     * Setting up a solver for footstep graph
+     */
     // Solver setup
     FootstepAStarSolver<FootstepGraph> solver(graph_,
                                               close_list_x_num_,
@@ -636,6 +677,11 @@ namespace jsk_footstep_planner
     }
     graph_->clearPerceptionDuration();
     solver.setProfileFunction(boost::bind(&FootstepPlanner::profile, this, _1, _2));
+
+
+    /*
+     * Plan footsteps using the solver
+     */
     ROS_INFO("start_solver timeout: %f", timeout.toSec());
     ros::WallTime start_time = ros::WallTime::now();
     std::vector<SolverNode<FootstepState, FootstepGraph>::Ptr> path = solver.solve(timeout);
@@ -643,6 +689,12 @@ namespace jsk_footstep_planner
     double planning_duration = (end_time - start_time).toSec();
     //ROS_INFO_STREAM("took " << planning_duration << " sec");
     //ROS_INFO_STREAM("path: " << path.size());
+
+
+    /*
+     * Finalize footstep path
+     */
+    // when solver failed
     if (path.size() == 0) {
       pcl::PointCloud<pcl::PointNormal> close_list_cloud, open_list_cloud;
       solver.openListToPointCloud(open_list_cloud);
@@ -667,7 +719,8 @@ namespace jsk_footstep_planner
       as_.setPreempted();
       return;
     }
-    // finalize in graph
+    // when solver succeeded
+    // finalize in graph (add exact final footsteps to result footstep
     std::vector <FootstepState::Ptr> finalizeSteps;
     if (! (graph_->finalizeSteps((path.size() >1 ? path[path.size()-2]->getState() : FootstepState::Ptr()),
                                  path[path.size()-1]->getState(),
@@ -698,9 +751,14 @@ namespace jsk_footstep_planner
         ros_path.footsteps.push_back(*(st->toROSMsg(inv_rleg_footstep_offset_)));
       }
     }
+    // return result of action server
     result_.result = ros_path;
     as_.setSucceeded(result_);
 
+
+    /*
+     *  Publish the result of planning
+     */
     pcl::PointCloud<pcl::PointNormal> close_list_cloud, open_list_cloud;
     solver.openListToPointCloud(open_list_cloud);
     solver.closeListToPointCloud(close_list_cloud);
