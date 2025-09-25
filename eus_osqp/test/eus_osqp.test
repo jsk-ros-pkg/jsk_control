@@ -1,0 +1,4 @@
+<launch>
+  <test test-name="test_eus_osqp" pkg="eus_osqp" type="eus-osqp.test.l" time-limit="10.0">
+  </test>
+</launch>
