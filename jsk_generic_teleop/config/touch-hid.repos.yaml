@@ -1,0 +1,5 @@
+repositories:
+  Geomagic_Touch_ROS_Drivers:
+    type: git
+    url: git@github.com:pazeshun/Geomagic_Touch_ROS_Drivers.git
+    version: dual-phantom-readme

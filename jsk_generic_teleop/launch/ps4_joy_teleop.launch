@@ -1,0 +1,45 @@
+<launch>
+  <arg name="start_joy_node" default="true"/>
+  <arg name="joy_dev"        default="/dev/input/js0"/>
+
+  <arg name="raw_joy_topic"       default="/joy"/>
+  <arg name="larm_joy_topic"      default="/joy_larm"/>
+  <arg name="rarm_joy_topic"      default="/joy_rarm"/>
+
+  <!-- Raw axis indices (PS4/PS5 default layout) -->
+  <arg name="axis_ls_x" default="0"/>
+  <arg name="axis_ls_y" default="1"/>
+  <arg name="axis_rs_x" default="2"/>
+  <arg name="axis_l2"   default="3"/>
+  <arg name="axis_r2"   default="4"/>
+  <arg name="axis_rs_y" default="5"/>
+
+  <!-- Button indices -->
+  <arg name="btn_cross"  default="0"/>  <!-- x  : rarm rotation mode -->
+  <arg name="btn_square" default="2"/>  <!-- [] : larm rotation mode -->
+  <arg name="btn_l1"     default="4"/>  <!-- L1 : larm Z positive -->
+  <arg name="btn_r1"     default="5"/>  <!-- R1 : rarm Z positive -->
+
+  <node if="$(arg start_joy_node)"
+        name="joy_node" pkg="joy" type="joy_node">
+    <param name="dev" value="$(arg joy_dev)"/>
+    <remap from="joy" to="$(arg raw_joy_topic)"/>
+  </node>
+
+  <node name="ps4_joy_dual_arm_teleop" pkg="jsk_generic_teleop"
+        type="ps4_joy_dual_arm_teleop.py" output="screen">
+    <param name="input_joy"       value="$(arg raw_joy_topic)"/>
+    <param name="output_joy_larm" value="$(arg larm_joy_topic)"/>
+    <param name="output_joy_rarm" value="$(arg rarm_joy_topic)"/>
+    <param name="axis_ls_x"       value="$(arg axis_ls_x)"/>
+    <param name="axis_ls_y"       value="$(arg axis_ls_y)"/>
+    <param name="axis_rs_x"       value="$(arg axis_rs_x)"/>
+    <param name="axis_l2"         value="$(arg axis_l2)"/>
+    <param name="axis_r2"         value="$(arg axis_r2)"/>
+    <param name="axis_rs_y"       value="$(arg axis_rs_y)"/>
+    <param name="btn_cross"       value="$(arg btn_cross)"/>
+    <param name="btn_square"      value="$(arg btn_square)"/>
+    <param name="btn_l1"          value="$(arg btn_l1)"/>
+    <param name="btn_r1"          value="$(arg btn_r1)"/>
+  </node>
+</launch>

@@ -1,0 +1,17 @@
+repositories:
+  rtmros/rtmros_common:
+    type: git
+    url: git@github.com:start-jsk/rtmros_common.git
+    version: master
+  rtmros/rtmros_hironx:
+    type: git
+    url: https://github.com/start-jsk/rtmros_hironx.git
+    version: indigo-devel
+  rtmros/rtmros_nextage:
+    type: git
+    url: git@github.com:Michi-Tsubaki/rtmros_nextage.git
+    version: add-display-launch
+  rtmros/rtmros_tutorials:
+    type: git
+    url: git@github.com:Michi-Tsubaki/rtmros_tutorials.git
+    version: add-camera-and-ft-sensor

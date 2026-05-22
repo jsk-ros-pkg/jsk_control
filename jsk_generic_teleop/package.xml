@@ -1,0 +1,26 @@
+<package format="3">
+  <name>jsk_generic_teleop</name>
+  <version>0.0.1</version>
+  <description>Generic EusLisp-based arm robot teleoperation controllers.</description>
+  <maintainer email="k-okada@jsk.t.u-tokyo.ac.jp">Kei Okada</maintainer>
+  <author email="tsubaki@jsk.t.u-tokyo.ac.jp">Michitoshi Tsubaki</author>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>roseus</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>spacenav_node</build_depend>
+  <build_depend>pr2eus</build_depend>
+  
+  <exec_depend>roseus</exec_depend>
+  <exec_depend>pr2eus</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>tf</exec_depend>
+  <exec_depend>spacenav_node</exec_depend>
+  <build_depend>pr2eus</build_depend>
+</package>

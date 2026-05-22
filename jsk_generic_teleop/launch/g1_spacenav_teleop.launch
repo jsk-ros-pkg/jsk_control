@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="spacenav_node" type="spacenav_node" name="$(anon spacenav_node)" output="screen">
+    <param name="zero_when_static" value="true"/>
+    <param name="static_count_threshold" value="30"/>
+  </node>
+  <node pkg="jsk_generic_teleop" type="g1-spacenav-sample.l" name="$(anon jsk_generic_teleop)" output="screen" />
+</launch>
